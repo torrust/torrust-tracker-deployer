@@ -14,24 +14,23 @@ mod grafana;
 mod mysql;
 mod network_definition;
 mod port_definition;
-mod port_derivation;
 mod prometheus;
+mod service_topology;
 mod tracker;
 
-// Re-exports
+// Re-exports - service contexts
+pub use caddy::CaddyServiceContext;
+pub use grafana::GrafanaServiceContext;
+pub use mysql::MysqlServiceContext;
+pub use prometheus::PrometheusServiceContext;
+pub use tracker::TrackerServiceContext;
+
+// Re-exports - other types
 pub use builder::{DockerComposeContextBuilder, PortConflictError};
-pub use caddy::CaddyServiceConfig;
 pub use database::{DatabaseConfig, MysqlSetupConfig};
-pub use grafana::GrafanaServiceConfig;
-pub use mysql::MysqlServiceConfig;
 pub use network_definition::NetworkDefinition;
 pub use port_definition::PortDefinition;
-pub use port_derivation::{
-    derive_caddy_ports, derive_grafana_ports, derive_mysql_ports, derive_prometheus_ports,
-    derive_tracker_ports,
-};
-pub use prometheus::PrometheusServiceConfig;
-pub use tracker::{TrackerPorts, TrackerServiceConfig};
+pub use service_topology::ServiceTopology;
 
 /// Context for rendering the docker-compose.yml template
 ///
@@ -41,13 +40,13 @@ pub struct DockerComposeContext {
     /// Database configuration
     pub database: DatabaseConfig,
     /// Tracker service configuration (ports, networks)
-    pub tracker: TrackerServiceConfig,
+    pub tracker: TrackerServiceContext,
     /// Prometheus service configuration (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub prometheus: Option<PrometheusServiceConfig>,
+    pub prometheus: Option<PrometheusServiceContext>,
     /// Grafana service configuration (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub grafana: Option<GrafanaServiceConfig>,
+    pub grafana: Option<GrafanaServiceContext>,
     /// Caddy TLS proxy service configuration (optional)
     ///
     /// When present, Caddy reverse proxy is deployed for TLS termination.
@@ -56,13 +55,13 @@ pub struct DockerComposeContext {
     /// Note: This is separate from `CaddyContext` (used for Caddyfile.tera).
     /// This type only contains the docker-compose service definition data.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub caddy: Option<CaddyServiceConfig>,
+    pub caddy: Option<CaddyServiceContext>,
     /// `MySQL` service configuration (optional)
     ///
     /// Contains network configuration for the `MySQL` service.
     /// This is separate from `MysqlSetupConfig` which contains credentials.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mysql: Option<MysqlServiceConfig>,
+    pub mysql: Option<MysqlServiceContext>,
     /// All networks required by enabled services (derived)
     ///
     /// This list is computed from the networks used by all services.
@@ -84,23 +83,29 @@ impl DockerComposeContext {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{DockerComposeContext, TrackerServiceConfig, MysqlSetupConfig};
+    /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{DockerComposeContext, TrackerServiceContext, MysqlSetupConfig};
+    /// use torrust_tracker_deployer_lib::domain::tracker::TrackerConfig;
+    /// use torrust_tracker_deployer_lib::domain::topology::{EnabledServices, Service};
     ///
-    /// let tracker_config = TrackerServiceConfig::new(
-    ///     vec![6868, 6969],        // UDP ports (always exposed)
-    ///     vec![7070],              // HTTP ports without TLS
-    ///     1212,                    // API port
-    ///     false,                   // API has no TLS
-    ///     false,                   // has_prometheus
-    ///     false,                   // has_mysql
-    ///     false,                   // has_caddy
+    /// // Create tracker config from domain configuration
+    /// let domain_config = TrackerConfig::default();
+    /// let context = EnabledServices::from(&[]);
+    /// let tracker_config = TrackerServiceContext::from_domain_config(
+    ///     &domain_config,
+    ///     &context,
     /// );
     ///
     /// // SQLite (default)
-    /// let context = DockerComposeContext::builder(tracker_config.clone()).build();
-    /// assert_eq!(context.database().driver(), "sqlite3");
+    /// let compose_context = DockerComposeContext::builder(tracker_config.clone()).build();
+    /// assert_eq!(compose_context.database().driver(), "sqlite3");
     ///
     /// // MySQL
+    /// let domain_config_for_mysql = TrackerConfig::default();
+    /// let mysql_context = EnabledServices::from(&[Service::MySQL]);
+    /// let tracker_config_with_mysql = TrackerServiceContext::from_domain_config(
+    ///     &domain_config_for_mysql,
+    ///     &mysql_context,
+    /// );
     /// let mysql_config = MysqlSetupConfig {
     ///     root_password: "root_pass".to_string(),
     ///     database: "db".to_string(),
@@ -108,14 +113,14 @@ impl DockerComposeContext {
     ///     password: "pass".to_string(),
     ///     port: 3306,
     /// };
-    /// let context = DockerComposeContext::builder(tracker_config)
+    /// let compose_context = DockerComposeContext::builder(tracker_config_with_mysql)
     ///     .with_mysql(mysql_config)
     ///     .build();
-    /// assert_eq!(context.database().driver(), "mysql");
+    /// assert_eq!(compose_context.database().driver(), "mysql");
     /// ```
     #[must_use]
-    pub fn builder(ports: TrackerPorts) -> DockerComposeContextBuilder {
-        DockerComposeContextBuilder::new(ports)
+    pub fn builder(tracker: TrackerServiceContext) -> DockerComposeContextBuilder {
+        DockerComposeContextBuilder::new(tracker)
     }
 
     /// Get the database configuration
@@ -126,31 +131,31 @@ impl DockerComposeContext {
 
     /// Get the tracker service configuration
     #[must_use]
-    pub fn tracker(&self) -> &TrackerServiceConfig {
+    pub fn tracker(&self) -> &TrackerServiceContext {
         &self.tracker
     }
 
     /// Get the Prometheus service configuration if present
     #[must_use]
-    pub fn prometheus(&self) -> Option<&PrometheusServiceConfig> {
+    pub fn prometheus(&self) -> Option<&PrometheusServiceContext> {
         self.prometheus.as_ref()
     }
 
     /// Get the Grafana service configuration if present
     #[must_use]
-    pub fn grafana(&self) -> Option<&GrafanaServiceConfig> {
+    pub fn grafana(&self) -> Option<&GrafanaServiceContext> {
         self.grafana.as_ref()
     }
 
     /// Get the Caddy TLS proxy service configuration if present
     #[must_use]
-    pub fn caddy(&self) -> Option<&CaddyServiceConfig> {
+    pub fn caddy(&self) -> Option<&CaddyServiceContext> {
         self.caddy.as_ref()
     }
 
     /// Get the `MySQL` service configuration if present
     #[must_use]
-    pub fn mysql(&self) -> Option<&MysqlServiceConfig> {
+    pub fn mysql(&self) -> Option<&MysqlServiceContext> {
         self.mysql.as_ref()
     }
 
@@ -167,20 +172,114 @@ impl DockerComposeContext {
 #[cfg(test)]
 mod tests {
     use crate::domain::prometheus::PrometheusConfig;
+    use crate::domain::topology::EnabledServices;
+    use crate::domain::tracker::{
+        DatabaseConfig as TrackerDatabaseConfig, HealthCheckApiConfig, HttpApiConfig,
+        HttpTrackerConfig, SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
+    };
 
     use super::*;
 
-    /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
-    fn test_tracker_config() -> TrackerServiceConfig {
-        TrackerServiceConfig::new(
-            vec![6868, 6969], // UDP ports
-            vec![7070],       // HTTP ports without TLS
-            1212,             // API port
-            false,            // API has no TLS
-            false,            // has_prometheus
-            false,            // has_mysql
-            false,            // has_caddy
+    /// Helper to create a domain `TrackerConfig` for tests (standard config)
+    fn test_domain_tracker_config() -> TrackerConfig {
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![
+                UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).unwrap(),
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).unwrap(),
+            ],
+            vec![HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).unwrap()],
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                None,
+                false,
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
         )
+        .unwrap()
+    }
+
+    /// Helper to create a domain `TrackerConfig` with specific UDP ports
+    fn domain_tracker_config_with_udp_port(port: u16) -> TrackerConfig {
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![UdpTrackerConfig::new(format!("0.0.0.0:{port}").parse().unwrap(), None).unwrap()],
+            vec![],
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                None,
+                false,
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
+
+    /// Helper to create a domain `TrackerConfig` with API TLS enabled
+    fn domain_tracker_config_with_api_tls(port: u16) -> TrackerConfig {
+        use crate::shared::DomainName;
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![UdpTrackerConfig::new(format!("0.0.0.0:{port}").parse().unwrap(), None).unwrap()],
+            vec![],
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                Some(DomainName::new("api.example.com").unwrap()),
+                true,
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
+        )
+        .unwrap()
+    }
+
+    /// Helper to create `TrackerServiceContext` for tests (no TLS, no networks)
+    fn test_tracker_config() -> TrackerServiceContext {
+        let domain_config = test_domain_tracker_config();
+        let context = EnabledServices::from(&[]);
+        TrackerServiceContext::from_domain_config(&domain_config, &context)
+    }
+
+    /// Helper to create `TrackerServiceContext` with specific network configuration
+    #[allow(clippy::fn_params_excessive_bools)]
+    fn tracker_config_for_networks(
+        has_prometheus: bool,
+        has_mysql: bool,
+        has_caddy: bool,
+        use_api_tls: bool,
+    ) -> TrackerServiceContext {
+        use crate::domain::topology::Service;
+        let domain_config = if use_api_tls {
+            domain_tracker_config_with_api_tls(6868)
+        } else {
+            domain_tracker_config_with_udp_port(6868)
+        };
+        let mut services = Vec::new();
+        if has_prometheus {
+            services.push(Service::Prometheus);
+        }
+        if has_mysql {
+            services.push(Service::MySQL);
+        }
+        if has_caddy {
+            services.push(Service::Caddy);
+        }
+        let context = EnabledServices::from(&services);
+        TrackerServiceContext::from_domain_config(&domain_config, &context)
     }
 
     #[test]
@@ -190,9 +289,12 @@ mod tests {
 
         assert_eq!(context.database().driver(), "sqlite3");
         assert!(context.database().mysql().is_none());
-        assert_eq!(context.tracker().udp_tracker_ports, vec![6868, 6969]);
-        assert_eq!(context.tracker().http_tracker_ports_without_tls, vec![7070]);
-        assert_eq!(context.tracker().http_api_port, 1212);
+        // Verify ports are derived correctly (2 UDP + 1 HTTP + 1 API = 4 ports)
+        assert_eq!(context.tracker().ports().len(), 4);
+        assert_eq!(context.tracker().ports()[0].binding(), "6868:6868/udp");
+        assert_eq!(context.tracker().ports()[1].binding(), "6969:6969/udp");
+        assert_eq!(context.tracker().ports()[2].binding(), "7070:7070");
+        assert_eq!(context.tracker().ports()[3].binding(), "1212:1212");
     }
 
     #[test]
@@ -219,9 +321,10 @@ mod tests {
         assert_eq!(mysql.password, "pass456");
         assert_eq!(mysql.port, 3306);
 
-        assert_eq!(context.tracker().udp_tracker_ports, vec![6868, 6969]);
-        assert_eq!(context.tracker().http_tracker_ports_without_tls, vec![7070]);
-        assert_eq!(context.tracker().http_api_port, 1212);
+        // Verify ports are derived correctly (2 UDP + 1 HTTP + 1 API = 4 ports)
+        assert_eq!(context.tracker().ports().len(), 4);
+        assert_eq!(context.tracker().ports()[0].binding(), "6868:6868/udp");
+        assert_eq!(context.tracker().ports()[1].binding(), "6969:6969/udp");
     }
 
     #[test]
@@ -293,7 +396,7 @@ mod tests {
             .build();
 
         assert!(context.prometheus().is_some());
-        assert_eq!(context.prometheus().unwrap().scrape_interval_in_secs, 30);
+        assert!(!context.prometheus().unwrap().ports().is_empty());
     }
 
     #[test]
@@ -316,7 +419,7 @@ mod tests {
 
         let serialized = serde_json::to_string(&context).unwrap();
         assert!(serialized.contains("prometheus"));
-        assert!(serialized.contains("\"scrape_interval_in_secs\":20"));
+        assert!(serialized.contains("ports"));
     }
 
     #[test]
@@ -331,7 +434,7 @@ mod tests {
             .build();
 
         let prometheus = context.prometheus().unwrap();
-        assert_eq!(prometheus.networks, vec![Network::Metrics]);
+        assert_eq!(prometheus.networks(), &[Network::Metrics]);
     }
 
     #[test]
@@ -351,8 +454,8 @@ mod tests {
 
         let prometheus = context.prometheus().unwrap();
         assert_eq!(
-            prometheus.networks,
-            vec![Network::Metrics, Network::Visualization]
+            prometheus.networks(),
+            &[Network::Metrics, Network::Visualization]
         );
     }
 
@@ -369,8 +472,7 @@ mod tests {
             .build();
 
         let grafana = context.grafana().unwrap();
-        assert_eq!(grafana.networks, vec![Network::Visualization]);
-        assert!(!grafana.has_tls);
+        assert_eq!(grafana.networks(), &[Network::Visualization]);
     }
 
     #[test]
@@ -382,14 +484,14 @@ mod tests {
         let grafana_config =
             GrafanaConfig::new("admin".to_string(), "password".to_string(), None, false);
         let context = DockerComposeContext::builder(tracker)
-            .with_grafana(grafana_config)
             .with_caddy()
+            .with_grafana(grafana_config)
             .build();
 
         let grafana = context.grafana().unwrap();
         assert_eq!(
-            grafana.networks,
-            vec![Network::Visualization, Network::Proxy]
+            grafana.networks(),
+            &[Network::Visualization, Network::Proxy]
         );
     }
 
@@ -409,15 +511,7 @@ mod tests {
 
         #[test]
         fn it_should_include_database_network_when_mysql_enabled() {
-            let tracker = TrackerServiceConfig::new(
-                vec![6868],
-                vec![],
-                1212,
-                false,
-                false,
-                true, // has_mysql
-                false,
-            );
+            let tracker = tracker_config_for_networks(false, true, false, false);
             let mysql_config = MysqlSetupConfig {
                 root_password: "root".to_string(),
                 database: "db".to_string(),
@@ -439,15 +533,7 @@ mod tests {
 
         #[test]
         fn it_should_include_metrics_network_when_prometheus_enabled() {
-            let tracker = TrackerServiceConfig::new(
-                vec![6868],
-                vec![],
-                1212,
-                false,
-                true, // has_prometheus
-                false,
-                false,
-            );
+            let tracker = tracker_config_for_networks(true, false, false, false);
             let prometheus_config =
                 PrometheusConfig::new(std::num::NonZeroU32::new(30).expect("30 is non-zero"));
             let context = DockerComposeContext::builder(tracker)
@@ -481,15 +567,7 @@ mod tests {
 
         #[test]
         fn it_should_include_proxy_network_when_caddy_enabled() {
-            let tracker = TrackerServiceConfig::new(
-                vec![6868],
-                vec![],
-                1212,
-                true, // API has TLS
-                false,
-                false,
-                true, // has_caddy
-            );
+            let tracker = tracker_config_for_networks(false, false, true, true);
             let context = DockerComposeContext::builder(tracker).with_caddy().build();
 
             let network_names: Vec<&str> = context
@@ -554,15 +632,7 @@ mod tests {
 
         #[test]
         fn it_should_include_all_networks_for_full_https_deployment() {
-            let tracker = TrackerServiceConfig::new(
-                vec![6868],
-                vec![],
-                1212,
-                true, // API has TLS
-                true, // has_prometheus
-                true, // has_mysql
-                true, // has_caddy
-            );
+            let tracker = tracker_config_for_networks(true, true, true, true);
             let mysql_config = MysqlSetupConfig {
                 root_password: "root".to_string(),
                 database: "db".to_string(),
@@ -596,15 +666,7 @@ mod tests {
 
         #[test]
         fn it_should_return_networks_in_deterministic_alphabetical_order() {
-            let tracker = TrackerServiceConfig::new(
-                vec![6868],
-                vec![],
-                1212,
-                true, // API has TLS
-                true, // has_prometheus
-                true, // has_mysql
-                true, // has_caddy
-            );
+            let tracker = tracker_config_for_networks(true, true, true, true);
             let mysql_config = MysqlSetupConfig {
                 root_password: "root".to_string(),
                 database: "db".to_string(),
@@ -644,15 +706,7 @@ mod tests {
         #[test]
         fn it_should_deduplicate_networks_from_multiple_services() {
             // Prometheus and Grafana both use visualization_network
-            let tracker = TrackerServiceConfig::new(
-                vec![6868],
-                vec![],
-                1212,
-                false,
-                true, // has_prometheus
-                false,
-                false,
-            );
+            let tracker = tracker_config_for_networks(true, false, false, false);
             let prometheus_config =
                 PrometheusConfig::new(std::num::NonZeroU32::new(30).expect("30 is non-zero"));
             let grafana_config =

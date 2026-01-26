@@ -185,7 +185,9 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
-    use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::TrackerServiceConfig;
+    use crate::domain::topology::EnabledServices;
+    use crate::domain::tracker::TrackerConfig;
+    use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::TrackerServiceContext;
     use crate::infrastructure::templating::docker_compose::DOCKER_COMPOSE_SUBFOLDER;
 
     /// Creates a `TemplateManager` that uses the embedded templates
@@ -206,16 +208,10 @@ mod tests {
 
     /// Helper function to create a test docker-compose context with `SQLite`
     fn create_test_docker_compose_context_sqlite() -> DockerComposeContext {
-        // Use default test ports (matching TrackerConfig::default())
-        let tracker = TrackerServiceConfig::new(
-            vec![6969], // UDP ports
-            vec![7070], // HTTP ports without TLS
-            1212,       // API port
-            false,      // API has no TLS
-            false,      // has_prometheus
-            false,      // has_mysql
-            false,      // has_caddy
-        );
+        // Use default TrackerConfig from domain layer
+        let tracker_config = TrackerConfig::default();
+        let context = EnabledServices::from(&[]);
+        let tracker = TrackerServiceContext::from_domain_config(&tracker_config, &context);
         DockerComposeContext::builder(tracker).build()
     }
 

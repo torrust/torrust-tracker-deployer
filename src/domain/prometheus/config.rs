@@ -6,6 +6,10 @@ use std::num::NonZeroU32;
 
 use serde::{Deserialize, Serialize};
 
+use crate::domain::topology::{
+    EnabledServices, Network, NetworkDerivation, PortBinding, PortDerivation, Service,
+};
+
 /// Default scrape interval in seconds
 ///
 /// This is the recommended interval for most use cases, balancing
@@ -85,6 +89,39 @@ impl Default for PrometheusConfig {
     }
 }
 
+impl PortDerivation for PrometheusConfig {
+    /// Derives port bindings for Prometheus
+    ///
+    /// Implements PORT-10: Prometheus 9090 on localhost only
+    ///
+    /// Prometheus is bound to localhost to prevent external access.
+    /// Grafana accesses it via Docker network (`http://prometheus:9090`).
+    fn derive_ports(&self) -> Vec<PortBinding> {
+        vec![PortBinding::localhost_tcp(
+            9090,
+            "Prometheus metrics (localhost only)",
+        )]
+    }
+}
+
+impl NetworkDerivation for PrometheusConfig {
+    /// Derives network assignments for the Prometheus service
+    ///
+    /// Implements NET-04 and NET-05:
+    /// - NET-04: Metrics network always (to scrape tracker)
+    /// - NET-05: Visualization network if Grafana enabled
+    fn derive_networks(&self, enabled_services: &EnabledServices) -> Vec<Network> {
+        let mut networks = vec![Network::Metrics];
+
+        // NET-05: Visualization network if Grafana enabled
+        if enabled_services.has(Service::Grafana) {
+            networks.push(Network::Visualization);
+        }
+
+        networks
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::num::NonZeroU32;
@@ -142,5 +179,43 @@ mod tests {
         // Cannot construct NonZeroU32 with 0
         let result = NonZeroU32::new(0);
         assert!(result.is_none());
+    }
+
+    // =========================================================================
+    // Port derivation tests (PORT-10)
+    // =========================================================================
+
+    mod port_derivation {
+        use std::net::{IpAddr, Ipv4Addr};
+
+        use super::*;
+        use crate::domain::tracker::Protocol;
+
+        #[test]
+        fn it_should_derive_prometheus_port_on_localhost_only() {
+            // PORT-10: Prometheus 9090 on localhost only
+            let config = PrometheusConfig::default();
+
+            let ports = config.derive_ports();
+
+            assert_eq!(ports.len(), 1);
+            let port = &ports[0];
+            assert_eq!(port.host_port(), 9090);
+            assert_eq!(port.container_port(), 9090);
+            assert_eq!(port.protocol(), Protocol::Tcp);
+            assert_eq!(port.host_ip(), Some(IpAddr::V4(Ipv4Addr::LOCALHOST)));
+        }
+
+        #[test]
+        fn it_should_include_description_for_prometheus_port() {
+            let config = PrometheusConfig::default();
+
+            let ports = config.derive_ports();
+
+            assert_eq!(
+                ports[0].description(),
+                "Prometheus metrics (localhost only)"
+            );
+        }
     }
 }

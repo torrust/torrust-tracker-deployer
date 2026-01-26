@@ -5,10 +5,10 @@
 //!
 //! ## Note on Context Separation
 //!
-//! This type (`CaddyServiceConfig`) is separate from the `CaddyContext` used
+//! This type (`CaddyServiceContext`) is separate from the `CaddyContext` used
 //! for rendering the Caddyfile.tera template. Each template has its own context:
 //!
-//! - `CaddyServiceConfig` (this module): For docker-compose.yml service definition
+//! - `CaddyServiceContext` (this module): For docker-compose.yml service definition
 //! - `CaddyContext` (in caddy/template/wrapper): For Caddyfile content with domains/ports
 //!
 //! The docker-compose template only needs to know that Caddy is enabled
@@ -16,10 +16,11 @@
 
 use serde::Serialize;
 
-use crate::domain::topology::Network;
+use crate::domain::caddy::CaddyConfig;
+use crate::domain::topology::{EnabledServices, Network, NetworkDerivation, PortDerivation};
 
 use super::port_definition::PortDefinition;
-use super::port_derivation::derive_caddy_ports;
+use super::service_topology::ServiceTopology;
 
 /// Caddy reverse proxy service configuration for Docker Compose
 ///
@@ -27,52 +28,71 @@ use super::port_derivation::derive_caddy_ports;
 /// This is intentionally minimal - the actual Caddy configuration (domains, ports)
 /// is in the Caddyfile, rendered separately.
 ///
+/// Uses `ServiceTopology` to share the common topology structure with other services.
+///
 /// # Example
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::context::CaddyServiceConfig;
-/// use torrust_tracker_deployer_lib::domain::topology::Network;
+/// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::context::CaddyServiceContext;
+/// use torrust_tracker_deployer_lib::domain::caddy::CaddyConfig;
+/// use torrust_tracker_deployer_lib::domain::topology::{EnabledServices, Network};
 ///
-/// let caddy = CaddyServiceConfig::new();
-/// assert_eq!(caddy.networks, vec![Network::Proxy]);
-/// assert_eq!(caddy.ports.len(), 3); // 80, 443, 443/udp
+/// let caddy = CaddyServiceContext::from_domain_config(&CaddyConfig::new(), &EnabledServices::default());
+/// assert_eq!(caddy.networks(), &[Network::Proxy]);
+/// assert_eq!(caddy.ports().len(), 3); // 80, 443, 443/udp
 /// ```
 #[derive(Debug, Clone, Serialize, PartialEq)]
-pub struct CaddyServiceConfig {
-    /// Port bindings for Docker Compose
+pub struct CaddyServiceContext {
+    /// Service topology (ports and networks)
     ///
-    /// Caddy exposes ports 80 (HTTP for ACME), 443 (HTTPS), and 443/udp (QUIC).
-    pub ports: Vec<PortDefinition>,
-    /// Networks this service connects to
-    ///
-    /// Caddy always connects to `proxy_network` for reverse proxying
-    /// to backend services (tracker API, HTTP trackers, Grafana).
-    pub networks: Vec<Network>,
+    /// Flattened for template compatibility - serializes ports/networks at top level.
+    #[serde(flatten)]
+    pub topology: ServiceTopology,
 }
 
-impl CaddyServiceConfig {
-    /// Creates a new `CaddyServiceConfig` with derived ports and default networks
+impl CaddyServiceContext {
+    /// Creates a new `CaddyServiceContext` from domain configuration
     ///
-    /// Caddy connects to:
-    /// - `proxy_network`: For reverse proxying to backend services
+    /// Uses the domain `PortDerivation` and `NetworkDerivation` traits,
+    /// ensuring business rules live in the domain layer.
     ///
-    /// Caddy exposes:
-    /// - Port 80: HTTP for ACME challenge
-    /// - Port 443: HTTPS
-    /// - Port 443/udp: HTTP/3 QUIC
+    /// # Arguments
+    ///
+    /// * `config` - The domain Caddy configuration
+    /// * `enabled_services` - Topology context with information about enabled services
     #[must_use]
-    pub fn new() -> Self {
-        let port_bindings = derive_caddy_ports();
+    pub fn from_domain_config(config: &CaddyConfig, enabled_services: &EnabledServices) -> Self {
+        let port_bindings = config.derive_ports();
         let ports = port_bindings.iter().map(PortDefinition::from).collect();
+        let networks = config.derive_networks(enabled_services);
 
         Self {
-            ports,
-            networks: vec![Network::Proxy],
+            topology: ServiceTopology::new(ports, networks),
         }
+    }
+
+    /// Creates a new `CaddyServiceContext` with default configuration
+    ///
+    /// Convenience method that creates a default `CaddyConfig` and empty enabled services.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::from_domain_config(&CaddyConfig::new(), &EnabledServices::default())
+    }
+
+    /// Returns a reference to the port bindings
+    #[must_use]
+    pub fn ports(&self) -> &[PortDefinition] {
+        &self.topology.ports
+    }
+
+    /// Returns a reference to the networks
+    #[must_use]
+    pub fn networks(&self) -> &[Network] {
+        &self.topology.networks
     }
 }
 
-impl Default for CaddyServiceConfig {
+impl Default for CaddyServiceContext {
     fn default() -> Self {
         Self::new()
     }
@@ -84,21 +104,21 @@ mod tests {
 
     #[test]
     fn it_should_connect_caddy_to_proxy_network() {
-        let caddy = CaddyServiceConfig::new();
+        let caddy = CaddyServiceContext::new();
 
-        assert_eq!(caddy.networks, vec![Network::Proxy]);
+        assert_eq!(caddy.networks(), &[Network::Proxy]);
     }
 
     #[test]
     fn it_should_implement_default() {
-        let caddy = CaddyServiceConfig::default();
+        let caddy = CaddyServiceContext::default();
 
-        assert_eq!(caddy.networks, vec![Network::Proxy]);
+        assert_eq!(caddy.networks(), &[Network::Proxy]);
     }
 
     #[test]
     fn it_should_serialize_network_to_name_string() {
-        let caddy = CaddyServiceConfig::new();
+        let caddy = CaddyServiceContext::new();
 
         let json = serde_json::to_value(&caddy).expect("serialization should succeed");
 
@@ -108,19 +128,39 @@ mod tests {
 
     #[test]
     fn it_should_expose_three_ports() {
-        let caddy = CaddyServiceConfig::new();
+        let caddy = CaddyServiceContext::new();
 
-        assert_eq!(caddy.ports.len(), 3);
+        assert_eq!(caddy.ports().len(), 3);
     }
 
     #[test]
     fn it_should_serialize_ports_with_binding_and_description() {
-        let caddy = CaddyServiceConfig::new();
+        let caddy = CaddyServiceContext::new();
 
         let json = serde_json::to_value(&caddy).expect("serialization should succeed");
 
         // Each port has binding and description fields
         assert!(json["ports"][0]["binding"].is_string());
         assert!(json["ports"][0]["description"].is_string());
+    }
+
+    #[test]
+    fn it_should_use_domain_traits_for_port_derivation() {
+        let config = CaddyConfig::new();
+        let enabled_services = EnabledServices::default();
+        let caddy = CaddyServiceContext::from_domain_config(&config, &enabled_services);
+
+        // Verify ports come from domain trait
+        assert_eq!(caddy.ports().len(), 3);
+    }
+
+    #[test]
+    fn it_should_use_domain_traits_for_network_derivation() {
+        let config = CaddyConfig::new();
+        let enabled_services = EnabledServices::default();
+        let caddy = CaddyServiceContext::from_domain_config(&config, &enabled_services);
+
+        // Verify networks come from domain trait
+        assert_eq!(caddy.networks(), &[Network::Proxy]);
     }
 }

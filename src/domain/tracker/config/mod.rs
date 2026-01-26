@@ -10,6 +10,9 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use serde::{Deserialize, Serialize};
 
 use super::{BindingAddress, Protocol};
+use crate::domain::topology::{
+    EnabledServices, Network, NetworkDerivation, PortBinding, PortDerivation, Service,
+};
 use crate::shared::DomainName;
 
 mod core;
@@ -506,6 +509,80 @@ impl TrackerConfig {
                 .iter()
                 .any(http::HttpTrackerConfig::use_tls_proxy)
             || self.health_check_api.use_tls_proxy()
+    }
+}
+
+impl PortDerivation for TrackerConfig {
+    /// Derives port bindings for the Tracker service
+    ///
+    /// Implements PORT-01 through PORT-06:
+    /// - PORT-01: Tracker needs ports if UDP OR HTTP without TLS OR API without TLS
+    /// - PORT-02: UDP ports always exposed (UDP doesn't use TLS)
+    /// - PORT-03: HTTP ports WITHOUT TLS exposed directly
+    /// - PORT-04: HTTP ports WITH TLS NOT exposed (Caddy handles)
+    /// - PORT-05: API port exposed only when no TLS
+    /// - PORT-06: API port NOT exposed when TLS
+    fn derive_ports(&self) -> Vec<PortBinding> {
+        let mut ports = Vec::new();
+
+        // PORT-02: UDP ports always exposed (UDP doesn't use TLS)
+        for udp_tracker in &self.udp_trackers {
+            ports.push(PortBinding::udp(
+                udp_tracker.bind_address().port(),
+                "BitTorrent UDP announce",
+            ));
+        }
+
+        // PORT-03: HTTP ports WITHOUT TLS exposed directly
+        // PORT-04: HTTP ports WITH TLS NOT exposed (Caddy handles)
+        for http_tracker in &self.http_trackers {
+            if !http_tracker.use_tls_proxy() {
+                ports.push(PortBinding::tcp(
+                    http_tracker.bind_address().port(),
+                    "HTTP tracker announce",
+                ));
+            }
+        }
+
+        // PORT-05: API exposed only when no TLS
+        // PORT-06: API NOT exposed when TLS
+        if !self.http_api.use_tls_proxy() {
+            ports.push(PortBinding::tcp(
+                self.http_api.bind_address().port(),
+                "HTTP API (stats/whitelist)",
+            ));
+        }
+
+        ports
+    }
+}
+
+impl NetworkDerivation for TrackerConfig {
+    /// Derives network assignments for the Tracker service
+    ///
+    /// Implements NET-01 through NET-03:
+    /// - NET-01: Metrics network if Prometheus enabled
+    /// - NET-02: Database network if `MySQL` enabled
+    /// - NET-03: Proxy network if Caddy enabled
+    fn derive_networks(&self, enabled_services: &EnabledServices) -> Vec<Network> {
+        let mut networks = Vec::new();
+
+        // NET-01: Metrics network if Prometheus enabled
+        if enabled_services.has(Service::Prometheus) {
+            networks.push(Network::Metrics);
+        }
+
+        // NET-02: Database network if MySQL enabled
+        if enabled_services.has(Service::MySQL) {
+            networks.push(Network::Database);
+        }
+
+        // NET-03: Proxy network if Caddy enabled
+        if enabled_services.has(Service::Caddy) {
+            networks.push(Network::Proxy);
+        }
+
+        networks
     }
 }
 
@@ -1133,6 +1210,170 @@ mod tests {
             .expect("valid config");
 
             assert!(config.http_api().use_tls_proxy());
+        }
+    }
+
+    // =========================================================================
+    // Port derivation tests (PORT-01 through PORT-06)
+    // =========================================================================
+
+    mod port_derivation {
+        use super::*;
+
+        fn default_core() -> TrackerCoreConfig {
+            TrackerCoreConfig::new(
+                DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            )
+        }
+
+        #[test]
+        fn it_should_expose_udp_ports_always() {
+            // PORT-02: UDP ports always exposed (UDP doesn't use TLS)
+            let config = TrackerConfig::new(
+                default_core(),
+                vec![
+                    test_udp_tracker_config("0.0.0.0:6969"),
+                    test_udp_tracker_config("0.0.0.0:6868"),
+                ],
+                vec![],
+                test_http_api_config("0.0.0.0:1212", "token"),
+                test_health_check_api_config("127.0.0.1:1313"),
+            )
+            .unwrap();
+
+            let ports = config.derive_ports();
+            let udp_ports: Vec<_> = ports
+                .iter()
+                .filter(|p| p.protocol() == Protocol::Udp)
+                .collect();
+
+            assert_eq!(udp_ports.len(), 2);
+            assert_eq!(udp_ports[0].host_port(), 6969);
+            assert_eq!(udp_ports[1].host_port(), 6868);
+        }
+
+        #[test]
+        fn it_should_expose_http_ports_without_tls() {
+            // PORT-03: HTTP ports WITHOUT TLS exposed directly
+            let config = TrackerConfig::new(
+                default_core(),
+                vec![],
+                vec![
+                    test_http_tracker_config("0.0.0.0:7070"),
+                    test_http_tracker_config("0.0.0.0:8080"),
+                ],
+                test_http_api_config("0.0.0.0:1212", "token"),
+                test_health_check_api_config("127.0.0.1:1313"),
+            )
+            .unwrap();
+
+            let ports = config.derive_ports();
+            // Should have 2 HTTP ports + 1 API port
+            let tcp_ports: Vec<_> = ports
+                .iter()
+                .filter(|p| p.protocol() == Protocol::Tcp)
+                .collect();
+
+            assert_eq!(tcp_ports.len(), 3);
+            assert!(tcp_ports.iter().any(|p| p.host_port() == 7070));
+            assert!(tcp_ports.iter().any(|p| p.host_port() == 8080));
+        }
+
+        #[test]
+        fn it_should_not_expose_http_ports_with_tls() {
+            // PORT-04: HTTP ports WITH TLS NOT exposed (Caddy handles)
+            let domain = crate::shared::DomainName::new("tracker.example.com").unwrap();
+            let config = TrackerConfig::new(
+                default_core(),
+                vec![],
+                vec![test_http_tracker_config_with_tls(
+                    "0.0.0.0:7070",
+                    Some(domain),
+                    true,
+                )],
+                test_http_api_config("0.0.0.0:1212", "token"),
+                test_health_check_api_config("127.0.0.1:1313"),
+            )
+            .unwrap();
+
+            let ports = config.derive_ports();
+            // Should only have API port (7070 is hidden behind TLS)
+            assert!(ports.iter().all(|p| p.host_port() != 7070));
+        }
+
+        #[test]
+        fn it_should_expose_api_port_without_tls() {
+            // PORT-05: API exposed only when no TLS
+            let config = TrackerConfig::new(
+                default_core(),
+                vec![],
+                vec![],
+                test_http_api_config("0.0.0.0:1212", "token"),
+                test_health_check_api_config("127.0.0.1:1313"),
+            )
+            .unwrap();
+
+            let ports = config.derive_ports();
+            let api_port = ports.iter().find(|p| p.host_port() == 1212);
+
+            assert!(api_port.is_some());
+            assert_eq!(
+                api_port.unwrap().description(),
+                "HTTP API (stats/whitelist)"
+            );
+        }
+
+        #[test]
+        fn it_should_not_expose_api_port_with_tls() {
+            // PORT-06: API NOT exposed when TLS
+            let domain = crate::shared::DomainName::new("api.example.com").unwrap();
+            let config = TrackerConfig::new(
+                default_core(),
+                vec![],
+                vec![],
+                test_http_api_config_with_tls("0.0.0.0:1212", "token", Some(domain), true),
+                test_health_check_api_config("127.0.0.1:1313"),
+            )
+            .unwrap();
+
+            let ports = config.derive_ports();
+            // API port should not be exposed when TLS is enabled
+            assert!(ports.iter().all(|p| p.host_port() != 1212));
+        }
+
+        #[test]
+        fn it_should_return_empty_when_all_ports_hidden_by_tls() {
+            // All services behind TLS = no exposed ports from tracker
+            let api_domain = crate::shared::DomainName::new("api.example.com").unwrap();
+            let tracker_domain = crate::shared::DomainName::new("tracker.example.com").unwrap();
+
+            let config = TrackerConfig::new(
+                default_core(),
+                vec![], // No UDP
+                vec![test_http_tracker_config_with_tls(
+                    "0.0.0.0:7070",
+                    Some(tracker_domain),
+                    true,
+                )],
+                test_http_api_config_with_tls("0.0.0.0:1212", "token", Some(api_domain), true),
+                test_health_check_api_config("127.0.0.1:1313"),
+            )
+            .unwrap();
+
+            let ports = config.derive_ports();
+            assert!(ports.is_empty());
+        }
+
+        #[test]
+        fn it_should_include_descriptions_for_all_ports() {
+            let config = TrackerConfig::default();
+
+            let ports = config.derive_ports();
+
+            for port in &ports {
+                assert!(!port.description().is_empty());
+            }
         }
     }
 }

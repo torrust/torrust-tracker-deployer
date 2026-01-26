@@ -25,6 +25,12 @@
 //! - `shared` - Shared modules used across different layers
 //! - `testing` - Testing utilities (unit, integration, and end-to-end)
 
+// False positive: clippy reports large_stack_arrays for vec![] macro with ServiceTopology
+// This is a known upstream issue: https://github.com/rust-lang/rust-clippy/issues/12586
+// Tracking issue: https://github.com/torrust/torrust-tracker-deployer/issues/304
+// See: docs/issues/304-clippy-large-stack-arrays-false-positive.md
+#![allow(clippy::large_stack_arrays)]
+
 pub mod adapters;
 pub mod application;
 pub mod bootstrap;

@@ -188,21 +188,45 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
+    use crate::domain::topology::EnabledServices;
+    use crate::domain::tracker::DatabaseConfig as TrackerDatabaseConfig;
+    use crate::domain::tracker::{
+        HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig, TrackerConfig,
+        TrackerCoreConfig, UdpTrackerConfig,
+    };
     use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
-        DockerComposeContext, MysqlSetupConfig, TrackerServiceConfig,
+        DockerComposeContext, MysqlSetupConfig, TrackerServiceContext,
     };
 
-    /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
-    fn test_tracker_config() -> TrackerServiceConfig {
-        TrackerServiceConfig::new(
-            vec![6868, 6969], // UDP ports
-            vec![7070],       // HTTP ports without TLS
-            1212,             // API port
-            false,            // API has no TLS
-            false,            // has_prometheus
-            false,            // has_mysql
-            false,            // has_caddy
+    /// Helper to create a domain `TrackerConfig` for tests
+    fn test_domain_tracker_config() -> TrackerConfig {
+        TrackerConfig::new(
+            TrackerCoreConfig::new(
+                TrackerDatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap()),
+                false,
+            ),
+            vec![
+                UdpTrackerConfig::new("0.0.0.0:6868".parse().unwrap(), None).unwrap(),
+                UdpTrackerConfig::new("0.0.0.0:6969".parse().unwrap(), None).unwrap(),
+            ],
+            vec![HttpTrackerConfig::new("0.0.0.0:7070".parse().unwrap(), None, false).unwrap()],
+            HttpApiConfig::new(
+                "0.0.0.0:1212".parse().unwrap(),
+                "TestToken".to_string().into(),
+                None,
+                false,
+            )
+            .unwrap(),
+            HealthCheckApiConfig::new("127.0.0.1:1313".parse().unwrap(), None, false).unwrap(),
         )
+        .unwrap()
+    }
+
+    /// Helper to create `TrackerServiceContext` for tests (no TLS, no networks)
+    fn test_tracker_config() -> TrackerServiceContext {
+        let domain_config = test_domain_tracker_config();
+        let context = EnabledServices::from(&[]);
+        TrackerServiceContext::from_domain_config(&domain_config, &context)
     }
 
     #[test]
@@ -349,30 +373,25 @@ mod tests {
     #[test]
     fn it_should_render_prometheus_service_when_config_is_present() {
         use crate::domain::prometheus::PrometheusConfig;
+        use crate::domain::topology::Service;
 
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
         // Create tracker config with prometheus enabled
-        let tracker = TrackerServiceConfig::new(
-            vec![6868, 6969], // UDP ports
-            vec![7070],       // HTTP ports without TLS
-            1212,             // API port
-            false,            // API has no TLS
-            true,             // has_prometheus
-            false,            // has_mysql
-            false,            // has_caddy
-        );
+        let domain_config = test_domain_tracker_config();
+        let topology_context = EnabledServices::from(&[Service::Prometheus]);
+        let tracker = TrackerServiceContext::from_domain_config(&domain_config, &topology_context);
         let prometheus_config =
             PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
-        let context = DockerComposeContext::builder(tracker)
+        let compose_context = DockerComposeContext::builder(tracker)
             .with_prometheus(prometheus_config)
             .build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();
 
-        let result = renderer.render(&context, output_dir.path());
+        let result = renderer.render(&compose_context, output_dir.path());
         assert!(
             result.is_ok(),
             "Rendering with Prometheus context should succeed"
