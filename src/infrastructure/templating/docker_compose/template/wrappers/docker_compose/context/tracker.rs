@@ -3,7 +3,8 @@
 // External crates
 use serde::Serialize;
 
-use crate::domain::topology::Network;
+use crate::domain::topology::{Network, PortDerivation};
+use crate::domain::tracker::TrackerConfig;
 
 use super::port_definition::PortDefinition;
 use super::port_derivation::derive_tracker_ports;
@@ -79,6 +80,62 @@ impl TrackerServiceConfig {
             http_api_port,
             http_api_has_tls,
         );
+        let ports = port_bindings.iter().map(PortDefinition::from).collect();
+
+        Self {
+            udp_tracker_ports,
+            http_tracker_ports_without_tls,
+            http_api_port,
+            http_api_has_tls,
+            needs_ports_section,
+            ports,
+            networks,
+        }
+    }
+
+    /// Creates a new `TrackerServiceConfig` from domain configuration
+    ///
+    /// Uses the domain `PortDerivation` trait for port derivation logic,
+    /// ensuring business rules live in the domain layer.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The domain Tracker configuration
+    /// * `has_prometheus` - Whether Prometheus is enabled (adds `metrics_network`)
+    /// * `has_mysql` - Whether `MySQL` is the database driver (adds `database_network`)
+    /// * `has_caddy` - Whether Caddy TLS proxy is enabled (adds `proxy_network`)
+    #[must_use]
+    pub fn from_domain_config(
+        config: &TrackerConfig,
+        has_prometheus: bool,
+        has_mysql: bool,
+        has_caddy: bool,
+    ) -> Self {
+        // Extract port info for legacy fields
+        let udp_tracker_ports: Vec<u16> = config
+            .udp_trackers()
+            .iter()
+            .map(|t| t.bind_address().port())
+            .collect();
+
+        let http_tracker_ports_without_tls: Vec<u16> = config
+            .http_trackers()
+            .iter()
+            .filter(|t| !t.use_tls_proxy())
+            .map(|t| t.bind_address().port())
+            .collect();
+
+        let http_api_port = config.http_api().bind_address().port();
+        let http_api_has_tls = config.http_api().use_tls_proxy();
+
+        let needs_ports_section = !udp_tracker_ports.is_empty()
+            || !http_tracker_ports_without_tls.is_empty()
+            || !http_api_has_tls;
+
+        let networks = Self::compute_networks(has_prometheus, has_mysql, has_caddy);
+
+        // Use domain PortDerivation trait for port logic
+        let port_bindings = config.derive_ports();
         let ports = port_bindings.iter().map(PortDefinition::from).collect();
 
         Self {

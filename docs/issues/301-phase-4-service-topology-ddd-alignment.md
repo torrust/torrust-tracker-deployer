@@ -321,9 +321,9 @@ impl TrackerServiceContext {
 
 ### Step 4: Implement PortDerivation for Tracker (Most Complex)
 
-- [ ] 4.1 Implement `PortDerivation` for `TrackerConfig` in domain
-- [ ] 4.2 Add unit tests for Tracker port derivation
-- [ ] 4.3 Update infrastructure `TrackerServiceConfig` to use domain trait
+- [x] 4.1 Implement `PortDerivation` for `TrackerConfig` in domain
+- [x] 4.2 Add unit tests for Tracker port derivation
+- [x] 4.3 Update infrastructure `TrackerServiceConfig` to use domain trait
 - [ ] 4.4 Remove `derive_tracker_ports()` calls from infrastructure
 
 ### Step 5: Fixed Port Services (Caddy, MySQL)
