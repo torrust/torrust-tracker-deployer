@@ -3,11 +3,11 @@
 // External crates
 use serde::Serialize;
 
-use crate::domain::topology::Network;
+use crate::domain::grafana::GrafanaConfig;
+use crate::domain::topology::{Network, PortDerivation};
 use crate::shared::secrets::Password;
 
 use super::port_definition::PortDefinition;
-use super::port_derivation::derive_grafana_ports;
 
 /// Grafana service configuration for Docker Compose
 ///
@@ -41,25 +41,19 @@ impl GrafanaServiceConfig {
     ///
     /// # Arguments
     ///
-    /// * `admin_user` - Grafana admin username
-    /// * `admin_password` - Grafana admin password
-    /// * `has_tls` - Whether Grafana has TLS enabled (via Caddy)
+    /// * `config` - The domain Grafana configuration
     /// * `has_caddy` - Whether Caddy TLS proxy is enabled (adds `proxy_network`)
     #[must_use]
-    pub fn new(
-        admin_user: String,
-        admin_password: Password,
-        has_tls: bool,
-        has_caddy: bool,
-    ) -> Self {
+    pub fn new(config: &GrafanaConfig, has_caddy: bool) -> Self {
         let networks = Self::compute_networks(has_caddy);
-        let port_bindings = derive_grafana_ports(has_tls);
+        // Use domain PortDerivation trait for port logic
+        let port_bindings = config.derive_ports();
         let ports = port_bindings.iter().map(PortDefinition::from).collect();
 
         Self {
-            admin_user,
-            admin_password,
-            has_tls,
+            admin_user: config.admin_user().to_string(),
+            admin_password: config.admin_password().clone(),
+            has_tls: config.use_tls_proxy(),
             ports,
             networks,
         }
@@ -80,19 +74,31 @@ impl GrafanaServiceConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::DomainName;
+
+    fn make_config(use_tls_proxy: bool) -> GrafanaConfig {
+        if use_tls_proxy {
+            GrafanaConfig::new(
+                "admin".to_string(),
+                "password".to_string(),
+                Some(DomainName::new("grafana.example.com").unwrap()),
+                true,
+            )
+        } else {
+            GrafanaConfig::new("admin".to_string(), "password".to_string(), None, false)
+        }
+    }
 
     #[test]
     fn it_should_connect_grafana_to_visualization_network() {
-        let config =
-            GrafanaServiceConfig::new("admin".to_string(), Password::new("password"), false, false);
+        let config = GrafanaServiceConfig::new(&make_config(false), false);
 
         assert!(config.networks.contains(&Network::Visualization));
     }
 
     #[test]
     fn it_should_not_connect_grafana_to_proxy_network_when_caddy_disabled() {
-        let config =
-            GrafanaServiceConfig::new("admin".to_string(), Password::new("password"), false, false);
+        let config = GrafanaServiceConfig::new(&make_config(false), false);
 
         assert_eq!(config.networks, vec![Network::Visualization]);
         assert!(!config.networks.contains(&Network::Proxy));
@@ -100,8 +106,7 @@ mod tests {
 
     #[test]
     fn it_should_connect_grafana_to_proxy_network_when_caddy_enabled() {
-        let config =
-            GrafanaServiceConfig::new("admin".to_string(), Password::new("password"), true, true);
+        let config = GrafanaServiceConfig::new(&make_config(true), true);
 
         assert_eq!(
             config.networks,
@@ -111,8 +116,7 @@ mod tests {
 
     #[test]
     fn it_should_serialize_networks_to_name_strings() {
-        let config =
-            GrafanaServiceConfig::new("admin".to_string(), Password::new("password"), true, true);
+        let config = GrafanaServiceConfig::new(&make_config(true), true);
 
         let json = serde_json::to_value(&config).expect("serialization should succeed");
 
@@ -123,8 +127,7 @@ mod tests {
 
     #[test]
     fn it_should_expose_port_3000_when_tls_disabled() {
-        let config =
-            GrafanaServiceConfig::new("admin".to_string(), Password::new("password"), false, false);
+        let config = GrafanaServiceConfig::new(&make_config(false), false);
 
         assert_eq!(config.ports.len(), 1);
         assert_eq!(config.ports[0].binding(), "3000:3000");
@@ -132,8 +135,7 @@ mod tests {
 
     #[test]
     fn it_should_not_expose_ports_when_tls_enabled() {
-        let config =
-            GrafanaServiceConfig::new("admin".to_string(), Password::new("password"), true, true);
+        let config = GrafanaServiceConfig::new(&make_config(true), true);
 
         assert!(config.ports.is_empty());
     }

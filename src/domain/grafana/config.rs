@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::domain::topology::{PortBinding, PortDerivation};
 use crate::shared::domain_name::DomainName;
 use crate::shared::secrets::Password;
 
@@ -112,6 +113,23 @@ impl Default for GrafanaConfig {
             admin_password: Password::new("admin"),
             domain: None,
             use_tls_proxy: false,
+        }
+    }
+}
+
+impl PortDerivation for GrafanaConfig {
+    /// Derives port bindings for Grafana
+    ///
+    /// Implements PORT-07 and PORT-08:
+    /// - Without TLS: expose port 3000 directly
+    /// - With TLS: don't expose (Caddy handles it)
+    fn derive_ports(&self) -> Vec<PortBinding> {
+        // PORT-07: Grafana 3000 exposed only without TLS
+        // PORT-08: Grafana 3000 NOT exposed with TLS
+        if self.use_tls_proxy {
+            vec![]
+        } else {
+            vec![PortBinding::tcp(3000, "Grafana dashboard")]
         }
     }
 }
@@ -232,5 +250,54 @@ mod tests {
             cloned.admin_password.expose_secret(),
             config.admin_password.expose_secret()
         );
+    }
+
+    // =========================================================================
+    // Port derivation tests (PORT-07, PORT-08)
+    // =========================================================================
+
+    mod port_derivation {
+        use super::*;
+        use crate::domain::tracker::Protocol;
+
+        #[test]
+        fn it_should_expose_port_3000_when_tls_disabled() {
+            // PORT-07: Grafana 3000 exposed only without TLS
+            let config =
+                GrafanaConfig::new("admin".to_string(), "password".to_string(), None, false);
+
+            let ports = config.derive_ports();
+
+            assert_eq!(ports.len(), 1);
+            let port = &ports[0];
+            assert_eq!(port.host_port(), 3000);
+            assert_eq!(port.container_port(), 3000);
+            assert_eq!(port.protocol(), Protocol::Tcp);
+        }
+
+        #[test]
+        fn it_should_not_expose_port_when_tls_enabled() {
+            // PORT-08: Grafana 3000 NOT exposed with TLS
+            let domain = DomainName::new("grafana.example.com").unwrap();
+            let config = GrafanaConfig::new(
+                "admin".to_string(),
+                "password".to_string(),
+                Some(domain),
+                true,
+            );
+
+            let ports = config.derive_ports();
+
+            assert!(ports.is_empty());
+        }
+
+        #[test]
+        fn it_should_include_description_for_grafana_port() {
+            let config = GrafanaConfig::default();
+
+            let ports = config.derive_ports();
+
+            assert_eq!(ports[0].description(), "Grafana dashboard");
+        }
     }
 }

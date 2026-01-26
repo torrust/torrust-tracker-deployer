@@ -314,10 +314,10 @@ impl TrackerServiceContext {
 
 ### Step 3: Implement PortDerivation for Grafana
 
-- [ ] 3.1 Implement `PortDerivation` for `GrafanaConfig` in domain
-- [ ] 3.2 Add unit tests for Grafana port derivation
-- [ ] 3.3 Update infrastructure `GrafanaServiceConfig` to use domain trait
-- [ ] 3.4 Remove `derive_grafana_ports()` calls from infrastructure
+- [x] 3.1 Implement `PortDerivation` for `GrafanaConfig` in domain
+- [x] 3.2 Add unit tests for Grafana port derivation
+- [x] 3.3 Update infrastructure `GrafanaServiceConfig` to use domain trait
+- [x] 3.4 Remove `derive_grafana_ports()` calls from infrastructure
 
 ### Step 4: Implement PortDerivation for Tracker (Most Complex)
 

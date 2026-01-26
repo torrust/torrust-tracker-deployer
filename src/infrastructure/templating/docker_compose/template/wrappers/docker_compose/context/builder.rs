@@ -146,15 +146,10 @@ impl DockerComposeContextBuilder {
             .map(|config| PrometheusServiceConfig::new(config, has_grafana));
 
         // Build Grafana service config if enabled
-        let grafana = self.grafana_config.map(|config| {
-            let has_tls = config.use_tls_proxy();
-            GrafanaServiceConfig::new(
-                config.admin_user().to_string(),
-                config.admin_password().clone(),
-                has_tls,
-                has_caddy,
-            )
-        });
+        let grafana = self
+            .grafana_config
+            .as_ref()
+            .map(|config| GrafanaServiceConfig::new(config, has_caddy));
 
         // Build Caddy service config if enabled
         let caddy = if has_caddy {
