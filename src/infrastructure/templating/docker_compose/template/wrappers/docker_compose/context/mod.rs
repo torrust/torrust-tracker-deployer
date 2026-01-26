@@ -22,7 +22,7 @@ pub use caddy::CaddyServiceContext;
 pub use grafana::GrafanaServiceContext;
 pub use mysql::MysqlServiceContext;
 pub use prometheus::PrometheusServiceContext;
-pub use tracker::{TrackerPorts, TrackerServiceContext};
+pub use tracker::TrackerServiceContext;
 
 // Re-exports - other types
 pub use builder::{DockerComposeContextBuilder, PortConflictError};
@@ -117,8 +117,8 @@ impl DockerComposeContext {
     /// assert_eq!(compose_context.database().driver(), "mysql");
     /// ```
     #[must_use]
-    pub fn builder(ports: TrackerPorts) -> DockerComposeContextBuilder {
-        DockerComposeContextBuilder::new(ports)
+    pub fn builder(tracker: TrackerServiceContext) -> DockerComposeContextBuilder {
+        DockerComposeContextBuilder::new(tracker)
     }
 
     /// Get the database configuration

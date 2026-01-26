@@ -95,12 +95,6 @@ impl TrackerServiceContext {
     }
 }
 
-/// Alias for the builder API
-///
-/// This is used in the builder pattern to accept tracker configuration.
-/// It's NOT a backward compatibility alias for the old name.
-pub type TrackerPorts = TrackerServiceContext;
-
 #[cfg(test)]
 mod tests {
     use super::*;
