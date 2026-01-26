@@ -3,10 +3,10 @@
 // External crates
 use serde::Serialize;
 
-use crate::domain::topology::Network;
+use crate::domain::prometheus::PrometheusConfig;
+use crate::domain::topology::{Network, PortDerivation};
 
 use super::port_definition::PortDefinition;
-use super::port_derivation::derive_prometheus_ports;
 
 /// Prometheus service configuration for Docker Compose
 ///
@@ -34,16 +34,17 @@ impl PrometheusServiceConfig {
     ///
     /// # Arguments
     ///
-    /// * `scrape_interval_in_secs` - The scrape interval in seconds
+    /// * `config` - The domain Prometheus configuration
     /// * `has_grafana` - Whether Grafana is enabled (adds `visualization_network`)
     #[must_use]
-    pub fn new(scrape_interval_in_secs: u32, has_grafana: bool) -> Self {
+    pub fn new(config: &PrometheusConfig, has_grafana: bool) -> Self {
         let networks = Self::compute_networks(has_grafana);
-        let port_bindings = derive_prometheus_ports();
+        // Use domain PortDerivation trait for port logic
+        let port_bindings = config.derive_ports();
         let ports = port_bindings.iter().map(PortDefinition::from).collect();
 
         Self {
-            scrape_interval_in_secs,
+            scrape_interval_in_secs: config.scrape_interval_in_secs(),
             ports,
             networks,
         }
@@ -63,18 +64,26 @@ impl PrometheusServiceConfig {
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroU32;
+
     use super::*;
+
+    fn make_config(scrape_interval_secs: u32) -> PrometheusConfig {
+        PrometheusConfig::new(
+            NonZeroU32::new(scrape_interval_secs).expect("non-zero scrape interval"),
+        )
+    }
 
     #[test]
     fn it_should_connect_prometheus_to_metrics_network() {
-        let config = PrometheusServiceConfig::new(15, false);
+        let config = PrometheusServiceConfig::new(&make_config(15), false);
 
         assert!(config.networks.contains(&Network::Metrics));
     }
 
     #[test]
     fn it_should_not_connect_prometheus_to_visualization_network_when_grafana_disabled() {
-        let config = PrometheusServiceConfig::new(15, false);
+        let config = PrometheusServiceConfig::new(&make_config(15), false);
 
         assert_eq!(config.networks, vec![Network::Metrics]);
         assert!(!config.networks.contains(&Network::Visualization));
@@ -82,7 +91,7 @@ mod tests {
 
     #[test]
     fn it_should_connect_prometheus_to_visualization_network_when_grafana_enabled() {
-        let config = PrometheusServiceConfig::new(30, true);
+        let config = PrometheusServiceConfig::new(&make_config(30), true);
 
         assert_eq!(
             config.networks,
@@ -92,7 +101,7 @@ mod tests {
 
     #[test]
     fn it_should_serialize_networks_to_name_strings() {
-        let config = PrometheusServiceConfig::new(15, true);
+        let config = PrometheusServiceConfig::new(&make_config(15), true);
 
         let json = serde_json::to_value(&config).expect("serialization should succeed");
 
@@ -103,7 +112,7 @@ mod tests {
 
     #[test]
     fn it_should_expose_localhost_port_9090() {
-        let config = PrometheusServiceConfig::new(15, false);
+        let config = PrometheusServiceConfig::new(&make_config(15), false);
 
         assert_eq!(config.ports.len(), 1);
         assert_eq!(config.ports[0].binding(), "127.0.0.1:9090:9090");
@@ -111,7 +120,7 @@ mod tests {
 
     #[test]
     fn it_should_serialize_ports_with_binding_and_description() {
-        let config = PrometheusServiceConfig::new(15, false);
+        let config = PrometheusServiceConfig::new(&make_config(15), false);
 
         let json = serde_json::to_value(&config).expect("serialization should succeed");
 

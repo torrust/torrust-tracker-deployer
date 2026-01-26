@@ -307,10 +307,10 @@ impl TrackerServiceContext {
 
 ### Step 2: Implement PortDerivation for Prometheus (Simplest)
 
-- [ ] 2.1 Implement `PortDerivation` for `PrometheusConfig` in domain
-- [ ] 2.2 Add unit tests for Prometheus port derivation
-- [ ] 2.3 Update infrastructure `PrometheusServiceConfig` to use domain trait
-- [ ] 2.4 Remove `derive_prometheus_ports()` calls from infrastructure
+- [x] 2.1 Implement `PortDerivation` for `PrometheusConfig` in domain
+- [x] 2.2 Add unit tests for Prometheus port derivation
+- [x] 2.3 Update infrastructure `PrometheusServiceConfig` to use domain trait
+- [x] 2.4 Remove `derive_prometheus_ports()` calls from infrastructure
 
 ### Step 3: Implement PortDerivation for Grafana
 

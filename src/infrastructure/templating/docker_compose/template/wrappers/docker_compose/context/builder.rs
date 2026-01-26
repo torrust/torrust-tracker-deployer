@@ -140,9 +140,10 @@ impl DockerComposeContextBuilder {
         let has_caddy = self.has_caddy;
 
         // Build Prometheus service config if enabled
-        let prometheus = self.prometheus_config.map(|config| {
-            PrometheusServiceConfig::new(config.scrape_interval_in_secs(), has_grafana)
-        });
+        let prometheus = self
+            .prometheus_config
+            .as_ref()
+            .map(|config| PrometheusServiceConfig::new(config, has_grafana));
 
         // Build Grafana service config if enabled
         let grafana = self.grafana_config.map(|config| {
