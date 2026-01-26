@@ -287,9 +287,12 @@ mod tests {
 
         assert_eq!(context.database().driver(), "sqlite3");
         assert!(context.database().mysql().is_none());
-        assert_eq!(context.tracker().udp_tracker_ports, vec![6868, 6969]);
-        assert_eq!(context.tracker().http_tracker_ports_without_tls, vec![7070]);
-        assert_eq!(context.tracker().http_api_port, 1212);
+        // Verify ports are derived correctly (2 UDP + 1 HTTP + 1 API = 4 ports)
+        assert_eq!(context.tracker().ports.len(), 4);
+        assert_eq!(context.tracker().ports[0].binding(), "6868:6868/udp");
+        assert_eq!(context.tracker().ports[1].binding(), "6969:6969/udp");
+        assert_eq!(context.tracker().ports[2].binding(), "7070:7070");
+        assert_eq!(context.tracker().ports[3].binding(), "1212:1212");
     }
 
     #[test]
@@ -316,9 +319,10 @@ mod tests {
         assert_eq!(mysql.password, "pass456");
         assert_eq!(mysql.port, 3306);
 
-        assert_eq!(context.tracker().udp_tracker_ports, vec![6868, 6969]);
-        assert_eq!(context.tracker().http_tracker_ports_without_tls, vec![7070]);
-        assert_eq!(context.tracker().http_api_port, 1212);
+        // Verify ports are derived correctly (2 UDP + 1 HTTP + 1 API = 4 ports)
+        assert_eq!(context.tracker().ports.len(), 4);
+        assert_eq!(context.tracker().ports[0].binding(), "6868:6868/udp");
+        assert_eq!(context.tracker().ports[1].binding(), "6969:6969/udp");
     }
 
     #[test]

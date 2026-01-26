@@ -15,23 +15,6 @@ use super::port_definition::PortDefinition;
 /// in Rust to keep the Tera template simple.
 #[derive(Serialize, Debug, Clone)]
 pub struct TrackerServiceContext {
-    /// UDP tracker ports (always exposed - UDP doesn't use TLS termination via Caddy)
-    pub udp_tracker_ports: Vec<u16>,
-    /// HTTP tracker ports without TLS (only these are exposed in Docker Compose)
-    ///
-    /// Ports with TLS enabled are handled by Caddy and NOT included here.
-    pub http_tracker_ports_without_tls: Vec<u16>,
-    /// HTTP API port
-    pub http_api_port: u16,
-    /// Whether the HTTP API has TLS enabled (port should not be exposed if true)
-    #[serde(default)]
-    pub http_api_has_tls: bool,
-    /// Whether the tracker service needs a ports section at all
-    ///
-    /// Pre-computed flag: true if there are UDP ports, HTTP ports without TLS,
-    /// or the API port is exposed (no TLS).
-    #[serde(default)]
-    pub needs_ports_section: bool,
     /// Port bindings for Docker Compose
     ///
     /// Pre-computed list of all ports the tracker should expose.
@@ -46,52 +29,23 @@ pub struct TrackerServiceContext {
 impl TrackerServiceContext {
     /// Creates a new `TrackerServiceContext` from domain configuration
     ///
-    /// Uses the domain `PortDerivation` trait for port derivation logic,
+    /// Uses the domain `PortDerivation` and `NetworkDerivation` traits,
     /// ensuring business rules live in the domain layer.
     ///
     /// # Arguments
     ///
     /// * `config` - The domain Tracker configuration
-    /// * `context` - Topology context with information about enabled services
+    /// * `enabled_services` - Topology context with information about enabled services
     #[must_use]
     pub fn from_domain_config(config: &TrackerConfig, enabled_services: &EnabledServices) -> Self {
-        // Extract port info for legacy fields
-        let udp_tracker_ports: Vec<u16> = config
-            .udp_trackers()
-            .iter()
-            .map(|t| t.bind_address().port())
-            .collect();
-
-        let http_tracker_ports_without_tls: Vec<u16> = config
-            .http_trackers()
-            .iter()
-            .filter(|t| !t.use_tls_proxy())
-            .map(|t| t.bind_address().port())
-            .collect();
-
-        let http_api_port = config.http_api().bind_address().port();
-        let http_api_has_tls = config.http_api().use_tls_proxy();
-
-        let needs_ports_section = !udp_tracker_ports.is_empty()
-            || !http_tracker_ports_without_tls.is_empty()
-            || !http_api_has_tls;
-
-        // Use domain NetworkDerivation trait for network logic
         let networks = config.derive_networks(enabled_services);
+        let ports = config
+            .derive_ports()
+            .iter()
+            .map(PortDefinition::from)
+            .collect();
 
-        // Use domain PortDerivation trait for port logic
-        let port_bindings = config.derive_ports();
-        let ports = port_bindings.iter().map(PortDefinition::from).collect();
-
-        Self {
-            udp_tracker_ports,
-            http_tracker_ports_without_tls,
-            http_api_port,
-            http_api_has_tls,
-            needs_ports_section,
-            ports,
-            networks,
-        }
+        Self { ports, networks }
     }
 }
 
