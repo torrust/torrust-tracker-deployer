@@ -19,7 +19,7 @@ use crate::domain::environment::{Environment, Releasing};
 /// Executes all steps required to release `MySQL`:
 /// 1. Create `MySQL` storage directories
 ///
-/// If `MySQL` is not configured as the tracker database, this step is skipped.
+/// If `MySQL` is not configured as the tracker database, all steps are skipped.
 ///
 /// # Errors
 ///
@@ -28,14 +28,22 @@ use crate::domain::environment::{Environment, Releasing};
 pub fn release(
     environment: &Environment<Releasing>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+    // Check if MySQL is configured (via tracker database driver)
+    if !environment.context().user_inputs.tracker().uses_mysql() {
+        info!(
+            command = "release",
+            service = "mysql",
+            status = "skipped",
+            "MySQL not configured - skipping all MySQL steps"
+        );
+        return Ok(());
+    }
+
     create_storage(environment)?;
     Ok(())
 }
 
-/// Create `MySQL` storage directories on the remote host (if enabled)
-///
-/// This step is optional and only executes if `MySQL` is configured as the tracker database.
-/// If `MySQL` is not configured, the step is skipped without error.
+/// Create `MySQL` storage directories on the remote host
 ///
 /// # Errors
 ///
@@ -45,17 +53,6 @@ fn create_storage(
     environment: &Environment<Releasing>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::CreateMysqlStorage;
-
-    // Check if MySQL is configured (via tracker database driver)
-    if !environment.context().user_inputs.tracker().uses_mysql() {
-        info!(
-            command = "release",
-            step = %current_step,
-            status = "skipped",
-            "MySQL not configured - skipping storage creation"
-        );
-        return Ok(());
-    }
 
     CreateMysqlStorageStep::new(ansible_client(environment))
         .execute()

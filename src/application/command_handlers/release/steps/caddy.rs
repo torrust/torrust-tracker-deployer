@@ -34,15 +34,23 @@ use crate::domain::template::TemplateManager;
 pub fn release(
     environment: &Environment<Releasing>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+    // Check if HTTPS is configured
+    if environment.context().user_inputs.https().is_none() {
+        info!(
+            command = "release",
+            service = "caddy",
+            status = "skipped",
+            "HTTPS not configured - skipping all Caddy steps"
+        );
+        return Ok(());
+    }
+
     render_templates(environment)?;
     deploy_config_to_remote(environment)?;
     Ok(())
 }
 
-/// Render Caddy configuration templates (if HTTPS enabled)
-///
-/// This step is optional and only executes if HTTPS is configured in the environment.
-/// If HTTPS is not configured, the step is skipped without error.
+/// Render Caddy configuration templates
 ///
 /// # Errors
 ///
@@ -52,17 +60,6 @@ fn render_templates(
     environment: &Environment<Releasing>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::RenderCaddyTemplates;
-
-    // Check if HTTPS is configured
-    if environment.context().user_inputs.https().is_none() {
-        info!(
-            command = "release",
-            step = %current_step,
-            status = "skipped",
-            "HTTPS not configured - skipping Caddy template rendering"
-        );
-        return Ok(());
-    }
 
     let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
     let step = RenderCaddyTemplatesStep::new(
@@ -90,10 +87,7 @@ fn render_templates(
     Ok(())
 }
 
-/// Deploy Caddy configuration to the remote host (if HTTPS enabled)
-///
-/// This step is optional and only executes if HTTPS is configured in the environment.
-/// If HTTPS is not configured, the step is skipped without error.
+/// Deploy Caddy configuration to the remote host
 ///
 /// # Errors
 ///
@@ -103,17 +97,6 @@ fn deploy_config_to_remote(
     environment: &Environment<Releasing>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::DeployCaddyConfigToRemote;
-
-    // Check if HTTPS is configured
-    if environment.context().user_inputs.https().is_none() {
-        info!(
-            command = "release",
-            step = %current_step,
-            status = "skipped",
-            "HTTPS not configured - skipping Caddy config deployment"
-        );
-        return Ok(());
-    }
 
     DeployCaddyConfigStep::new(ansible_client(environment))
         .execute()

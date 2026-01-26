@@ -38,16 +38,24 @@ use crate::domain::template::TemplateManager;
 pub fn release(
     environment: &Environment<Releasing>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+    // Check if Prometheus is configured
+    if environment.context().user_inputs.prometheus().is_none() {
+        info!(
+            command = "release",
+            service = "prometheus",
+            status = "skipped",
+            "Prometheus not configured - skipping all Prometheus steps"
+        );
+        return Ok(());
+    }
+
     create_storage(environment)?;
     render_templates(environment)?;
     deploy_config_to_remote(environment)?;
     Ok(())
 }
 
-/// Create Prometheus storage directories on the remote host (if enabled)
-///
-/// This step is optional and only executes if Prometheus is configured in the environment.
-/// If Prometheus is not configured, the step is skipped without error.
+/// Create Prometheus storage directories on the remote host
 ///
 /// # Errors
 ///
@@ -57,17 +65,6 @@ fn create_storage(
     environment: &Environment<Releasing>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::CreatePrometheusStorage;
-
-    // Check if Prometheus is configured
-    if environment.context().user_inputs.prometheus().is_none() {
-        info!(
-            command = "release",
-            step = %current_step,
-            status = "skipped",
-            "Prometheus not configured - skipping storage creation"
-        );
-        return Ok(());
-    }
 
     CreatePrometheusStorageStep::new(ansible_client(environment))
         .execute()
@@ -90,10 +87,7 @@ fn create_storage(
     Ok(())
 }
 
-/// Render Prometheus configuration templates to the build directory (if enabled)
-///
-/// This step is optional and only executes if Prometheus is configured in the environment.
-/// If Prometheus is not configured, the step is skipped without error.
+/// Render Prometheus configuration templates to the build directory
 ///
 /// # Errors
 ///
@@ -103,17 +97,6 @@ fn render_templates(
     environment: &Environment<Releasing>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::RenderPrometheusTemplates;
-
-    // Check if Prometheus is configured
-    if environment.context().user_inputs.prometheus().is_none() {
-        info!(
-            command = "release",
-            step = %current_step,
-            status = "skipped",
-            "Prometheus not configured - skipping template rendering"
-        );
-        return Ok(());
-    }
 
     let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
     let step = RenderPrometheusTemplatesStep::new(
@@ -141,10 +124,7 @@ fn render_templates(
     Ok(())
 }
 
-/// Deploy Prometheus configuration to the remote host via Ansible (if enabled)
-///
-/// This step is optional and only executes if Prometheus is configured in the environment.
-/// If Prometheus is not configured, the step is skipped without error.
+/// Deploy Prometheus configuration to the remote host via Ansible
 ///
 /// # Errors
 ///
@@ -154,17 +134,6 @@ fn deploy_config_to_remote(
     environment: &Environment<Releasing>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::DeployPrometheusConfigToRemote;
-
-    // Check if Prometheus is configured
-    if environment.context().user_inputs.prometheus().is_none() {
-        info!(
-            command = "release",
-            step = %current_step,
-            status = "skipped",
-            "Prometheus not configured - skipping config deployment"
-        );
-        return Ok(());
-    }
 
     DeployPrometheusConfigStep::new(ansible_client(environment))
         .execute()
