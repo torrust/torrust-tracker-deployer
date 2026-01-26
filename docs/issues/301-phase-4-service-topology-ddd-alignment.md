@@ -402,25 +402,27 @@ impl TrackerServiceContext {
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
 
 **Task-Specific Criteria**:
 
-- [ ] `PortDerivation` trait defined in `domain/topology/traits.rs`
-- [ ] All service configs (`TrackerConfig`, `GrafanaConfig`, `PrometheusConfig`) implement `PortDerivation`
-- [ ] `DockerComposeTopologyBuilder` computes networks in domain layer
-- [ ] Infrastructure context types are pure DTOs with no `compute_*()` methods
-- [ ] `port_derivation.rs` deleted from infrastructure
-- [ ] All existing E2E tests pass
-- [ ] Unit tests cover port derivation for each service
+- [x] `PortDerivation` trait defined in `domain/topology/traits.rs`
+- [x] All service configs (`TrackerConfig`, `GrafanaConfig`, `PrometheusConfig`) implement `PortDerivation`
+- [x] `NetworkDerivation` trait defined in `domain/topology/traits.rs` for network computation
+- [x] Infrastructure context types are pure DTOs with no `compute_*()` methods
+- [x] `port_derivation.rs` deleted from infrastructure
+- [x] All existing E2E tests pass (2060 tests)
+- [x] Unit tests cover port derivation for each service
+- [x] Unit tests cover network derivation for `EnabledServices`
 
 ## Design Decisions (Resolved)
 
-| Question                                                                          | Decision                                         | Rationale                                                                                                                        |
-| --------------------------------------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| Should `PortDerivation` trait be in `domain/topology/` or a shared traits module? | `domain/topology/traits.rs`                      | The trait exists for topology purposes. Consumer (builder) defines it, implementers import it. Keeps topology concerns cohesive. |
-| Should we rename infrastructure context types to `*Context` now or defer?         | Phase 4 (P4.3)                                   | Directly related to "refactor to pure DTOs" goal. One coherent refactoring story.                                                |
-| Should `fixed_ports.rs` functions be in the builder or a separate module?         | Separate module `domain/topology/fixed_ports.rs` | Keeps builder focused on orchestration. Single responsibility. Easy to find, extend, test.                                       |
+| Question                                                                          | Decision                                         | Rationale                                                                                                                           |
+| --------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Should `PortDerivation` trait be in `domain/topology/` or a shared traits module? | `domain/topology/traits.rs`                      | The trait exists for topology purposes. Consumer (builder) defines it, implementers import it. Keeps topology concerns cohesive.    |
+| Should we rename infrastructure context types to `*Context` now or defer?         | Deferred (optional)                              | Not critical for DDD alignment. Can be done in a future cleanup phase.                                                              |
+| Should `fixed_ports.rs` functions be in the builder or a separate module?         | Separate module `domain/topology/fixed_ports.rs` | Keeps builder focused on orchestration. Single responsibility. Easy to find, extend, test.                                          |
+| Should we create `DockerComposeTopologyBuilder` for network computation?          | Not needed                                       | Caddy/MySQL have static networks (NET-08, NET-09). Trait-based approach with `NetworkDerivation` + `EnabledServices` is sufficient. |
 
 ## Related Documentation
 
