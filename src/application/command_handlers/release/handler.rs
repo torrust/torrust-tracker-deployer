@@ -361,6 +361,13 @@ impl ReleaseCommandHandler {
     // Individual step implementations
     // =========================================================================
 
+    /// Create an Ansible client configured for the environment's build directory
+    ///
+    /// This is a helper method to reduce duplication across step implementations.
+    fn ansible_client(environment: &Environment<Releasing>) -> Arc<AnsibleClient> {
+        Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")))
+    }
+
     /// Create tracker storage directories on the remote host
     ///
     /// # Errors
@@ -373,9 +380,7 @@ impl ReleaseCommandHandler {
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::CreateTrackerStorage;
 
-        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
-
-        CreateTrackerStorageStep::new(ansible_client)
+        CreateTrackerStorageStep::new(Self::ansible_client(environment))
             .execute()
             .map_err(|e| {
                 (
@@ -405,9 +410,7 @@ impl ReleaseCommandHandler {
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::InitTrackerDatabase;
 
-        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
-
-        InitTrackerDatabaseStep::new(ansible_client)
+        InitTrackerDatabaseStep::new(Self::ansible_client(environment))
             .execute()
             .map_err(|e| {
                 (
@@ -533,9 +536,7 @@ impl ReleaseCommandHandler {
             return Ok(());
         }
 
-        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
-
-        CreatePrometheusStorageStep::new(ansible_client)
+        CreatePrometheusStorageStep::new(Self::ansible_client(environment))
             .execute()
             .map_err(|e| {
                 (
@@ -579,9 +580,7 @@ impl ReleaseCommandHandler {
             return Ok(());
         }
 
-        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
-
-        CreateGrafanaStorageStep::new(ansible_client)
+        CreateGrafanaStorageStep::new(Self::ansible_client(environment))
             .execute()
             .map_err(|e| {
                 (
@@ -625,9 +624,7 @@ impl ReleaseCommandHandler {
             return Ok(());
         }
 
-        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
-
-        CreateMysqlStorageStep::new(ansible_client)
+        CreateMysqlStorageStep::new(Self::ansible_client(environment))
             .execute()
             .map_err(|e| {
                 (
@@ -677,9 +674,7 @@ impl ReleaseCommandHandler {
             return Ok(());
         }
 
-        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
-
-        DeployPrometheusConfigStep::new(ansible_client)
+        DeployPrometheusConfigStep::new(Self::ansible_client(environment))
             .execute()
             .map_err(|e| {
                 (
@@ -831,9 +826,7 @@ impl ReleaseCommandHandler {
             return Ok(());
         }
 
-        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
-
-        DeployCaddyConfigStep::new(ansible_client)
+        DeployCaddyConfigStep::new(Self::ansible_client(environment))
             .execute()
             .map_err(|e| {
                 (
@@ -889,9 +882,7 @@ impl ReleaseCommandHandler {
             return Ok(());
         }
 
-        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
-
-        DeployGrafanaProvisioningStep::new(ansible_client)
+        DeployGrafanaProvisioningStep::new(Self::ansible_client(environment))
             .execute()
             .map_err(|e| {
                 (
@@ -929,19 +920,20 @@ impl ReleaseCommandHandler {
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::DeployTrackerConfigToRemote;
 
-        let ansible_client = Arc::new(AnsibleClient::new(environment.build_dir().join("ansible")));
-
-        DeployTrackerConfigStep::new(ansible_client, tracker_build_dir.to_path_buf())
-            .execute()
-            .map_err(|e| {
-                (
-                    ReleaseCommandHandlerError::Deployment {
-                        message: e.to_string(),
-                        source: Box::new(e),
-                    },
-                    current_step,
-                )
-            })?;
+        DeployTrackerConfigStep::new(
+            Self::ansible_client(environment),
+            tracker_build_dir.to_path_buf(),
+        )
+        .execute()
+        .map_err(|e| {
+            (
+                ReleaseCommandHandlerError::Deployment {
+                    message: e.to_string(),
+                    source: Box::new(e),
+                },
+                current_step,
+            )
+        })?;
 
         info!(
             command = "release",
