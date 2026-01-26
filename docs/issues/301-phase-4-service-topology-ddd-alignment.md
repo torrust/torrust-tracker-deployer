@@ -297,37 +297,66 @@ impl TrackerServiceContext {
 
 ## Implementation Plan
 
-### P4.1: Add Trait and Implement in Domain
+> **Approach**: Single PR with incremental commits. Each step is a logical commit point.
+> Progress tracked with checkboxes below.
 
-- [ ] Create `src/domain/topology/traits.rs` with `PortDerivation` trait
-- [ ] Implement `PortDerivation` for `TrackerConfig`
-- [ ] Implement `PortDerivation` for `GrafanaConfig`
-- [ ] Implement `PortDerivation` for `PrometheusConfig`
-- [ ] Create `src/domain/topology/fixed_ports.rs` for Caddy and MySQL
-- [ ] Add unit tests for each implementation
+### Step 1: Create PortDerivation Trait Foundation
 
-### P4.2: Create Domain Topology Builder
+- [x] 1.1 Create `src/domain/topology/traits.rs` with `PortDerivation` trait
+- [x] 1.2 Export trait from `src/domain/topology/mod.rs`
 
-- [ ] Create `src/domain/topology/builder.rs` with `DockerComposeTopologyBuilder`
-- [ ] Move network computation logic from infrastructure to domain builder
-- [ ] Wire up port derivation via trait calls
-- [ ] Add integration tests
+### Step 2: Implement PortDerivation for Prometheus (Simplest)
 
-### P4.3: Refactor Infrastructure to Pure DTOs
+- [ ] 2.1 Implement `PortDerivation` for `PrometheusConfig` in domain
+- [ ] 2.2 Add unit tests for Prometheus port derivation
+- [ ] 2.3 Update infrastructure `PrometheusServiceConfig` to use domain trait
+- [ ] 2.4 Remove `derive_prometheus_ports()` calls from infrastructure
 
-- [ ] Remove `compute_networks()` from `TrackerServiceConfig`
-- [ ] Remove `compute_networks()` from `GrafanaServiceConfig`
-- [ ] Remove `compute_networks()` from `PrometheusServiceConfig`
-- [ ] Rename types to `*Context` (e.g., `TrackerServiceContext`)
-- [ ] Update `DockerComposeContextBuilder` to receive domain topology
-- [ ] Update tests
+### Step 3: Implement PortDerivation for Grafana
 
-### P4.4: Cleanup
+- [ ] 3.1 Implement `PortDerivation` for `GrafanaConfig` in domain
+- [ ] 3.2 Add unit tests for Grafana port derivation
+- [ ] 3.3 Update infrastructure `GrafanaServiceConfig` to use domain trait
+- [ ] 3.4 Remove `derive_grafana_ports()` calls from infrastructure
 
-- [ ] Delete `src/infrastructure/.../context/port_derivation.rs`
-- [ ] Remove any remaining business logic from infrastructure
-- [ ] Update documentation
-- [ ] Run full E2E test suite
+### Step 4: Implement PortDerivation for Tracker (Most Complex)
+
+- [ ] 4.1 Implement `PortDerivation` for `TrackerConfig` in domain
+- [ ] 4.2 Add unit tests for Tracker port derivation
+- [ ] 4.3 Update infrastructure `TrackerServiceConfig` to use domain trait
+- [ ] 4.4 Remove `derive_tracker_ports()` calls from infrastructure
+
+### Step 5: Fixed Port Services (Caddy, MySQL)
+
+- [ ] 5.1 Create `src/domain/topology/fixed_ports.rs` with `caddy_ports()` and `mysql_ports()`
+- [ ] 5.2 Add unit tests for fixed port functions
+- [ ] 5.3 Update infrastructure to use domain fixed port functions
+- [ ] 5.4 Remove `derive_caddy_ports()` and `derive_mysql_ports()` from infrastructure
+
+### Step 6: Network Computation - Domain Topology Builder
+
+- [ ] 6.1 Create `src/domain/topology/builder.rs` with `DockerComposeTopologyBuilder`
+- [ ] 6.2 Move Tracker network computation to builder
+- [ ] 6.3 Move Prometheus network computation to builder
+- [ ] 6.4 Move Grafana network computation to builder
+- [ ] 6.5 Move Caddy network computation to builder
+- [ ] 6.6 Move MySQL network computation to builder
+- [ ] 6.7 Add unit tests for builder network derivation
+
+### Step 7: Refactor Infrastructure to Pure DTOs
+
+- [ ] 7.1 Remove `compute_networks()` from `TrackerServiceConfig`
+- [ ] 7.2 Remove `compute_networks()` from `PrometheusServiceConfig`
+- [ ] 7.3 Remove `compute_networks()` from `GrafanaServiceConfig`
+- [ ] 7.4 Update `DockerComposeContextBuilder` to receive topology from domain
+- [ ] 7.5 Rename service config types to `*Context` (optional, for clarity)
+
+### Step 8: Cleanup and Verification
+
+- [ ] 8.1 Delete `src/infrastructure/.../context/port_derivation.rs`
+- [ ] 8.2 Remove unused imports and dead code
+- [ ] 8.3 Run full E2E test suite
+- [ ] 8.4 Run pre-commit checks: `./scripts/pre-commit.sh`
 
 ## Files Changed
 

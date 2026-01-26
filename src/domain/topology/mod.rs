@@ -20,12 +20,14 @@
 //! - [`DockerComposeTopology`] - Aggregate that derives required networks from services
 //! - [`ServiceTopology`] - Topology information for a single service
 //! - [`TopologyError`] - Validation errors (e.g., port conflicts)
+//! - [`PortDerivation`] - Trait for services that derive their port bindings
 
 pub mod aggregate;
 pub mod error;
 pub mod network;
 pub mod port;
 pub mod service;
+pub mod traits;
 
 // Re-export main types for convenience
 pub use aggregate::{DockerComposeTopology, ServiceTopology};
@@ -33,3 +35,4 @@ pub use error::{PortConflict, TopologyError};
 pub use network::Network;
 pub use port::PortBinding;
 pub use service::Service;
+pub use traits::PortDerivation;
