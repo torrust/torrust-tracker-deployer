@@ -187,7 +187,7 @@ mod tests {
     use super::*;
     use crate::domain::topology::EnabledServices;
     use crate::domain::tracker::TrackerConfig;
-    use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::TrackerServiceConfig;
+    use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::TrackerServiceContext;
     use crate::infrastructure::templating::docker_compose::DOCKER_COMPOSE_SUBFOLDER;
 
     /// Creates a `TemplateManager` that uses the embedded templates
@@ -211,7 +211,7 @@ mod tests {
         // Use default TrackerConfig from domain layer
         let tracker_config = TrackerConfig::default();
         let context = EnabledServices::from(&[]);
-        let tracker = TrackerServiceConfig::from_domain_config(&tracker_config, &context);
+        let tracker = TrackerServiceContext::from_domain_config(&tracker_config, &context);
         DockerComposeContext::builder(tracker).build()
     }
 

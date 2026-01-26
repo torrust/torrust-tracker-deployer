@@ -34,7 +34,7 @@ use crate::domain::template::TemplateManager;
 use crate::domain::topology::EnabledServices;
 use crate::domain::tracker::DatabaseConfig;
 use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
-    DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerServiceConfig,
+    DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerServiceContext,
 };
 use crate::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
 use crate::infrastructure::templating::docker_compose::{
@@ -155,7 +155,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         self.environment.admin_token().to_string()
     }
 
-    fn build_tracker_config(&self) -> TrackerServiceConfig {
+    fn build_tracker_config(&self) -> TrackerServiceContext {
         let tracker_config = self.environment.tracker_config();
 
         // Determine which features are enabled (affects tracker networks)
@@ -184,7 +184,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         let topology_context = EnabledServices::from(&enabled_services);
 
-        TrackerServiceConfig::from_domain_config(tracker_config, &topology_context)
+        TrackerServiceContext::from_domain_config(tracker_config, &topology_context)
     }
 
     /// Check if Caddy is enabled (HTTPS with at least one TLS-configured service)
@@ -211,7 +211,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
     fn create_sqlite_contexts(
         admin_token: String,
-        tracker: TrackerServiceConfig,
+        tracker: TrackerServiceContext,
     ) -> (EnvContext, DockerComposeContextBuilder) {
         let env_context = EnvContext::new(admin_token);
         let builder = DockerComposeContext::builder(tracker);
@@ -221,7 +221,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
     fn create_mysql_contexts(
         admin_token: String,
-        tracker: TrackerServiceConfig,
+        tracker: TrackerServiceContext,
         port: u16,
         database_name: String,
         username: String,

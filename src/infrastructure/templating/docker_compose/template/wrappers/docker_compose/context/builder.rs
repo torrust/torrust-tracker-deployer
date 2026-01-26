@@ -7,14 +7,14 @@ use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::topology::{EnabledServices, Network, Service};
 
-use super::caddy::CaddyServiceConfig;
+use super::caddy::CaddyServiceContext;
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
-use super::grafana::GrafanaServiceConfig;
-use super::mysql::MysqlServiceConfig;
+use super::grafana::GrafanaServiceContext;
+use super::mysql::MysqlServiceContext;
 use super::network_definition::NetworkDefinition;
 use super::port_definition::PortDefinition;
-use super::prometheus::PrometheusServiceConfig;
-use super::{DockerComposeContext, TrackerServiceConfig};
+use super::prometheus::PrometheusServiceContext;
+use super::{DockerComposeContext, TrackerServiceContext};
 
 /// Builder for `DockerComposeContext`
 ///
@@ -24,7 +24,7 @@ use super::{DockerComposeContext, TrackerServiceConfig};
 /// The builder collects domain configuration objects and transforms them into
 /// service configuration objects with pre-computed networks at build time.
 pub struct DockerComposeContextBuilder {
-    tracker: TrackerServiceConfig,
+    tracker: TrackerServiceContext,
     database: DatabaseConfig,
     prometheus_config: Option<PrometheusConfig>,
     grafana_config: Option<GrafanaConfig>,
@@ -33,7 +33,7 @@ pub struct DockerComposeContextBuilder {
 
 impl DockerComposeContextBuilder {
     /// Creates a new builder with default `SQLite` configuration
-    pub(super) fn new(tracker: TrackerServiceConfig) -> Self {
+    pub(super) fn new(tracker: TrackerServiceContext) -> Self {
         Self {
             tracker,
             database: DatabaseConfig {
@@ -162,24 +162,24 @@ impl DockerComposeContextBuilder {
         let prometheus = self
             .prometheus_config
             .as_ref()
-            .map(|config| PrometheusServiceConfig::from_domain_config(config, &topology_context));
+            .map(|config| PrometheusServiceContext::from_domain_config(config, &topology_context));
 
         // Build Grafana service config if enabled
         let grafana = self
             .grafana_config
             .as_ref()
-            .map(|config| GrafanaServiceConfig::from_domain_config(config, &topology_context));
+            .map(|config| GrafanaServiceContext::from_domain_config(config, &topology_context));
 
         // Build Caddy service config if enabled
         let caddy = if has_caddy {
-            Some(CaddyServiceConfig::new())
+            Some(CaddyServiceContext::new())
         } else {
             None
         };
 
         // Build MySQL service config if enabled
         let mysql = if self.database.driver == DRIVER_MYSQL {
-            Some(MysqlServiceConfig::new())
+            Some(MysqlServiceContext::new())
         } else {
             None
         };
@@ -209,11 +209,11 @@ impl DockerComposeContextBuilder {
     /// Collects networks from all enabled services, deduplicates them,
     /// and returns in deterministic alphabetical order.
     fn derive_required_networks(
-        tracker: &TrackerServiceConfig,
-        prometheus: Option<&PrometheusServiceConfig>,
-        grafana: Option<&GrafanaServiceConfig>,
-        caddy: Option<&CaddyServiceConfig>,
-        mysql: Option<&MysqlServiceConfig>,
+        tracker: &TrackerServiceContext,
+        prometheus: Option<&PrometheusServiceContext>,
+        grafana: Option<&GrafanaServiceContext>,
+        caddy: Option<&CaddyServiceContext>,
+        mysql: Option<&MysqlServiceContext>,
     ) -> Vec<NetworkDefinition> {
         let mut networks: HashSet<Network> = HashSet::new();
 
@@ -454,20 +454,20 @@ mod tests {
     }
 
     /// Helper to create a minimal tracker config
-    fn minimal_tracker_config() -> TrackerServiceConfig {
+    fn minimal_tracker_config() -> TrackerServiceContext {
         let domain_config = minimal_domain_tracker_config();
         let context = EnabledServices::from(&[]);
-        TrackerServiceConfig::from_domain_config(&domain_config, &context)
+        TrackerServiceContext::from_domain_config(&domain_config, &context)
     }
 
     /// Helper to create a tracker config that exposes specific ports
     fn tracker_config_with_ports(
         udp_ports: Vec<u16>,
         http_ports: Vec<u16>,
-    ) -> TrackerServiceConfig {
+    ) -> TrackerServiceContext {
         let domain_config = domain_tracker_config_with_ports(udp_ports, http_ports);
         let context = EnabledServices::from(&[]);
-        TrackerServiceConfig::from_domain_config(&domain_config, &context)
+        TrackerServiceContext::from_domain_config(&domain_config, &context)
     }
 
     // ==========================================================================

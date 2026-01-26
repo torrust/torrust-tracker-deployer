@@ -17,16 +17,18 @@ mod port_definition;
 mod prometheus;
 mod tracker;
 
-// Re-exports
+// Re-exports - service contexts
+pub use caddy::CaddyServiceContext;
+pub use grafana::GrafanaServiceContext;
+pub use mysql::MysqlServiceContext;
+pub use prometheus::PrometheusServiceContext;
+pub use tracker::{TrackerPorts, TrackerServiceContext};
+
+// Re-exports - other types
 pub use builder::{DockerComposeContextBuilder, PortConflictError};
-pub use caddy::{CaddyDockerServiceConfig, CaddyServiceConfig};
 pub use database::{DatabaseConfig, MysqlSetupConfig};
-pub use grafana::GrafanaServiceConfig;
-pub use mysql::{MysqlDockerServiceConfig, MysqlServiceConfig};
 pub use network_definition::NetworkDefinition;
 pub use port_definition::PortDefinition;
-pub use prometheus::PrometheusServiceConfig;
-pub use tracker::{TrackerPorts, TrackerServiceConfig};
 
 /// Context for rendering the docker-compose.yml template
 ///
@@ -36,13 +38,13 @@ pub struct DockerComposeContext {
     /// Database configuration
     pub database: DatabaseConfig,
     /// Tracker service configuration (ports, networks)
-    pub tracker: TrackerServiceConfig,
+    pub tracker: TrackerServiceContext,
     /// Prometheus service configuration (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub prometheus: Option<PrometheusServiceConfig>,
+    pub prometheus: Option<PrometheusServiceContext>,
     /// Grafana service configuration (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub grafana: Option<GrafanaServiceConfig>,
+    pub grafana: Option<GrafanaServiceContext>,
     /// Caddy TLS proxy service configuration (optional)
     ///
     /// When present, Caddy reverse proxy is deployed for TLS termination.
@@ -51,13 +53,13 @@ pub struct DockerComposeContext {
     /// Note: This is separate from `CaddyContext` (used for Caddyfile.tera).
     /// This type only contains the docker-compose service definition data.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub caddy: Option<CaddyServiceConfig>,
+    pub caddy: Option<CaddyServiceContext>,
     /// `MySQL` service configuration (optional)
     ///
     /// Contains network configuration for the `MySQL` service.
     /// This is separate from `MysqlSetupConfig` which contains credentials.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mysql: Option<MysqlServiceConfig>,
+    pub mysql: Option<MysqlServiceContext>,
     /// All networks required by enabled services (derived)
     ///
     /// This list is computed from the networks used by all services.
@@ -79,14 +81,14 @@ impl DockerComposeContext {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{DockerComposeContext, TrackerServiceConfig, MysqlSetupConfig};
+    /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{DockerComposeContext, TrackerServiceContext, MysqlSetupConfig};
     /// use torrust_tracker_deployer_lib::domain::tracker::TrackerConfig;
     /// use torrust_tracker_deployer_lib::domain::topology::{EnabledServices, Service};
     ///
     /// // Create tracker config from domain configuration
     /// let domain_config = TrackerConfig::default();
     /// let context = EnabledServices::from(&[]);
-    /// let tracker_config = TrackerServiceConfig::from_domain_config(
+    /// let tracker_config = TrackerServiceContext::from_domain_config(
     ///     &domain_config,
     ///     &context,
     /// );
@@ -98,7 +100,7 @@ impl DockerComposeContext {
     /// // MySQL
     /// let domain_config_for_mysql = TrackerConfig::default();
     /// let mysql_context = EnabledServices::from(&[Service::MySQL]);
-    /// let tracker_config_with_mysql = TrackerServiceConfig::from_domain_config(
+    /// let tracker_config_with_mysql = TrackerServiceContext::from_domain_config(
     ///     &domain_config_for_mysql,
     ///     &mysql_context,
     /// );
@@ -127,31 +129,31 @@ impl DockerComposeContext {
 
     /// Get the tracker service configuration
     #[must_use]
-    pub fn tracker(&self) -> &TrackerServiceConfig {
+    pub fn tracker(&self) -> &TrackerServiceContext {
         &self.tracker
     }
 
     /// Get the Prometheus service configuration if present
     #[must_use]
-    pub fn prometheus(&self) -> Option<&PrometheusServiceConfig> {
+    pub fn prometheus(&self) -> Option<&PrometheusServiceContext> {
         self.prometheus.as_ref()
     }
 
     /// Get the Grafana service configuration if present
     #[must_use]
-    pub fn grafana(&self) -> Option<&GrafanaServiceConfig> {
+    pub fn grafana(&self) -> Option<&GrafanaServiceContext> {
         self.grafana.as_ref()
     }
 
     /// Get the Caddy TLS proxy service configuration if present
     #[must_use]
-    pub fn caddy(&self) -> Option<&CaddyServiceConfig> {
+    pub fn caddy(&self) -> Option<&CaddyServiceContext> {
         self.caddy.as_ref()
     }
 
     /// Get the `MySQL` service configuration if present
     #[must_use]
-    pub fn mysql(&self) -> Option<&MysqlServiceConfig> {
+    pub fn mysql(&self) -> Option<&MysqlServiceContext> {
         self.mysql.as_ref()
     }
 
@@ -243,21 +245,21 @@ mod tests {
         .unwrap()
     }
 
-    /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
-    fn test_tracker_config() -> TrackerServiceConfig {
+    /// Helper to create `TrackerServiceContext` for tests (no TLS, no networks)
+    fn test_tracker_config() -> TrackerServiceContext {
         let domain_config = test_domain_tracker_config();
         let context = EnabledServices::from(&[]);
-        TrackerServiceConfig::from_domain_config(&domain_config, &context)
+        TrackerServiceContext::from_domain_config(&domain_config, &context)
     }
 
-    /// Helper to create `TrackerServiceConfig` with specific network configuration
+    /// Helper to create `TrackerServiceContext` with specific network configuration
     #[allow(clippy::fn_params_excessive_bools)]
     fn tracker_config_for_networks(
         has_prometheus: bool,
         has_mysql: bool,
         has_caddy: bool,
         use_api_tls: bool,
-    ) -> TrackerServiceConfig {
+    ) -> TrackerServiceContext {
         use crate::domain::topology::Service;
         let domain_config = if use_api_tls {
             domain_tracker_config_with_api_tls(6868)
@@ -275,7 +277,7 @@ mod tests {
             services.push(Service::Caddy);
         }
         let context = EnabledServices::from(&services);
-        TrackerServiceConfig::from_domain_config(&domain_config, &context)
+        TrackerServiceContext::from_domain_config(&domain_config, &context)
     }
 
     #[test]

@@ -195,7 +195,7 @@ mod tests {
         TrackerCoreConfig, UdpTrackerConfig,
     };
     use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
-        DockerComposeContext, MysqlSetupConfig, TrackerServiceConfig,
+        DockerComposeContext, MysqlSetupConfig, TrackerServiceContext,
     };
 
     /// Helper to create a domain `TrackerConfig` for tests
@@ -222,11 +222,11 @@ mod tests {
         .unwrap()
     }
 
-    /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
-    fn test_tracker_config() -> TrackerServiceConfig {
+    /// Helper to create `TrackerServiceContext` for tests (no TLS, no networks)
+    fn test_tracker_config() -> TrackerServiceContext {
         let domain_config = test_domain_tracker_config();
         let context = EnabledServices::from(&[]);
-        TrackerServiceConfig::from_domain_config(&domain_config, &context)
+        TrackerServiceContext::from_domain_config(&domain_config, &context)
     }
 
     #[test]
@@ -381,7 +381,7 @@ mod tests {
         // Create tracker config with prometheus enabled
         let domain_config = test_domain_tracker_config();
         let topology_context = EnabledServices::from(&[Service::Prometheus]);
-        let tracker = TrackerServiceConfig::from_domain_config(&domain_config, &topology_context);
+        let tracker = TrackerServiceContext::from_domain_config(&domain_config, &topology_context);
         let prometheus_config =
             PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
         let compose_context = DockerComposeContext::builder(tracker)

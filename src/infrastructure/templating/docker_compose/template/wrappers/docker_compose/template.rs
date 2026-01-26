@@ -81,7 +81,7 @@ impl DockerComposeTemplate {
 
 #[cfg(test)]
 mod tests {
-    use super::super::context::{MysqlSetupConfig, TrackerServiceConfig};
+    use super::super::context::{MysqlSetupConfig, TrackerServiceContext};
     use super::*;
 
     use crate::domain::topology::EnabledServices;
@@ -114,11 +114,11 @@ mod tests {
         .unwrap()
     }
 
-    /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
-    fn test_tracker_config() -> TrackerServiceConfig {
+    /// Helper to create `TrackerServiceContext` for tests (no TLS, no networks)
+    fn test_tracker_config() -> TrackerServiceContext {
         let domain_config = test_domain_tracker_config();
         let context = EnabledServices::from(&[]);
-        TrackerServiceConfig::from_domain_config(&domain_config, &context)
+        TrackerServiceContext::from_domain_config(&domain_config, &context)
     }
 
     #[test]
