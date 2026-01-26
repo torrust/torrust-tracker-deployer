@@ -198,23 +198,22 @@ impl ReleaseCommandHandler {
         instance_ip: IpAddr,
     ) -> StepResult<Environment<Released>, ReleaseCommandHandlerError, ReleaseStep> {
         // Tracker service steps
-        self.release_tracker_service(environment)?;
+        Self::release_tracker_service(environment)?;
 
         // Prometheus service steps (if enabled)
-        self.release_prometheus_service(environment)?;
+        Self::release_prometheus_service(environment)?;
 
         // Grafana service steps (if enabled)
-        self.release_grafana_service(environment)?;
+        Self::release_grafana_service(environment)?;
 
         // MySQL service steps (if enabled)
         Self::release_mysql_service(environment)?;
 
         // Caddy service steps (if HTTPS enabled)
-        self.release_caddy_service(environment)?;
+        Self::release_caddy_service(environment)?;
 
         // Docker Compose deployment
-        self.release_docker_compose(environment, instance_ip)
-            .await?;
+        Self::release_docker_compose(environment, instance_ip).await?;
 
         let released = environment.clone().released();
 
@@ -236,15 +235,14 @@ impl ReleaseCommandHandler {
     /// # Errors
     ///
     /// Returns a tuple of (error, step) if any tracker step fails
-    #[allow(clippy::result_large_err, clippy::unused_self)]
+    #[allow(clippy::result_large_err)]
     fn release_tracker_service(
-        &self,
         environment: &Environment<Releasing>,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         Self::create_tracker_storage(environment)?;
         Self::init_tracker_database(environment)?;
         let tracker_build_dir = Self::render_tracker_templates(environment)?;
-        self.deploy_tracker_config_to_remote(environment, &tracker_build_dir)?;
+        Self::deploy_tracker_config_to_remote(environment, &tracker_build_dir)?;
         Ok(())
     }
 
@@ -260,14 +258,13 @@ impl ReleaseCommandHandler {
     /// # Errors
     ///
     /// Returns a tuple of (error, step) if any Prometheus step fails
-    #[allow(clippy::result_large_err, clippy::unused_self)]
+    #[allow(clippy::result_large_err)]
     fn release_prometheus_service(
-        &self,
         environment: &Environment<Releasing>,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         Self::create_prometheus_storage(environment)?;
         Self::render_prometheus_templates(environment)?;
-        self.deploy_prometheus_config_to_remote(environment)?;
+        Self::deploy_prometheus_config_to_remote(environment)?;
         Ok(())
     }
 
@@ -283,14 +280,13 @@ impl ReleaseCommandHandler {
     /// # Errors
     ///
     /// Returns a tuple of (error, step) if any Grafana step fails
-    #[allow(clippy::result_large_err, clippy::unused_self)]
+    #[allow(clippy::result_large_err)]
     fn release_grafana_service(
-        &self,
         environment: &Environment<Releasing>,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         Self::create_grafana_storage(environment)?;
         Self::render_grafana_templates(environment)?;
-        self.deploy_grafana_provisioning_to_remote(environment)?;
+        Self::deploy_grafana_provisioning_to_remote(environment)?;
         Ok(())
     }
 
@@ -323,13 +319,12 @@ impl ReleaseCommandHandler {
     /// # Errors
     ///
     /// Returns a tuple of (error, step) if any Caddy step fails
-    #[allow(clippy::result_large_err, clippy::unused_self)]
+    #[allow(clippy::result_large_err)]
     fn release_caddy_service(
-        &self,
         environment: &Environment<Releasing>,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         Self::render_caddy_templates(environment)?;
-        self.deploy_caddy_config_to_remote(environment)?;
+        Self::deploy_caddy_config_to_remote(environment)?;
         Ok(())
     }
 
@@ -343,12 +338,11 @@ impl ReleaseCommandHandler {
     ///
     /// Returns a tuple of (error, step) if any Docker Compose step fails
     async fn release_docker_compose(
-        &self,
         environment: &Environment<Releasing>,
         instance_ip: IpAddr,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
-        let compose_build_dir = self.render_docker_compose_templates(environment).await?;
-        self.deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
+        let compose_build_dir = Self::render_docker_compose_templates(environment).await?;
+        Self::deploy_compose_files_to_remote(environment, &compose_build_dir, instance_ip)?;
         Ok(())
     }
 
@@ -644,9 +638,8 @@ impl ReleaseCommandHandler {
     /// # Errors
     ///
     /// Returns a tuple of (error, `ReleaseStep::DeployPrometheusConfigToRemote`) if deployment fails
-    #[allow(clippy::result_large_err, clippy::unused_self)]
+    #[allow(clippy::result_large_err)]
     fn deploy_prometheus_config_to_remote(
-        &self,
         environment: &Environment<Releasing>,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::DeployPrometheusConfigToRemote;
@@ -795,9 +788,8 @@ impl ReleaseCommandHandler {
     /// # Errors
     ///
     /// Returns a tuple of (error, `ReleaseStep::DeployCaddyConfigToRemote`) if deployment fails
-    #[allow(clippy::result_large_err, clippy::unused_self)]
+    #[allow(clippy::result_large_err)]
     fn deploy_caddy_config_to_remote(
-        &self,
         environment: &Environment<Releasing>,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::DeployCaddyConfigToRemote;
@@ -839,9 +831,8 @@ impl ReleaseCommandHandler {
     /// # Errors
     ///
     /// Returns a tuple of (error, `ReleaseStep::DeployGrafanaProvisioning`) if deployment fails
-    #[allow(clippy::result_large_err, clippy::unused_self)]
+    #[allow(clippy::result_large_err)]
     fn deploy_grafana_provisioning_to_remote(
-        &self,
         environment: &Environment<Releasing>,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::DeployGrafanaProvisioning;
@@ -896,9 +887,8 @@ impl ReleaseCommandHandler {
     /// # Errors
     ///
     /// Returns a tuple of (error, `ReleaseStep::DeployTrackerConfigToRemote`) if deployment fails
-    #[allow(clippy::result_large_err, clippy::unused_self)]
+    #[allow(clippy::result_large_err)]
     fn deploy_tracker_config_to_remote(
-        &self,
         environment: &Environment<Releasing>,
         tracker_build_dir: &Path,
     ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
@@ -934,7 +924,6 @@ impl ReleaseCommandHandler {
     ///
     /// Returns a tuple of (error, `ReleaseStep::RenderDockerComposeTemplates`) if rendering fails
     async fn render_docker_compose_templates(
-        &self,
         environment: &Environment<Releasing>,
     ) -> StepResult<PathBuf, ReleaseCommandHandlerError, ReleaseStep> {
         let current_step = ReleaseStep::RenderDockerComposeTemplates;
@@ -973,9 +962,8 @@ impl ReleaseCommandHandler {
     /// # Errors
     ///
     /// Returns a tuple of (error, `ReleaseStep::DeployComposeFilesToRemote`) if deployment fails
-    #[allow(clippy::result_large_err, clippy::unused_self)]
+    #[allow(clippy::result_large_err)]
     fn deploy_compose_files_to_remote(
-        &self,
         environment: &Environment<Releasing>,
         compose_build_dir: &Path,
         instance_ip: IpAddr,
