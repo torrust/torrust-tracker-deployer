@@ -339,13 +339,18 @@ impl TrackerServiceContext {
 
 ### Step 6: Network Computation - Domain Topology Builder
 
-- [ ] 6.1 Create `src/domain/topology/builder.rs` with `DockerComposeTopologyBuilder`
-- [ ] 6.2 Move Tracker network computation to builder
-- [ ] 6.3 Move Prometheus network computation to builder
-- [ ] 6.4 Move Grafana network computation to builder
-- [ ] 6.5 Move Caddy network computation to builder
-- [ ] 6.6 Move MySQL network computation to builder
-- [ ] 6.7 Add unit tests for builder network derivation
+- [x] 6.1 Create `NetworkDerivation` trait for network assignment logic
+- [x] 6.2 Implement `NetworkDerivation` for `TrackerConfig`
+- [x] 6.3 Implement `NetworkDerivation` for `PrometheusConfig`
+- [x] 6.4 Implement `NetworkDerivation` for `GrafanaConfig`
+- [x] 6.5 Create `EnabledServices` abstraction (renamed from `TopologyContext`)
+  - Uses `HashSet<Service>` for Open/Closed compliance
+  - Provides only `has(Service)` method - no convenience methods
+- [x] 6.6 Add unit tests for `EnabledServices` (10 tests covering constructor, has method, Default, Clone)
+- [ ] 6.7 Create `src/domain/topology/builder.rs` with `DockerComposeTopologyBuilder`
+- [ ] 6.8 Move Caddy network computation to builder
+- [ ] 6.9 Move MySQL network computation to builder
+- [ ] 6.10 Add unit tests for builder network derivation
 
 ### Step 7: Refactor Infrastructure to Pure DTOs
 
@@ -366,11 +371,12 @@ impl TrackerServiceContext {
 
 ### New Files
 
-| File                                 | Purpose                        |
-| ------------------------------------ | ------------------------------ |
-| `src/domain/topology/traits.rs`      | `PortDerivation` trait         |
-| `src/domain/topology/builder.rs`     | `DockerComposeTopologyBuilder` |
-| `src/domain/topology/fixed_ports.rs` | Caddy/MySQL port functions     |
+| File                                      | Purpose                                      |
+| ----------------------------------------- | -------------------------------------------- |
+| `src/domain/topology/traits.rs`           | `PortDerivation`, `NetworkDerivation` traits |
+| `src/domain/topology/enabled_services.rs` | `EnabledServices` set for topology queries   |
+| `src/domain/topology/builder.rs`          | `DockerComposeTopologyBuilder`               |
+| `src/domain/topology/fixed_ports.rs`      | Caddy/MySQL port functions                   |
 
 ### Modified Files
 

@@ -10,7 +10,9 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use serde::{Deserialize, Serialize};
 
 use super::{BindingAddress, Protocol};
-use crate::domain::topology::{PortBinding, PortDerivation};
+use crate::domain::topology::{
+    EnabledServices, Network, NetworkDerivation, PortBinding, PortDerivation, Service,
+};
 use crate::shared::DomainName;
 
 mod core;
@@ -552,6 +554,35 @@ impl PortDerivation for TrackerConfig {
         }
 
         ports
+    }
+}
+
+impl NetworkDerivation for TrackerConfig {
+    /// Derives network assignments for the Tracker service
+    ///
+    /// Implements NET-01 through NET-03:
+    /// - NET-01: Metrics network if Prometheus enabled
+    /// - NET-02: Database network if `MySQL` enabled
+    /// - NET-03: Proxy network if Caddy enabled
+    fn derive_networks(&self, enabled_services: &EnabledServices) -> Vec<Network> {
+        let mut networks = Vec::new();
+
+        // NET-01: Metrics network if Prometheus enabled
+        if enabled_services.has(Service::Prometheus) {
+            networks.push(Network::Metrics);
+        }
+
+        // NET-02: Database network if MySQL enabled
+        if enabled_services.has(Service::MySQL) {
+            networks.push(Network::Database);
+        }
+
+        // NET-03: Proxy network if Caddy enabled
+        if enabled_services.has(Service::Caddy) {
+            networks.push(Network::Proxy);
+        }
+
+        networks
     }
 }
 

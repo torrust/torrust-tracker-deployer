@@ -31,6 +31,7 @@ use tracing::{info, instrument};
 
 use crate::domain::environment::Environment;
 use crate::domain::template::TemplateManager;
+use crate::domain::topology::EnabledServices;
 use crate::domain::tracker::DatabaseConfig;
 use crate::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{
     DockerComposeContext, DockerComposeContextBuilder, MysqlSetupConfig, TrackerServiceConfig,
@@ -164,13 +165,26 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             DatabaseConfig::Mysql(..)
         );
         let has_caddy = self.has_caddy_enabled();
+        let has_grafana = self.environment.grafana_config().is_some();
 
-        TrackerServiceConfig::from_domain_config(
-            tracker_config,
-            has_prometheus,
-            has_mysql,
-            has_caddy,
-        )
+        // Build list of enabled services for topology context
+        let mut enabled_services = Vec::new();
+        if has_prometheus {
+            enabled_services.push(crate::domain::topology::Service::Prometheus);
+        }
+        if has_grafana {
+            enabled_services.push(crate::domain::topology::Service::Grafana);
+        }
+        if has_mysql {
+            enabled_services.push(crate::domain::topology::Service::MySQL);
+        }
+        if has_caddy {
+            enabled_services.push(crate::domain::topology::Service::Caddy);
+        }
+
+        let topology_context = EnabledServices::from(&enabled_services);
+
+        TrackerServiceConfig::from_domain_config(tracker_config, &topology_context)
     }
 
     /// Check if Caddy is enabled (HTTPS with at least one TLS-configured service)

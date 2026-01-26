@@ -4,7 +4,7 @@
 use serde::Serialize;
 
 use crate::domain::prometheus::PrometheusConfig;
-use crate::domain::topology::{Network, PortDerivation};
+use crate::domain::topology::{EnabledServices, Network, NetworkDerivation, PortDerivation};
 
 use super::port_definition::PortDefinition;
 
@@ -32,16 +32,20 @@ pub struct PrometheusServiceConfig {
 impl PrometheusServiceConfig {
     /// Creates a new `PrometheusServiceConfig` from domain configuration
     ///
-    /// Uses the domain `PortDerivation` trait for port derivation logic,
+    /// Uses the domain `PortDerivation` and `NetworkDerivation` traits,
     /// ensuring business rules live in the domain layer.
     ///
     /// # Arguments
     ///
     /// * `config` - The domain Prometheus configuration
-    /// * `has_grafana` - Whether Grafana is enabled (adds `visualization_network`)
+    /// * `context` - Topology context with information about enabled services
     #[must_use]
-    pub fn from_domain_config(config: &PrometheusConfig, has_grafana: bool) -> Self {
-        let networks = Self::compute_networks(has_grafana);
+    pub fn from_domain_config(
+        config: &PrometheusConfig,
+        enabled_services: &EnabledServices,
+    ) -> Self {
+        // Use domain NetworkDerivation trait for network logic
+        let networks = config.derive_networks(enabled_services);
         // Use domain PortDerivation trait for port logic
         let port_bindings = config.derive_ports();
         let ports = port_bindings.iter().map(PortDefinition::from).collect();
@@ -51,17 +55,6 @@ impl PrometheusServiceConfig {
             ports,
             networks,
         }
-    }
-
-    /// Computes the list of networks for the Prometheus service
-    fn compute_networks(has_grafana: bool) -> Vec<Network> {
-        let mut networks = vec![Network::Metrics];
-
-        if has_grafana {
-            networks.push(Network::Visualization);
-        }
-
-        networks
     }
 }
 
@@ -77,16 +70,26 @@ mod tests {
         )
     }
 
+    fn make_context(has_grafana: bool) -> EnabledServices {
+        if has_grafana {
+            EnabledServices::from(&[crate::domain::topology::Service::Grafana])
+        } else {
+            EnabledServices::from(&[])
+        }
+    }
+
     #[test]
     fn it_should_connect_prometheus_to_metrics_network() {
-        let config = PrometheusServiceConfig::from_domain_config(&make_config(15), false);
+        let context = make_context(false);
+        let config = PrometheusServiceConfig::from_domain_config(&make_config(15), &context);
 
         assert!(config.networks.contains(&Network::Metrics));
     }
 
     #[test]
     fn it_should_not_connect_prometheus_to_visualization_network_when_grafana_disabled() {
-        let config = PrometheusServiceConfig::from_domain_config(&make_config(15), false);
+        let context = make_context(false);
+        let config = PrometheusServiceConfig::from_domain_config(&make_config(15), &context);
 
         assert_eq!(config.networks, vec![Network::Metrics]);
         assert!(!config.networks.contains(&Network::Visualization));
@@ -94,7 +97,8 @@ mod tests {
 
     #[test]
     fn it_should_connect_prometheus_to_visualization_network_when_grafana_enabled() {
-        let config = PrometheusServiceConfig::from_domain_config(&make_config(30), true);
+        let context = make_context(true);
+        let config = PrometheusServiceConfig::from_domain_config(&make_config(30), &context);
 
         assert_eq!(
             config.networks,
@@ -104,7 +108,8 @@ mod tests {
 
     #[test]
     fn it_should_serialize_networks_to_name_strings() {
-        let config = PrometheusServiceConfig::from_domain_config(&make_config(15), true);
+        let context = make_context(true);
+        let config = PrometheusServiceConfig::from_domain_config(&make_config(15), &context);
 
         let json = serde_json::to_value(&config).expect("serialization should succeed");
 
@@ -115,7 +120,8 @@ mod tests {
 
     #[test]
     fn it_should_expose_localhost_port_9090() {
-        let config = PrometheusServiceConfig::from_domain_config(&make_config(15), false);
+        let context = make_context(false);
+        let config = PrometheusServiceConfig::from_domain_config(&make_config(15), &context);
 
         assert_eq!(config.ports.len(), 1);
         assert_eq!(config.ports[0].binding(), "127.0.0.1:9090:9090");
@@ -123,7 +129,8 @@ mod tests {
 
     #[test]
     fn it_should_serialize_ports_with_binding_and_description() {
-        let config = PrometheusServiceConfig::from_domain_config(&make_config(15), false);
+        let context = make_context(false);
+        let config = PrometheusServiceConfig::from_domain_config(&make_config(15), &context);
 
         let json = serde_json::to_value(&config).expect("serialization should succeed");
 

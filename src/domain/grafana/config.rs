@@ -2,7 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::topology::{PortBinding, PortDerivation};
+use crate::domain::topology::{
+    EnabledServices, Network, NetworkDerivation, PortBinding, PortDerivation, Service,
+};
 use crate::shared::domain_name::DomainName;
 use crate::shared::secrets::Password;
 
@@ -131,6 +133,24 @@ impl PortDerivation for GrafanaConfig {
         } else {
             vec![PortBinding::tcp(3000, "Grafana dashboard")]
         }
+    }
+}
+
+impl NetworkDerivation for GrafanaConfig {
+    /// Derives network assignments for the Grafana service
+    ///
+    /// Implements NET-06 and NET-07:
+    /// - NET-06: Visualization network always (to query Prometheus)
+    /// - NET-07: Proxy network if Caddy enabled
+    fn derive_networks(&self, enabled_services: &EnabledServices) -> Vec<Network> {
+        let mut networks = vec![Network::Visualization];
+
+        // NET-07: Proxy network if Caddy enabled
+        if enabled_services.has(Service::Caddy) {
+            networks.push(Network::Proxy);
+        }
+
+        networks
     }
 }
 

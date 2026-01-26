@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 // Internal crate
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
-use crate::domain::topology::Network;
+use crate::domain::topology::{EnabledServices, Network, Service};
 
 use super::caddy::CaddyServiceConfig;
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
@@ -138,18 +138,37 @@ impl DockerComposeContextBuilder {
     fn build_internal(self) -> DockerComposeContext {
         let has_grafana = self.grafana_config.is_some();
         let has_caddy = self.has_caddy;
+        let has_prometheus = self.prometheus_config.is_some();
+        let has_mysql = self.database.driver == DRIVER_MYSQL;
+
+        // Build list of enabled services for topology context
+        let mut enabled_services = Vec::new();
+        if has_prometheus {
+            enabled_services.push(Service::Prometheus);
+        }
+        if has_grafana {
+            enabled_services.push(Service::Grafana);
+        }
+        if has_mysql {
+            enabled_services.push(Service::MySQL);
+        }
+        if has_caddy {
+            enabled_services.push(Service::Caddy);
+        }
+
+        let topology_context = EnabledServices::from(&enabled_services);
 
         // Build Prometheus service config if enabled
         let prometheus = self
             .prometheus_config
             .as_ref()
-            .map(|config| PrometheusServiceConfig::from_domain_config(config, has_grafana));
+            .map(|config| PrometheusServiceConfig::from_domain_config(config, &topology_context));
 
         // Build Grafana service config if enabled
         let grafana = self
             .grafana_config
             .as_ref()
-            .map(|config| GrafanaServiceConfig::from_domain_config(config, has_caddy));
+            .map(|config| GrafanaServiceConfig::from_domain_config(config, &topology_context));
 
         // Build Caddy service config if enabled
         let caddy = if has_caddy {
@@ -370,6 +389,7 @@ impl std::error::Error for PortConflictError {}
 mod tests {
     use super::*;
     use crate::domain::prometheus::PrometheusConfig;
+    use crate::domain::topology::EnabledServices;
     use crate::domain::tracker::{
         DatabaseConfig as TrackerDatabaseConfig, HealthCheckApiConfig, HttpApiConfig,
         HttpTrackerConfig, SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
@@ -436,7 +456,8 @@ mod tests {
     /// Helper to create a minimal tracker config
     fn minimal_tracker_config() -> TrackerServiceConfig {
         let domain_config = minimal_domain_tracker_config();
-        TrackerServiceConfig::from_domain_config(&domain_config, false, false, false)
+        let context = EnabledServices::from(&[]);
+        TrackerServiceConfig::from_domain_config(&domain_config, &context)
     }
 
     /// Helper to create a tracker config that exposes specific ports
@@ -445,7 +466,8 @@ mod tests {
         http_ports: Vec<u16>,
     ) -> TrackerServiceConfig {
         let domain_config = domain_tracker_config_with_ports(udp_ports, http_ports);
-        TrackerServiceConfig::from_domain_config(&domain_config, false, false, false)
+        let context = EnabledServices::from(&[]);
+        TrackerServiceConfig::from_domain_config(&domain_config, &context)
     }
 
     // ==========================================================================

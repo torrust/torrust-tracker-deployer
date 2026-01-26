@@ -81,27 +81,26 @@ impl DockerComposeContext {
     /// ```rust
     /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::docker_compose::{DockerComposeContext, TrackerServiceConfig, MysqlSetupConfig};
     /// use torrust_tracker_deployer_lib::domain::tracker::TrackerConfig;
+    /// use torrust_tracker_deployer_lib::domain::topology::{EnabledServices, Service};
     ///
     /// // Create tracker config from domain configuration
     /// let domain_config = TrackerConfig::default();
+    /// let context = EnabledServices::from(&[]);
     /// let tracker_config = TrackerServiceConfig::from_domain_config(
     ///     &domain_config,
-    ///     false, // has_prometheus
-    ///     false, // has_mysql
-    ///     false, // has_caddy
+    ///     &context,
     /// );
     ///
     /// // SQLite (default)
-    /// let context = DockerComposeContext::builder(tracker_config.clone()).build();
-    /// assert_eq!(context.database().driver(), "sqlite3");
+    /// let compose_context = DockerComposeContext::builder(tracker_config.clone()).build();
+    /// assert_eq!(compose_context.database().driver(), "sqlite3");
     ///
     /// // MySQL
     /// let domain_config_for_mysql = TrackerConfig::default();
+    /// let mysql_context = EnabledServices::from(&[Service::MySQL]);
     /// let tracker_config_with_mysql = TrackerServiceConfig::from_domain_config(
     ///     &domain_config_for_mysql,
-    ///     false, // has_prometheus
-    ///     true,  // has_mysql
-    ///     false, // has_caddy
+    ///     &mysql_context,
     /// );
     /// let mysql_config = MysqlSetupConfig {
     ///     root_password: "root_pass".to_string(),
@@ -110,10 +109,10 @@ impl DockerComposeContext {
     ///     password: "pass".to_string(),
     ///     port: 3306,
     /// };
-    /// let context = DockerComposeContext::builder(tracker_config_with_mysql)
+    /// let compose_context = DockerComposeContext::builder(tracker_config_with_mysql)
     ///     .with_mysql(mysql_config)
     ///     .build();
-    /// assert_eq!(context.database().driver(), "mysql");
+    /// assert_eq!(compose_context.database().driver(), "mysql");
     /// ```
     #[must_use]
     pub fn builder(ports: TrackerPorts) -> DockerComposeContextBuilder {
@@ -169,6 +168,7 @@ impl DockerComposeContext {
 #[cfg(test)]
 mod tests {
     use crate::domain::prometheus::PrometheusConfig;
+    use crate::domain::topology::EnabledServices;
     use crate::domain::tracker::{
         DatabaseConfig as TrackerDatabaseConfig, HealthCheckApiConfig, HttpApiConfig,
         HttpTrackerConfig, SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
@@ -246,7 +246,8 @@ mod tests {
     /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
     fn test_tracker_config() -> TrackerServiceConfig {
         let domain_config = test_domain_tracker_config();
-        TrackerServiceConfig::from_domain_config(&domain_config, false, false, false)
+        let context = EnabledServices::from(&[]);
+        TrackerServiceConfig::from_domain_config(&domain_config, &context)
     }
 
     /// Helper to create `TrackerServiceConfig` with specific network configuration
@@ -257,17 +258,24 @@ mod tests {
         has_caddy: bool,
         use_api_tls: bool,
     ) -> TrackerServiceConfig {
+        use crate::domain::topology::Service;
         let domain_config = if use_api_tls {
             domain_tracker_config_with_api_tls(6868)
         } else {
             domain_tracker_config_with_udp_port(6868)
         };
-        TrackerServiceConfig::from_domain_config(
-            &domain_config,
-            has_prometheus,
-            has_mysql,
-            has_caddy,
-        )
+        let mut services = Vec::new();
+        if has_prometheus {
+            services.push(Service::Prometheus);
+        }
+        if has_mysql {
+            services.push(Service::MySQL);
+        }
+        if has_caddy {
+            services.push(Service::Caddy);
+        }
+        let context = EnabledServices::from(&services);
+        TrackerServiceConfig::from_domain_config(&domain_config, &context)
     }
 
     #[test]

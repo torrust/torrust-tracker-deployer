@@ -188,6 +188,7 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
+    use crate::domain::topology::EnabledServices;
     use crate::domain::tracker::DatabaseConfig as TrackerDatabaseConfig;
     use crate::domain::tracker::{
         HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, SqliteConfig, TrackerConfig,
@@ -224,12 +225,8 @@ mod tests {
     /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
     fn test_tracker_config() -> TrackerServiceConfig {
         let domain_config = test_domain_tracker_config();
-        TrackerServiceConfig::from_domain_config(
-            &domain_config,
-            false, // has_prometheus
-            false, // has_mysql
-            false, // has_caddy
-        )
+        let context = EnabledServices::from(&[]);
+        TrackerServiceConfig::from_domain_config(&domain_config, &context)
     }
 
     #[test]
@@ -376,28 +373,25 @@ mod tests {
     #[test]
     fn it_should_render_prometheus_service_when_config_is_present() {
         use crate::domain::prometheus::PrometheusConfig;
+        use crate::domain::topology::Service;
 
         let temp_dir = TempDir::new().unwrap();
         let template_manager = Arc::new(TemplateManager::new(temp_dir.path()));
 
         // Create tracker config with prometheus enabled
         let domain_config = test_domain_tracker_config();
-        let tracker = TrackerServiceConfig::from_domain_config(
-            &domain_config,
-            true,  // has_prometheus
-            false, // has_mysql
-            false, // has_caddy
-        );
+        let topology_context = EnabledServices::from(&[Service::Prometheus]);
+        let tracker = TrackerServiceConfig::from_domain_config(&domain_config, &topology_context);
         let prometheus_config =
             PrometheusConfig::new(std::num::NonZeroU32::new(15).expect("15 is non-zero"));
-        let context = DockerComposeContext::builder(tracker)
+        let compose_context = DockerComposeContext::builder(tracker)
             .with_prometheus(prometheus_config)
             .build();
 
         let renderer = DockerComposeRenderer::new(template_manager);
         let output_dir = TempDir::new().unwrap();
 
-        let result = renderer.render(&context, output_dir.path());
+        let result = renderer.render(&compose_context, output_dir.path());
         assert!(
             result.is_ok(),
             "Rendering with Prometheus context should succeed"

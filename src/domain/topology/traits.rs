@@ -14,6 +14,8 @@
 //! - **Service-Local Logic**: Port derivation can be computed from a service's own
 //!   configuration without knowledge of other services.
 
+use super::enabled_services::EnabledServices;
+use super::Network;
 use super::PortBinding;
 
 /// Trait for services that can derive their port bindings
@@ -53,4 +55,38 @@ pub trait PortDerivation {
     /// A vector of [`PortBinding`] that should be exposed in Docker Compose.
     /// An empty vector means the service has no exposed ports.
     fn derive_ports(&self) -> Vec<PortBinding>;
+}
+
+/// Trait for services that can derive their network assignments
+///
+/// This trait enables domain-driven network computation: each service
+/// determines which networks it needs based on its configuration and
+/// the topology context (which other services are enabled).
+///
+/// # Network Rules Reference
+///
+/// Each implementation applies the relevant NET-* rules:
+///
+/// | Rule   | Service    | Description                                    |
+/// |--------|------------|------------------------------------------------|
+/// | NET-01 | Tracker    | Metrics network if Prometheus enabled          |
+/// | NET-02 | Tracker    | Database network if MySQL enabled              |
+/// | NET-03 | Tracker    | Proxy network if Caddy enabled                 |
+/// | NET-04 | Prometheus | Metrics network always                         |
+/// | NET-05 | Prometheus | Visualization network if Grafana enabled       |
+/// | NET-06 | Grafana    | Visualization network always                   |
+/// | NET-07 | Grafana    | Proxy network if Caddy enabled                 |
+/// | NET-08 | MySQL      | Database network always                        |
+/// | NET-09 | Caddy      | Proxy network always                           |
+pub trait NetworkDerivation {
+    /// Derives network assignments based on service configuration and topology
+    ///
+    /// # Arguments
+    ///
+    /// * `enabled_services` - Information about which other services are enabled
+    ///
+    /// # Returns
+    ///
+    /// A vector of [`Network`] that this service should be connected to.
+    fn derive_networks(&self, enabled_services: &EnabledServices) -> Vec<Network>;
 }

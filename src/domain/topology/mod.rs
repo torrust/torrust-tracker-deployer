@@ -24,6 +24,7 @@
 //! - [`caddy_ports`], [`mysql_ports`] - Fixed port functions for static services
 
 pub mod aggregate;
+pub mod enabled_services;
 pub mod error;
 pub mod fixed_ports;
 pub mod network;
@@ -33,9 +34,10 @@ pub mod traits;
 
 // Re-export main types for convenience
 pub use aggregate::{DockerComposeTopology, ServiceTopology};
+pub use enabled_services::EnabledServices;
 pub use error::{PortConflict, TopologyError};
 pub use fixed_ports::{caddy_ports, mysql_ports};
 pub use network::Network;
 pub use port::PortBinding;
 pub use service::Service;
-pub use traits::PortDerivation;
+pub use traits::{NetworkDerivation, PortDerivation};

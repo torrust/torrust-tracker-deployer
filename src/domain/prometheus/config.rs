@@ -6,7 +6,9 @@ use std::num::NonZeroU32;
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::topology::{PortBinding, PortDerivation};
+use crate::domain::topology::{
+    EnabledServices, Network, NetworkDerivation, PortBinding, PortDerivation, Service,
+};
 
 /// Default scrape interval in seconds
 ///
@@ -99,6 +101,24 @@ impl PortDerivation for PrometheusConfig {
             9090,
             "Prometheus metrics (localhost only)",
         )]
+    }
+}
+
+impl NetworkDerivation for PrometheusConfig {
+    /// Derives network assignments for the Prometheus service
+    ///
+    /// Implements NET-04 and NET-05:
+    /// - NET-04: Metrics network always (to scrape tracker)
+    /// - NET-05: Visualization network if Grafana enabled
+    fn derive_networks(&self, enabled_services: &EnabledServices) -> Vec<Network> {
+        let mut networks = vec![Network::Metrics];
+
+        // NET-05: Visualization network if Grafana enabled
+        if enabled_services.has(Service::Grafana) {
+            networks.push(Network::Visualization);
+        }
+
+        networks
     }
 }
 

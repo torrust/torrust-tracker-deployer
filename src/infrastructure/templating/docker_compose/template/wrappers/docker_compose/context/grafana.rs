@@ -4,7 +4,7 @@
 use serde::Serialize;
 
 use crate::domain::grafana::GrafanaConfig;
-use crate::domain::topology::{Network, PortDerivation};
+use crate::domain::topology::{EnabledServices, Network, NetworkDerivation, PortDerivation};
 use crate::shared::secrets::Password;
 
 use super::port_definition::PortDefinition;
@@ -39,16 +39,17 @@ pub struct GrafanaServiceConfig {
 impl GrafanaServiceConfig {
     /// Creates a new `GrafanaServiceConfig` from domain configuration
     ///
-    /// Uses the domain `PortDerivation` trait for port derivation logic,
+    /// Uses the domain `PortDerivation` and `NetworkDerivation` traits,
     /// ensuring business rules live in the domain layer.
     ///
     /// # Arguments
     ///
     /// * `config` - The domain Grafana configuration
-    /// * `has_caddy` - Whether Caddy TLS proxy is enabled (adds `proxy_network`)
+    /// * `context` - Topology context with information about enabled services
     #[must_use]
-    pub fn from_domain_config(config: &GrafanaConfig, has_caddy: bool) -> Self {
-        let networks = Self::compute_networks(has_caddy);
+    pub fn from_domain_config(config: &GrafanaConfig, enabled_services: &EnabledServices) -> Self {
+        // Use domain NetworkDerivation trait for network logic
+        let networks = config.derive_networks(enabled_services);
         // Use domain PortDerivation trait for port logic
         let port_bindings = config.derive_ports();
         let ports = port_bindings.iter().map(PortDefinition::from).collect();
@@ -60,17 +61,6 @@ impl GrafanaServiceConfig {
             ports,
             networks,
         }
-    }
-
-    /// Computes the list of networks for the Grafana service
-    fn compute_networks(has_caddy: bool) -> Vec<Network> {
-        let mut networks = vec![Network::Visualization];
-
-        if has_caddy {
-            networks.push(Network::Proxy);
-        }
-
-        networks
     }
 }
 
@@ -92,16 +82,26 @@ mod tests {
         }
     }
 
+    fn make_context(has_caddy: bool) -> EnabledServices {
+        if has_caddy {
+            EnabledServices::from(&[crate::domain::topology::Service::Caddy])
+        } else {
+            EnabledServices::from(&[])
+        }
+    }
+
     #[test]
     fn it_should_connect_grafana_to_visualization_network() {
-        let config = GrafanaServiceConfig::from_domain_config(&make_config(false), false);
+        let context = make_context(false);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(false), &context);
 
         assert!(config.networks.contains(&Network::Visualization));
     }
 
     #[test]
     fn it_should_not_connect_grafana_to_proxy_network_when_caddy_disabled() {
-        let config = GrafanaServiceConfig::from_domain_config(&make_config(false), false);
+        let context = make_context(false);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(false), &context);
 
         assert_eq!(config.networks, vec![Network::Visualization]);
         assert!(!config.networks.contains(&Network::Proxy));
@@ -109,7 +109,8 @@ mod tests {
 
     #[test]
     fn it_should_connect_grafana_to_proxy_network_when_caddy_enabled() {
-        let config = GrafanaServiceConfig::from_domain_config(&make_config(true), true);
+        let context = make_context(true);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(true), &context);
 
         assert_eq!(
             config.networks,
@@ -119,7 +120,8 @@ mod tests {
 
     #[test]
     fn it_should_serialize_networks_to_name_strings() {
-        let config = GrafanaServiceConfig::from_domain_config(&make_config(true), true);
+        let context = make_context(true);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(true), &context);
 
         let json = serde_json::to_value(&config).expect("serialization should succeed");
 
@@ -130,7 +132,8 @@ mod tests {
 
     #[test]
     fn it_should_expose_port_3000_when_tls_disabled() {
-        let config = GrafanaServiceConfig::from_domain_config(&make_config(false), false);
+        let context = make_context(false);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(false), &context);
 
         assert_eq!(config.ports.len(), 1);
         assert_eq!(config.ports[0].binding(), "3000:3000");
@@ -138,7 +141,8 @@ mod tests {
 
     #[test]
     fn it_should_not_expose_ports_when_tls_enabled() {
-        let config = GrafanaServiceConfig::from_domain_config(&make_config(true), true);
+        let context = make_context(true);
+        let config = GrafanaServiceConfig::from_domain_config(&make_config(true), &context);
 
         assert!(config.ports.is_empty());
     }

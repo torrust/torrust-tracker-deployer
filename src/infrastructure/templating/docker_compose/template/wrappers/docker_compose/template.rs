@@ -84,6 +84,7 @@ mod tests {
     use super::super::context::{MysqlSetupConfig, TrackerServiceConfig};
     use super::*;
 
+    use crate::domain::topology::EnabledServices;
     use crate::domain::tracker::{
         DatabaseConfig as TrackerDatabaseConfig, HealthCheckApiConfig, HttpApiConfig,
         HttpTrackerConfig, SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
@@ -116,12 +117,8 @@ mod tests {
     /// Helper to create `TrackerServiceConfig` for tests (no TLS, no networks)
     fn test_tracker_config() -> TrackerServiceConfig {
         let domain_config = test_domain_tracker_config();
-        TrackerServiceConfig::from_domain_config(
-            &domain_config,
-            false, // has_prometheus
-            false, // has_mysql
-            false, // has_caddy
-        )
+        let context = EnabledServices::from(&[]);
+        TrackerServiceConfig::from_domain_config(&domain_config, &context)
     }
 
     #[test]
