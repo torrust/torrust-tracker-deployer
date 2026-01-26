@@ -48,6 +48,16 @@ Implementation follows a 5-PR strategy (original scope), with Phase 3 added as a
 - [ ] [#300](https://github.com/torrust/torrust-tracker-deployer/issues/300) - [Refactor] Phase 3: Port Topology Template Integration (P3.4) → [Spec](300-phase-3-port-topology-template-integration.md)
   - P3.4: Update template to use derived ports with descriptions
 
+### Phase 4: DDD Layer Alignment (Extension)
+
+> **Note**: During Phase 3 implementation, we identified that port derivation and network computation logic was incorrectly placed in the infrastructure layer. Phase 4 moves these business rules to their correct DDD locations in the domain layer.
+
+- [ ] [#301](https://github.com/torrust/torrust-tracker-deployer/issues/301) - [Refactor] Phase 4: Service Topology DDD Alignment → [Spec](301-phase-4-service-topology-ddd-alignment.md)
+  - P4.1: Add `PortDerivation` trait in domain, implement for service configs
+  - P4.2: Create `DockerComposeTopologyBuilder` in domain for network computation
+  - P4.3: Refactor infrastructure context types to pure DTOs
+  - P4.4: Delete `port_derivation.rs` (logic moved to domain)
+
 ## PR Dependencies
 
 ```text
@@ -66,7 +76,10 @@ PR 5 (Phase 2)
 PR 6 (Phase 3 Foundation) ◄─── Domain types: PortBinding, validation, help()
     │
     ▼
-PR 7 (Phase 3 Template) ◄─── Template integration (P3.4) - follow-up
+PR 7 (Phase 3 Template) ◄─── Template integration (P3.4)
+    │
+    ▼
+PR 8 (Phase 4) ◄─── DDD layer alignment: move port/network logic to domain
 ```
 
 ## Key Decisions

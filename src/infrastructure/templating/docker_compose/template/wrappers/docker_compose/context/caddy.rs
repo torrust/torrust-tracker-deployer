@@ -18,6 +18,9 @@ use serde::Serialize;
 
 use crate::domain::topology::Network;
 
+use super::port_definition::PortDefinition;
+use super::port_derivation::derive_caddy_ports;
+
 /// Caddy reverse proxy service configuration for Docker Compose
 ///
 /// Contains configuration for the Caddy service definition in docker-compose.yml.
@@ -32,9 +35,14 @@ use crate::domain::topology::Network;
 ///
 /// let caddy = CaddyServiceConfig::new();
 /// assert_eq!(caddy.networks, vec![Network::Proxy]);
+/// assert_eq!(caddy.ports.len(), 3); // 80, 443, 443/udp
 /// ```
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct CaddyServiceConfig {
+    /// Port bindings for Docker Compose
+    ///
+    /// Caddy exposes ports 80 (HTTP for ACME), 443 (HTTPS), and 443/udp (QUIC).
+    pub ports: Vec<PortDefinition>,
     /// Networks this service connects to
     ///
     /// Caddy always connects to `proxy_network` for reverse proxying
@@ -43,13 +51,22 @@ pub struct CaddyServiceConfig {
 }
 
 impl CaddyServiceConfig {
-    /// Creates a new `CaddyServiceConfig` with default networks
+    /// Creates a new `CaddyServiceConfig` with derived ports and default networks
     ///
     /// Caddy connects to:
     /// - `proxy_network`: For reverse proxying to backend services
+    ///
+    /// Caddy exposes:
+    /// - Port 80: HTTP for ACME challenge
+    /// - Port 443: HTTPS
+    /// - Port 443/udp: HTTP/3 QUIC
     #[must_use]
     pub fn new() -> Self {
+        let port_bindings = derive_caddy_ports();
+        let ports = port_bindings.iter().map(PortDefinition::from).collect();
+
         Self {
+            ports,
             networks: vec![Network::Proxy],
         }
     }
@@ -87,5 +104,23 @@ mod tests {
 
         // Network serializes to its name string for template compatibility
         assert_eq!(json["networks"][0], "proxy_network");
+    }
+
+    #[test]
+    fn it_should_expose_three_ports() {
+        let caddy = CaddyServiceConfig::new();
+
+        assert_eq!(caddy.ports.len(), 3);
+    }
+
+    #[test]
+    fn it_should_serialize_ports_with_binding_and_description() {
+        let caddy = CaddyServiceConfig::new();
+
+        let json = serde_json::to_value(&caddy).expect("serialization should succeed");
+
+        // Each port has binding and description fields
+        assert!(json["ports"][0]["binding"].is_string());
+        assert!(json["ports"][0]["description"].is_string());
     }
 }

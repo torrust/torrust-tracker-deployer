@@ -5,6 +5,9 @@ use serde::Serialize;
 
 use crate::domain::topology::Network;
 
+use super::port_definition::PortDefinition;
+use super::port_derivation::derive_tracker_ports;
+
 /// Tracker service configuration for Docker Compose
 ///
 /// Contains all configuration needed for the tracker service in Docker Compose,
@@ -29,6 +32,11 @@ pub struct TrackerServiceConfig {
     /// or the API port is exposed (no TLS).
     #[serde(default)]
     pub needs_ports_section: bool,
+    /// Port bindings for Docker Compose
+    ///
+    /// Pre-computed list of all ports the tracker should expose.
+    /// Derived from UDP ports, HTTP ports without TLS, and API port (if no TLS).
+    pub ports: Vec<PortDefinition>,
     /// Networks the tracker service should connect to
     ///
     /// Pre-computed list based on enabled features (prometheus, mysql, caddy).
@@ -64,12 +72,22 @@ impl TrackerServiceConfig {
 
         let networks = Self::compute_networks(has_prometheus, has_mysql, has_caddy);
 
+        // Derive ports using the domain logic
+        let port_bindings = derive_tracker_ports(
+            &udp_tracker_ports,
+            &http_tracker_ports_without_tls,
+            http_api_port,
+            http_api_has_tls,
+        );
+        let ports = port_bindings.iter().map(PortDefinition::from).collect();
+
         Self {
             udp_tracker_ports,
             http_tracker_ports_without_tls,
             http_api_port,
             http_api_has_tls,
             needs_ports_section,
+            ports,
             networks,
         }
     }
@@ -247,5 +265,85 @@ mod tests {
         // Networks serialize to their name strings for template compatibility
         assert_eq!(json["networks"][0], "metrics_network");
         assert_eq!(json["networks"][1], "database_network");
+    }
+
+    // ==========================================================================
+    // Port derivation tests
+    // ==========================================================================
+
+    #[test]
+    fn it_should_derive_udp_ports() {
+        let config = TrackerServiceConfig::new(
+            vec![6969, 6970],
+            vec![],
+            1212,
+            true, // TLS enabled, so API port not exposed
+            false,
+            false,
+            false,
+        );
+
+        assert_eq!(config.ports.len(), 2);
+        assert_eq!(config.ports[0].binding(), "6969:6969/udp");
+        assert_eq!(config.ports[1].binding(), "6970:6970/udp");
+    }
+
+    #[test]
+    fn it_should_derive_http_ports_without_tls() {
+        let config = TrackerServiceConfig::new(
+            vec![],
+            vec![7070, 7071],
+            1212,
+            true, // TLS enabled, so API port not exposed
+            false,
+            false,
+            false,
+        );
+
+        assert_eq!(config.ports.len(), 2);
+        assert_eq!(config.ports[0].binding(), "7070:7070");
+        assert_eq!(config.ports[1].binding(), "7071:7071");
+    }
+
+    #[test]
+    fn it_should_derive_api_port_when_no_tls() {
+        let config = TrackerServiceConfig::new(
+            vec![],
+            vec![],
+            1212,
+            false, // No TLS, so API port exposed
+            false,
+            false,
+            false,
+        );
+
+        assert_eq!(config.ports.len(), 1);
+        assert_eq!(config.ports[0].binding(), "1212:1212");
+    }
+
+    #[test]
+    fn it_should_not_derive_api_port_when_tls_enabled() {
+        let config = TrackerServiceConfig::new(
+            vec![],
+            vec![],
+            1212,
+            true, // TLS enabled, so API port not exposed
+            false,
+            false,
+            false,
+        );
+
+        assert!(config.ports.is_empty());
+    }
+
+    #[test]
+    fn it_should_serialize_ports_with_binding_and_description() {
+        let config =
+            TrackerServiceConfig::new(vec![6969], vec![], 1212, false, false, false, false);
+
+        let json = serde_json::to_value(&config).expect("serialization should succeed");
+
+        assert!(json["ports"][0]["binding"].is_string());
+        assert!(json["ports"][0]["description"].is_string());
     }
 }
