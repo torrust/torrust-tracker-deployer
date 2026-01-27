@@ -24,10 +24,12 @@ use tracing::instrument;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::template::TemplateManager;
 use crate::domain::tracker::TrackerConfig;
+use crate::infrastructure::templating::metadata::TemplateMetadata;
 use crate::infrastructure::templating::prometheus::template::{
     renderer::{PrometheusConfigRenderer, PrometheusConfigRendererError},
     PrometheusContext,
 };
+use crate::shared::clock::Clock;
 
 /// Errors that can occur during Prometheus project generation
 #[derive(Error, Debug)]
@@ -60,6 +62,7 @@ pub enum PrometheusProjectGeneratorError {
 pub struct PrometheusProjectGenerator {
     build_dir: PathBuf,
     prometheus_renderer: PrometheusConfigRenderer,
+    clock: Arc<dyn Clock>,
 }
 
 impl PrometheusProjectGenerator {
@@ -72,13 +75,19 @@ impl PrometheusProjectGenerator {
     ///
     /// * `build_dir` - The destination directory where templates will be rendered
     /// * `template_manager` - The template manager to source templates from
+    /// * `clock` - Clock service for generating timestamps
     #[must_use]
-    pub fn new<P: AsRef<Path>>(build_dir: P, template_manager: Arc<TemplateManager>) -> Self {
+    pub fn new<P: AsRef<Path>>(
+        build_dir: P,
+        template_manager: Arc<TemplateManager>,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
         let prometheus_renderer = PrometheusConfigRenderer::new(template_manager);
 
         Self {
             build_dir: build_dir.as_ref().to_path_buf(),
             prometheus_renderer,
+            clock,
         }
     }
 
@@ -126,7 +135,7 @@ impl PrometheusProjectGenerator {
         })?;
 
         // Build PrometheusContext from configurations
-        let context = Self::build_context(prometheus_config, tracker_config);
+        let context = self.build_context(prometheus_config, tracker_config);
 
         // Render prometheus.yml using PrometheusConfigRenderer
         self.prometheus_renderer
@@ -145,13 +154,16 @@ impl PrometheusProjectGenerator {
     /// # Returns
     ///
     /// A `PrometheusContext` with:
+    /// - `metadata`: Template metadata with generation timestamp
     /// - `scrape_interval`: From `prometheus_config.scrape_interval_in_secs`
     /// - `api_token`: From `tracker_config.http_api.admin_token`
     /// - `api_port`: Parsed from `tracker_config.http_api.bind_address`
     fn build_context(
+        &self,
         prometheus_config: &PrometheusConfig,
         tracker_config: &TrackerConfig,
     ) -> PrometheusContext {
+        let metadata = TemplateMetadata::new(self.clock.now());
         let scrape_interval = prometheus_config.scrape_interval_in_secs().to_string();
         let api_token = tracker_config
             .http_api()
@@ -162,7 +174,7 @@ impl PrometheusProjectGenerator {
         // Extract port from SocketAddr
         let api_port = tracker_config.http_api().bind_address().port();
 
-        PrometheusContext::new(scrape_interval, api_token, api_port)
+        PrometheusContext::new(metadata, scrape_interval, api_token, api_port)
     }
 }
 
@@ -172,6 +184,15 @@ mod tests {
 
     use super::*;
     use crate::domain::tracker::HttpApiConfig;
+    use crate::testing::mock_clock::MockClock;
+
+    fn create_test_clock() -> Arc<dyn Clock> {
+        use chrono::TimeZone;
+        let fixed_time = chrono::Utc
+            .with_ymd_and_hms(2026, 1, 27, 13, 41, 56)
+            .unwrap();
+        Arc::new(MockClock::new(fixed_time))
+    }
 
     fn create_test_template_manager() -> Arc<TemplateManager> {
         use tempfile::TempDir;
@@ -242,7 +263,8 @@ scrape_configs:
         let build_dir = temp_dir.path().join("build");
 
         let template_manager = create_test_template_manager();
-        let generator = PrometheusProjectGenerator::new(&build_dir, template_manager);
+        let clock = create_test_clock();
+        let generator = PrometheusProjectGenerator::new(&build_dir, template_manager, clock);
 
         let prometheus_config = PrometheusConfig::default();
         let tracker_config = create_test_tracker_config();
@@ -268,7 +290,8 @@ scrape_configs:
         let build_dir = temp_dir.path().join("build");
 
         let template_manager = create_test_template_manager();
-        let generator = PrometheusProjectGenerator::new(&build_dir, template_manager);
+        let clock = create_test_clock();
+        let generator = PrometheusProjectGenerator::new(&build_dir, template_manager, clock);
 
         let prometheus_config = PrometheusConfig::default(); // scrape_interval: 15
         let tracker_config = create_test_tracker_config();
@@ -298,7 +321,8 @@ scrape_configs:
         let build_dir = temp_dir.path().join("build");
 
         let template_manager = create_test_template_manager();
-        let generator = PrometheusProjectGenerator::new(&build_dir, template_manager);
+        let clock = create_test_clock();
+        let generator = PrometheusProjectGenerator::new(&build_dir, template_manager, clock);
 
         let prometheus_config =
             PrometheusConfig::new(std::num::NonZeroU32::new(30).expect("30 is non-zero"));
@@ -320,7 +344,8 @@ scrape_configs:
         let build_dir = temp_dir.path().join("build");
 
         let template_manager = create_test_template_manager();
-        let generator = PrometheusProjectGenerator::new(&build_dir, template_manager);
+        let clock = create_test_clock();
+        let generator = PrometheusProjectGenerator::new(&build_dir, template_manager, clock);
 
         let prometheus_config = PrometheusConfig::default();
         let tracker_config =
@@ -342,7 +367,8 @@ scrape_configs:
         let build_dir = temp_dir.path().join("build");
 
         let template_manager = create_test_template_manager();
-        let generator = PrometheusProjectGenerator::new(&build_dir, template_manager);
+        let clock = create_test_clock();
+        let generator = PrometheusProjectGenerator::new(&build_dir, template_manager, clock);
 
         let prometheus_config = PrometheusConfig::default();
         let tracker_config =

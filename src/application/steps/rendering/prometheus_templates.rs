@@ -34,6 +34,7 @@ use crate::domain::template::TemplateManager;
 use crate::infrastructure::templating::prometheus::{
     PrometheusProjectGenerator, PrometheusProjectGeneratorError,
 };
+use crate::shared::clock::Clock;
 
 /// Step that renders Prometheus templates to the build directory
 ///
@@ -44,6 +45,7 @@ pub struct RenderPrometheusTemplatesStep<S> {
     environment: Arc<Environment<S>>,
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
+    clock: Arc<dyn Clock>,
 }
 
 impl<S> RenderPrometheusTemplatesStep<S> {
@@ -54,16 +56,19 @@ impl<S> RenderPrometheusTemplatesStep<S> {
     /// * `environment` - The deployment environment
     /// * `template_manager` - The template manager for accessing templates
     /// * `build_dir` - The build directory where templates will be rendered
+    /// * `clock` - Clock service for generating timestamps
     #[must_use]
     pub fn new(
         environment: Arc<Environment<S>>,
         template_manager: Arc<TemplateManager>,
         build_dir: PathBuf,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             environment,
             template_manager,
             build_dir,
+            clock,
         }
     }
 
@@ -111,8 +116,11 @@ impl<S> RenderPrometheusTemplatesStep<S> {
             "Rendering Prometheus configuration templates"
         );
 
-        let generator =
-            PrometheusProjectGenerator::new(&self.build_dir, self.template_manager.clone());
+        let generator = PrometheusProjectGenerator::new(
+            &self.build_dir,
+            self.template_manager.clone(),
+            self.clock.clone(),
+        );
 
         // Extract tracker config for API token and port
         let tracker_config = self.environment.context().user_inputs.tracker();
@@ -138,6 +146,15 @@ mod tests {
     use super::*;
     use crate::domain::environment::testing::EnvironmentTestBuilder;
     use crate::domain::prometheus::PrometheusConfig;
+    use crate::testing::mock_clock::MockClock;
+
+    fn create_test_clock() -> Arc<dyn Clock> {
+        use chrono::TimeZone;
+        let fixed_time = chrono::Utc
+            .with_ymd_and_hms(2026, 1, 27, 13, 41, 56)
+            .unwrap();
+        Arc::new(MockClock::new(fixed_time))
+    }
 
     #[test]
     fn it_should_create_render_prometheus_templates_step() {
@@ -149,10 +166,12 @@ mod tests {
         let environment = Arc::new(environment);
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
+        let clock = create_test_clock();
         let step = RenderPrometheusTemplatesStep::new(
             environment.clone(),
             template_manager.clone(),
             build_dir.path().to_path_buf(),
+            clock,
         );
 
         assert_eq!(step.build_dir, build_dir.path());
@@ -171,10 +190,12 @@ mod tests {
         let environment = Arc::new(environment);
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
+        let clock = create_test_clock();
         let step = RenderPrometheusTemplatesStep::new(
             environment,
             template_manager,
             build_dir.path().to_path_buf(),
+            clock,
         );
 
         let result = step.execute();
@@ -202,10 +223,12 @@ mod tests {
         let environment = Arc::new(environment);
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
+        let clock = create_test_clock();
         let step = RenderPrometheusTemplatesStep::new(
             environment,
             template_manager,
             build_dir.path().to_path_buf(),
+            clock,
         );
 
         let result = step.execute();

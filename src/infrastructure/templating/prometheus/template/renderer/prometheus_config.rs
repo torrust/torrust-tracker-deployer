@@ -120,6 +120,15 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
+    /// Helper to create test metadata with a fixed timestamp
+    fn create_test_metadata() -> crate::infrastructure::templating::metadata::TemplateMetadata {
+        use chrono::TimeZone;
+        let fixed_time = chrono::Utc
+            .with_ymd_and_hms(2026, 1, 27, 13, 41, 56)
+            .unwrap();
+        crate::infrastructure::templating::metadata::TemplateMetadata::new(fixed_time)
+    }
+
     fn create_test_template_manager() -> Arc<TemplateManager> {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let templates_dir = temp_dir.path().join("templates");
@@ -154,7 +163,9 @@ scrape_configs:
         let template_manager = create_test_template_manager();
         let renderer = PrometheusConfigRenderer::new(template_manager);
 
-        let context = PrometheusContext::new("15s".to_string(), "test_token".to_string(), 1212);
+        let metadata = create_test_metadata();
+        let context =
+            PrometheusContext::new(metadata, "15s".to_string(), "test_token".to_string(), 1212);
 
         let temp_dir = TempDir::new().expect("Failed to create temp output dir");
         let output_dir = temp_dir.path();
@@ -177,8 +188,13 @@ scrape_configs:
         let template_manager = create_test_template_manager();
         let renderer = PrometheusConfigRenderer::new(template_manager);
 
-        let context =
-            PrometheusContext::new("30s".to_string(), "admin_token_123".to_string(), 8080);
+        let metadata = create_test_metadata();
+        let context = PrometheusContext::new(
+            metadata,
+            "30s".to_string(),
+            "admin_token_123".to_string(),
+            8080,
+        );
 
         let temp_dir = TempDir::new().expect("Failed to create temp output dir");
         let output_dir = temp_dir.path();
@@ -209,7 +225,9 @@ scrape_configs:
         let template_manager = Arc::new(TemplateManager::new(&templates_dir));
         let renderer = PrometheusConfigRenderer::new(template_manager);
 
-        let context = PrometheusContext::new("15s".to_string(), "token".to_string(), 1212);
+        let metadata = create_test_metadata();
+        let context =
+            PrometheusContext::new(metadata, "15s".to_string(), "token".to_string(), 1212);
         let output_dir = temp_dir.path();
 
         let result = renderer.render(&context, output_dir);
