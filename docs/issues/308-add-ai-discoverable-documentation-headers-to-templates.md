@@ -388,6 +388,8 @@ Each template should have 4 sub-checkboxes to track completion of the above task
 
 ### Phase 3: Static Template Updates
 
+**Status**: ✅ Complete
+
 **Implementation Notes**:
 
 - Process one template at a time
@@ -396,40 +398,40 @@ Each template should have 4 sub-checkboxes to track completion of the above task
 - These are straightforward documentation additions- **Excluded formats**: JSON files (no comment support) - `metrics.json`, `stats.json`
   **Static Templates to Update** (track progress):
 
-- [ ] `templates/ansible/ansible.cfg`
-- [ ] `templates/ansible/configure-firewall.yml`
-- [ ] `templates/ansible/configure-security-updates.yml`
-- [ ] `templates/ansible/create-grafana-storage.yml`
-- [ ] `templates/ansible/create-mysql-storage.yml`
-- [ ] `templates/ansible/create-prometheus-storage.yml`
-- [ ] `templates/ansible/create-tracker-storage.yml`
-- [ ] `templates/ansible/deploy-caddy-config.yml`
-- [ ] `templates/ansible/deploy-compose-files.yml`
-- [ ] `templates/ansible/deploy-grafana-provisioning.yml`
-- [ ] `templates/ansible/deploy-prometheus-config.yml`
-- [ ] `templates/ansible/deploy-tracker-config.yml`
-- [ ] `templates/ansible/init-tracker-database.yml`
-- [ ] `templates/ansible/install-docker.yml`
-- [ ] `templates/ansible/install-docker-compose.yml`
-- [ ] `templates/ansible/run-compose-services.yml`
-- [ ] `templates/ansible/update-apt-cache.yml`
-- [ ] `templates/ansible/wait-cloud-init.yml`
-- [ ] `templates/grafana/provisioning/dashboards/torrust.yml`
-- [ ] `templates/tofu/lxd/main.tf`
-- [ ] `templates/tofu/hetzner/main.tf`
+- [x] `templates/ansible/ansible.cfg`
+- [x] `templates/ansible/configure-firewall.yml`
+- [x] `templates/ansible/configure-security-updates.yml`
+- [x] `templates/ansible/create-grafana-storage.yml`
+- [x] `templates/ansible/create-mysql-storage.yml`
+- [x] `templates/ansible/create-prometheus-storage.yml`
+- [x] `templates/ansible/create-tracker-storage.yml`
+- [x] `templates/ansible/deploy-caddy-config.yml`
+- [x] `templates/ansible/deploy-compose-files.yml`
+- [x] `templates/ansible/deploy-grafana-provisioning.yml`
+- [x] `templates/ansible/deploy-prometheus-config.yml`
+- [x] `templates/ansible/deploy-tracker-config.yml`
+- [x] `templates/ansible/init-tracker-database.yml`
+- [x] `templates/ansible/install-docker.yml`
+- [x] `templates/ansible/install-docker-compose.yml`
+- [x] `templates/ansible/run-compose-services.yml`
+- [x] `templates/ansible/update-apt-cache.yml`
+- [x] `templates/ansible/wait-cloud-init.yml`
+- [x] `templates/grafana/provisioning/dashboards/torrust.yml`
+- [x] `templates/tofu/lxd/main.tf`
+- [x] `templates/tofu/hetzner/main.tf`
 
 1. **Add simplified headers to all static templates**
    - Follow simplified header format
    - Include repository URL, template path, API docs, and description
    - Omit timestamp and Rust wrapper path
 
-2. **Verify static templates** with timestamp
+2. **Verify static templates**
 
-- [ ] All static templates include simplified documentation header without timestamp
-- [ ] Headers contain correct repository URL, template path, and docs.rs URL
-- [ ] Dynamic template headers include Rust wrapper path
-- [ ] Static template headers omit Rust wrapper path (not applicable)
-  - Check that files are still valid configuration files
+- [x] All static templates include simplified documentation header without timestamp
+- [x] Headers contain correct repository URL, template path, and docs.rs URL
+- [x] Dynamic template headers include Rust wrapper path
+- [x] Static template headers omit Rust wrapper path (not applicable)
+- [x] All files remain valid configuration files
 
 ### Phase 4: Documentation
 
