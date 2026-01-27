@@ -91,9 +91,11 @@ For TOML templates:
 # ============================================================================
 ```
 
-**Note**: The timestamp uses ISO 8601 format (e.g., `2026-01-27T14:30:00Z`) and is only included in dynamic `.tera` templates. Static templates (if any) will omit the timestamp line.
+**Note**: The timestamp uses ISO 8601 format (e.g., `2026-01-27T14:30:00Z`) and is only included in dynamic `.tera` templates. Static templates use a simplified header without timestamp or Rust wrapper path since they are copied as-is without rendering.
 
 ## Templates to Update
+
+### Dynamic Templates (`.tera` files)
 
 | Template                                           | Rust Wrapper                                                                                |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -104,8 +106,36 @@ For TOML templates:
 | `templates/prometheus/prometheus.yml.tera`         | `src/infrastructure/templating/prometheus/template/wrapper/prometheus_config/template.rs`   |
 | `templates/grafana/datasources.yml.tera`           | `src/infrastructure/templating/grafana/template/wrapper/datasource/template.rs`             |
 | `templates/ansible/inventory.yml.tera`             | `src/infrastructure/templating/ansible/template/wrappers/inventory/template.rs`             |
-| `templates/ansible/variables.yml.tera`             | `src/infrastructure/templating/ansible/template/wrappers/variables/template.rs`             |
-| `templates/tofu/*/variables.tf.json.tera`          | Provider-specific wrappers in `src/infrastructure/templating/tofu/template/providers/`      |
+
+### Static Templates (no `.tera` extension)
+
+Static templates that are copied as-is will use simplified headers without timestamp or Rust wrapper path.
+
+**Note**: JSON files are excluded as they don't support comments.
+
+| Template                                                | Description                                               |
+| ------------------------------------------------------- | --------------------------------------------------------- |
+| `templates/ansible/ansible.cfg`                         | Ansible global configuration settings                     |
+| `templates/ansible/configure-firewall.yml`              | Ansible playbook to configure firewall rules              |
+| `templates/ansible/configure-security-updates.yml`      | Ansible playbook to configure automatic security updates  |
+| `templates/ansible/create-grafana-storage.yml`          | Ansible playbook to create Grafana storage directories    |
+| `templates/ansible/create-mysql-storage.yml`            | Ansible playbook to create MySQL storage directories      |
+| `templates/ansible/create-prometheus-storage.yml`       | Ansible playbook to create Prometheus storage directories |
+| `templates/ansible/create-tracker-storage.yml`          | Ansible playbook to create Tracker storage directories    |
+| `templates/ansible/deploy-caddy-config.yml`             | Ansible playbook to deploy Caddy configuration            |
+| `templates/ansible/deploy-compose-files.yml`            | Ansible playbook to deploy Docker Compose files           |
+| `templates/ansible/deploy-grafana-provisioning.yml`     | Ansible playbook to deploy Grafana provisioning files     |
+| `templates/ansible/deploy-prometheus-config.yml`        | Ansible playbook to deploy Prometheus configuration       |
+| `templates/ansible/deploy-tracker-config.yml`           | Ansible playbook to deploy Tracker configuration          |
+| `templates/ansible/init-tracker-database.yml`           | Ansible playbook to initialize Tracker database           |
+| `templates/ansible/install-docker.yml`                  | Ansible playbook to install Docker                        |
+| `templates/ansible/install-docker-compose.yml`          | Ansible playbook to install Docker Compose                |
+| `templates/ansible/run-compose-services.yml`            | Ansible playbook to run Docker Compose services           |
+| `templates/ansible/update-apt-cache.yml`                | Ansible playbook to update APT package cache              |
+| `templates/ansible/wait-cloud-init.yml`                 | Ansible playbook to wait for cloud-init completion        |
+| `templates/grafana/provisioning/dashboards/torrust.yml` | Grafana dashboard provisioning configuration              |
+| `templates/tofu/lxd/main.tf`                            | OpenTofu main configuration for LXD provider              |
+| `templates/tofu/hetzner/main.tf`                        | OpenTofu main configuration for Hetzner provider          |
 
 ## Benefits
 
@@ -136,8 +166,34 @@ The header should be in the **template file** so it appears in the **rendered ou
 
 ### Static vs. Dynamic Templates
 
-- **Dynamic templates** (`.tera` files): Include full header with timestamp
-- **Static templates** (if any): Include header without timestamp to avoid forcing all templates to be dynamic
+- **Dynamic templates** (`.tera` files): Include full header with timestamp and Rust wrapper path
+- **Static templates** (copied as-is): Include simplified header without timestamp or Rust wrapper path
+
+Static templates use a simplified header format:
+
+- Excludes: Generation timestamp, Rust wrapper path (since there's no wrapper for static files)
+- Includes: Repository URL, template path, API docs link, description
+
+Example for static template:
+
+```properties
+# ============================================================================
+# Torrust Tracker Deployer - Generated Configuration
+# ============================================================================
+#
+# This file was generated by the Torrust Tracker Deployer.
+#
+# DOCUMENTATION:
+#   Repository:    https://github.com/torrust/torrust-tracker-deployer
+#   Template:      templates/ansible/ansible.cfg
+#   API Docs:      https://docs.rs/torrust-tracker-deployer/latest/
+#
+# DESCRIPTION:
+#   This file configures global settings for Ansible when running from this directory
+#
+# For configuration options and valid values, see the API documentation link above.
+# ============================================================================
+```
 
 ### Metadata Context Field
 
@@ -229,6 +285,27 @@ This pattern can be extended to other configuration elements (services, volumes,
 
 ### Phase 2: Template Updates
 
+**Implementation Notes**:
+
+- Process one template at a time
+- Run linters after each template change
+- After first template, run full pre-commit checks
+- Verify rendered output in `build/` directory has correct header
+- Review inline documentation in templates (move heavy docs to Rust wrappers)
+
+**Templates to Update** (track progress):
+
+- [ ] `templates/ansible/inventory.yml.tera`
+- [ ] `templates/ansible/variables.yml.tera`
+- [ ] `templates/caddy/Caddyfile.tera`
+- [ ] `templates/docker-compose/docker-compose.yml.tera`
+- [ ] `templates/grafana/provisioning/datasources/prometheus.yml.tera`
+- [ ] `templates/prometheus/prometheus.yml.tera`
+- [ ] `templates/tofu/common/cloud-init.yml.tera`
+- [ ] `templates/tofu/hetzner/variables.tfvars.tera`
+- [ ] `templates/tofu/lxd/variables.tfvars.tera`
+- [ ] `templates/tracker/tracker.toml.tera`
+
 1. **Add headers to all `.tera` templates**
    - Follow standardized format with timestamp
    - Update documentation links (use short-form docs.rs URLs)
@@ -239,7 +316,52 @@ This pattern can be extended to other configuration elements (services, volumes,
    - Check timestamp format is ISO 8601
    - Verify all template variables resolve
 
-### Phase 3: Documentation
+### Phase 3: Static Template Updates
+
+**Implementation Notes**:
+
+- Process one template at a time
+- Static templates use simplified header (no timestamp, no Rust wrapper path)
+- Run linters after each template change
+- These are straightforward documentation additions- **Excluded formats**: JSON files (no comment support) - `metrics.json`, `stats.json`
+  **Static Templates to Update** (track progress):
+
+- [ ] `templates/ansible/ansible.cfg`
+- [ ] `templates/ansible/configure-firewall.yml`
+- [ ] `templates/ansible/configure-security-updates.yml`
+- [ ] `templates/ansible/create-grafana-storage.yml`
+- [ ] `templates/ansible/create-mysql-storage.yml`
+- [ ] `templates/ansible/create-prometheus-storage.yml`
+- [ ] `templates/ansible/create-tracker-storage.yml`
+- [ ] `templates/ansible/deploy-caddy-config.yml`
+- [ ] `templates/ansible/deploy-compose-files.yml`
+- [ ] `templates/ansible/deploy-grafana-provisioning.yml`
+- [ ] `templates/ansible/deploy-prometheus-config.yml`
+- [ ] `templates/ansible/deploy-tracker-config.yml`
+- [ ] `templates/ansible/init-tracker-database.yml`
+- [ ] `templates/ansible/install-docker.yml`
+- [ ] `templates/ansible/install-docker-compose.yml`
+- [ ] `templates/ansible/run-compose-services.yml`
+- [ ] `templates/ansible/update-apt-cache.yml`
+- [ ] `templates/ansible/wait-cloud-init.yml`
+- [ ] `templates/grafana/provisioning/dashboards/torrust.yml`
+- [ ] `templates/tofu/lxd/main.tf`
+- [ ] `templates/tofu/hetzner/main.tf`
+
+1. **Add simplified headers to all static templates**
+   - Follow simplified header format
+   - Include repository URL, template path, API docs, and description
+   - Omit timestamp and Rust wrapper path
+
+2. **Verify static templates** with timestamp
+
+- [ ] All static templates include simplified documentation header without timestamp
+- [ ] Headers contain correct repository URL, template path, and docs.rs URL
+- [ ] Dynamic template headers include Rust wrapper path
+- [ ] Static template headers omit Rust wrapper path (not applicable)
+  - Check that files are still valid configuration files
+
+### Phase 4: Documentation
 
 1. **Document the header pattern**
    - Update `docs/contributing/templates/template-system-architecture.md`
