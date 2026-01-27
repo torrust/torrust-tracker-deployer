@@ -40,6 +40,8 @@ use crate::infrastructure::templating::docker_compose::template::wrappers::env::
 use crate::infrastructure::templating::docker_compose::{
     DockerComposeProjectGenerator, DockerComposeProjectGeneratorError,
 };
+use crate::infrastructure::templating::TemplateMetadata;
+use crate::shared::clock::Clock;
 use crate::shared::PlainPassword;
 
 /// Step that renders Docker Compose templates to the build directory
@@ -51,6 +53,7 @@ pub struct RenderDockerComposeTemplatesStep<S> {
     environment: Arc<Environment<S>>,
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
+    clock: Arc<dyn Clock>,
 }
 
 impl<S> RenderDockerComposeTemplatesStep<S> {
@@ -61,16 +64,19 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
     /// * `environment` - The deployment environment
     /// * `template_manager` - The template manager for accessing templates
     /// * `build_dir` - The build directory where templates will be rendered
+    /// * `clock` - Clock service for generating template metadata timestamps
     #[must_use]
     pub fn new(
         environment: Arc<Environment<S>>,
         template_manager: Arc<TemplateManager>,
         build_dir: PathBuf,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             environment,
             template_manager,
             build_dir,
+            clock,
         }
     }
 
@@ -113,8 +119,8 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         // Create contexts based on database configuration
         let database_config = self.environment.database_config();
         let (env_context, builder) = match database_config {
-            DatabaseConfig::Sqlite(..) => Self::create_sqlite_contexts(admin_token, tracker),
-            DatabaseConfig::Mysql(mysql_config) => Self::create_mysql_contexts(
+            DatabaseConfig::Sqlite(..) => self.create_sqlite_contexts(admin_token, tracker),
+            DatabaseConfig::Mysql(mysql_config) => self.create_mysql_contexts(
                 admin_token,
                 tracker,
                 mysql_config.port(),
@@ -210,16 +216,19 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
     }
 
     fn create_sqlite_contexts(
+        &self,
         admin_token: String,
         tracker: TrackerServiceContext,
     ) -> (EnvContext, DockerComposeContextBuilder) {
+        let metadata = TemplateMetadata::new(self.clock.now());
         let env_context = EnvContext::new(admin_token);
-        let builder = DockerComposeContext::builder(tracker);
+        let builder = DockerComposeContext::builder(tracker).with_metadata(metadata);
 
         (env_context, builder)
     }
 
     fn create_mysql_contexts(
+        &self,
         admin_token: String,
         tracker: TrackerServiceContext,
         port: u16,
@@ -230,6 +239,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         // For MySQL, generate a secure root password (in production, this should be managed securely)
         let root_password = format!("{password}_root");
 
+        let metadata = TemplateMetadata::new(self.clock.now());
         let env_context = EnvContext::new_with_mysql(
             admin_token,
             root_password.clone(),
@@ -246,7 +256,9 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
             port,
         };
 
-        let builder = DockerComposeContext::builder(tracker).with_mysql(mysql_config);
+        let builder = DockerComposeContext::builder(tracker)
+            .with_metadata(metadata)
+            .with_mysql(mysql_config);
 
         (env_context, builder)
     }
@@ -327,6 +339,7 @@ mod tests {
     use super::*;
     use crate::domain::environment::testing::EnvironmentTestBuilder;
     use crate::infrastructure::templating::docker_compose::DOCKER_COMPOSE_SUBFOLDER;
+    use crate::shared::clock::SystemClock;
 
     #[tokio::test]
     async fn it_should_create_render_docker_compose_templates_step() {
@@ -338,10 +351,12 @@ mod tests {
         let environment = Arc::new(environment);
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
+        let clock = Arc::new(SystemClock);
         let step = RenderDockerComposeTemplatesStep::new(
             environment.clone(),
             template_manager.clone(),
             build_dir.path().to_path_buf(),
+            clock,
         );
 
         assert_eq!(step.build_dir, build_dir.path());
@@ -358,10 +373,12 @@ mod tests {
         let environment = Arc::new(environment);
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
+        let clock = Arc::new(SystemClock);
         let step = RenderDockerComposeTemplatesStep::new(
             environment,
             template_manager,
             build_dir.path().to_path_buf(),
+            clock,
         );
 
         let result = step.execute().await;
@@ -381,10 +398,12 @@ mod tests {
         let environment = Arc::new(environment);
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
+        let clock = Arc::new(SystemClock);
         let step = RenderDockerComposeTemplatesStep::new(
             environment,
             template_manager,
             build_dir.path().to_path_buf(),
+            clock,
         );
 
         let result = step.execute().await;
