@@ -510,7 +510,7 @@ Each template should have 4 sub-checkboxes to track completion of the above task
 
 ✅ **All 5 containers running and healthy**:
 
-```
+```text
 NAMES        STATUS                       PORTS
 grafana      Up (healthy)                 0.0.0.0:3000->3000/tcp
 prometheus   Up (healthy)                 127.0.0.1:9090->9090/tcp
