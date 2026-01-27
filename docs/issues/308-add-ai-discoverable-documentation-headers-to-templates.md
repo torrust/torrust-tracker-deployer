@@ -468,7 +468,7 @@ Each template should have 4 sub-checkboxes to track completion of the above task
 
 ### Phase 5: Full-Stack Manual E2E Test
 
-**Status**: ⏳ In Progress
+**Status**: ✅ Complete
 
 **Rationale**: Given the extensive template changes across 32 files, we need to verify that all headers render correctly in a real-world deployment scenario with all services enabled.
 
@@ -497,7 +497,78 @@ Each template should have 4 sub-checkboxes to track completion of the above task
 8. Verify headers in all rendered files
 9. Clean up resources
 
-**Test Results**: (to be documented)
+**Test Results**:
+
+✅ **All deployment commands executed successfully**:
+
+- Environment created: `manual-test-phase5-full-stack`
+- Instance provisioned: `torrust-tracker-vm-manual-test-phase5-full-stack` at IP `10.140.190.12`
+- Infrastructure provisioned in 26.7s
+- Software configured in 45s (Docker + Docker Compose + security + firewall)
+- Application released in 18.4s
+- Services started in 39.9s
+
+✅ **All 5 containers running and healthy**:
+
+```
+NAMES        STATUS                       PORTS
+grafana      Up (healthy)                 0.0.0.0:3000->3000/tcp
+prometheus   Up (healthy)                 127.0.0.1:9090->9090/tcp
+tracker      Up (healthy)                 0.0.0.0:1212->1212/tcp, 0.0.0.0:6969->6969/udp
+caddy        Up (healthy)                 0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
+mysql        Up (healthy)                 3306/tcp
+```
+
+✅ **Service Verification Results**:
+
+1. **Tracker HTTP API**: ✅ Healthy
+
+   ```json
+   { "status": "Ok" }
+   ```
+
+2. **MySQL Database**: ✅ Connected and initialized
+   - 4 tables created in `torrust_tracker` database
+   - Schema properly deployed
+
+3. **Prometheus**: ✅ Scraping tracker metrics
+   - `tracker_metrics` job: `health: up`
+   - `tracker_stats` job: `health: up`
+   - No scraping errors
+
+4. **Grafana**: ✅ Running version 12.3.1
+
+   ```json
+   { "database": "ok", "version": "12.3.1" }
+   ```
+
+5. **Caddy HTTPS**: ✅ Certificate obtained for `tracker.local`
+   - Using Let's Encrypt staging (as configured with `use_staging: true`)
+   - Automatic certificate management enabled
+
+✅ **AI-Discoverable Headers Verified** in rendered files:
+
+1. **Dynamic templates** (with timestamp):
+   - `tracker.toml`: Header present, timestamp `2026-01-27T19:39:46Z`
+   - `docker-compose.yml`: Header present, timestamp `2026-01-27T19:39:59Z`
+   - All dynamic templates include Rust wrapper path
+
+2. **Static templates** (simplified header):
+   - `install-docker.yml`: Header present, no timestamp (as expected)
+   - Static templates omit Rust wrapper path (not applicable)
+
+3. **Header placement verified**:
+   - YAML files: Headers correctly placed BEFORE `---` marker
+   - All headers include correct repository URLs and API docs links
+
+**Bugfix Discovered During Testing**:
+
+- **Issue**: Error messages were hiding actual validation errors
+- **Fix**: Changed `CreateCommandHandlerError::InvalidConfiguration` from `#[error("Configuration validation failed")]` to `#[error("Configuration validation failed: {0}")]`
+- **Impact**: Users now see actionable error messages (e.g., "HTTPS section is defined but no service has TLS configured") instead of generic "validation failed"
+- **Committed**: Commit `9a3bab15`
+
+**Conclusion**: All 32 template files (11 dynamic + 21 static) successfully render with AI-discoverable headers. Full-stack deployment with MySQL, Prometheus, Grafana, and HTTPS works correctly. Headers are present, properly formatted, and contain accurate information for AI agents.
 
 ## Acceptance Criteria
 
