@@ -139,10 +139,16 @@ impl CaddyfileRenderer {
 mod tests {
     use std::fs;
 
+    use chrono::{TimeZone, Utc};
     use tempfile::TempDir;
 
     use super::*;
     use crate::infrastructure::templating::caddy::template::wrapper::CaddyService;
+    use crate::infrastructure::templating::TemplateMetadata;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(Utc.with_ymd_and_hms(2026, 1, 27, 13, 41, 56).unwrap())
+    }
 
     fn create_test_template_manager() -> (Arc<TemplateManager>, TempDir) {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -190,7 +196,7 @@ mod tests {
         let caddyfile_renderer = CaddyfileRenderer::new(template_manager);
 
         let output_dir = TempDir::new().expect("Failed to create output dir");
-        let caddy_ctx = CaddyContext::new("admin@example.com", false)
+        let caddy_ctx = CaddyContext::new(create_test_metadata(), "admin@example.com", false)
             .with_tracker_api(CaddyService::new("api.example.com", 1212))
             .with_http_tracker(CaddyService::new("http1.example.com", 7070))
             .with_grafana(CaddyService::new("grafana.example.com", 3000));
@@ -218,7 +224,7 @@ mod tests {
         let caddyfile_renderer = CaddyfileRenderer::new(template_manager);
 
         let output_dir = TempDir::new().expect("Failed to create output dir");
-        let caddy_ctx = CaddyContext::new("admin@example.com", true)
+        let caddy_ctx = CaddyContext::new(create_test_metadata(), "admin@example.com", true)
             .with_tracker_api(CaddyService::new("api.example.com", 1212));
 
         caddyfile_renderer
@@ -236,7 +242,7 @@ mod tests {
         let caddyfile_renderer = CaddyfileRenderer::new(template_manager);
 
         let output_dir = TempDir::new().expect("Failed to create output dir");
-        let caddy_ctx = CaddyContext::new("admin@example.com", false)
+        let caddy_ctx = CaddyContext::new(create_test_metadata(), "admin@example.com", false)
             .with_http_tracker(CaddyService::new("http1.example.com", 7070))
             .with_http_tracker(CaddyService::new("http2.example.com", 7071))
             .with_http_tracker(CaddyService::new("http3.example.com", 7072));
@@ -262,7 +268,7 @@ mod tests {
 
         let output_dir = TempDir::new().expect("Failed to create output dir");
         // Only API, no HTTP trackers or Grafana
-        let caddy_ctx = CaddyContext::new("admin@example.com", false)
+        let caddy_ctx = CaddyContext::new(create_test_metadata(), "admin@example.com", false)
             .with_tracker_api(CaddyService::new("api.example.com", 1212));
 
         caddyfile_renderer

@@ -12,6 +12,8 @@
 
 use serde::Serialize;
 
+use crate::infrastructure::templating::TemplateMetadata;
+
 /// Represents a service that can be proxied through Caddy
 ///
 /// Contains the domain name for TLS certificate acquisition and the
@@ -75,27 +77,37 @@ impl CaddyService {
 /// use torrust_tracker_deployer_lib::infrastructure::templating::caddy::{
 ///     CaddyContext, CaddyService,
 /// };
+/// use torrust_tracker_deployer_lib::infrastructure::templating::TemplateMetadata;
+/// use torrust_tracker_deployer_lib::shared::clock::{Clock, SystemClock};
+///
+/// let clock = SystemClock;
+/// let metadata = TemplateMetadata::new(clock.now());
 ///
 /// // All services with HTTPS
-/// let context = CaddyContext {
-///     admin_email: "admin@example.com".to_string(),
-///     use_staging: false,
-///     tracker_api: Some(CaddyService::new("api.example.com", 1212)),
-///     http_trackers: vec![
-///         CaddyService::new("http1.example.com", 7070),
-///         CaddyService::new("http2.example.com", 7071),
-///     ],
-///     grafana: Some(CaddyService::new("grafana.example.com", 3000)),
-///     health_check_api: None,
-/// };
+/// let context = CaddyContext::new(
+///     metadata,
+///     "admin@example.com",
+///     false,
+/// )
+/// .with_tracker_api(CaddyService::new("api.example.com", 1212))
+/// .with_http_tracker(CaddyService::new("http1.example.com", 7070))
+/// .with_http_tracker(CaddyService::new("http2.example.com", 7071))
+/// .with_grafana(CaddyService::new("grafana.example.com", 3000));
 /// ```
 ///
 /// # Data Flow
 ///
 /// Environment Config (tracker, grafana sections with tls) → Application Layer
 /// → `CaddyContext` with pre-extracted ports
-#[derive(Debug, Clone, Default, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct CaddyContext {
+    /// Template metadata (timestamp, etc.)
+    ///
+    /// Contains information about when the template was generated, useful for
+    /// tracking template versions and ensuring reproducibility.
+    #[serde(flatten)]
+    pub metadata: TemplateMetadata,
+
     /// Email for Let's Encrypt certificate notifications
     ///
     /// Required when any service has TLS configured.
@@ -139,11 +151,17 @@ impl CaddyContext {
     ///
     /// # Arguments
     ///
+    /// * `metadata` - Template metadata (timestamp, etc.)
     /// * `admin_email` - Email for Let's Encrypt notifications
     /// * `use_staging` - Whether to use Let's Encrypt staging environment
     #[must_use]
-    pub fn new(admin_email: impl Into<String>, use_staging: bool) -> Self {
+    pub fn new(
+        metadata: TemplateMetadata,
+        admin_email: impl Into<String>,
+        use_staging: bool,
+    ) -> Self {
         Self {
+            metadata,
             admin_email: admin_email.into(),
             use_staging,
             tracker_api: None,
@@ -193,9 +211,30 @@ impl CaddyContext {
     }
 }
 
+impl Default for CaddyContext {
+    fn default() -> Self {
+        use chrono::{TimeZone, Utc};
+        Self {
+            metadata: TemplateMetadata::new(Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap()),
+            admin_email: String::new(),
+            use_staging: false,
+            tracker_api: None,
+            http_trackers: Vec::new(),
+            health_check_api: None,
+            grafana: None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use chrono::{TimeZone, Utc};
+
     use super::*;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(Utc.with_ymd_and_hms(2026, 1, 27, 13, 41, 56).unwrap())
+    }
 
     #[test]
     fn it_should_create_caddy_service() {
@@ -207,7 +246,7 @@ mod tests {
 
     #[test]
     fn it_should_create_caddy_context_with_builder_pattern() {
-        let context = CaddyContext::new("admin@example.com", false)
+        let context = CaddyContext::new(create_test_metadata(), "admin@example.com", false)
             .with_tracker_api(CaddyService::new("api.example.com", 1212))
             .with_http_tracker(CaddyService::new("http1.example.com", 7070))
             .with_http_tracker(CaddyService::new("http2.example.com", 7071))
@@ -225,19 +264,21 @@ mod tests {
         let empty_context = CaddyContext::default();
         assert!(!empty_context.has_any_tls());
 
-        let api_only = CaddyContext::new("admin@example.com", false)
+        let api_only = CaddyContext::new(create_test_metadata(), "admin@example.com", false)
             .with_tracker_api(CaddyService::new("api.example.com", 1212));
         assert!(api_only.has_any_tls());
 
-        let http_tracker_only = CaddyContext::new("admin@example.com", false)
-            .with_http_tracker(CaddyService::new("http.example.com", 7070));
+        let http_tracker_only =
+            CaddyContext::new(create_test_metadata(), "admin@example.com", false)
+                .with_http_tracker(CaddyService::new("http.example.com", 7070));
         assert!(http_tracker_only.has_any_tls());
 
-        let health_check_only = CaddyContext::new("admin@example.com", false)
-            .with_health_check_api(CaddyService::new("health.example.com", 1313));
+        let health_check_only =
+            CaddyContext::new(create_test_metadata(), "admin@example.com", false)
+                .with_health_check_api(CaddyService::new("health.example.com", 1313));
         assert!(health_check_only.has_any_tls());
 
-        let grafana_only = CaddyContext::new("admin@example.com", false)
+        let grafana_only = CaddyContext::new(create_test_metadata(), "admin@example.com", false)
             .with_grafana(CaddyService::new("grafana.example.com", 3000));
         assert!(grafana_only.has_any_tls());
     }
@@ -256,12 +297,13 @@ mod tests {
 
     #[test]
     fn it_should_serialize_to_json() {
-        let context = CaddyContext::new("admin@example.com", true)
+        let context = CaddyContext::new(create_test_metadata(), "admin@example.com", true)
             .with_tracker_api(CaddyService::new("api.example.com", 1212))
             .with_http_tracker(CaddyService::new("http.example.com", 7070));
 
         let json = serde_json::to_value(&context).expect("serialization should succeed");
 
+        assert_eq!(json["generated_at"], "2026-01-27T13:41:56Z");
         assert_eq!(json["admin_email"], "admin@example.com");
         assert_eq!(json["use_staging"], true);
         assert_eq!(json["tracker_api"]["domain"], "api.example.com");
@@ -273,8 +315,8 @@ mod tests {
 
     #[test]
     fn it_should_use_staging_for_testing() {
-        let production = CaddyContext::new("admin@example.com", false);
-        let staging = CaddyContext::new("admin@example.com", true);
+        let production = CaddyContext::new(create_test_metadata(), "admin@example.com", false);
+        let staging = CaddyContext::new(create_test_metadata(), "admin@example.com", true);
 
         assert!(!production.use_staging);
         assert!(staging.use_staging);

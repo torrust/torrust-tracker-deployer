@@ -161,10 +161,16 @@ impl CaddyProjectGenerator {
 mod tests {
     use std::fs;
 
+    use chrono::{TimeZone, Utc};
     use tempfile::TempDir;
 
     use super::*;
     use crate::infrastructure::templating::caddy::template::wrapper::CaddyService;
+    use crate::infrastructure::templating::TemplateMetadata;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(Utc.with_ymd_and_hms(2026, 1, 27, 13, 41, 56).unwrap())
+    }
 
     fn create_test_template_manager() -> (Arc<TemplateManager>, TempDir) {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -213,7 +219,7 @@ mod tests {
 
         let generator = CaddyProjectGenerator::new(build_dir.path(), template_manager);
 
-        let caddy_ctx = CaddyContext::new("admin@example.com", false)
+        let caddy_ctx = CaddyContext::new(create_test_metadata(), "admin@example.com", false)
             .with_tracker_api(CaddyService::new("api.example.com", 1212));
 
         generator.render(&caddy_ctx).expect("Failed to render");
@@ -230,7 +236,7 @@ mod tests {
 
         let project_gen = CaddyProjectGenerator::new(build_dir.path(), template_manager);
 
-        let caddy_ctx = CaddyContext::new("admin@example.com", false)
+        let caddy_ctx = CaddyContext::new(create_test_metadata(), "admin@example.com", false)
             .with_tracker_api(CaddyService::new("api.example.com", 1212))
             .with_grafana(CaddyService::new("grafana.example.com", 3000));
 
@@ -253,7 +259,7 @@ mod tests {
         let project_gen = CaddyProjectGenerator::new(build_dir.path(), template_manager);
 
         // Empty context - no TLS configured
-        let caddy_ctx = CaddyContext::new("admin@example.com", false);
+        let caddy_ctx = CaddyContext::new(create_test_metadata(), "admin@example.com", false);
 
         let result = project_gen.render(&caddy_ctx);
         assert!(result.is_err());
