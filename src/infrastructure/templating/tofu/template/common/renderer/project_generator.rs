@@ -479,7 +479,10 @@ impl TofuProjectGenerator {
         })?;
 
         // Build LXD context for template rendering
+        #[allow(clippy::used_underscore_binding)]
+        let metadata = TemplateMetadata::new(self._clock.now());
         let context = LxdVariablesContextBuilder::new()
+            .with_metadata(metadata)
             .with_instance_name(self.instance_name.clone())
             .with_profile_name(lxd_config.profile_name.clone())
             .build()
