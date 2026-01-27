@@ -33,6 +33,8 @@ use crate::infrastructure::templating::tracker::template::{
     renderer::{TrackerConfigRenderer, TrackerConfigRendererError},
     TrackerContext,
 };
+use crate::infrastructure::templating::TemplateMetadata;
+use crate::shared::Clock;
 
 /// Errors that can occur during Tracker project generation
 #[derive(Error, Debug)]
@@ -69,6 +71,7 @@ pub enum TrackerProjectGeneratorError {
 pub struct TrackerProjectGenerator {
     build_dir: PathBuf,
     tracker_renderer: TrackerConfigRenderer,
+    clock: Arc<dyn Clock>,
 }
 
 impl TrackerProjectGenerator {
@@ -81,13 +84,19 @@ impl TrackerProjectGenerator {
     ///
     /// * `build_dir` - The destination directory where templates will be rendered
     /// * `template_manager` - The template manager to source templates from
+    /// * `clock` - Clock service for generating timestamps
     #[must_use]
-    pub fn new<P: AsRef<Path>>(build_dir: P, template_manager: Arc<TemplateManager>) -> Self {
+    pub fn new<P: AsRef<Path>>(
+        build_dir: P,
+        template_manager: Arc<TemplateManager>,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
         let tracker_renderer = TrackerConfigRenderer::new(template_manager);
 
         Self {
             build_dir: build_dir.as_ref().to_path_buf(),
             tracker_renderer,
+            clock,
         }
     }
 
@@ -130,9 +139,10 @@ impl TrackerProjectGenerator {
         })?;
 
         // Create context from tracker config or use defaults
+        let metadata = TemplateMetadata::new(self.clock.now());
         let context = match tracker_config {
-            Some(config) => TrackerContext::from_config(config),
-            None => TrackerContext::default_config(),
+            Some(config) => TrackerContext::from_config(metadata, config),
+            None => TrackerContext::default_config(metadata),
         };
 
         // Render tracker.toml using TrackerRenderer
@@ -147,7 +157,7 @@ mod tests {
     use std::fs;
 
     use super::*;
-    use crate::shared::Password;
+    use crate::shared::{Password, SystemClock};
 
     #[test]
     fn it_should_create_tracker_build_directory() {
@@ -155,7 +165,8 @@ mod tests {
         let build_dir = temp_dir.path().join("build");
 
         let template_manager = create_test_template_manager();
-        let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
+        let clock = Arc::new(SystemClock);
+        let generator = TrackerProjectGenerator::new(&build_dir, template_manager, clock);
 
         generator.render(None).expect("Failed to render templates");
 
@@ -176,7 +187,8 @@ mod tests {
         let build_dir = temp_dir.path().join("build");
 
         let template_manager = create_test_template_manager();
-        let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
+        let generator =
+            TrackerProjectGenerator::new(&build_dir, template_manager, Arc::new(SystemClock));
 
         generator.render(None).expect("Failed to render templates");
 
@@ -210,7 +222,8 @@ mod tests {
         let build_dir = temp_dir.path().join("build");
 
         let template_manager = create_test_template_manager();
-        let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
+        let generator =
+            TrackerProjectGenerator::new(&build_dir, template_manager, Arc::new(SystemClock));
 
         let tracker_config = TrackerConfig::new(
             TrackerCoreConfig::new(
@@ -258,7 +271,8 @@ mod tests {
         let build_dir = temp_dir.path().join("build");
 
         let template_manager = create_test_template_manager();
-        let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
+        let generator =
+            TrackerProjectGenerator::new(&build_dir, template_manager, Arc::new(SystemClock));
 
         let tracker_config = TrackerConfig::new(
             TrackerCoreConfig::new(
@@ -317,7 +331,8 @@ mod tests {
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir));
 
-        let generator = TrackerProjectGenerator::new(&build_dir, template_manager);
+        let generator =
+            TrackerProjectGenerator::new(&build_dir, template_manager, Arc::new(SystemClock));
 
         // Should succeed because TemplateManager extracts from embedded resources
         let result = generator.render(None);

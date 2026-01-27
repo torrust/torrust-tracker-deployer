@@ -5,7 +5,15 @@
 //! to provide context for AI agents, developers, and system administrators.
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
+
+/// Serializes `DateTime<Utc>` as ISO 8601 string for Tera templates
+fn serialize_datetime_as_iso8601<S>(dt: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&dt.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+}
 
 /// Metadata about template generation.
 ///
@@ -25,6 +33,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TemplateMetadata {
     /// Timestamp when the template was generated (UTC).
+    #[serde(serialize_with = "serialize_datetime_as_iso8601")]
     generated_at: DateTime<Utc>,
 }
 

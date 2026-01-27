@@ -12,6 +12,7 @@
 use serde::Serialize;
 
 use crate::domain::environment::TrackerConfig;
+use crate::infrastructure::templating::TemplateMetadata;
 
 /// Context for rendering tracker.toml.tera template
 ///
@@ -24,7 +25,9 @@ use crate::domain::environment::TrackerConfig;
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::infrastructure::templating::tracker::TrackerContext;
+/// use torrust_tracker_deployer_lib::infrastructure::templating::TemplateMetadata;
 /// use torrust_tracker_deployer_lib::domain::environment::{TrackerConfig, TrackerCoreConfig, DatabaseConfig, SqliteConfig, UdpTrackerConfig, HttpTrackerConfig, HttpApiConfig, HealthCheckApiConfig};
+/// use torrust_tracker_deployer_lib::shared::clock::{Clock, SystemClock};
 ///
 /// let tracker_config = TrackerConfig::new(
 ///     TrackerCoreConfig::new(
@@ -50,10 +53,18 @@ use crate::domain::environment::TrackerConfig;
 ///         false,
 ///     ).expect("valid config"),
 /// ).expect("valid tracker config");
-/// let context = TrackerContext::from_config(&tracker_config);
+/// let clock = SystemClock;
+/// let metadata = TemplateMetadata::new(clock.now());
+/// let context = TrackerContext::from_config(metadata, &tracker_config);
 /// ```
 #[derive(Debug, Clone, Serialize)]
 pub struct TrackerContext {
+    /// Template generation metadata (timestamp, etc.)
+    ///
+    /// Flattened for template compatibility - serializes metadata at top level.
+    #[serde(flatten)]
+    pub metadata: TemplateMetadata,
+
     /// Database driver: "sqlite3" or "mysql"
     pub database_driver: String,
 
@@ -123,9 +134,10 @@ impl TrackerContext {
     ///
     /// # Arguments
     ///
+    /// * `metadata` - Template generation metadata (timestamp, etc.)
     /// * `config` - The tracker configuration from environment
     #[must_use]
-    pub fn from_config(config: &TrackerConfig) -> Self {
+    pub fn from_config(metadata: TemplateMetadata, config: &TrackerConfig) -> Self {
         use crate::domain::tracker::DatabaseConfig;
 
         let (mysql_host, mysql_port, mysql_database, mysql_user, mysql_password) =
@@ -141,6 +153,7 @@ impl TrackerContext {
             };
 
         Self {
+            metadata,
             database_driver: config.core().database().driver_name().to_string(),
             tracker_database_name: config.core().database().database_name().to_string(),
             mysql_host,
@@ -174,12 +187,17 @@ impl TrackerContext {
     /// Used when no tracker configuration is provided in environment.
     /// Provides backward compatibility with Phase 4 defaults.
     ///
+    /// # Arguments
+    ///
+    /// * `metadata` - Template generation metadata (timestamp, etc.)
+    ///
     /// # Panics
     ///
     /// Panics if default IP addresses fail to parse (should never happen with valid constants).
     #[must_use]
-    pub fn default_config() -> Self {
+    pub fn default_config(metadata: TemplateMetadata) -> Self {
         Self {
+            metadata,
             database_driver: "sqlite3".to_string(),
             tracker_database_name: "sqlite3.db".to_string(),
             mysql_host: None,
@@ -206,12 +224,6 @@ impl TrackerContext {
     }
 }
 
-impl Default for TrackerContext {
-    fn default() -> Self {
-        Self::default_config()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -219,7 +231,14 @@ mod tests {
         DatabaseConfig, HealthCheckApiConfig, HttpApiConfig, HttpTrackerConfig, MysqlConfig,
         SqliteConfig, TrackerConfig, TrackerCoreConfig, UdpTrackerConfig,
     };
+    use crate::infrastructure::templating::TemplateMetadata;
     use crate::shared::Password;
+    use chrono::{TimeZone, Utc};
+
+    fn create_test_metadata() -> TemplateMetadata {
+        let timestamp = Utc.with_ymd_and_hms(2026, 1, 27, 14, 30, 0).unwrap();
+        TemplateMetadata::new(timestamp)
+    }
 
     fn create_test_tracker_config() -> TrackerConfig {
         TrackerConfig::new(
@@ -251,7 +270,8 @@ mod tests {
     #[test]
     fn it_should_create_context_from_tracker_config() {
         let config = create_test_tracker_config();
-        let context = TrackerContext::from_config(&config);
+        let metadata = create_test_metadata();
+        let context = TrackerContext::from_config(metadata, &config);
 
         assert_eq!(context.database_driver, "sqlite3");
         assert_eq!(context.tracker_database_name, "test_tracker.db");
@@ -303,7 +323,8 @@ mod tests {
         )
         .expect("valid tracker config");
 
-        let context = TrackerContext::from_config(&config);
+        let metadata = create_test_metadata();
+        let context = TrackerContext::from_config(metadata, &config);
 
         assert_eq!(context.database_driver, "mysql");
         assert_eq!(context.tracker_database_name, "tracker_db");
@@ -317,7 +338,8 @@ mod tests {
 
     #[test]
     fn it_should_create_default_context() {
-        let context = TrackerContext::default_config();
+        let metadata = create_test_metadata();
+        let context = TrackerContext::default_config(metadata);
 
         assert_eq!(context.database_driver, "sqlite3");
         assert_eq!(context.tracker_database_name, "sqlite3.db");
@@ -331,19 +353,21 @@ mod tests {
         assert_eq!(context.http_trackers.len(), 1);
     }
 
-    #[test]
-    fn it_should_support_default_trait() {
-        let context = TrackerContext::default();
+    // Note: Default trait removed - context now requires metadata parameter
+    // #[test]
+    // fn it_should_support_default_trait() {
+    //     let context = TrackerContext::default();
 
-        assert_eq!(context.database_driver, "sqlite3");
-        assert_eq!(context.tracker_database_name, "sqlite3.db");
-        assert!(!context.tracker_core_private);
-    }
+    //     assert_eq!(context.database_driver, "sqlite3");
+    //     assert_eq!(context.tracker_database_name, "sqlite3.db");
+    //     assert!(!context.tracker_core_private);
+    // }
 
     #[test]
     fn it_should_be_cloneable() {
         let config = create_test_tracker_config();
-        let context = TrackerContext::from_config(&config);
+        let metadata = create_test_metadata();
+        let context = TrackerContext::from_config(metadata, &config);
         let cloned = context.clone();
 
         assert_eq!(context.tracker_database_name, cloned.tracker_database_name);
@@ -354,7 +378,8 @@ mod tests {
 
     #[test]
     fn it_should_support_debug_formatting() {
-        let context = TrackerContext::default_config();
+        let metadata = create_test_metadata();
+        let context = TrackerContext::default_config(metadata);
         let debug_output = format!("{context:?}");
 
         assert!(debug_output.contains("TrackerContext"));

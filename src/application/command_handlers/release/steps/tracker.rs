@@ -21,6 +21,7 @@ use crate::application::steps::rendering::RenderTrackerTemplatesStep;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
 use crate::domain::template::TemplateManager;
+use crate::shared::SystemClock;
 
 /// Release the Tracker service
 ///
@@ -120,10 +121,12 @@ fn render_templates(
     let current_step = ReleaseStep::RenderTrackerTemplates;
 
     let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
+    let clock = Arc::new(SystemClock);
     let step = RenderTrackerTemplatesStep::new(
         Arc::new(environment.clone()),
         template_manager,
         environment.build_dir().clone(),
+        clock,
     );
 
     let tracker_build_dir = step.execute().map_err(|e| {

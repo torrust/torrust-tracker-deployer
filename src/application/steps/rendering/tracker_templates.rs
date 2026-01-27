@@ -41,6 +41,7 @@ use crate::domain::template::TemplateManager;
 use crate::infrastructure::templating::tracker::{
     TrackerProjectGenerator, TrackerProjectGeneratorError,
 };
+use crate::shared::Clock;
 
 /// Step that renders Tracker configuration templates to the build directory
 ///
@@ -51,6 +52,7 @@ pub struct RenderTrackerTemplatesStep<S> {
     environment: Arc<Environment<S>>,
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
+    clock: Arc<dyn Clock>,
 }
 
 impl<S> RenderTrackerTemplatesStep<S> {
@@ -61,16 +63,19 @@ impl<S> RenderTrackerTemplatesStep<S> {
     /// * `environment` - The deployment environment
     /// * `template_manager` - The template manager for accessing templates
     /// * `build_dir` - The build directory where templates will be rendered
+    /// * `clock` - Clock service for generating timestamps
     #[must_use]
     pub fn new(
         environment: Arc<Environment<S>>,
         template_manager: Arc<TemplateManager>,
         build_dir: PathBuf,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             environment,
             template_manager,
             build_dir,
+            clock,
         }
     }
 
@@ -105,8 +110,11 @@ impl<S> RenderTrackerTemplatesStep<S> {
             "Rendering Tracker configuration templates"
         );
 
-        let generator =
-            TrackerProjectGenerator::new(&self.build_dir, self.template_manager.clone());
+        let generator = TrackerProjectGenerator::new(
+            &self.build_dir,
+            self.template_manager.clone(),
+            self.clock.clone(),
+        );
 
         // Extract tracker config from environment (Phase 6)
         let tracker_config = self.environment.context().user_inputs.tracker();
@@ -133,6 +141,7 @@ mod tests {
 
     use super::*;
     use crate::domain::environment::testing::EnvironmentTestBuilder;
+    use crate::shared::SystemClock;
 
     #[test]
     fn it_should_render_tracker_templates_to_build_directory() {
@@ -167,6 +176,7 @@ threshold = "info"
             environment,
             Arc::new(template_manager),
             build_dir.clone(),
+            Arc::new(SystemClock),
         );
 
         let result = step.execute();
@@ -211,6 +221,7 @@ threshold = "info"
             environment,
             Arc::new(template_manager),
             build_dir.clone(),
+            Arc::new(SystemClock),
         );
 
         let result = step.execute();
@@ -254,6 +265,7 @@ threshold = "info"
             environment,
             Arc::new(template_manager),
             build_dir.clone(),
+            Arc::new(SystemClock),
         );
 
         step.execute().expect("Template rendering should succeed");

@@ -309,17 +309,36 @@ This pattern can be extended to other configuration elements (services, volumes,
 - [ ] `templates/tofu/common/cloud-init.yml.tera`
 - [ ] `templates/tofu/hetzner/variables.tfvars.tera`
 - [ ] `templates/tofu/lxd/variables.tfvars.tera`
-- [ ] `templates/tracker/tracker.toml.tera`
+- [x] `templates/tracker/tracker.toml.tera`
 
-1. **Add headers to all `.tera` templates**
+**Process for Each Tera Template**:
+
+1. **Add AI-discoverable header**
    - Follow standardized format with timestamp
    - Update documentation links (use short-form docs.rs URLs)
    - Include description specific to each template
 
-2. **Verify rendered output**
-   - Run E2E tests to ensure headers appear correctly
+2. **Review and clean up comments** (Tera templates only)
+   - **Keep in template**: User-facing comments that explain configuration options (e.g., "Set to true when ANY HTTP tracker uses Caddy TLS termination")
+   - **Move to wrapper**: Implementation details, code documentation, developer notes
+   - Rationale: Templates should contain configuration guidance, not implementation details
+
+3. **Fix Tera delimiters to avoid extra line breaks**
+   - Replace `{% if %}` with `{%- if %}` (trim whitespace before)
+   - Replace `{% endif %}` with `{%- endif %}` (trim whitespace before)
+   - Replace `{% for %}` with `{%- for %}` (trim whitespace before)
+   - Replace `{% endfor %}` with `{%- endfor %}` (trim whitespace before)
+   - Replace `{% elif %}` with `{%- elif %}` (trim whitespace before)
+   - Use `-%}` (trim after) only when needed to prevent trailing blank lines
+   - Pattern: Control flow statements should use `{%-` to prevent inserting blank lines
+
+4. **Verify rendered output**
+   - Run pre-commit checks which includes E2E tests that regenerate build files
+   - Inspect rendered files in `build/` directory (e.g., `build/e2e-deployment/tracker/tracker.toml`)
+   - Verify headers appear correctly without extra blank lines
    - Check timestamp format is ISO 8601
    - Verify all template variables resolve
+   - Confirm no unwanted blank lines from control flow statements
 
 ### Phase 3: Static Template Updates
 
