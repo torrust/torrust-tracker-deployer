@@ -44,10 +44,13 @@ impl AnsibleVariablesTemplate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::infrastructure::templating::TemplateMetadata;
+    use crate::shared::clock::{Clock, SystemClock};
 
     /// Helper function to create a `AnsibleVariablesContext` with the given SSH port
     fn create_variables_context(ssh_port: u16) -> AnsibleVariablesContext {
-        AnsibleVariablesContext::new(ssh_port, None, None).unwrap()
+        let metadata = TemplateMetadata::new(SystemClock.now());
+        AnsibleVariablesContext::new(metadata, ssh_port, None, None).unwrap()
     }
 
     /// Helper function to create a minimal valid variables template file

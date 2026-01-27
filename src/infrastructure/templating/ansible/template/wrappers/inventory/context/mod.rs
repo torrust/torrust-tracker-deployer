@@ -112,6 +112,12 @@ impl InventoryContext {
         &self.ansible_user
     }
 
+    /// Get the template metadata
+    #[must_use]
+    pub fn metadata(&self) -> &TemplateMetadata {
+        &self.metadata
+    }
+
     /// Get the ansible host wrapper
     #[must_use]
     pub fn ansible_host_wrapper(&self) -> &AnsibleHost {

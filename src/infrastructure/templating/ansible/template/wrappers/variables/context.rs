@@ -5,6 +5,7 @@ use thiserror::Error;
 
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::tracker::TrackerConfig;
+use crate::infrastructure::templating::TemplateMetadata;
 
 /// Errors that can occur when creating an `AnsibleVariablesContext`
 #[derive(Debug, Error)]
@@ -20,6 +21,10 @@ pub enum AnsibleVariablesContextError {
 /// Ansible playbooks (but NOT inventory connection variables).
 #[derive(Serialize, Debug, Clone)]
 pub struct AnsibleVariablesContext {
+    /// Template metadata (timestamp, version info)
+    #[serde(flatten)]
+    metadata: TemplateMetadata,
+
     /// SSH port to configure in firewall and other services
     ssh_port: u16,
 
@@ -47,6 +52,7 @@ impl AnsibleVariablesContext {
     ///
     /// Returns an error if the SSH port is invalid (0 or out of range)
     pub fn new(
+        metadata: TemplateMetadata,
         ssh_port: u16,
         tracker_config: Option<&TrackerConfig>,
         grafana_config: Option<&GrafanaConfig>,
@@ -58,6 +64,7 @@ impl AnsibleVariablesContext {
             Self::extract_tracker_ports(tracker_config);
 
         Ok(Self {
+            metadata,
             ssh_port,
             tracker_udp_ports,
             tracker_http_ports,
@@ -129,10 +136,16 @@ impl AnsibleVariablesContext {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::clock::{Clock, SystemClock};
+
+    /// Helper function to create default metadata for tests
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(SystemClock.now())
+    }
 
     #[test]
     fn it_should_create_context_with_valid_ssh_port() {
-        let context = AnsibleVariablesContext::new(22, None, None).unwrap();
+        let context = AnsibleVariablesContext::new(create_test_metadata(), 22, None, None).unwrap();
         assert_eq!(context.ssh_port(), 22);
         assert!(context.tracker_udp_ports().is_empty());
         assert!(context.tracker_http_ports().is_empty());
@@ -141,19 +154,21 @@ mod tests {
 
     #[test]
     fn it_should_create_context_with_custom_ssh_port() {
-        let context = AnsibleVariablesContext::new(2222, None, None).unwrap();
+        let context =
+            AnsibleVariablesContext::new(create_test_metadata(), 2222, None, None).unwrap();
         assert_eq!(context.ssh_port(), 2222);
     }
 
     #[test]
     fn it_should_create_context_with_high_port() {
-        let context = AnsibleVariablesContext::new(65535, None, None).unwrap();
+        let context =
+            AnsibleVariablesContext::new(create_test_metadata(), 65535, None, None).unwrap();
         assert_eq!(context.ssh_port(), 65535);
     }
 
     #[test]
     fn it_should_fail_with_port_zero() {
-        let result = AnsibleVariablesContext::new(0, None, None);
+        let result = AnsibleVariablesContext::new(create_test_metadata(), 0, None, None);
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Invalid SSH port"));
@@ -161,21 +176,24 @@ mod tests {
 
     #[test]
     fn it_should_implement_clone() {
-        let context1 = AnsibleVariablesContext::new(22, None, None).unwrap();
+        let context1 =
+            AnsibleVariablesContext::new(create_test_metadata(), 22, None, None).unwrap();
         let context2 = context1.clone();
         assert_eq!(context1.ssh_port(), context2.ssh_port());
     }
 
     #[test]
     fn it_should_serialize_to_json() {
-        let context = AnsibleVariablesContext::new(8022, None, None).unwrap();
+        let context =
+            AnsibleVariablesContext::new(create_test_metadata(), 8022, None, None).unwrap();
         let json = serde_json::to_string(&context).unwrap();
         assert!(json.contains("\"ssh_port\":8022"));
     }
 
     #[test]
     fn it_should_display_error_message_correctly() {
-        let error = AnsibleVariablesContext::new(0, None, None).unwrap_err();
+        let error =
+            AnsibleVariablesContext::new(create_test_metadata(), 0, None, None).unwrap_err();
         let error_msg = format!("{error}");
         assert!(error_msg.contains("Invalid SSH port"));
         assert!(error_msg.contains("Invalid port number: 0"));
@@ -213,7 +231,9 @@ mod tests {
         )
         .expect("valid tracker config");
 
-        let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
+        let context =
+            AnsibleVariablesContext::new(create_test_metadata(), 22, Some(&tracker_config), None)
+                .unwrap();
 
         assert_eq!(context.tracker_udp_ports(), &[6868, 6969]);
         assert_eq!(context.tracker_http_ports(), &[7070]);
@@ -245,7 +265,9 @@ mod tests {
         )
         .expect("valid tracker config");
 
-        let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
+        let context =
+            AnsibleVariablesContext::new(create_test_metadata(), 22, Some(&tracker_config), None)
+                .unwrap();
 
         assert!(context.tracker_udp_ports().is_empty());
         assert!(context.tracker_http_ports().is_empty());
@@ -284,7 +306,9 @@ mod tests {
         )
         .expect("valid tracker config");
 
-        let context = AnsibleVariablesContext::new(22, Some(&tracker_config), None).unwrap();
+        let context =
+            AnsibleVariablesContext::new(create_test_metadata(), 22, Some(&tracker_config), None)
+                .unwrap();
 
         // All valid ports should be extracted (domain now enforces valid SocketAddr)
         assert_eq!(context.tracker_udp_ports(), &[6868, 6969]);
