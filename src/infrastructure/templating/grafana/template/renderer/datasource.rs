@@ -116,9 +116,15 @@ impl DatasourceRenderer {
 mod tests {
     use std::fs;
 
+    use chrono::{TimeZone, Utc};
     use tempfile::TempDir;
 
     use super::*;
+    use crate::infrastructure::templating::TemplateMetadata;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(Utc.with_ymd_and_hms(2026, 1, 27, 13, 41, 56).unwrap())
+    }
 
     fn create_test_template_manager() -> Arc<TemplateManager> {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -155,7 +161,7 @@ datasources:
         let template_manager = create_test_template_manager();
         let renderer = DatasourceRenderer::new(template_manager);
 
-        let context = DatasourceContext::new(15);
+        let context = DatasourceContext::new(create_test_metadata(), 15);
         let output_dir = TempDir::new().expect("Failed to create output dir");
 
         renderer

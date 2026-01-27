@@ -124,16 +124,16 @@ For TOML templates:
   - [x] 2. Comments reviewed and cleaned
   - [x] 3. Tera delimiters fixed
   - [x] 4. Rendered output verified
-- [ ] `templates/caddy/Caddyfile.tera`
-  - [ ] 1. AI-discoverable header added
-  - [ ] 2. Comments reviewed and cleaned
-  - [ ] 3. Tera delimiters fixed
-  - [ ] 4. Rendered output verified
-- [ ] `templates/grafana/provisioning/datasources/prometheus.yml.tera`
-  - [ ] 1. AI-discoverable header added
-  - [ ] 2. Comments reviewed and cleaned
-  - [ ] 3. Tera delimiters fixed
-  - [ ] 4. Rendered output verified
+- [x] `templates/caddy/Caddyfile.tera`
+  - [x] 1. AI-discoverable header added
+  - [x] 2. Comments reviewed and cleaned
+  - [x] 3. Tera delimiters fixed
+  - [x] 4. Rendered output verified
+- [x] `templates/grafana/provisioning/datasources/prometheus.yml.tera`
+  - [x] 1. AI-discoverable header added
+  - [x] 2. Comments reviewed and cleaned
+  - [x] 3. Tera delimiters fixed
+  - [x] 4. Rendered output verified
 - [ ] `templates/prometheus/prometheus.yml.tera`
   - [ ] 1. AI-discoverable header added
   - [ ] 2. Comments reviewed and cleaned

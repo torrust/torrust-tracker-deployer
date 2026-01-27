@@ -34,6 +34,7 @@ use crate::domain::template::TemplateManager;
 use crate::infrastructure::templating::grafana::template::renderer::{
     GrafanaProjectGenerator, GrafanaProjectGeneratorError,
 };
+use crate::shared::clock::Clock;
 
 /// Step that renders Grafana provisioning templates to the build directory
 ///
@@ -44,6 +45,7 @@ pub struct RenderGrafanaTemplatesStep<S> {
     environment: Arc<Environment<S>>,
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
+    clock: Arc<dyn Clock>,
 }
 
 impl<S> RenderGrafanaTemplatesStep<S> {
@@ -54,16 +56,19 @@ impl<S> RenderGrafanaTemplatesStep<S> {
     /// * `environment` - The deployment environment
     /// * `template_manager` - The template manager for accessing templates
     /// * `build_dir` - The build directory where templates will be rendered
+    /// * `clock` - Clock service for generating timestamps
     #[must_use]
     pub fn new(
         environment: Arc<Environment<S>>,
         template_manager: Arc<TemplateManager>,
         build_dir: PathBuf,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             environment,
             template_manager,
             build_dir,
+            clock,
         }
     }
 
@@ -122,8 +127,11 @@ impl<S> RenderGrafanaTemplatesStep<S> {
             "Rendering Grafana provisioning templates"
         );
 
-        let generator =
-            GrafanaProjectGenerator::new(&self.build_dir, self.template_manager.clone());
+        let generator = GrafanaProjectGenerator::new(
+            &self.build_dir,
+            self.template_manager.clone(),
+            self.clock.clone(),
+        );
 
         // Render all Grafana provisioning files (datasource + dashboards)
         generator.render(prometheus_config)?;

@@ -93,9 +93,15 @@ impl DatasourceTemplate {
 
 #[cfg(test)]
 mod tests {
+    use chrono::{TimeZone, Utc};
     use tempfile::NamedTempFile;
 
     use super::*;
+    use crate::infrastructure::templating::TemplateMetadata;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(Utc.with_ymd_and_hms(2026, 1, 27, 13, 41, 56).unwrap())
+    }
 
     #[test]
     fn it_should_render_datasource_template() {
@@ -113,7 +119,7 @@ datasources:
       httpMethod: POST
 "#;
 
-        let context = DatasourceContext::new(15);
+        let context = DatasourceContext::new(create_test_metadata(), 15);
         let template = DatasourceTemplate::new(template_content.to_string(), context);
 
         let temp_file = NamedTempFile::new().expect("Failed to create temp file");
@@ -132,7 +138,7 @@ datasources:
     fn it_should_handle_different_scrape_intervals() {
         let template_content = r#"timeInterval: "{{ prometheus_scrape_interval_in_secs }}s""#;
 
-        let context = DatasourceContext::new(30);
+        let context = DatasourceContext::new(create_test_metadata(), 30);
         let template = DatasourceTemplate::new(template_content.to_string(), context);
 
         let temp_file = NamedTempFile::new().expect("Failed to create temp file");
