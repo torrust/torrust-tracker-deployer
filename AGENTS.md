@@ -120,7 +120,10 @@ These principles should guide all development decisions, code reviews, and featu
 
 7. **Before working with Tera templates**: Read [`docs/contributing/templates/tera.md`](docs/contributing/templates/tera.md) for correct variable syntax - use `{{ variable }}` not `{ { variable } }`. Tera template files have the `.tera` extension.
 
-8. **When adding new Ansible playbooks**: Read [`docs/contributing/templates/tera.md`](docs/contributing/templates/tera.md) for the complete guide. **CRITICAL**: Static playbooks (without `.tera` extension) must be registered in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs` in the `copy_static_templates` method, otherwise they won't be copied to the build directory and Ansible will fail with "playbook not found" error.
+8. **When adding new Ansible playbooks**: Read [`docs/contributing/templates/ansible.md`](docs/contributing/templates/ansible.md) and the ADR [`atomic-ansible-playbooks.md`](docs/decisions/atomic-ansible-playbooks.md).
+    - **CRITICAL: One playbook = one responsibility** (atomic playbook rule)
+    - Conditional enablement belongs in Rust commands/steps, not in Ansible `when:` clauses (use `when:` only for host facts)
+    - Static playbooks must be registered in `src/infrastructure/external_tools/ansible/template/renderer/project_generator.rs` under `copy_static_templates()` so they are copied into the build directory
 
 9. **When handling errors in code**: Read [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md) for error handling principles. Prefer explicit enum errors over anyhow for better pattern matching and user experience. Make errors clear, include sufficient context for traceability, and ensure they are actionable with specific fix instructions.
 
