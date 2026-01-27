@@ -300,7 +300,7 @@ This pattern can be extended to other configuration elements (services, volumes,
 
 **Templates to Update** (track progress):
 
-- [ ] `templates/ansible/inventory.yml.tera`
+- [x] `templates/ansible/inventory.yml.tera`
 - [ ] `templates/ansible/variables.yml.tera`
 - [ ] `templates/caddy/Caddyfile.tera`
 - [ ] `templates/docker-compose/docker-compose.yml.tera`

@@ -16,6 +16,7 @@ use crate::domain::environment::state::Provisioned;
 use crate::domain::environment::Environment;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
+use crate::shared::clock::Clock;
 
 use super::errors::RegisterSubcommandError;
 
@@ -69,6 +70,7 @@ impl RegisterStep {
 /// `RegisterCommandHandler`, maintaining clear separation of concerns.
 pub struct RegisterCommandController {
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
+    clock: Arc<dyn Clock>,
     progress: ProgressReporter,
 }
 
@@ -77,12 +79,14 @@ impl RegisterCommandController {
     #[allow(clippy::needless_pass_by_value)] // Constructor takes ownership of Arc parameters
     pub fn new(
         repository: Arc<dyn EnvironmentRepository + Send + Sync>,
+        clock: Arc<dyn Clock>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
         let progress = ProgressReporter::new(user_output, RegisterStep::count());
 
         Self {
             repository,
+            clock,
             progress,
         }
     }
@@ -167,7 +171,8 @@ impl RegisterCommandController {
             .start_step(RegisterStep::CreateCommandHandler.description())?;
 
         let handler = RegisterCommandHandler::new(
-            Arc::clone(&self.repository) as Arc<dyn EnvironmentRepository>
+            self.clock.clone(),
+            Arc::clone(&self.repository) as Arc<dyn EnvironmentRepository>,
         );
 
         self.progress.complete_step(None)?;

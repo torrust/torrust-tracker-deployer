@@ -280,6 +280,7 @@ impl ProvisionCommandHandler {
         let ansible_template_service = AnsibleTemplateService::from_paths(
             environment.templates_dir(),
             environment.build_dir().clone(),
+            self.clock.clone(),
         );
 
         ansible_template_service

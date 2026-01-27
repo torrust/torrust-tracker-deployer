@@ -12,6 +12,8 @@ pub use ansible_host::{AnsibleHost, AnsibleHostError};
 pub use ansible_port::{AnsiblePort, AnsiblePortError};
 pub use ssh_private_key_file::{SshPrivateKeyFile, SshPrivateKeyFileError};
 
+use crate::infrastructure::templating::TemplateMetadata;
+
 pub mod builder;
 pub use builder::InventoryContextBuilder;
 
@@ -46,6 +48,11 @@ pub enum InventoryContextError {
 #[derive(Serialize, Debug, Clone)]
 #[allow(clippy::struct_field_names)] // Field names mirror Ansible inventory variables
 pub struct InventoryContext {
+    /// Template generation metadata (timestamp, etc.)
+    ///
+    /// Flattened for template compatibility - serializes metadata at top level.
+    #[serde(flatten)]
+    pub metadata: TemplateMetadata,
     ansible_host: AnsibleHost,
     ansible_ssh_private_key_file: SshPrivateKeyFile,
     ansible_port: AnsiblePort,
@@ -60,12 +67,14 @@ impl InventoryContext {
     /// This method cannot fail with the current implementation since it takes
     /// already validated types, but returns Result for consistency with builder pattern
     pub fn new(
+        metadata: TemplateMetadata,
         ansible_host: AnsibleHost,
         ansible_ssh_private_key_file: SshPrivateKeyFile,
         ansible_port: AnsiblePort,
         ansible_user: String,
     ) -> Result<Self, InventoryContextError> {
         Ok(Self {
+            metadata,
             ansible_host,
             ansible_ssh_private_key_file,
             ansible_port,
@@ -246,12 +255,16 @@ mod tests {
     #[test]
     fn it_should_create_new_inventory_context_with_typed_parameters() {
         // Test the new direct constructor with typed parameters
+        use crate::shared::clock::{Clock, SystemClock};
+
+        let metadata = TemplateMetadata::new(SystemClock.now());
         let host = AnsibleHost::from_str("192.168.1.50").unwrap();
         let ssh_key = SshPrivateKeyFile::new("/etc/ssh/test_key").unwrap();
         let ssh_port = AnsiblePort::new(22).unwrap();
         let user = "ubuntu".to_string();
 
-        let inventory_context = InventoryContext::new(host, ssh_key, ssh_port, user).unwrap();
+        let inventory_context =
+            InventoryContext::new(metadata, host, ssh_key, ssh_port, user).unwrap();
 
         assert_eq!(inventory_context.ansible_host(), "192.168.1.50");
         assert_eq!(
@@ -264,12 +277,16 @@ mod tests {
 
     #[test]
     fn it_should_create_inventory_context_with_ipv6() {
+        use crate::shared::clock::{Clock, SystemClock};
+
+        let metadata = TemplateMetadata::new(SystemClock.now());
         let host = AnsibleHost::from_str("2001:db8::1").unwrap();
         let ssh_key = SshPrivateKeyFile::new("/path/to/key").unwrap();
         let ssh_port = AnsiblePort::new(22).unwrap();
         let user = "ubuntu".to_string();
 
-        let inventory_context = InventoryContext::new(host, ssh_key, ssh_port, user).unwrap();
+        let inventory_context =
+            InventoryContext::new(metadata, host, ssh_key, ssh_port, user).unwrap();
 
         assert_eq!(inventory_context.ansible_host(), "2001:db8::1");
     }
