@@ -139,16 +139,16 @@ For TOML templates:
   - [x] 2. Comments reviewed and cleaned
   - [x] 3. Tera delimiters fixed
   - [x] 4. Rendered output verified
-- [ ] `templates/tofu/common/cloud-init.yml.tera`
-  - [ ] 1. AI-discoverable header added
-  - [ ] 2. Comments reviewed and cleaned
-  - [ ] 3. Tera delimiters fixed
-  - [ ] 4. Rendered output verified
-- [ ] `templates/tofu/hetzner/variables.tfvars.tera`
-  - [ ] 1. AI-discoverable header added
-  - [ ] 2. Comments reviewed and cleaned
-  - [ ] 3. Tera delimiters fixed
-  - [ ] 4. Rendered output verified
+- [x] `templates/tofu/common/cloud-init.yml.tera`
+  - [x] 1. AI-discoverable header added
+  - [x] 2. Comments reviewed and cleaned
+  - [x] 3. Tera delimiters fixed
+  - [x] 4. Rendered output verified
+- [x] `templates/tofu/hetzner/variables.tfvars.tera`
+  - [x] 1. AI-discoverable header added
+  - [x] 2. Comments reviewed and cleaned
+  - [x] 3. Tera delimiters fixed
+  - [x] 4. Rendered output verified
 - [ ] `templates/tofu/lxd/variables.tfvars.tera`
   - [ ] 1. AI-discoverable header added
   - [ ] 2. Comments reviewed and cleaned

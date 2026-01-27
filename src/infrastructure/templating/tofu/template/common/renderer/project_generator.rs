@@ -18,6 +18,7 @@ use crate::adapters::ssh::credentials::SshCredentials;
 use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::template::{TemplateManager, TemplateManagerError};
 use crate::domain::InstanceName;
+use crate::infrastructure::templating::metadata::TemplateMetadata;
 use crate::infrastructure::templating::tofu::template::common::renderer::cloud_init::{
     CloudInitRenderer, CloudInitRendererError,
 };
@@ -535,7 +536,10 @@ impl TofuProjectGenerator {
                 })?;
 
         // Build Hetzner context for template rendering
+        #[allow(clippy::used_underscore_binding)]
+        let metadata = TemplateMetadata::new(self._clock.now());
         let context = HetznerVariablesContextBuilder::new()
+            .with_metadata(metadata)
             .with_instance_name(self.instance_name.clone())
             .with_hcloud_api_token(hetzner_config.api_token.expose_secret().to_string())
             .with_server_type(hetzner_config.server_type.clone())

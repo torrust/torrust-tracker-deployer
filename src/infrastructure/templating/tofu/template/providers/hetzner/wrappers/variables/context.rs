@@ -19,9 +19,13 @@
 //!
 //! ```rust
 //! use torrust_tracker_deployer_lib::infrastructure::templating::tofu::template::providers::hetzner::wrappers::variables::VariablesContext;
-//! use torrust_tracker_deployer_lib::adapters::lxd::instance::InstanceName;
+//! use torrust_tracker_deployer_lib::infrastructure::templating::metadata::TemplateMetadata;
+//! use torrust_tracker_deployer_lib::domain::InstanceName;
+//! use chrono::Utc;
 //!
+//! let metadata = TemplateMetadata::new(Utc::now());
 //! let context = VariablesContext::builder()
+//!     .with_metadata(metadata)
 //!     .with_instance_name(InstanceName::new("my-test-vm".to_string()).unwrap())
 //!     .with_hcloud_api_token("my-api-token".to_string())
 //!     .with_server_type("cx22".to_string())
@@ -36,11 +40,16 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::domain::InstanceName;
+use crate::infrastructure::templating::metadata::TemplateMetadata;
 use crate::shared::ApiToken;
 
 /// Errors that can occur when building the Hetzner variables context
 #[derive(Error, Debug)]
 pub enum VariablesContextError {
+    /// Template metadata is required but was not provided
+    #[error("Template metadata is required but was not provided")]
+    MissingMetadata,
+
     /// Instance name is required but was not provided
     #[error("Instance name is required but was not provided")]
     MissingInstanceName,
@@ -72,6 +81,9 @@ pub enum VariablesContextError {
 /// with Hetzner Cloud-specific configuration parameters.
 #[derive(Debug, Clone, Serialize)]
 pub struct VariablesContext {
+    /// Template metadata (generation timestamp, etc.)
+    #[serde(flatten)]
+    pub metadata: TemplateMetadata,
     /// The name of the server instance to be created
     pub instance_name: InstanceName,
     /// Hetzner Cloud API token for authentication (redacted in debug output)
@@ -92,6 +104,7 @@ pub struct VariablesContext {
 /// to ensure all required fields are provided.
 #[derive(Debug, Default)]
 pub struct VariablesContextBuilder {
+    metadata: Option<TemplateMetadata>,
     instance_name: Option<InstanceName>,
     hcloud_api_token: Option<ApiToken>,
     server_type: Option<String>,
@@ -105,6 +118,17 @@ impl VariablesContextBuilder {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Sets the template metadata
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata` - The template metadata containing generation timestamp
+    #[must_use]
+    pub fn with_metadata(mut self, metadata: TemplateMetadata) -> Self {
+        self.metadata = Some(metadata);
+        self
     }
 
     /// Sets the instance name for the server
@@ -184,6 +208,10 @@ impl VariablesContextBuilder {
     ///
     /// Returns appropriate error variant for each missing required field
     pub fn build(self) -> Result<VariablesContext, VariablesContextError> {
+        let metadata = self
+            .metadata
+            .ok_or(VariablesContextError::MissingMetadata)?;
+
         let instance_name = self
             .instance_name
             .ok_or(VariablesContextError::MissingInstanceName)?;
@@ -209,6 +237,7 @@ impl VariablesContextBuilder {
             .ok_or(VariablesContextError::MissingSshPublicKeyContent)?;
 
         Ok(VariablesContext {
+            metadata,
             instance_name,
             hcloud_api_token,
             server_type,
@@ -229,10 +258,17 @@ impl VariablesContext {
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
+
     use super::*;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(Utc::now())
+    }
 
     fn create_valid_builder() -> VariablesContextBuilder {
         VariablesContext::builder()
+            .with_metadata(create_test_metadata())
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .with_hcloud_api_token("test-token".to_string())
             .with_server_type("cx22".to_string())
@@ -268,11 +304,14 @@ mod tests {
         assert!(json.contains("server_location"));
         assert!(json.contains("server_image"));
         assert!(json.contains("ssh_public_key_content"));
+        assert!(json.contains("generated_at"));
     }
 
     #[test]
     fn it_should_fail_when_instance_name_is_missing() {
+        let metadata = create_test_metadata();
         let result = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_hcloud_api_token("test-token".to_string())
             .with_server_type("cx22".to_string())
             .with_server_location("nbg1".to_string())
@@ -288,7 +327,9 @@ mod tests {
 
     #[test]
     fn it_should_fail_when_hcloud_api_token_is_missing() {
+        let metadata = create_test_metadata();
         let result = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .with_server_type("cx22".to_string())
             .with_server_location("nbg1".to_string())
@@ -304,7 +345,9 @@ mod tests {
 
     #[test]
     fn it_should_fail_when_server_type_is_missing() {
+        let metadata = create_test_metadata();
         let result = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .with_hcloud_api_token("test-token".to_string())
             .with_server_location("nbg1".to_string())
@@ -320,7 +363,9 @@ mod tests {
 
     #[test]
     fn it_should_fail_when_server_location_is_missing() {
+        let metadata = create_test_metadata();
         let result = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .with_hcloud_api_token("test-token".to_string())
             .with_server_type("cx22".to_string())
@@ -336,7 +381,9 @@ mod tests {
 
     #[test]
     fn it_should_fail_when_server_image_is_missing() {
+        let metadata = create_test_metadata();
         let result = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .with_hcloud_api_token("test-token".to_string())
             .with_server_type("cx22".to_string())
@@ -352,7 +399,9 @@ mod tests {
 
     #[test]
     fn it_should_fail_when_ssh_public_key_content_is_missing() {
+        let metadata = create_test_metadata();
         let result = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .with_hcloud_api_token("test-token".to_string())
             .with_server_type("cx22".to_string())
