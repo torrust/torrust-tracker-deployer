@@ -450,10 +450,21 @@ Each template should have 4 sub-checkboxes to track completion of the above task
 
 ### Phase 4: Documentation
 
+**Status**: ✅ Complete
+
 1. **Document the header pattern**
    - Update `docs/contributing/templates/template-system-architecture.md`
    - Add examples to template contribution guide
    - Document metadata field pattern
+
+**Completed Documentation**:
+
+- ✅ Added comprehensive "AI-Discoverable Documentation Headers" section to `template-system-architecture.md`
+- ✅ Created dedicated `docs/contributing/templates/yml.md` for YAML-specific conventions
+- ✅ Updated `docs/contributing/templates/README.md` to reference yml.md
+- ✅ Added header pattern examples for both dynamic and static templates
+- ✅ Documented TemplateMetadata infrastructure
+- ✅ Documented YAML header placement convention
 
 ## Acceptance Criteria
 
@@ -461,18 +472,18 @@ Each template should have 4 sub-checkboxes to track completion of the above task
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
 
 **Task-Specific Criteria**:
 
-- [ ] `TemplateMetadata` struct created with `generated_at` field
-- [ ] All project generators inject clock service and generate timestamps
-- [ ] All template context structs include `metadata` field at top (with `#[serde(flatten)]`)
-- [ ] All `.tera` templates include standardized documentation header
-- [ ] Headers contain correct repository URL, template path, Rust wrapper path, and docs.rs URL
-- [ ] Timestamp appears in rendered output in ISO 8601 format
-- [ ] E2E tests pass with new headers in place
-- [ ] Template contribution guide updated with header pattern documentation
+- [x] `TemplateMetadata` struct created with `generated_at` field
+- [x] All project generators inject clock service and generate timestamps
+- [x] All template context structs include `metadata` field at top (with `#[serde(flatten)]`)
+- [x] All `.tera` templates include standardized documentation header
+- [x] Headers contain correct repository URL, template path, Rust wrapper path, and docs.rs URL
+- [x] Timestamp appears in rendered output in ISO 8601 format
+- [x] E2E tests pass with new headers in place
+- [x] Template contribution guide updated with header pattern documentation
 
 ## 🏗️ Architecture Requirements
 
@@ -487,10 +498,10 @@ Each template should have 4 sub-checkboxes to track completion of the above task
 
 ### Architectural Constraints
 
-- [ ] Metadata struct should be domain-level or shared infrastructure
-- [ ] Clock service injection follows existing dependency injection patterns
-- [ ] Flattened serialization maintains template compatibility
-- [ ] No breaking changes to existing template contexts
+- [x] Metadata struct should be domain-level or shared infrastructure
+- [x] Clock service injection follows existing dependency injection patterns
+- [x] Flattened serialization maintains template compatibility
+- [x] No breaking changes to existing template contexts
 
 ### Related Architectural Documentation
 
