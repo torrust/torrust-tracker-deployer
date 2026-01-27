@@ -19,6 +19,7 @@
 # For configuration options and valid values, see the API documentation link above.
 # ============================================================================
 
+---
 # Ansible Inventory File (YAML format)
 # This file defines the hosts (servers/VMs/containers) that Ansible will manage
 # and how to connect to them
