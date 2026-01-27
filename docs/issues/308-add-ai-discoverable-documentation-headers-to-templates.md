@@ -466,6 +466,39 @@ Each template should have 4 sub-checkboxes to track completion of the above task
 - ✅ Documented TemplateMetadata infrastructure
 - ✅ Documented YAML header placement convention
 
+### Phase 5: Full-Stack Manual E2E Test
+
+**Status**: ⏳ In Progress
+
+**Rationale**: Given the extensive template changes across 32 files, we need to verify that all headers render correctly in a real-world deployment scenario with all services enabled.
+
+**Test Configuration**:
+
+- **Provider**: LXD (local)
+- **Database**: MySQL (instead of default SQLite)
+- **Monitoring**: Prometheus + Grafana
+- **Reverse Proxy**: Caddy (HTTPS support)
+- **Services**: All optional services enabled
+
+**Test Workflow**:
+
+1. Create template with MySQL configuration
+2. Create environment
+3. Provision infrastructure
+4. Configure software
+5. Release tracker
+6. Run all services
+7. Verify each service:
+   - MySQL database connectivity
+   - Prometheus metrics collection
+   - Grafana dashboard access
+   - HTTPS endpoint via Caddy
+   - Tracker functionality
+8. Verify headers in all rendered files
+9. Clean up resources
+
+**Test Results**: (to be documented)
+
 ## Acceptance Criteria
 
 > **Note for Contributors**: These criteria define what the PR reviewer will check. Use this as your pre-review checklist before submitting the PR to minimize back-and-forth iterations.
