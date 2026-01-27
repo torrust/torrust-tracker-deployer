@@ -268,30 +268,35 @@ This pattern can be extended to other configuration elements (services, volumes,
 
 ### Phase 1: Infrastructure Setup
 
+**Complete once, before implementing any template:**
+
 1. **Create `TemplateMetadata` struct**
-   - Location: `src/infrastructure/templating/shared/` (or similar)
-   - Fields: `generated_at: String`
+   - Location: `src/infrastructure/templating/metadata.rs`
+   - Fields: `generated_at: DateTime<Utc>`
    - Serialization: Flatten with `#[serde(flatten)]`
+   - Method: `generated_at_iso8601()` for template rendering
 
-2. **Update project generators**
-   - Inject clock service in constructors
-   - Generate timestamp when building contexts
-   - Pass metadata to all template contexts
+**Status**: ✅ Complete
 
-3. **Update template context structs**
-   - Add `metadata: TemplateMetadata` field at top
-   - Mark with `#[serde(flatten)]`
-   - Update context builders to accept metadata
+### Phase 2: Template Updates (One Template at a Time)
 
-### Phase 2: Template Updates
+**For each template, complete all steps before moving to the next:**
 
-**Implementation Notes**:
-
-- Process one template at a time
-- Run linters after each template change
-- After first template, run full pre-commit checks
-- Verify rendered output in `build/` directory has correct header
-- Review inline documentation in templates (move heavy docs to Rust wrappers)
+1. **Select next template** from the list below
+2. **Update project generator** for this specific template:
+   - Inject clock service in constructor (if not already present)
+   - Generate timestamp when building context: `TemplateMetadata::new(clock.now())`
+   - Add metadata field to context struct
+3. **Add header to template file**
+   - Follow standardized format with timestamp
+   - Update documentation links (use short-form docs.rs URLs)
+   - Include description specific to this template
+4. **Test the implementation**:
+   - Run linters after template change
+   - After first template: Run full pre-commit checks
+   - Verify rendered output in `build/` directory has correct header
+   - Review inline documentation in template (move heavy docs to Rust wrappers)
+5. **Commit and move to next template**
 
 **Templates to Update** (track progress):
 
