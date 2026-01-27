@@ -33,6 +33,8 @@ use crate::infrastructure::templating::ansible::ANSIBLE_SUBFOLDER;
 use crate::infrastructure::templating::tofu::TofuProjectGenerator;
 use crate::shared::Clock;
 use crate::testing::e2e::LXD_OPENTOFU_SUBFOLDER;
+use crate::testing::mock_clock::MockClock;
+use chrono::DateTime;
 
 /// Default lock timeout for repository operations
 ///
@@ -87,6 +89,7 @@ impl Services {
         let ansible_client = AnsibleClient::new(config.build_dir.join(ANSIBLE_SUBFOLDER));
 
         // Create provision template renderer
+        let clock = Arc::new(MockClock::new(DateTime::UNIX_EPOCH));
         let tofu_template_renderer = TofuProjectGenerator::new(
             template_manager.clone(),
             config.build_dir.clone(),
@@ -94,6 +97,7 @@ impl Services {
             22, // Default SSH port for tests
             instance_name,
             provider_config,
+            clock,
         );
 
         // Create configuration template renderer

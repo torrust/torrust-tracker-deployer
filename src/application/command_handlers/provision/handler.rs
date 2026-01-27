@@ -23,6 +23,7 @@ use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
 use crate::domain::environment::{Environment, Provisioned, Provisioning};
 use crate::domain::EnvironmentName;
 use crate::infrastructure::templating::tofu::TofuProjectGenerator;
+use crate::shared::clock::SystemClock;
 use crate::shared::error::Traceable;
 
 /// `ProvisionCommandHandler` orchestrates the complete infrastructure provisioning workflow
@@ -245,6 +246,8 @@ impl ProvisionCommandHandler {
             environment.templates_dir(),
         ));
 
+        let clock = Arc::new(SystemClock);
+
         let tofu_template_renderer = Arc::new(TofuProjectGenerator::new(
             template_manager,
             environment.build_dir(),
@@ -252,6 +255,7 @@ impl ProvisionCommandHandler {
             environment.ssh_port(),
             environment.instance_name().clone(),
             environment.provider_config().clone(),
+            clock,
         ));
 
         (tofu_template_renderer, opentofu_client)
