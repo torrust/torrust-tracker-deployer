@@ -7,17 +7,14 @@ This directory contains Ansible playbook templates for the Torrust Tracker Deplo
 ### Core Infrastructure
 
 - **`update-apt-cache.yml`** - Updates APT package cache with retries and network diagnostics
-
   - ⚠️ **Note**: This playbook contains network-sensitive operations that may fail in CI environments
   - Run this first if you need to update the package cache before installing packages
 
 - **`install-docker.yml`** - Installs Docker CE on Ubuntu/Debian systems
-
   - ⚠️ **Important**: Does NOT update APT cache automatically to avoid CI issues
   - Run `update-apt-cache.yml` first if needed
 
 - **`install-docker-compose.yml`** - Installs Docker Compose
-
   - Requires Docker to be installed first (`install-docker.yml`)
 
 - **`wait-cloud-init.yml`** - Waits for cloud-init to complete on newly provisioned VMs
@@ -25,11 +22,9 @@ This directory contains Ansible playbook templates for the Torrust Tracker Deplo
 ### System Configuration
 
 - **`configure-security-updates.yml`** - Configures automatic security updates
-
   - Sets up unattended-upgrades for automatic security patches
 
 - **`configure-firewall.yml`** - Configures UFW (Uncomplicated Firewall) with SSH lockout prevention
-
   - ⚠️ **Critical**: This playbook configures restrictive firewall rules
   - Automatically preserves SSH access on the configured port to prevent lockout
   - Uses centralized variables from `variables.yml` (loaded via `vars_files`)
@@ -83,6 +78,24 @@ This directory uses a **centralized variables pattern**:
 4. **Register** in `copy_static_templates()` if new static playbook
 
 This pattern reduces Rust boilerplate (no per-playbook renderer/wrapper/context needed) while providing centralized variable management.
+
+## Red Flags (stop and reconsider)
+
+- Adding tasks to an existing playbook instead of creating a new atomic playbook
+- Using Ansible `when:` to decide if a service/feature is enabled (gating belongs in Rust commands/steps; `when:` is only for host facts)
+- Playbook names with "and" or multiple unrelated actions
+- Multiple unrelated `ansible.builtin.file`/copy tasks bundled together
+
+**Correct pattern**: New feature → new atomic playbook + new Rust step that decides whether to run it. See [atomic-ansible-playbooks.md](../../decisions/atomic-ansible-playbooks.md) and AGENTS rule #8.
+
+## Before adding Ansible functionality checklist
+
+- [ ] Am I adding tasks to an existing playbook? → Create a new atomic playbook
+- [ ] Does the playbook do more than one conceptual thing? → Split it
+- [ ] Am I using `when:` for feature/service enablement? → Move gating to Rust command/step
+- [ ] Did I add a corresponding Rust step that conditionally runs this playbook?
+- [ ] Did I register the static playbook in `copy_static_templates()`?
+- [ ] Does the playbook name describe a single action?
 
 ## Template Processing
 
