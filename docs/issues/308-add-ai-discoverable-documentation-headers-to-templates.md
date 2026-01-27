@@ -243,6 +243,21 @@ Example for static template:
 # ============================================================================
 ```
 
+### YAML Template Header Placement
+
+**CRITICAL**: For YAML templates (both `.yml.tera` and static `.yml` files), the header MUST be placed **BEFORE** the `---` YAML document marker. See [YAML Template Conventions](../contributing/templates/yml.md) for details.
+
+```yaml
+# ============================================================================
+# Torrust Tracker Deployer - Generated Configuration
+# ============================================================================
+# ... rest of header ...
+# ============================================================================
+
+---
+# YAML content starts here
+```
+
 ### Metadata Context Field
 
 Add a `metadata` field to each template context, similar to the existing `topology` field pattern:

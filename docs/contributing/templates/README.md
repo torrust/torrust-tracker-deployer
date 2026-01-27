@@ -9,7 +9,6 @@ The template system uses a **double indirection** approach with embedded templat
 ### Core Documentation
 
 - **[Template System Architecture](template-system-architecture.md)** - **CRITICAL**: Technical architecture overview
-
   - Double indirection pattern (embedded → external → build)
   - Project Generator pattern (Orchestrator/Worker)
   - Two-phase processing (dynamic rendering + static copying)
@@ -17,13 +16,19 @@ The template system uses a **double indirection** approach with embedded templat
   - Read this first to understand the overall system design
 
 - **[Tera Template Syntax](tera.md)** - **CRITICAL**: Working with Tera templates
-
   - Correct Tera variable syntax: `{{ variable }}` not `{ { variable } }`
   - Static vs dynamic playbooks
   - Adding new Ansible playbooks (registration required)
   - Using centralized variables pattern
   - Common mistakes and troubleshooting
   - Read this when creating or modifying `.tera` files
+
+- **[YAML Template Conventions](yml.md)** - **CRITICAL**: YAML-specific conventions
+  - Header placement (BEFORE `---` document marker)
+  - Whitespace control with Tera in YAML
+  - Conditional indentation patterns
+  - Common pitfalls and best practices
+  - Read this when working with any `.yml` or `.yml.tera` files
 
 - **[Ansible Templates](ansible.md)** - Ansible-specific documentation
   - Available playbooks and their purpose
@@ -40,6 +45,7 @@ The template system uses a **double indirection** approach with embedded templat
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | Understanding template architecture     | [Template System Architecture](template-system-architecture.md)                                               |
 | Creating/modifying `.tera` files        | [Tera Template Syntax](tera.md)                                                                               |
+| Working with YAML templates             | [YAML Template Conventions](yml.md)                                                                           |
 | Adding new Ansible playbooks            | [Tera Template Syntax](tera.md#-adding-new-ansible-playbooks)                                                 |
 | Working with Ansible infrastructure     | [Ansible Templates](ansible.md)                                                                               |
 | Understanding Project Generator pattern | [Template System Architecture](template-system-architecture.md#-project-generator-pattern-orchestratorworker) |
