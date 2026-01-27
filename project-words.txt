@@ -77,6 +77,7 @@ aquasec
 aquasecurity
 architecting
 autorestart
+Backblaze
 backlinks
 bencoded
 binstall
@@ -88,6 +89,7 @@ certbot
 certonly
 chdir
 checkmarks
+checkpointing
 childlogdir
 chkdsk
 chrono
@@ -163,6 +165,7 @@ htdocs
 hugepages
 idna
 impls
+Inno
 incompletei
 intervali
 isreg
@@ -212,6 +215,8 @@ multiprocess
 myapp
 myenv
 mysqladmin
+mysqldump
+mysqlpump
 nameof
 namespacing
 nanos
@@ -329,6 +334,7 @@ tmpfiles
 tmpfs
 tmptu
 torrust
+transactionally
 tryfrom
 tulnp
 tulpn
@@ -355,9 +361,11 @@ vulns
 webservers
 writeln
 wrongpassword
+Xtra
 yourdomain
 youruser
 zeroize
+zstd
 Émojis
 значение
 ключ

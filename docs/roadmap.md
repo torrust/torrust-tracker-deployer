@@ -131,7 +131,9 @@ When starting work on a new feature:
 
 ### 7. Add backup support
 
-- [ ] **7.1** Research database backup strategies
+**Epic Issue**: [#309 - Add backup support](https://github.com/torrust/torrust-tracker-deployer/issues/309)
+
+- [ ] **7.1** Research database backup strategies - [Issue #310](https://github.com/torrust/torrust-tracker-deployer/issues/310)
   - Investigate SQLite backup approaches (file copy while service is running)
   - Investigate MySQL backup approaches (concurrency issues, locking, `mysqldump` vs hot backups)
   - Document findings and recommend approach for each database type
