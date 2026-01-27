@@ -221,7 +221,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         tracker: TrackerServiceContext,
     ) -> (EnvContext, DockerComposeContextBuilder) {
         let metadata = TemplateMetadata::new(self.clock.now());
-        let env_context = EnvContext::new(admin_token);
+        let env_context = EnvContext::new(metadata.clone(), admin_token);
         let builder = DockerComposeContext::builder(tracker).with_metadata(metadata);
 
         (env_context, builder)
@@ -241,6 +241,7 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
 
         let metadata = TemplateMetadata::new(self.clock.now());
         let env_context = EnvContext::new_with_mysql(
+            metadata.clone(),
             admin_token,
             root_password.clone(),
             database_name.clone(),

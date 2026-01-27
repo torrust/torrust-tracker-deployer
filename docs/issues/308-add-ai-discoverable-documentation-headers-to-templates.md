@@ -97,15 +97,63 @@ For TOML templates:
 
 ### Dynamic Templates (`.tera` files)
 
-| Template                                           | Rust Wrapper                                                                                |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `templates/docker-compose/docker-compose.yml.tera` | `src/infrastructure/templating/docker_compose/template/wrappers/docker_compose/template.rs` |
-| `templates/docker-compose/.env.tera`               | `src/infrastructure/templating/docker_compose/template/wrappers/env/template.rs`            |
-| `templates/tracker/tracker.toml.tera`              | `src/infrastructure/templating/tracker/template/wrapper/tracker_config/template.rs`         |
-| `templates/caddy/Caddyfile.tera`                   | `src/infrastructure/templating/caddy/template/wrapper/caddyfile/` (needs template.rs)       |
-| `templates/prometheus/prometheus.yml.tera`         | `src/infrastructure/templating/prometheus/template/wrapper/prometheus_config/template.rs`   |
-| `templates/grafana/datasources.yml.tera`           | `src/infrastructure/templating/grafana/template/wrapper/datasource/template.rs`             |
-| `templates/ansible/inventory.yml.tera`             | `src/infrastructure/templating/ansible/template/wrappers/inventory/template.rs`             |
+**Detailed Progress Tracking** (track 4 subtasks per template):
+
+- [x] `templates/tracker/tracker.toml.tera`
+  - [x] 1. AI-discoverable header added
+  - [x] 2. Comments reviewed and cleaned
+  - [x] 3. Tera delimiters fixed
+  - [x] 4. Rendered output verified
+- [x] `templates/ansible/inventory.yml.tera`
+  - [x] 1. AI-discoverable header added
+  - [x] 2. Comments reviewed and cleaned
+  - [x] 3. Tera delimiters fixed
+  - [x] 4. Rendered output verified
+- [x] `templates/ansible/variables.yml.tera`
+  - [x] 1. AI-discoverable header added
+  - [x] 2. Comments reviewed and cleaned
+  - [x] 3. Tera delimiters fixed
+  - [x] 4. Rendered output verified
+- [x] `templates/docker-compose/docker-compose.yml.tera`
+  - [x] 1. AI-discoverable header added
+  - [x] 2. Comments reviewed and cleaned
+  - [x] 3. Tera delimiters fixed
+  - [x] 4. Rendered output verified
+- [x] `templates/docker-compose/.env.tera`
+  - [x] 1. AI-discoverable header added
+  - [x] 2. Comments reviewed and cleaned
+  - [x] 3. Tera delimiters fixed
+  - [x] 4. Rendered output verified
+- [ ] `templates/caddy/Caddyfile.tera`
+  - [ ] 1. AI-discoverable header added
+  - [ ] 2. Comments reviewed and cleaned
+  - [ ] 3. Tera delimiters fixed
+  - [ ] 4. Rendered output verified
+- [ ] `templates/grafana/provisioning/datasources/prometheus.yml.tera`
+  - [ ] 1. AI-discoverable header added
+  - [ ] 2. Comments reviewed and cleaned
+  - [ ] 3. Tera delimiters fixed
+  - [ ] 4. Rendered output verified
+- [ ] `templates/prometheus/prometheus.yml.tera`
+  - [ ] 1. AI-discoverable header added
+  - [ ] 2. Comments reviewed and cleaned
+  - [ ] 3. Tera delimiters fixed
+  - [ ] 4. Rendered output verified
+- [ ] `templates/tofu/common/cloud-init.yml.tera`
+  - [ ] 1. AI-discoverable header added
+  - [ ] 2. Comments reviewed and cleaned
+  - [ ] 3. Tera delimiters fixed
+  - [ ] 4. Rendered output verified
+- [ ] `templates/tofu/hetzner/variables.tfvars.tera`
+  - [ ] 1. AI-discoverable header added
+  - [ ] 2. Comments reviewed and cleaned
+  - [ ] 3. Tera delimiters fixed
+  - [ ] 4. Rendered output verified
+- [ ] `templates/tofu/lxd/variables.tfvars.tera`
+  - [ ] 1. AI-discoverable header added
+  - [ ] 2. Comments reviewed and cleaned
+  - [ ] 3. Tera delimiters fixed
+  - [ ] 4. Rendered output verified
 
 ### Static Templates (no `.tera` extension)
 
@@ -298,19 +346,6 @@ This pattern can be extended to other configuration elements (services, volumes,
    - Review inline documentation in template (move heavy docs to Rust wrappers)
 5. **Commit and move to next template**
 
-**Templates to Update** (track progress):
-
-- [x] `templates/ansible/inventory.yml.tera`
-- [x] `templates/ansible/variables.yml.tera`
-- [ ] `templates/caddy/Caddyfile.tera`
-- [ ] `templates/docker-compose/docker-compose.yml.tera`
-- [ ] `templates/grafana/provisioning/datasources/prometheus.yml.tera`
-- [ ] `templates/prometheus/prometheus.yml.tera`
-- [ ] `templates/tofu/common/cloud-init.yml.tera`
-- [ ] `templates/tofu/hetzner/variables.tfvars.tera`
-- [ ] `templates/tofu/lxd/variables.tfvars.tera`
-- [x] `templates/tracker/tracker.toml.tera`
-
 **Process for Each Tera Template**:
 
 1. **Add AI-discoverable header**
@@ -339,6 +374,15 @@ This pattern can be extended to other configuration elements (services, volumes,
    - Check timestamp format is ISO 8601
    - Verify all template variables resolve
    - Confirm no unwanted blank lines from control flow statements
+
+**Per-Template Progress Tracking**:
+
+Each template should have 4 sub-checkboxes to track completion of the above tasks. Mark each checkbox as complete after finishing that specific subtask:
+
+- [ ] 1. AI-discoverable header added
+- [ ] 2. Comments reviewed and cleaned
+- [ ] 3. Tera delimiters fixed (if applicable)
+- [ ] 4. Rendered output verified
 
 ### Phase 3: Static Template Updates
 

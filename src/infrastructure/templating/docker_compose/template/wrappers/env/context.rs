@@ -9,6 +9,8 @@
 
 use serde::Serialize;
 
+use crate::infrastructure::templating::TemplateMetadata;
+
 /// Configuration for the Tracker service
 ///
 /// Contains environment variables for the Torrust Tracker container.
@@ -55,6 +57,10 @@ pub struct GrafanaServiceConfig {
 /// organized by service to mirror the template structure.
 #[derive(Serialize, Debug, Clone)]
 pub struct EnvContext {
+    /// Template metadata (timestamp, version info)
+    #[serde(flatten)]
+    metadata: TemplateMetadata,
+
     /// Tracker service configuration
     pub tracker: TrackerServiceConfig,
     /// `MySQL` service configuration (only present when `MySQL` driver is configured)
@@ -70,21 +76,26 @@ impl EnvContext {
     ///
     /// # Arguments
     ///
+    /// * `metadata` - Template metadata with generation timestamp
     /// * `tracker_api_admin_token` - The admin token for tracker API authentication
     ///
     /// # Examples
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
+    /// use torrust_tracker_deployer_lib::infrastructure::templating::TemplateMetadata;
+    /// use torrust_tracker_deployer_lib::shared::clock::{Clock, SystemClock};
     ///
-    /// let context = EnvContext::new("MySecretToken123".to_string());
+    /// let metadata = TemplateMetadata::new(SystemClock.now());
+    /// let context = EnvContext::new(metadata, "MySecretToken123".to_string());
     /// assert_eq!(context.tracker.api_admin_token, "MySecretToken123");
     /// assert_eq!(context.tracker.database_driver, "sqlite3");
     /// assert!(context.mysql.is_none());
     /// ```
     #[must_use]
-    pub fn new(tracker_api_admin_token: String) -> Self {
+    pub fn new(metadata: TemplateMetadata, tracker_api_admin_token: String) -> Self {
         Self {
+            metadata,
             tracker: TrackerServiceConfig {
                 api_admin_token: tracker_api_admin_token,
                 database_driver: "sqlite3".to_string(),
@@ -98,6 +109,7 @@ impl EnvContext {
     ///
     /// # Arguments
     ///
+    /// * `metadata` - Template metadata with generation timestamp
     /// * `tracker_api_admin_token` - The admin token for tracker API authentication
     /// * `mysql_root_password` - `MySQL` root password
     /// * `mysql_database` - `MySQL` database name
@@ -108,8 +120,12 @@ impl EnvContext {
     ///
     /// ```rust
     /// use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
+    /// use torrust_tracker_deployer_lib::infrastructure::templating::TemplateMetadata;
+    /// use torrust_tracker_deployer_lib::shared::clock::{Clock, SystemClock};
     ///
+    /// let metadata = TemplateMetadata::new(SystemClock.now());
     /// let context = EnvContext::new_with_mysql(
+    ///     metadata,
     ///     "MySecretToken123".to_string(),
     ///     "root_pass".to_string(),
     ///     "tracker_db".to_string(),
@@ -121,6 +137,7 @@ impl EnvContext {
     /// ```
     #[must_use]
     pub fn new_with_mysql(
+        metadata: TemplateMetadata,
         tracker_api_admin_token: String,
         mysql_root_password: String,
         mysql_database: String,
@@ -128,6 +145,7 @@ impl EnvContext {
         mysql_password: String,
     ) -> Self {
         Self {
+            metadata,
             tracker: TrackerServiceConfig {
                 api_admin_token: tracker_api_admin_token,
                 database_driver: "mysql".to_string(),
@@ -140,6 +158,12 @@ impl EnvContext {
             }),
             grafana: None,
         }
+    }
+
+    /// Get the template metadata
+    #[must_use]
+    pub fn metadata(&self) -> &TemplateMetadata {
+        &self.metadata
     }
 
     /// Get the tracker API admin token
@@ -210,12 +234,19 @@ impl EnvContext {
 
 #[cfg(test)]
 mod tests {
+    use crate::shared::clock::{Clock, SystemClock};
+
     use super::*;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(SystemClock.now())
+    }
 
     #[test]
     fn it_should_create_context_with_tracker_token() {
         let token = "TestToken123".to_string();
-        let context = EnvContext::new(token.clone());
+        let metadata = create_test_metadata();
+        let context = EnvContext::new(metadata, token.clone());
 
         assert_eq!(context.tracker.api_admin_token, "TestToken123");
         assert_eq!(context.tracker.database_driver, "sqlite3");
@@ -224,7 +255,9 @@ mod tests {
 
     #[test]
     fn it_should_create_context_with_mysql_configuration() {
+        let metadata = create_test_metadata();
         let context = EnvContext::new_with_mysql(
+            metadata,
             "AdminToken456".to_string(),
             "root_pass".to_string(),
             "tracker_db".to_string(),
@@ -245,7 +278,8 @@ mod tests {
 
     #[test]
     fn it_should_be_serializable() {
-        let context = EnvContext::new("AdminToken456".to_string());
+        let metadata = create_test_metadata();
+        let context = EnvContext::new(metadata, "AdminToken456".to_string());
 
         // Verify it can be serialized (needed for Tera template rendering)
         let serialized = serde_json::to_string(&context).unwrap();
@@ -256,7 +290,9 @@ mod tests {
 
     #[test]
     fn it_should_serialize_mysql_config_when_present() {
+        let metadata = create_test_metadata();
         let context = EnvContext::new_with_mysql(
+            metadata,
             "Token123".to_string(),
             "root".to_string(),
             "db".to_string(),
@@ -271,7 +307,8 @@ mod tests {
 
     #[test]
     fn it_should_not_serialize_mysql_config_when_absent() {
-        let context = EnvContext::new("Token123".to_string());
+        let metadata = create_test_metadata();
+        let context = EnvContext::new(metadata, "Token123".to_string());
 
         let serialized = serde_json::to_string(&context).unwrap();
         // MySQL section should not be present when None
@@ -280,7 +317,9 @@ mod tests {
 
     #[test]
     fn it_should_provide_backward_compatible_getters() {
+        let metadata = create_test_metadata();
         let context = EnvContext::new_with_mysql(
+            metadata,
             "Token123".to_string(),
             "root_pass".to_string(),
             "tracker_db".to_string(),

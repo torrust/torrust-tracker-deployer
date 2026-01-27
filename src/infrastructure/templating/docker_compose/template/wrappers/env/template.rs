@@ -81,7 +81,14 @@ impl EnvTemplate {
 
 #[cfg(test)]
 mod tests {
+    use crate::infrastructure::templating::TemplateMetadata;
+    use crate::shared::clock::{Clock, SystemClock};
+
     use super::*;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(SystemClock.now())
+    }
 
     #[test]
     fn it_should_create_env_template_successfully() {
@@ -89,7 +96,8 @@ mod tests {
 
         let template_file = File::new(".env.tera", template_content.to_string()).unwrap();
 
-        let env_context = EnvContext::new("MyToken123".to_string());
+        let metadata = create_test_metadata();
+        let env_context = EnvContext::new(metadata, "MyToken123".to_string());
         let template = EnvTemplate::new(&template_file, env_context).unwrap();
 
         assert_eq!(template.tracker_api_admin_token(), "MyToken123");
@@ -101,7 +109,8 @@ mod tests {
 
         let template_file = File::new(".env.tera", template_content.to_string()).unwrap();
 
-        let env_context = EnvContext::new("SecretToken".to_string());
+        let metadata = create_test_metadata();
+        let env_context = EnvContext::new(metadata, "SecretToken".to_string());
         let template = EnvTemplate::new(&template_file, env_context).unwrap();
 
         // Verify the content has the substituted value
@@ -112,7 +121,8 @@ mod tests {
     fn it_should_accept_empty_template_content() {
         let template_file = File::new(".env.tera", String::new()).unwrap();
 
-        let env_context = EnvContext::new("TestToken".to_string());
+        let metadata = create_test_metadata();
+        let env_context = EnvContext::new(metadata, "TestToken".to_string());
         let result = EnvTemplate::new(&template_file, env_context);
 
         // Empty templates are valid in Tera
@@ -128,7 +138,8 @@ mod tests {
 
         let template_file = File::new(".env.tera", template_content.to_string()).unwrap();
 
-        let env_context = EnvContext::new("UnusedToken".to_string());
+        let metadata = create_test_metadata();
+        let env_context = EnvContext::new(metadata, "UnusedToken".to_string());
         let result = EnvTemplate::new(&template_file, env_context);
 
         // Templates don't need to use all available context variables
@@ -144,7 +155,8 @@ mod tests {
         let template_content = "ADMIN_TOKEN={{ tracker.api_admin_token }}\n";
         let template_file = File::new(".env.tera", template_content.to_string()).unwrap();
 
-        let env_context = EnvContext::new("FileTestToken".to_string());
+        let metadata = create_test_metadata();
+        let env_context = EnvContext::new(metadata, "FileTestToken".to_string());
         let template = EnvTemplate::new(&template_file, env_context).unwrap();
 
         // Create temp directory for output
