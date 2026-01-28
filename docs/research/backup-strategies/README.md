@@ -7,6 +7,8 @@
 
 This folder contains research documentation for backup strategies in the context of Torrust Tracker deployments. The research covers different backup types, database-specific approaches, and general requirements.
 
+> **📋 See [Preliminary Conclusions](preliminary-conclusions.md) for a summary of key findings and recommendations.**
+
 ## Backup Types
 
 The research is organized around three backup types:
