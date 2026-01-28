@@ -40,6 +40,9 @@ pub mod ansible;
 pub mod caddy;
 pub mod docker_compose;
 pub mod grafana;
+pub mod metadata;
 pub mod prometheus;
 pub mod tofu;
 pub mod tracker;
+
+pub use metadata::TemplateMetadata;

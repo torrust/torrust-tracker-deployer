@@ -14,16 +14,19 @@
 //! ```rust
 //! # use std::sync::Arc;
 //! # use tempfile::TempDir;
+//! # use chrono::Utc;
 //! use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::renderer::env::EnvRenderer;
 //! use torrust_tracker_deployer_lib::domain::template::TemplateManager;
 //! use torrust_tracker_deployer_lib::infrastructure::templating::docker_compose::template::wrappers::env::EnvContext;
+//! use torrust_tracker_deployer_lib::infrastructure::templating::metadata::TemplateMetadata;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let temp_dir = TempDir::new()?;
 //! let template_manager = Arc::new(TemplateManager::new("/path/to/templates"));
 //! let renderer = EnvRenderer::new(template_manager);
 //!
-//! let env_context = EnvContext::new("MyAccessToken".to_string());
+//! let metadata = TemplateMetadata::new(Utc::now());
+//! let env_context = EnvContext::new(metadata, "MyAccessToken".to_string());
 //! renderer.render(&env_context, temp_dir.path())?;
 //! # Ok(())
 //! # }
@@ -204,13 +207,17 @@ impl EnvRenderer {
 
 #[cfg(test)]
 mod tests {
+    use crate::infrastructure::templating::TemplateMetadata;
+    use crate::shared::clock::{Clock, SystemClock};
+
     use super::*;
     use std::fs;
     use tempfile::TempDir;
 
     /// Helper function to create a test .env context
     fn create_test_env_context() -> EnvContext {
-        EnvContext::new("TestAdminToken123".to_string())
+        let metadata = TemplateMetadata::new(SystemClock.now());
+        EnvContext::new(metadata, "TestAdminToken123".to_string())
     }
 
     /// Helper function to create a test template directory with env.tera

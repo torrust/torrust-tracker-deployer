@@ -24,7 +24,10 @@
 //! let template_manager = Arc::new(TemplateManager::new("/path/to/templates"));
 //! let renderer = VariablesRenderer::new(template_manager);
 //!
-//! let variables_context = AnsibleVariablesContext::new(22, None, None)?;
+//! use torrust_tracker_deployer_lib::infrastructure::templating::TemplateMetadata;
+//! use torrust_tracker_deployer_lib::shared::clock::{Clock, SystemClock};
+//! let metadata = TemplateMetadata::new(SystemClock.now());
+//! let variables_context = AnsibleVariablesContext::new(metadata, 22, None, None)?;
 //! renderer.render(&variables_context, temp_dir.path())?;
 //! # Ok(())
 //! # }
@@ -211,7 +214,11 @@ mod tests {
 
     /// Helper function to create a test variables context
     fn create_test_variables_context() -> AnsibleVariablesContext {
-        AnsibleVariablesContext::new(22, None, None).expect("Failed to create variables context")
+        use crate::infrastructure::templating::TemplateMetadata;
+        use crate::shared::clock::{Clock, SystemClock};
+        let metadata = TemplateMetadata::new(SystemClock.now());
+        AnsibleVariablesContext::new(metadata, 22, None, None)
+            .expect("Failed to create variables context")
     }
 
     /// Helper function to create a test template directory with variables.yml.tera
@@ -292,6 +299,9 @@ ssh_port: {{ ssh_port }}
 
     #[test]
     fn it_should_render_with_custom_ssh_port() {
+        use crate::infrastructure::templating::TemplateMetadata;
+        use crate::shared::clock::{Clock, SystemClock};
+
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let template_dir = temp_dir.path().join("templates");
         let output_dir = temp_dir.path().join("output");
@@ -307,7 +317,8 @@ ssh_port: {{ ssh_port }}
         let renderer = VariablesRenderer::new(template_manager);
 
         // Use custom SSH port
-        let variables_context = AnsibleVariablesContext::new(2222, None, None)
+        let metadata = TemplateMetadata::new(SystemClock.now());
+        let variables_context = AnsibleVariablesContext::new(metadata, 2222, None, None)
             .expect("Failed to create variables context");
 
         let result = renderer.render(&variables_context, &output_dir);

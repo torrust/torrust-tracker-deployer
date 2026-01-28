@@ -409,8 +409,12 @@ impl AnsibleProjectGenerator {
     >{
         use crate::infrastructure::templating::ansible::template::wrappers::variables::AnsibleVariablesContext;
 
+        // Extract metadata from inventory context (reuse the same timestamp)
+        let metadata = inventory_context.metadata().clone();
+
         // Extract SSH port from inventory context and create variables context with tracker config
         AnsibleVariablesContext::new(
+            metadata,
             inventory_context.ansible_port(),
             tracker_config,
             grafana_config,

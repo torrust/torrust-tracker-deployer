@@ -30,6 +30,7 @@ use crate::application::steps::RenderAnsibleTemplatesStep;
 use crate::domain::environment::UserInputs;
 use crate::domain::TemplateManager;
 use crate::infrastructure::templating::ansible::AnsibleProjectGenerator;
+use crate::shared::clock::Clock;
 
 /// Errors that can occur during Ansible template rendering
 #[derive(Error, Debug)]
@@ -58,6 +59,7 @@ pub enum AnsibleTemplateServiceError {
 /// runtime parameters.
 pub struct AnsibleTemplateService {
     ansible_template_renderer: Arc<AnsibleProjectGenerator>,
+    clock: Arc<dyn Clock>,
 }
 
 impl AnsibleTemplateService {
@@ -66,10 +68,15 @@ impl AnsibleTemplateService {
     /// # Arguments
     ///
     /// * `ansible_template_renderer` - The renderer for Ansible templates
+    /// * `clock` - The clock for generating timestamps
     #[must_use]
-    pub fn new(ansible_template_renderer: Arc<AnsibleProjectGenerator>) -> Self {
+    pub fn new(
+        ansible_template_renderer: Arc<AnsibleProjectGenerator>,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
         Self {
             ansible_template_renderer,
+            clock,
         }
     }
 
@@ -82,6 +89,7 @@ impl AnsibleTemplateService {
     ///
     /// * `templates_dir` - Directory containing the source templates
     /// * `build_dir` - Directory where rendered templates will be written
+    /// * `clock` - The clock for generating timestamps
     ///
     /// # Returns
     ///
@@ -91,21 +99,24 @@ impl AnsibleTemplateService {
     ///
     /// ```rust,ignore
     /// use std::path::PathBuf;
+    /// use std::sync::Arc;
     /// use torrust_tracker_deployer_lib::application::services::AnsibleTemplateService;
+    /// use torrust_tracker_deployer_lib::shared::clock::SystemClock;
     ///
     /// let service = AnsibleTemplateService::from_paths(
     ///     PathBuf::from("templates"),
     ///     PathBuf::from("build/my-env"),
+    ///     Arc::new(SystemClock),
     /// );
     /// ```
     #[must_use]
-    pub fn from_paths(templates_dir: PathBuf, build_dir: PathBuf) -> Self {
+    pub fn from_paths(templates_dir: PathBuf, build_dir: PathBuf, clock: Arc<dyn Clock>) -> Self {
         let template_manager = Arc::new(TemplateManager::new(templates_dir));
 
         let ansible_template_renderer =
             Arc::new(AnsibleProjectGenerator::new(build_dir, template_manager));
 
-        Self::new(ansible_template_renderer)
+        Self::new(ansible_template_renderer, clock)
     }
 
     /// Render Ansible templates with the provided runtime configuration
@@ -154,6 +165,7 @@ impl AnsibleTemplateService {
             ssh_socket_addr,
             user_inputs.tracker().clone(),
             user_inputs.grafana().cloned(),
+            self.clock.clone(),
         )
         .execute()
         .await

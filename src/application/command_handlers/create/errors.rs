@@ -16,7 +16,7 @@ use crate::domain::environment::repository::RepositoryError;
 #[derive(Debug, Error)]
 pub enum CreateCommandHandlerError {
     /// Configuration validation failed
-    #[error("Configuration validation failed")]
+    #[error("Configuration validation failed: {0}")]
     InvalidConfiguration(#[source] CreateConfigError),
 
     /// Environment with the given name already exists

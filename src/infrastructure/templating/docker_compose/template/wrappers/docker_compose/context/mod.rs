@@ -6,6 +6,8 @@
 // External crates
 use serde::Serialize;
 
+use crate::infrastructure::templating::TemplateMetadata;
+
 // Submodules
 mod builder;
 mod caddy;
@@ -37,6 +39,10 @@ pub use service_topology::ServiceTopology;
 /// Contains all variables needed for the Docker Compose service configuration.
 #[derive(Serialize, Debug, Clone)]
 pub struct DockerComposeContext {
+    /// Template metadata (timestamp, version info)
+    #[serde(flatten)]
+    metadata: TemplateMetadata,
+
     /// Database configuration
     pub database: DatabaseConfig,
     /// Tracker service configuration (ports, networks)
@@ -127,6 +133,12 @@ impl DockerComposeContext {
     #[must_use]
     pub fn database(&self) -> &DatabaseConfig {
         &self.database
+    }
+
+    /// Get the template metadata
+    #[must_use]
+    pub fn metadata(&self) -> &TemplateMetadata {
+        &self.metadata
     }
 
     /// Get the tracker service configuration

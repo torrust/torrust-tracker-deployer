@@ -126,8 +126,15 @@ impl TrackerConfigRenderer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::infrastructure::templating::TemplateMetadata;
+    use chrono::{TimeZone, Utc};
     use std::fs;
     use tempfile::TempDir;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        let timestamp = Utc.with_ymd_and_hms(2026, 1, 27, 14, 30, 0).unwrap();
+        TemplateMetadata::new(timestamp)
+    }
 
     fn create_test_template_manager() -> Arc<TemplateManager> {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -160,7 +167,7 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
         let renderer = TrackerConfigRenderer::new(template_manager);
 
         let temp_output = TempDir::new().expect("Failed to create output dir");
-        let ctx = TrackerContext::default_config();
+        let ctx = TrackerContext::default_config(create_test_metadata());
 
         let result = renderer.render(&ctx, temp_output.path());
         assert!(result.is_ok());
@@ -179,7 +186,7 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
         let renderer = TrackerConfigRenderer::new(template_manager);
 
         let temp_output = TempDir::new().expect("Failed to create output dir");
-        let ctx = TrackerContext::default_config();
+        let ctx = TrackerContext::default_config(create_test_metadata());
 
         renderer
             .render(&ctx, temp_output.path())
@@ -201,7 +208,7 @@ path = "/var/lib/torrust/tracker/database/sqlite3.db"
         let renderer = TrackerConfigRenderer::new(template_manager);
 
         let temp_output = TempDir::new().expect("Failed to create output dir");
-        let context = TrackerContext::default_config();
+        let context = TrackerContext::default_config(create_test_metadata());
 
         // Should succeed because TemplateManager extracts from embedded resources
         let result = renderer.render(&context, temp_output.path());

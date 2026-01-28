@@ -241,7 +241,7 @@ impl Container {
     /// Create a new `RegisterCommandController`
     #[must_use]
     pub fn create_register_controller(&self) -> RegisterCommandController {
-        RegisterCommandController::new(self.repository(), self.user_output())
+        RegisterCommandController::new(self.repository(), self.clock(), self.user_output())
     }
 
     /// Create a new `ReleaseCommandController`

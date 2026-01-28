@@ -18,6 +18,7 @@ use crate::adapters::ssh::credentials::SshCredentials;
 use crate::domain::provider::{Provider, ProviderConfig};
 use crate::domain::template::{TemplateManager, TemplateManagerError};
 use crate::domain::InstanceName;
+use crate::infrastructure::templating::metadata::TemplateMetadata;
 use crate::infrastructure::templating::tofu::template::common::renderer::cloud_init::{
     CloudInitRenderer, CloudInitRendererError,
 };
@@ -26,6 +27,7 @@ use crate::infrastructure::templating::tofu::template::providers::lxd::wrappers:
     VariablesContextBuilder as LxdVariablesContextBuilder,
     VariablesTemplate as LxdVariablesTemplate, VariablesTemplateError as LxdVariablesTemplateError,
 };
+use crate::shared::clock::Clock;
 
 /// Errors that can occur during `OpenTofu` project generation
 #[derive(Error, Debug)]
@@ -148,6 +150,7 @@ pub struct TofuProjectGenerator {
     instance_name: InstanceName,
     provider: Provider,
     provider_config: ProviderConfig,
+    _clock: Arc<dyn Clock>,
 }
 
 impl TofuProjectGenerator {
@@ -161,6 +164,7 @@ impl TofuProjectGenerator {
     /// * `ssh_port` - The SSH service port to configure in cloud-init
     /// * `instance_name` - The name of the instance to be created (for template rendering)
     /// * `provider_config` - The provider configuration containing provider type and settings
+    /// * `clock` - Clock service for generating timestamps
     ///
     /// Note: For LXD provider, the profile name is extracted from `provider_config`.
     pub fn new<P: AsRef<Path>>(
@@ -170,9 +174,10 @@ impl TofuProjectGenerator {
         ssh_port: u16,
         instance_name: InstanceName,
         provider_config: ProviderConfig,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         let provider = provider_config.provider();
-        let cloud_init_renderer = CloudInitRenderer::new(template_manager.clone());
+        let cloud_init_renderer = CloudInitRenderer::new(template_manager.clone(), clock.clone());
 
         Self {
             template_manager,
@@ -183,6 +188,7 @@ impl TofuProjectGenerator {
             instance_name,
             provider,
             provider_config,
+            _clock: clock,
         }
     }
 
@@ -473,7 +479,10 @@ impl TofuProjectGenerator {
         })?;
 
         // Build LXD context for template rendering
+        #[allow(clippy::used_underscore_binding)]
+        let metadata = TemplateMetadata::new(self._clock.now());
         let context = LxdVariablesContextBuilder::new()
+            .with_metadata(metadata)
             .with_instance_name(self.instance_name.clone())
             .with_profile_name(lxd_config.profile_name.clone())
             .build()
@@ -530,7 +539,10 @@ impl TofuProjectGenerator {
                 })?;
 
         // Build Hetzner context for template rendering
+        #[allow(clippy::used_underscore_binding)]
+        let metadata = TemplateMetadata::new(self._clock.now());
         let context = HetznerVariablesContextBuilder::new()
+            .with_metadata(metadata)
             .with_instance_name(self.instance_name.clone())
             .with_hcloud_api_token(hetzner_config.api_token.expose_secret().to_string())
             .with_server_type(hetzner_config.server_type.clone())
@@ -566,6 +578,8 @@ mod tests {
 
     use crate::domain::ProfileName;
     use crate::shared::Username;
+    use crate::testing::mock_clock::MockClock;
+    use chrono::DateTime;
 
     /// Test instance name for unit tests
     fn fixture_instance_name() -> InstanceName {
@@ -619,6 +633,7 @@ mod tests {
             22, // Default SSH port for tests
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         assert_eq!(renderer.build_dir, build_path);
@@ -639,6 +654,7 @@ mod tests {
             22, // Default SSH port for tests
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
         let actual_path = renderer.build_opentofu_directory();
 
@@ -659,6 +675,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
         let template_path = renderer.build_template_path("main.tf");
 
@@ -679,6 +696,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         assert_eq!(
@@ -710,6 +728,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
         let created_path = renderer
             .create_build_directory()
@@ -752,6 +771,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         let result = renderer.create_build_directory().await;
@@ -790,6 +810,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         // Try to copy a non-existent template
@@ -852,6 +873,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         let result = renderer.copy_templates(&["test.tf"], &build_path).await;
@@ -883,6 +905,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
         let template_path = renderer.build_template_path("");
         assert_eq!(template_path, "tofu/lxd/");
@@ -902,6 +925,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         // File names with forward slashes should be handled literally
@@ -931,6 +955,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         // File names with spaces
@@ -960,6 +985,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         // Create a very long file name (300 characters)
@@ -990,6 +1016,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
         let created_path = renderer
             .create_build_directory()
@@ -1015,6 +1042,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         // Should succeed with empty array
@@ -1053,6 +1081,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         // Copy the same file twice - should succeed (overwrite)
@@ -1102,6 +1131,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
         let ssh_credentials2 = create_dummy_ssh_credentials(temp_dir.path());
         let renderer2 = TofuProjectGenerator::new(
@@ -1111,6 +1141,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         tokio::fs::create_dir_all(&build_path1)
@@ -1171,6 +1202,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         // Try to copy both existing and non-existing files
@@ -1231,6 +1263,7 @@ mod tests {
             22,
             fixture_instance_name(),
             fixture_lxd_provider_config(),
+            Arc::new(MockClock::new(DateTime::UNIX_EPOCH)),
         );
 
         let file_refs: Vec<&str> = file_names.iter().map(std::string::String::as_str).collect();

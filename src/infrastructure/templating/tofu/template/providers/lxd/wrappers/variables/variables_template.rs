@@ -80,12 +80,17 @@ impl VariablesTemplate {
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
+
     use super::*;
     use crate::domain::InstanceName;
+    use crate::infrastructure::templating::metadata::TemplateMetadata;
     use tempfile::NamedTempFile;
 
     fn create_test_context() -> VariablesContext {
+        let metadata = TemplateMetadata::new(Utc::now());
         VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("test-instance".to_string()).unwrap())
             .with_profile_name(crate::domain::ProfileName::new("test-profile".to_string()).unwrap())
             .build()
@@ -232,7 +237,9 @@ image = "ubuntu:24.04""#;
     fn it_should_generate_variables_template_context() {
         let template_file =
             File::new("variables.tfvars.tera", "{{ instance_name }}".to_string()).unwrap();
+        let metadata = TemplateMetadata::new(Utc::now());
         let context = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("dynamic-vm".to_string()).unwrap())
             .with_profile_name(
                 crate::domain::ProfileName::new("dynamic-profile".to_string()).unwrap(),

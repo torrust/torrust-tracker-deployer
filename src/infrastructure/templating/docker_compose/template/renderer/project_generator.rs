@@ -203,7 +203,10 @@ mod tests {
 
     /// Helper function to create a test .env context
     fn create_test_env_context() -> EnvContext {
-        EnvContext::new("TestAdminToken123".to_string())
+        use crate::infrastructure::templating::TemplateMetadata;
+        use crate::shared::clock::{Clock, SystemClock};
+        let metadata = TemplateMetadata::new(SystemClock.now());
+        EnvContext::new(metadata, "TestAdminToken123".to_string())
     }
 
     /// Helper function to create a test docker-compose context with `SQLite`

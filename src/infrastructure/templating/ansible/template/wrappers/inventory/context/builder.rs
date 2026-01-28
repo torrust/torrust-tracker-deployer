@@ -1,9 +1,11 @@
 use super::{AnsibleHost, AnsiblePort, InventoryContext, InventoryContextError, SshPrivateKeyFile};
+use crate::infrastructure::templating::TemplateMetadata;
 
 /// Builder for `InventoryContext` with fluent interface
 #[derive(Debug, Default)]
 #[allow(clippy::struct_field_names)] // Field names mirror Ansible inventory variables
 pub struct InventoryContextBuilder {
+    metadata: Option<TemplateMetadata>,
     ansible_host: Option<AnsibleHost>,
     ansible_ssh_private_key_file: Option<SshPrivateKeyFile>,
     ansible_port: Option<AnsiblePort>,
@@ -15,6 +17,13 @@ impl InventoryContextBuilder {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Sets the template metadata for the builder
+    #[must_use]
+    pub fn with_metadata(mut self, metadata: TemplateMetadata) -> Self {
+        self.metadata = Some(metadata);
+        self
     }
 
     /// Sets the Ansible host for the builder.
@@ -51,6 +60,12 @@ impl InventoryContextBuilder {
     ///
     /// Returns an error if any required field is missing
     pub fn build(self) -> Result<InventoryContext, InventoryContextError> {
+        // Use default metadata if not provided (for backwards compatibility with tests)
+        let metadata = self.metadata.unwrap_or_else(|| {
+            use crate::shared::clock::{Clock, SystemClock};
+            TemplateMetadata::new(SystemClock.now())
+        });
+
         let ansible_host = self
             .ansible_host
             .ok_or(InventoryContextError::MissingAnsibleHost)?;
@@ -68,6 +83,7 @@ impl InventoryContextBuilder {
             .ok_or(InventoryContextError::MissingAnsibleUser)?;
 
         InventoryContext::new(
+            metadata,
             ansible_host,
             ansible_ssh_private_key_file,
             ansible_port,

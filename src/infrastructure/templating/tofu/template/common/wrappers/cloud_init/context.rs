@@ -10,6 +10,7 @@ use std::path::Path;
 use thiserror::Error;
 
 use crate::adapters::ssh::SshPublicKey;
+use crate::infrastructure::templating::metadata::TemplateMetadata;
 use crate::shared::Username;
 
 /// Errors that can occur when creating a `CloudInitContext`
@@ -31,6 +32,12 @@ pub enum CloudInitContextError {
 /// Template context for Cloud Init configuration with SSH public key and username
 #[derive(Debug, Clone, Serialize)]
 pub struct CloudInitContext {
+    /// Template metadata (generation timestamp, etc.)
+    ///
+    /// Flattened for template compatibility - serializes metadata at top level.
+    #[serde(flatten)]
+    pub metadata: TemplateMetadata,
+
     /// SSH public key content to be injected into cloud-init configuration
     pub ssh_public_key: SshPublicKey,
     /// Username to be created in the cloud-init configuration
@@ -40,8 +47,9 @@ pub struct CloudInitContext {
 }
 
 /// Builder for `CloudInitContext` with fluent interface
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct CloudInitContextBuilder {
+    metadata: TemplateMetadata,
     ssh_public_key: Option<SshPublicKey>,
     username: Option<Username>,
     ssh_port: Option<u16>,
@@ -124,6 +132,7 @@ impl CloudInitContextBuilder {
         let ssh_port = self.ssh_port.unwrap_or(22);
 
         Ok(CloudInitContext {
+            metadata: self.metadata,
             ssh_public_key,
             username,
             ssh_port,
@@ -138,6 +147,7 @@ impl CloudInitContext {
     /// Returns an error if the username is invalid according to Linux naming requirements
     /// or if the SSH public key is invalid
     pub fn new<S: Into<String>>(
+        metadata: TemplateMetadata,
         ssh_public_key: S,
         username: S,
     ) -> Result<Self, CloudInitContextError> {
@@ -146,6 +156,7 @@ impl CloudInitContext {
         let username = Username::new(username)
             .map_err(|e| CloudInitContextError::InvalidUsername(e.to_string()))?;
         Ok(Self {
+            metadata,
             ssh_public_key: key,
             username,
             ssh_port: 22, // Default SSH port
@@ -154,8 +165,13 @@ impl CloudInitContext {
 
     /// Creates a new builder for `CloudInitContext` with fluent interface
     #[must_use]
-    pub fn builder() -> CloudInitContextBuilder {
-        CloudInitContextBuilder::default()
+    pub fn builder(metadata: TemplateMetadata) -> CloudInitContextBuilder {
+        CloudInitContextBuilder {
+            metadata,
+            ssh_public_key: None,
+            username: None,
+            ssh_port: None,
+        }
     }
 
     /// Get the SSH public key content
@@ -173,15 +189,23 @@ impl CloudInitContext {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::fs;
+    use chrono::{TimeZone, Utc};
     use tempfile::TempDir;
+
+    use super::*;
+
+    /// Helper to create test metadata with a fixed timestamp
+    fn create_test_metadata() -> TemplateMetadata {
+        let fixed_time = Utc.with_ymd_and_hms(2026, 1, 27, 13, 41, 56).unwrap();
+        TemplateMetadata::new(fixed_time)
+    }
 
     #[test]
     fn it_should_create_cloud_init_context_with_ssh_key() {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
         let username = "testuser";
-        let context = CloudInitContext::new(ssh_key, username).unwrap();
+        let metadata = create_test_metadata();
+        let context = CloudInitContext::new(metadata, ssh_key, username).unwrap();
 
         assert_eq!(context.ssh_public_key(), ssh_key);
         assert_eq!(context.username(), username);
@@ -191,7 +215,8 @@ mod tests {
     fn it_should_build_context_with_builder_pattern() {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
         let username = "testuser";
-        let context = CloudInitContext::builder()
+        let metadata = create_test_metadata();
+        let context = CloudInitContext::builder(metadata)
             .with_ssh_public_key(ssh_key)
             .unwrap()
             .with_username(username)
@@ -212,7 +237,8 @@ mod tests {
 
         fs::write(&key_file, ssh_key).unwrap();
 
-        let context = CloudInitContext::builder()
+        let metadata = create_test_metadata();
+        let context = CloudInitContext::builder(metadata)
             .with_ssh_public_key_from_file(&key_file)
             .unwrap()
             .with_username(username)
@@ -227,7 +253,8 @@ mod tests {
 
     #[test]
     fn it_should_fail_when_ssh_key_is_missing() {
-        let result = CloudInitContext::builder().build();
+        let metadata = create_test_metadata();
+        let result = CloudInitContext::builder(metadata).build();
 
         assert!(result.is_err());
         assert!(matches!(
@@ -239,7 +266,8 @@ mod tests {
     #[test]
     fn it_should_fail_when_username_is_missing() {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
-        let result = CloudInitContext::builder()
+        let metadata = create_test_metadata();
+        let result = CloudInitContext::builder(metadata)
             .with_ssh_public_key(ssh_key)
             .unwrap()
             .build();
@@ -253,8 +281,9 @@ mod tests {
 
     #[test]
     fn it_should_fail_when_ssh_key_file_does_not_exist() {
-        let result =
-            CloudInitContext::builder().with_ssh_public_key_from_file("/nonexistent/path/key.pub");
+        let metadata = create_test_metadata();
+        let result = CloudInitContext::builder(metadata)
+            .with_ssh_public_key_from_file("/nonexistent/path/key.pub");
 
         assert!(result.is_err());
         assert!(matches!(
@@ -267,9 +296,11 @@ mod tests {
     fn it_should_serialize_to_json() {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
         let username = "testuser";
-        let context = CloudInitContext::new(ssh_key, username).unwrap();
+        let metadata = create_test_metadata();
+        let context = CloudInitContext::new(metadata, ssh_key, username).unwrap();
 
         let json = serde_json::to_value(&context).unwrap();
+        assert_eq!(json["generated_at"], "2026-01-27T13:41:56Z");
         assert_eq!(json["ssh_public_key"], ssh_key);
         assert_eq!(json["username"], username);
     }
@@ -279,7 +310,8 @@ mod tests {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
         let invalid_username = "123invalid"; // starts with digit
 
-        let result = CloudInitContext::new(ssh_key, invalid_username);
+        let metadata = create_test_metadata();
+        let result = CloudInitContext::new(metadata, ssh_key, invalid_username);
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
@@ -291,8 +323,9 @@ mod tests {
     fn it_should_fail_with_builder_when_username_is_invalid() {
         let ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... test@example.com";
         let invalid_username = "@invalid"; // contains @ symbol
+        let metadata = create_test_metadata();
 
-        let result = CloudInitContext::builder()
+        let result = CloudInitContext::builder(metadata)
             .with_ssh_public_key(ssh_key)
             .unwrap()
             .with_username(invalid_username);

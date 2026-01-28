@@ -66,11 +66,17 @@ impl CloudInitTemplate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::infrastructure::templating::metadata::TemplateMetadata;
     use crate::infrastructure::templating::tofu::template::common::wrappers::cloud_init::CloudInitContext;
+    use chrono::DateTime;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(DateTime::UNIX_EPOCH)
+    }
 
     /// Helper function to create a `CloudInitContext` with given SSH key
     fn create_cloud_init_context(ssh_key: &str) -> CloudInitContext {
-        CloudInitContext::builder()
+        CloudInitContext::builder(create_test_metadata())
             .with_ssh_public_key(ssh_key)
             .unwrap()
             .with_username("testuser")

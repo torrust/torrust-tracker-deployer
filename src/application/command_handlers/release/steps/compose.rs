@@ -16,6 +16,7 @@ use crate::application::steps::{DeployComposeFilesStep, RenderDockerComposeTempl
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
 use crate::domain::template::TemplateManager;
+use crate::shared::clock::SystemClock;
 
 /// Release Docker Compose configuration
 ///
@@ -45,10 +46,12 @@ async fn render_templates(
     let current_step = ReleaseStep::RenderDockerComposeTemplates;
 
     let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
+    let clock = Arc::new(SystemClock);
     let step = RenderDockerComposeTemplatesStep::new(
         Arc::new(environment.clone()),
         template_manager,
         environment.build_dir().clone(),
+        clock,
     );
 
     let compose_build_dir = step.execute().await.map_err(|e| {

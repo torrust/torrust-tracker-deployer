@@ -80,12 +80,17 @@ impl VariablesTemplate {
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
+
     use super::*;
     use crate::domain::InstanceName;
+    use crate::infrastructure::templating::metadata::TemplateMetadata;
     use tempfile::NamedTempFile;
 
     fn create_test_context() -> VariablesContext {
+        let metadata = TemplateMetadata::new(Utc::now());
         VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("test-instance".to_string()).unwrap())
             .with_hcloud_api_token("test-api-token".to_string())
             .with_server_type("cx22".to_string())
@@ -238,7 +243,9 @@ server_type = "cx22""#;
     fn it_should_generate_variables_template_context() {
         let template_file =
             File::new("variables.tfvars.tera", "{{ instance_name }}".to_string()).unwrap();
+        let metadata = TemplateMetadata::new(Utc::now());
         let context = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("dynamic-vm".to_string()).unwrap())
             .with_hcloud_api_token("dynamic-token".to_string())
             .with_server_type("cx32".to_string())

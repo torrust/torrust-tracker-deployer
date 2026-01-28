@@ -27,6 +27,8 @@ use crate::infrastructure::templating::grafana::template::{
     renderer::{DatasourceRenderer, DatasourceRendererError},
     DatasourceContext,
 };
+use crate::infrastructure::templating::TemplateMetadata;
+use crate::shared::clock::Clock;
 
 /// Errors that can occur during Grafana project generation
 #[derive(Error, Debug)]
@@ -69,6 +71,7 @@ pub struct GrafanaProjectGenerator {
     build_dir: PathBuf,
     template_manager: Arc<TemplateManager>,
     datasource_renderer: DatasourceRenderer,
+    clock: Arc<dyn Clock>,
 }
 
 impl GrafanaProjectGenerator {
@@ -93,14 +96,20 @@ impl GrafanaProjectGenerator {
     ///
     /// * `build_dir` - The destination directory where templates will be rendered
     /// * `template_manager` - The template manager to source templates from
+    /// * `clock` - Clock service for generating timestamps
     #[must_use]
-    pub fn new<P: AsRef<Path>>(build_dir: P, template_manager: Arc<TemplateManager>) -> Self {
+    pub fn new<P: AsRef<Path>>(
+        build_dir: P,
+        template_manager: Arc<TemplateManager>,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
         let datasource_renderer = DatasourceRenderer::new(Arc::clone(&template_manager));
 
         Self {
             build_dir: build_dir.as_ref().to_path_buf(),
             template_manager,
             datasource_renderer,
+            clock,
         }
     }
 
@@ -142,7 +151,7 @@ impl GrafanaProjectGenerator {
         self.create_directory_structure(&grafana_build_dir)?;
 
         // Build context from Prometheus config
-        let context = Self::build_context(prometheus_config);
+        let context = self.build_context(prometheus_config);
 
         // Render datasource template
         self.render_datasource_template(&context, &grafana_build_dir)?;
@@ -178,8 +187,9 @@ impl GrafanaProjectGenerator {
     }
 
     /// Builds `DatasourceContext` from Prometheus configuration
-    fn build_context(prometheus_config: &PrometheusConfig) -> DatasourceContext {
-        DatasourceContext::new(prometheus_config.scrape_interval_in_secs())
+    fn build_context(&self, prometheus_config: &PrometheusConfig) -> DatasourceContext {
+        let metadata = TemplateMetadata::new(self.clock.now());
+        DatasourceContext::new(metadata, prometheus_config.scrape_interval_in_secs())
     }
 
     /// Renders the datasource template using `DatasourceRenderer`

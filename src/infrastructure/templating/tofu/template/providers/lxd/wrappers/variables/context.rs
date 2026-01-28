@@ -14,10 +14,13 @@
 //!
 //! ```rust
 //! use torrust_tracker_deployer_lib::infrastructure::templating::tofu::template::providers::lxd::wrappers::variables::VariablesContext;
-//! use torrust_tracker_deployer_lib::adapters::lxd::instance::InstanceName;
-//! use torrust_tracker_deployer_lib::domain::ProfileName;
+//! use torrust_tracker_deployer_lib::infrastructure::templating::metadata::TemplateMetadata;
+//! use torrust_tracker_deployer_lib::domain::{InstanceName, ProfileName};
+//! use chrono::Utc;
 //!
+//! let metadata = TemplateMetadata::new(Utc::now());
 //! let context = VariablesContext::builder()
+//!     .with_metadata(metadata)
 //!     .with_instance_name(InstanceName::new("my-test-vm".to_string()).unwrap())
 //!     .with_profile_name(ProfileName::new("my-test-profile".to_string()).unwrap())
 //!     .build()
@@ -28,10 +31,15 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::domain::{InstanceName, ProfileName};
+use crate::infrastructure::templating::metadata::TemplateMetadata;
 
 /// Errors that can occur when building the variables context
 #[derive(Error, Debug)]
 pub enum VariablesContextError {
+    /// Template metadata is required but was not provided
+    #[error("Template metadata is required but was not provided")]
+    MissingMetadata,
+
     /// Instance name is required but was not provided
     #[error("Instance name is required but was not provided")]
     MissingInstanceName,
@@ -47,6 +55,9 @@ pub enum VariablesContextError {
 /// with dynamic instance naming and other configurable parameters.
 #[derive(Debug, Clone, Serialize)]
 pub struct VariablesContext {
+    /// Template metadata (generation timestamp, etc.)
+    #[serde(flatten)]
+    pub metadata: TemplateMetadata,
     /// The name of the VM/container instance to be created
     pub instance_name: InstanceName,
     /// The name of the LXD profile to be created  
@@ -59,6 +70,7 @@ pub struct VariablesContext {
 /// to ensure all required fields are provided.
 #[derive(Debug, Default)]
 pub struct VariablesContextBuilder {
+    metadata: Option<TemplateMetadata>,
     instance_name: Option<InstanceName>,
     profile_name: Option<ProfileName>,
 }
@@ -68,6 +80,17 @@ impl VariablesContextBuilder {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Sets the template metadata
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata` - The template metadata containing generation timestamp
+    #[must_use]
+    pub fn with_metadata(mut self, metadata: TemplateMetadata) -> Self {
+        self.metadata = Some(metadata);
+        self
     }
 
     /// Sets the instance name for the VM/container
@@ -104,6 +127,10 @@ impl VariablesContextBuilder {
     /// Returns `MissingInstanceName` if instance name was not provided
     /// Returns `MissingProfileName` if profile name was not provided
     pub fn build(self) -> Result<VariablesContext, VariablesContextError> {
+        let metadata = self
+            .metadata
+            .ok_or(VariablesContextError::MissingMetadata)?;
+
         let instance_name = self
             .instance_name
             .ok_or(VariablesContextError::MissingInstanceName)?;
@@ -113,6 +140,7 @@ impl VariablesContextBuilder {
             .ok_or(VariablesContextError::MissingProfileName)?;
 
         Ok(VariablesContext {
+            metadata,
             instance_name,
             profile_name,
         })
@@ -129,11 +157,19 @@ impl VariablesContext {
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
+
     use super::*;
+
+    fn create_test_metadata() -> TemplateMetadata {
+        TemplateMetadata::new(Utc::now())
+    }
 
     #[test]
     fn it_should_create_variables_context_with_instance_name() {
+        let metadata = create_test_metadata();
         let context = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .with_profile_name(ProfileName::new("test-profile".to_string()).unwrap())
             .build()
@@ -145,7 +181,9 @@ mod tests {
 
     #[test]
     fn it_should_serialize_to_json() {
+        let metadata = create_test_metadata();
         let context = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .with_profile_name(ProfileName::new("test-profile".to_string()).unwrap())
             .build()
@@ -156,11 +194,14 @@ mod tests {
         assert!(json.contains("instance_name"));
         assert!(json.contains("test-profile"));
         assert!(json.contains("profile_name"));
+        assert!(json.contains("generated_at"));
     }
 
     #[test]
     fn it_should_build_context_with_builder_pattern() {
+        let metadata = create_test_metadata();
         let result = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("my-instance".to_string()).unwrap())
             .with_profile_name(ProfileName::new("my-profile".to_string()).unwrap())
             .build();
@@ -173,7 +214,9 @@ mod tests {
 
     #[test]
     fn it_should_fail_when_instance_name_is_missing() {
+        let metadata = create_test_metadata();
         let result = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_profile_name(ProfileName::new("test-profile".to_string()).unwrap())
             .build();
 
@@ -185,7 +228,9 @@ mod tests {
 
     #[test]
     fn it_should_fail_when_profile_name_is_missing() {
+        let metadata = create_test_metadata();
         let result = VariablesContext::builder()
+            .with_metadata(metadata)
             .with_instance_name(InstanceName::new("test-vm".to_string()).unwrap())
             .build();
 

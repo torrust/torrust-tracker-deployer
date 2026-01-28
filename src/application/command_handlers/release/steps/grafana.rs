@@ -22,6 +22,7 @@ use crate::application::steps::rendering::RenderGrafanaTemplatesStep;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
 use crate::domain::template::TemplateManager;
+use crate::shared::clock::SystemClock;
 
 /// Release the Grafana service (if enabled)
 ///
@@ -113,10 +114,12 @@ fn render_templates(
     let current_step = ReleaseStep::RenderGrafanaTemplates;
 
     let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
+    let clock = Arc::new(SystemClock);
     let step = RenderGrafanaTemplatesStep::new(
         Arc::new(environment.clone()),
         template_manager,
         environment.build_dir().clone(),
+        clock,
     );
 
     step.execute().map_err(|e| {

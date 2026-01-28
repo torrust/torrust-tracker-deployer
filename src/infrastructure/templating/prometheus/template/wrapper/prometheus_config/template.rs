@@ -128,8 +128,16 @@ impl PrometheusTemplate {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use chrono::{TimeZone, Utc};
     use tempfile::TempDir;
+
+    use super::*;
+
+    /// Helper to create test metadata with a fixed timestamp
+    fn create_test_metadata() -> crate::infrastructure::templating::metadata::TemplateMetadata {
+        let fixed_time = Utc.with_ymd_and_hms(2026, 1, 27, 13, 41, 56).unwrap();
+        crate::infrastructure::templating::metadata::TemplateMetadata::new(fixed_time)
+    }
 
     fn sample_template_content() -> String {
         r#"global:
@@ -150,7 +158,9 @@ scrape_configs:
     #[test]
     fn it_should_create_prometheus_template_successfully() {
         let template_content = sample_template_content();
-        let ctx = PrometheusContext::new("15s".to_string(), "test_token".to_string(), 1212);
+        let metadata = create_test_metadata();
+        let ctx =
+            PrometheusContext::new(metadata, "15s".to_string(), "test_token".to_string(), 1212);
 
         let template = PrometheusTemplate::new(template_content, ctx);
         assert!(template.is_ok());
@@ -159,7 +169,9 @@ scrape_configs:
     #[test]
     fn it_should_fail_with_invalid_template_syntax() {
         let invalid_content = "{{ unclosed".to_string();
-        let context = PrometheusContext::new("15s".to_string(), "token".to_string(), 1212);
+        let metadata = create_test_metadata();
+        let context =
+            PrometheusContext::new(metadata, "15s".to_string(), "token".to_string(), 1212);
 
         let result = PrometheusTemplate::new(invalid_content, context);
         assert!(result.is_err());
@@ -168,7 +180,9 @@ scrape_configs:
     #[test]
     fn it_should_render_template_with_context() {
         let template_content = sample_template_content();
-        let ctx = PrometheusContext::new("30s".to_string(), "admin_token".to_string(), 8080);
+        let metadata = create_test_metadata();
+        let ctx =
+            PrometheusContext::new(metadata, "30s".to_string(), "admin_token".to_string(), 8080);
 
         let template =
             PrometheusTemplate::new(template_content, ctx).expect("Failed to create template");
@@ -183,7 +197,8 @@ scrape_configs:
     #[test]
     fn it_should_not_contain_template_syntax_after_rendering() {
         let template_content = sample_template_content();
-        let ctx = PrometheusContext::new("15s".to_string(), "token".to_string(), 1212);
+        let metadata = create_test_metadata();
+        let ctx = PrometheusContext::new(metadata, "15s".to_string(), "token".to_string(), 1212);
 
         let template =
             PrometheusTemplate::new(template_content, ctx).expect("Failed to create template");
@@ -201,7 +216,9 @@ scrape_configs:
         let output_path = temp_dir.path().join("prometheus.yml");
 
         let template_content = sample_template_content();
-        let ctx = PrometheusContext::new("20s".to_string(), "file_token".to_string(), 9090);
+        let metadata = create_test_metadata();
+        let ctx =
+            PrometheusContext::new(metadata, "20s".to_string(), "file_token".to_string(), 9090);
 
         let template =
             PrometheusTemplate::new(template_content, ctx).expect("Failed to create template");
@@ -223,7 +240,8 @@ scrape_configs:
     #[test]
     fn it_should_provide_access_to_content() {
         let template_content = sample_template_content();
-        let ctx = PrometheusContext::new("15s".to_string(), "token".to_string(), 1212);
+        let metadata = create_test_metadata();
+        let ctx = PrometheusContext::new(metadata, "15s".to_string(), "token".to_string(), 1212);
 
         let template = PrometheusTemplate::new(template_content.clone(), ctx)
             .expect("Failed to create template");
@@ -234,7 +252,13 @@ scrape_configs:
     #[test]
     fn it_should_provide_access_to_context() {
         let template_content = sample_template_content();
-        let ctx = PrometheusContext::new("25s".to_string(), "context_token".to_string(), 7070);
+        let metadata = create_test_metadata();
+        let ctx = PrometheusContext::new(
+            metadata,
+            "25s".to_string(),
+            "context_token".to_string(),
+            7070,
+        );
 
         let template = PrometheusTemplate::new(template_content, ctx.clone())
             .expect("Failed to create template");

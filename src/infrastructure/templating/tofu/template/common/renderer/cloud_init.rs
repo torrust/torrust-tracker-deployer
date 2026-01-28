@@ -24,17 +24,20 @@
 //! # use torrust_tracker_deployer_lib::domain::template::TemplateManager;
 //! # use torrust_tracker_deployer_lib::shared::Username;
 //! use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
+//! # use torrust_tracker_deployer_lib::testing::mock_clock::MockClock;
 //! # use std::path::PathBuf;
+//! # use chrono::DateTime;
 //! #
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let template_manager = Arc::new(TemplateManager::new(std::env::temp_dir()));
+//! let clock = Arc::new(MockClock::new(DateTime::UNIX_EPOCH));
 //! let ssh_credentials = SshCredentials::new(
 //!     PathBuf::from("fixtures/testing_rsa"),
 //!     PathBuf::from("fixtures/testing_rsa.pub"),
 //!     Username::new("username").unwrap()
 //! );
-//! let renderer = CloudInitRenderer::new(template_manager);
+//! let renderer = CloudInitRenderer::new(template_manager, clock);
 //!
 //! // Just demonstrate creating the renderer - actual rendering requires
 //! // a proper template manager setup with cloud-init templates
@@ -49,6 +52,8 @@ use thiserror::Error;
 use crate::adapters::ssh::credentials::SshCredentials;
 use crate::domain::template::file::File;
 use crate::domain::template::{TemplateManager, TemplateManagerError};
+use crate::infrastructure::templating::metadata::TemplateMetadata;
+use crate::shared::clock::Clock;
 
 /// Errors that can occur during cloud-init template rendering
 #[derive(Error, Debug)]
@@ -102,6 +107,7 @@ pub enum CloudInitRendererError {
 /// provider-specific logic is needed.
 pub struct CloudInitRenderer {
     template_manager: Arc<TemplateManager>,
+    clock: Arc<dyn Clock>,
 }
 
 impl CloudInitRenderer {
@@ -121,13 +127,17 @@ impl CloudInitRenderer {
     /// # Arguments
     ///
     /// * `template_manager` - Arc reference to the template manager for file operations
+    /// * `clock` - Clock service for generating timestamps
     ///
     /// # Returns
     ///
     /// * `CloudInitRenderer` - A new renderer instance
     #[must_use]
-    pub fn new(template_manager: Arc<TemplateManager>) -> Self {
-        Self { template_manager }
+    pub fn new(template_manager: Arc<TemplateManager>, clock: Arc<dyn Clock>) -> Self {
+        Self {
+            template_manager,
+            clock,
+        }
     }
 
     /// Renders the cloud-init.yml.tera template with SSH credentials
@@ -186,8 +196,17 @@ impl CloudInitRenderer {
         let template_file = File::new(Self::CLOUD_INIT_TEMPLATE_FILE, template_content)
             .map_err(|_| CloudInitRendererError::FileCreationFailed)?;
 
+        // Generate metadata with current timestamp
+        let metadata = TemplateMetadata::new(self.clock.now());
+
         // Render cloud-init template (shared logic for all providers)
-        Self::render_cloud_init(&template_file, ssh_credentials, ssh_port, output_dir)
+        Self::render_cloud_init(
+            &template_file,
+            ssh_credentials,
+            ssh_port,
+            output_dir,
+            metadata,
+        )
     }
 
     /// Renders cloud-init template (shared logic for all providers)
@@ -196,6 +215,7 @@ impl CloudInitRenderer {
         ssh_credentials: &SshCredentials,
         ssh_port: u16,
         output_dir: &Path,
+        metadata: TemplateMetadata,
     ) -> Result<(), CloudInitRendererError> {
         use crate::infrastructure::templating::tofu::template::common::wrappers::cloud_init::{
             CloudInitContext, CloudInitTemplate,
@@ -203,7 +223,7 @@ impl CloudInitRenderer {
 
         // Create cloud-init context with SSH public key and username
         // Note: All providers use the same context structure for cloud-init
-        let cloud_init_context = CloudInitContext::builder()
+        let cloud_init_context = CloudInitContext::builder(metadata)
             .with_ssh_public_key_from_file(&ssh_credentials.ssh_pub_key_path)
             .map_err(|_| CloudInitRendererError::SshKeyReadError)?
             .with_username(ssh_credentials.ssh_username.as_str())
@@ -253,6 +273,8 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::shared::Username;
+    use crate::testing::mock_clock::MockClock;
+    use chrono::DateTime;
 
     /// Helper function to create mock SSH credentials for testing
     fn create_mock_ssh_credentials(temp_dir: &std::path::Path) -> SshCredentials {
@@ -304,7 +326,8 @@ users:
     #[test]
     fn it_should_create_cloud_init_renderer_with_template_manager() {
         let template_manager = Arc::new(TemplateManager::new(std::env::temp_dir()));
-        let renderer = CloudInitRenderer::new(template_manager);
+        let clock = Arc::new(MockClock::new(DateTime::UNIX_EPOCH));
+        let renderer = CloudInitRenderer::new(template_manager, clock);
 
         // Verify the renderer was created successfully
         // Just check that it contains the expected template manager reference
@@ -322,7 +345,8 @@ users:
     #[tokio::test]
     async fn it_should_render_cloud_init_template_successfully() {
         let template_manager = create_mock_template_manager_with_cloud_init();
-        let renderer = CloudInitRenderer::new(template_manager);
+        let clock = Arc::new(MockClock::new(DateTime::UNIX_EPOCH));
+        let renderer = CloudInitRenderer::new(template_manager, clock);
 
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let ssh_credentials = create_mock_ssh_credentials(temp_dir.path());
@@ -363,7 +387,8 @@ users:
     #[tokio::test]
     async fn it_should_fail_when_ssh_key_file_missing() {
         let template_manager = create_mock_template_manager_with_cloud_init();
-        let renderer = CloudInitRenderer::new(template_manager);
+        let clock = Arc::new(MockClock::new(DateTime::UNIX_EPOCH));
+        let renderer = CloudInitRenderer::new(template_manager, clock);
 
         // Create SSH credentials with non-existent key file
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -392,7 +417,8 @@ users:
     #[tokio::test]
     async fn it_should_fail_when_output_directory_is_readonly() {
         let template_manager = create_mock_template_manager_with_cloud_init();
-        let renderer = CloudInitRenderer::new(template_manager);
+        let clock = Arc::new(MockClock::new(DateTime::UNIX_EPOCH));
+        let renderer = CloudInitRenderer::new(template_manager, clock);
 
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let ssh_credentials = create_mock_ssh_credentials(temp_dir.path());

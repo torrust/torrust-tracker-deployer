@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::topology::{EnabledServices, Network, Service};
+use crate::infrastructure::templating::TemplateMetadata;
 
 use super::caddy::CaddyServiceContext;
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
@@ -24,6 +25,7 @@ use super::{DockerComposeContext, TrackerServiceContext};
 /// The builder collects domain configuration objects and transforms them into
 /// service configuration objects with pre-computed networks at build time.
 pub struct DockerComposeContextBuilder {
+    metadata: Option<TemplateMetadata>,
     tracker: TrackerServiceContext,
     database: DatabaseConfig,
     prometheus_config: Option<PrometheusConfig>,
@@ -35,6 +37,7 @@ impl DockerComposeContextBuilder {
     /// Creates a new builder with default `SQLite` configuration
     pub(super) fn new(tracker: TrackerServiceContext) -> Self {
         Self {
+            metadata: None,
             tracker,
             database: DatabaseConfig {
                 driver: DRIVER_SQLITE.to_string(),
@@ -92,6 +95,17 @@ impl DockerComposeContextBuilder {
         self
     }
 
+    /// Sets the template metadata
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata` - Template metadata with generation timestamp
+    #[must_use]
+    pub fn with_metadata(mut self, metadata: TemplateMetadata) -> Self {
+        self.metadata = Some(metadata);
+        self
+    }
+
     /// Builds the `DockerComposeContext`
     ///
     /// Transforms domain configuration objects into service configuration
@@ -136,6 +150,12 @@ impl DockerComposeContextBuilder {
 
     /// Internal build logic shared by `build()` and `try_build()`
     fn build_internal(self) -> DockerComposeContext {
+        // Use provided metadata or create default with SystemClock
+        let metadata = self.metadata.unwrap_or_else(|| {
+            use crate::shared::clock::{Clock, SystemClock};
+            TemplateMetadata::new(SystemClock.now())
+        });
+
         let has_grafana = self.grafana_config.is_some();
         let has_caddy = self.has_caddy;
         let has_prometheus = self.prometheus_config.is_some();
@@ -194,6 +214,7 @@ impl DockerComposeContextBuilder {
         );
 
         DockerComposeContext {
+            metadata,
             database: self.database,
             tracker: self.tracker,
             prometheus,

@@ -33,6 +33,8 @@ use crate::infrastructure::templating::ansible::template::wrappers::inventory::{
     SshPrivateKeyFile, SshPrivateKeyFileError,
 };
 use crate::infrastructure::templating::ansible::AnsibleProjectGenerator;
+use crate::infrastructure::templating::TemplateMetadata;
+use crate::shared::clock::Clock;
 
 /// Errors that can occur during Ansible template rendering step execution
 #[derive(Error, Debug)]
@@ -89,6 +91,7 @@ pub struct RenderAnsibleTemplatesStep {
     ssh_socket_addr: SocketAddr,
     tracker_config: TrackerConfig,
     grafana_config: Option<GrafanaConfig>,
+    clock: Arc<dyn Clock>,
 }
 
 impl RenderAnsibleTemplatesStep {
@@ -99,6 +102,7 @@ impl RenderAnsibleTemplatesStep {
         ssh_socket_addr: SocketAddr,
         tracker_config: TrackerConfig,
         grafana_config: Option<GrafanaConfig>,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             ansible_project_generator,
@@ -106,6 +110,7 @@ impl RenderAnsibleTemplatesStep {
             ssh_socket_addr,
             tracker_config,
             grafana_config,
+            clock,
         }
     }
 
@@ -155,12 +160,14 @@ impl RenderAnsibleTemplatesStep {
     /// - SSH key path parsing fails
     /// - Inventory context creation fails
     fn create_inventory_context(&self) -> Result<InventoryContext, RenderAnsibleTemplatesError> {
+        let metadata = TemplateMetadata::new(self.clock.now());
         let host = AnsibleHost::from(self.ssh_socket_addr.ip());
         let ssh_key = SshPrivateKeyFile::new(&self.ssh_credentials.ssh_priv_key_path)?;
         let ssh_port = AnsiblePort::new(self.ssh_socket_addr.port())?;
         let ansible_user = self.ssh_credentials.ssh_username.as_str().to_string();
 
         InventoryContext::builder()
+            .with_metadata(metadata)
             .with_host(host)
             .with_ssh_priv_key_path(ssh_key)
             .with_ssh_port(ssh_port)

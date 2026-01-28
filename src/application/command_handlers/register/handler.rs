@@ -37,14 +37,19 @@ use crate::domain::EnvironmentName;
 /// 5. Transition to Provisioned state
 /// 6. Persist the updated environment
 pub struct RegisterCommandHandler {
+    clock: Arc<dyn crate::shared::Clock>,
     repository: TypedEnvironmentRepository,
 }
 
 impl RegisterCommandHandler {
     /// Create a new `RegisterCommandHandler`
     #[must_use]
-    pub fn new(repository: Arc<dyn EnvironmentRepository>) -> Self {
+    pub fn new(
+        clock: Arc<dyn crate::shared::Clock>,
+        repository: Arc<dyn EnvironmentRepository>,
+    ) -> Self {
         Self {
+            clock,
             repository: TypedEnvironmentRepository::new(repository),
         }
     }
@@ -186,6 +191,7 @@ impl RegisterCommandHandler {
         let ansible_template_service = AnsibleTemplateService::from_paths(
             environment.templates_dir(),
             environment.build_dir().clone(),
+            self.clock.clone(),
         );
 
         ansible_template_service

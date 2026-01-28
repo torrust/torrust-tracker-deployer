@@ -34,6 +34,8 @@ use crate::domain::template::TemplateManager;
 use crate::infrastructure::templating::caddy::{
     CaddyContext, CaddyProjectGenerator, CaddyProjectGeneratorError, CaddyService,
 };
+use crate::infrastructure::templating::TemplateMetadata;
+use crate::shared::clock::Clock;
 
 /// Step that renders Caddy templates to the build directory
 ///
@@ -48,6 +50,7 @@ pub struct RenderCaddyTemplatesStep<S> {
     environment: Arc<Environment<S>>,
     template_manager: Arc<TemplateManager>,
     build_dir: PathBuf,
+    clock: Arc<dyn Clock>,
 }
 
 impl<S> RenderCaddyTemplatesStep<S> {
@@ -58,16 +61,19 @@ impl<S> RenderCaddyTemplatesStep<S> {
     /// * `environment` - The deployment environment
     /// * `template_manager` - The template manager for accessing templates
     /// * `build_dir` - The build directory where templates will be rendered
+    /// * `clock` - Clock service for generating timestamps
     #[must_use]
     pub fn new(
         environment: Arc<Environment<S>>,
         template_manager: Arc<TemplateManager>,
         build_dir: PathBuf,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             environment,
             template_manager,
             build_dir,
+            clock,
         }
     }
 
@@ -159,7 +165,13 @@ impl<S> RenderCaddyTemplatesStep<S> {
         let user_inputs = &self.environment.context().user_inputs;
         let tracker = user_inputs.tracker();
 
-        let mut context = CaddyContext::new(https_config.admin_email(), https_config.use_staging());
+        let metadata = TemplateMetadata::new(self.clock.now());
+
+        let mut context = CaddyContext::new(
+            metadata,
+            https_config.admin_email(),
+            https_config.use_staging(),
+        );
 
         // Add Tracker HTTP API if TLS configured
         if let Some(tls_config) = tracker.http_api_tls_domain() {
@@ -196,6 +208,7 @@ mod tests {
 
     use super::*;
     use crate::domain::environment::testing::EnvironmentTestBuilder;
+    use crate::shared::clock::SystemClock;
 
     #[test]
     fn it_should_create_render_caddy_templates_step() {
@@ -207,10 +220,12 @@ mod tests {
         let environment = Arc::new(environment);
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
+        let clock = Arc::new(SystemClock);
         let step = RenderCaddyTemplatesStep::new(
             environment.clone(),
             template_manager.clone(),
             build_dir.path().to_path_buf(),
+            clock,
         );
 
         assert_eq!(step.build_dir, build_dir.path());
@@ -228,10 +243,12 @@ mod tests {
         let environment = Arc::new(environment);
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
+        let clock = Arc::new(SystemClock);
         let step = RenderCaddyTemplatesStep::new(
             environment,
             template_manager,
             build_dir.path().to_path_buf(),
+            clock,
         );
 
         let result = step.execute();
