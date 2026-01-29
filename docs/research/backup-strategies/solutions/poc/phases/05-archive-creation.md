@@ -1,42 +1,109 @@
-# Phase 5: Archive Creation
+# Phase 5: Backup Maintenance (Compression & Retention)
 
 **Status**: 🔲 Not started
 **Date**: -
 
 ## Goal
 
-Create timestamped tar.gz archives with retention policy.
+Add a maintenance phase that runs after each backup cycle to compress older
+backups and apply retention policies.
+
+## Design Decisions
+
+### Two-Phase Approach
+
+The backup process now has two logical phases:
+
+1. **Backup Phase** (Phase 3-4): Generate raw dumps + copy configs (fast)
+2. **Maintenance Phase** (this phase): Compress + cleanup (can be slower)
+
+This separation ensures:
+
+- Minimal database lock time during dump
+- Compression doesn't block backup operations
+- Retention cleanup is logically separate
+
+### No Overlap Concern
+
+The current script is sequential - the loop only repeats after the previous
+backup completes:
+
+```bash
+while true; do
+    sleep "${interval}"   # Wait first
+    run_backup            # Blocks until complete (including maintenance)
+done
+```
+
+If a backup takes longer than the interval, the next backup simply starts
+later. No concurrent backups are possible with this design.
+
+### Why Not Restic (Yet)
+
+For the first release, simple bash-based compression and retention is
+sufficient. Restic adds value when you need:
+
+- Incremental/deduplicated backups
+- Encryption at rest
+- Cloud storage backends (S3, B2, etc.)
+- Sophisticated retention policies
+
+Advanced users can integrate restic later if needed.
 
 ## Checklist
 
-- [ ] Update script to create staging directory
-- [ ] Stage all files (database dump + configs)
-- [ ] Create compressed archive
-- [ ] Implement 7-day local retention
-- [ ] Clean up staging directory after archive
+- [ ] Add `run_maintenance()` function after backup cycle
+- [ ] Implement `compress_old_backups()` - gzip config files older than 1 hour
+- [ ] Implement `apply_retention_policy()` - delete backups older than N days
+- [ ] Add `BACKUP_RETENTION_DAYS` environment variable (default: 7)
+- [ ] Document the maintenance behavior
 
-## Artifacts
+## Implementation
 
-- Complete backup script: [../artifacts/scripts/backup-all.sh](../artifacts/scripts/backup-all.sh)
+### New Functions
 
-## Commands Executed
+```bash
+run_maintenance() {
+    compress_old_backups
+    apply_retention_policy
+}
 
-<!-- Will be populated during implementation -->
+compress_old_backups() {
+    # Compress config files older than 1 hour (MySQL already compressed)
+    find /backups/config -type f ! -name "*.gz" -mmin +60 -exec gzip {} \;
+}
+
+apply_retention_policy() {
+    local days="${BACKUP_RETENTION_DAYS:-7}"
+    find /backups/mysql -name "*.sql.gz" -mtime +"${days}" -delete
+    find /backups/config -type f -mtime +"${days}" -delete
+}
+```
+
+### Environment Variables
+
+| Variable                | Default | Description                              |
+| ----------------------- | ------- | ---------------------------------------- |
+| `BACKUP_RETENTION_DAYS` | 7       | Delete backups older than this many days |
 
 ## Validation
 
-**Expected**: `backup_YYYYMMDD_HHMMSS.tar.gz` files in `/backups/`:
+**Test retention policy** (with short interval for testing):
 
 ```bash
-ls -la /opt/torrust/backups/
-# backup_20260129_183000.tar.gz
-# backup_20260129_185000.tar.gz
+# Set retention to 0 days to test immediate cleanup
+docker exec backup-test env BACKUP_RETENTION_DAYS=0 \
+  find /backups/mysql -name "*.sql.gz" -mtime +0 -delete
+
+# Verify old backups are removed
+ls -la /opt/torrust/storage/backup/lib/mysql/
 ```
 
-Archive contents:
+**Test compression**:
 
 ```bash
-tar -tzf /opt/torrust/backups/backup_20260129_183000.tar.gz
+# Check for gzipped config files
+find /opt/torrust/storage/backup/lib/config -name "*.gz"
 ```
 
 ## Issues Encountered

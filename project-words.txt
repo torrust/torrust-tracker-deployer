@@ -186,6 +186,7 @@ idna
 impls
 incompletei
 intervali
+ionice
 isreg
 josecelano
 journalctl
@@ -225,6 +226,7 @@ mkdir
 mktemp
 mlock
 mlockfile
+mmin
 moby
 mockall
 mocksecret
