@@ -43,7 +43,9 @@ poc/
 │   │   ├── entrypoint.sh
 │   │   └── backup-mysql.sh
 │   ├── docker-compose-original.yml    # Original docker-compose
-│   └── docker-compose-with-backup.yml # With backup service
+│   ├── docker-compose-with-backup.yml # With backup service
+│   ├── mysql_20260129_185824.sql      # Sample backup (empty DB)
+│   └── mysql_20260129_190424.sql      # Sample backup (with data)
 ├── phases/                      # Detailed documentation per phase
 │   ├── 01-environment-setup.md
 │   ├── 02-minimal-container.md

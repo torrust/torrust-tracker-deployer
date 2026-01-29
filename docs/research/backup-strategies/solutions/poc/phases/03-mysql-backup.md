@@ -128,6 +128,75 @@ communication.
 **Solution**: Added `--no-tablespaces` flag. Tablespace info is not needed for
 logical restore.
 
+## Backup Integrity Verification
+
+We verified that backups accurately capture live database state by:
+
+1. Sending HTTP announce requests to the tracker to create database records
+2. Waiting for the next automatic backup cycle
+3. Comparing the backup contents against the live database
+
+### Test: Trigger Database Change
+
+Sent a `completed` event to the HTTP tracker:
+
+```bash
+curl -s 'http://localhost:7070/announce?info_hash=%01%02%03%04%05...\
+&peer_id=-TR3000-000000000001&port=6881&uploaded=1000\
+&downloaded=1000&left=0&event=completed'
+```
+
+### Verification: Live Database
+
+```bash
+mysql -u tracker_user -p torrust_tracker -e 'SELECT * FROM torrents;'
+```
+
+**Output**:
+
+```text
+id      info_hash                                 completed
+1       0102030405060708090a0b0c0d0e0f1011121314  1
+```
+
+### Verification: Backup File
+
+```bash
+zcat mysql_20260129_190424.sql.gz | grep -A1 "INSERT INTO \`torrents\`"
+```
+
+**Output**:
+
+```sql
+INSERT INTO `torrents` VALUES
+(1,'0102030405060708090a0b0c0d0e0f1011121314',1);
+```
+
+### Comparison Results
+
+| Field     | Backup File | Live Database | Match |
+| --------- | ----------- | ------------- | ----- |
+| id        | 1           | 1             | ✅    |
+| info_hash | 0102...1314 | 0102...1314   | ✅    |
+| completed | 1           | 1             | ✅    |
+
+### Backup File Size Change
+
+| Backup               | Size (bytes) | Contents                   |
+| -------------------- | ------------ | -------------------------- |
+| mysql\_...185824.sql | 964          | Empty tables (before test) |
+| mysql\_...190424.sql | 1044         | 1 torrent record           |
+
+✅ **Conclusion**: Backups accurately capture the live database state,
+including new records added via tracker announces.
+
+## Sample Backup Files
+
+Two backup samples are preserved in the artifacts folder:
+
+- `mysql_20260129_185824.sql` - Empty database (baseline)
+- `mysql_20260129_190424.sql` - Database with 1 torrent record
+
 ## Key Findings
 
 1. **MariaDB client tools are fully compatible with MySQL**: We use
@@ -145,6 +214,9 @@ logical restore.
 
 4. **Minimal privileges**: Standard database user doesn't need PROCESS
    privilege for logical backups. Use `--no-tablespaces` to avoid the warning.
+
+5. **Backup integrity verified**: Backups accurately capture live database
+   state, including records created by tracker announces.
 
 ## Next Steps
 
