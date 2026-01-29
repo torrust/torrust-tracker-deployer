@@ -15,11 +15,12 @@ sidecar PoC in a production environment.
 
 ### High
 
-| Issue                                | Current State                                | Production Fix                                                   |
-| ------------------------------------ | -------------------------------------------- | ---------------------------------------------------------------- |
-| **Root container**                   | Container runs as root                       | Create dedicated `backup` user with uid matching app user (1000) |
-| **Backup file permissions**          | Root-owned files, potentially world-readable | Set explicit permissions (600), run container as app user        |
-| **No backup integrity verification** | No checksums generated                       | Generate SHA256 sums for each backup file                        |
+| Issue                                | Current State                                   | Production Fix                                                                     |
+| ------------------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Root container**                   | ✅ FIXED - Container runs as torrust (uid=1000) | N/A - Already implemented                                                          |
+| **Backup file permissions**          | ✅ FIXED - Files owned by torrust:torrust       | N/A - Already implemented                                                          |
+| **No backup integrity verification** | No checksums generated                          | Generate SHA256 sums for each backup file                                          |
+| **Ansible deploys as root**          | `.env` file deployed with root:root ownership   | Fix `deploy-compose-files.yml` to use `{{ ansible_user }}` - tracked in issue #313 |
 
 ### Medium
 
