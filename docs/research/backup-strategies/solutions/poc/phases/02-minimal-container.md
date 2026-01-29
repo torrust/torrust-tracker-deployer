@@ -17,8 +17,8 @@ Build and run a backup container that does nothing but log a message every
 
 ## Artifacts
 
-- Dockerfile: [../artifacts/Dockerfile](../artifacts/Dockerfile)
-- Entrypoint: [../artifacts/entrypoint.sh](../artifacts/entrypoint.sh)
+- Dockerfile: [../artifacts/backup-container/Dockerfile](../artifacts/backup-container/Dockerfile)
+- Entrypoint: [../artifacts/backup-container/entrypoint.sh](../artifacts/backup-container/entrypoint.sh)
 - Original docker-compose: [../artifacts/docker-compose-original.yml](../artifacts/docker-compose-original.yml)
 - Docker Compose with backup: [../artifacts/docker-compose-with-backup.yml](../artifacts/docker-compose-with-backup.yml)
 

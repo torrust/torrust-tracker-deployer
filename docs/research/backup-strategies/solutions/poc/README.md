@@ -38,8 +38,10 @@ poc/
 ├── README.md                    # This file - overview and status
 ├── artifacts/                   # Configuration files and scripts
 │   ├── environment-config.json  # Environment configuration
-│   ├── Dockerfile               # Backup container Dockerfile
-│   ├── entrypoint.sh            # Backup container entrypoint
+│   ├── backup-container/        # Container build context
+│   │   ├── Dockerfile
+│   │   ├── entrypoint.sh
+│   │   └── backup-mysql.sh
 │   ├── docker-compose-original.yml    # Original docker-compose
 │   └── docker-compose-with-backup.yml # With backup service
 ├── phases/                      # Detailed documentation per phase

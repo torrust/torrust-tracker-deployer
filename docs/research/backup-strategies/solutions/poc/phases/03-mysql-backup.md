@@ -17,8 +17,8 @@ Backup MySQL database using `mysqldump --single-transaction`.
 
 ## Artifacts
 
-- Dockerfile: [../artifacts/Dockerfile](../artifacts/Dockerfile)
-- Backup script: [../artifacts/backup-mysql.sh](../artifacts/backup-mysql.sh)
+- Dockerfile: [../artifacts/backup-container/Dockerfile](../artifacts/backup-container/Dockerfile)
+- Backup script: [../artifacts/backup-container/backup-mysql.sh](../artifacts/backup-container/backup-mysql.sh)
 - Docker Compose: [../artifacts/docker-compose-with-backup.yml](../artifacts/docker-compose-with-backup.yml)
 
 ## Commands Executed
