@@ -154,11 +154,23 @@ services:
       start_period: 30s
 
   # =========================================================================
-  # Backup Sidecar (PoC Phase 3)
+  # Backup Sidecar (PoC Phase 4)
   # =========================================================================
   # Backup container for proof of concept.
-  # Phase 2: Just logs messages every BACKUP_INTERVAL seconds.
-  # Phase 3: Runs mysqldump with --single-transaction.
+  # All behavior is controlled via environment variables - no rebuild needed.
+  #
+  # Public Interface (Environment Variables):
+  #   BACKUP_INTERVAL      - Seconds between backups
+  #   BACKUP_MYSQL_ENABLED - Enable MySQL database backup (true/false)
+  #   BACKUP_PATHS_FILE    - Path to file listing config paths to backup
+  #   MYSQL_*              - Database connection settings
+  #
+  # Mount Points:
+  #   /backups - Output directory for all backups
+  #   /data    - Source data (app storage, read-only)
+  #   /config  - Backup configuration files (etc)
+  #   /backups - Backup output directory (lib)
+  #   /logs    - Backup logs (log)
   backup:
     <<: *defaults
     build:
@@ -166,14 +178,26 @@ services:
       dockerfile: Dockerfile
     container_name: backup
     environment:
+      # Backup schedule
       - BACKUP_INTERVAL=120
+      # MySQL backup settings
+      - BACKUP_MYSQL_ENABLED=true
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      # Config files backup settings
+      - BACKUP_PATHS_FILE=/config/backup-paths.txt
     volumes:
-      - ./storage/backup:/backups
+      # Backup configuration (etc)
+      - ./storage/backup/etc:/config:ro
+      # Backup output directory (lib)
+      - ./storage/backup/lib:/backups
+      # Backup logs (log) - future use
+      - ./storage/backup/log:/logs
+      # Source data directory (read-only)
+      - ./:/data:ro
     depends_on:
       mysql:
         condition: service_healthy

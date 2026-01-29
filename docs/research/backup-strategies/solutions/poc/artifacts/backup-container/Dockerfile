@@ -1,13 +1,26 @@
-# Minimal backup sidecar container for PoC
-# Phase 2: Just logs a message every interval
-# Phase 3: Added mysql-client for database backups
+# ============================================================================
+# Torrust Backup Sidecar Container
+# ============================================================================
+# Configuration-driven backup container. All behavior is controlled via
+# environment variables - no rebuild needed to change backup behavior.
+#
+# Environment Variables:
+#   BACKUP_INTERVAL        - Seconds between backups (default: 120)
+#   BACKUP_MYSQL_ENABLED   - Enable MySQL backup: true/false (default: false)
+#   BACKUP_PATHS_FILE      - Path to file listing paths to backup (optional)
+#   MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
+#
+# Mount Points:
+#   /backups  - Output directory for all backups
+#   /data     - Source data directory (mount app storage here, read-only)
+#   /config   - Backup configuration files (e.g., backup-paths.txt)
+# ============================================================================
 
-# Use Debian slim for official MySQL client (Alpine's mysql-client is MariaDB)
 FROM debian:bookworm-slim
 
 # Install utilities
 # - bash: for scripting
-# - default-mysql-client: official MySQL client (supports caching_sha2_password)
+# - default-mysql-client: MariaDB client (compatible with MySQL 8)
 # - gzip: for compression
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
@@ -16,22 +29,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create directories
-RUN mkdir -p /scripts /backups
+RUN mkdir -p /scripts /backups/mysql /backups/config
 
-# Copy scripts
-COPY entrypoint.sh /scripts/entrypoint.sh
-COPY backup-mysql.sh /scripts/backup-mysql.sh
-RUN chmod +x /scripts/*.sh
+# Copy unified backup script
+COPY backup.sh /scripts/backup.sh
+RUN chmod +x /scripts/backup.sh
 
-# Default backup interval (in seconds) - 2 minutes for testing
+# Default configuration (override via docker-compose environment)
 ENV BACKUP_INTERVAL=120
+ENV BACKUP_MYSQL_ENABLED=false
 
-# MySQL connection defaults (override in docker-compose)
-# Note: Credentials are passed via docker-compose environment, not hardcoded here
+# MySQL connection defaults
 ENV MYSQL_HOST=mysql
 ENV MYSQL_PORT=3306
 ENV MYSQL_DATABASE=torrust_tracker
 ENV MYSQL_USER=tracker_user
 # MYSQL_PASSWORD must be provided via docker-compose environment
 
-ENTRYPOINT ["/scripts/entrypoint.sh"]
+ENTRYPOINT ["/scripts/backup.sh"]
