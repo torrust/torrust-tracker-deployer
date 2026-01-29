@@ -6,6 +6,7 @@
 #
 # Environment Variables:
 #   BACKUP_INTERVAL        - Seconds between backups (default: 120)
+#   BACKUP_RETENTION_DAYS  - Days to keep backups before deletion (default: 7)
 #   BACKUP_MYSQL_ENABLED   - Enable MySQL backup: true/false (default: false)
 #   BACKUP_PATHS_FILE      - Path to file listing paths to backup (optional)
 #   MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD

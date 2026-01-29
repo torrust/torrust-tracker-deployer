@@ -180,6 +180,8 @@ services:
     environment:
       # Backup schedule
       - BACKUP_INTERVAL=120
+      # Retention policy (days to keep backups)
+      - BACKUP_RETENTION_DAYS=7
       # MySQL backup settings
       - BACKUP_MYSQL_ENABLED=true
       - MYSQL_HOST=mysql
