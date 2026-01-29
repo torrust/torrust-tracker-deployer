@@ -154,11 +154,11 @@ services:
       start_period: 30s
 
   # =========================================================================
-  # Backup Sidecar (PoC Phase 2)
+  # Backup Sidecar (PoC Phase 3)
   # =========================================================================
-  # Minimal backup container for proof of concept.
+  # Backup container for proof of concept.
   # Phase 2: Just logs messages every BACKUP_INTERVAL seconds.
-  # Later phases will add actual backup functionality.
+  # Phase 3: Runs mysqldump with --single-transaction.
   backup:
     <<: *defaults
     build:
@@ -167,6 +167,13 @@ services:
     container_name: backup
     environment:
       - BACKUP_INTERVAL=120
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - ./storage/backup:/backups
     depends_on:
       mysql:
         condition: service_healthy

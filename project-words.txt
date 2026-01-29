@@ -17,6 +17,7 @@ Cockburn
 Containerfile
 Crossplane
 Datagram
+Distrib
 Dockerfiles
 Duplicati
 EAAAADAQABAAABAQC
@@ -66,6 +67,7 @@ Scriptability
 Silverlight
 Subissue
 Swatinem
+Tablespace
 Taplo
 Tera
 Testcontain
@@ -337,6 +339,7 @@ supervisord
 swappability
 sysfs
 sysv
+tablespaces
 taiki
 taskkill
 tasklist

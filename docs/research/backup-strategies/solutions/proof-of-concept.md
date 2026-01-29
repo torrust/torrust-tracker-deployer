@@ -9,7 +9,7 @@
 | ----- | ------------------------ | -------------- |
 | 1     | Environment Setup        | ✅ Complete    |
 | 2     | Minimal Backup Container | ✅ Complete    |
-| 3     | MySQL Backup             | 🔲 Not started |
+| 3     | MySQL Backup             | ✅ Complete    |
 | 4     | Config Files Backup      | 🔲 Not started |
 | 5     | Archive Creation         | 🔲 Not started |
 | 6     | Restore Validation       | 🔲 Not started |
