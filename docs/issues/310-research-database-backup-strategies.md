@@ -12,10 +12,10 @@ Research and document backup strategies for SQLite databases, MySQL databases, a
 
 ### SQLite Backup
 
-- [ ] Learn how to backup SQLite files safely while used in production (no locks, safe copying)
-- [ ] Research tools and techniques for copying and compressing SQLite backups
-- [ ] Investigate redundancy strategies for SQLite backups (cloud volumes, S3, backup services, snapshots)
-- [ ] Document current Torrust Live Demo SQLite backup implementation
+- [x] Learn how to backup SQLite files safely while used in production (no locks, safe copying)
+- [x] Research tools and techniques for copying and compressing SQLite backups
+- [x] Investigate redundancy strategies for SQLite backups (cloud volumes, S3, backup services, snapshots)
+- [x] Document current Torrust Live Demo SQLite backup implementation
 
 ### MySQL Backup
 
