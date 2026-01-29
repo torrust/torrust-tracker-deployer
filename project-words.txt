@@ -390,6 +390,7 @@ wrongpassword
 xtrabackup
 yourdomain
 youruser
+zcat
 zeroize
 zstd
 Émojis
