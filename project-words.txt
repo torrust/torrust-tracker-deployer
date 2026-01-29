@@ -30,15 +30,18 @@ HIDS
 Herberto
 Hillsboro
 Hostnames
+ISAM
 Inno
 Kopia
 LUKS
 Liskov
 MAAACBA
 MLKEM
+MVCC
 MVVM
 Martín
 Mermaid
+MyISAM
 NOPASSWD
 OAAAAN
 OCSP
@@ -51,6 +54,7 @@ Pulumi
 QUIC
 RAII
 RUSTDOCFLAGS
+Regenerable
 Repomix
 Rescan
 Restic
@@ -69,6 +73,7 @@ Testcontainers
 Testinfra
 Torrust
 Traefik
+Unflushed
 VARCHAR
 Wazuh
 Xtra
@@ -116,9 +121,12 @@ containerd
 copilotignore
 cpus
 creds
+crond
+crontabs
 cursorignore
 custompass
 customuser
+dcron
 dearmor
 debootstrap
 debuginfo
@@ -226,6 +234,7 @@ multiprocess
 myapp
 myenv
 mysqladmin
+mysqlcheck
 mysqldump
 mysqlpump
 nameof
@@ -378,6 +387,7 @@ vulns
 webservers
 writeln
 wrongpassword
+xtrabackup
 yourdomain
 youruser
 zeroize

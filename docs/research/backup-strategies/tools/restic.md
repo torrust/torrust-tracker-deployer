@@ -300,3 +300,177 @@ For the Torrust Tracker Deployer:
 - [Restic Documentation](https://restic.readthedocs.io/en/stable/)
 - [Restic Docker Image](https://hub.docker.com/r/restic/restic)
 - [Restic GitHub](https://github.com/restic/restic)
+
+## Best Practices
+
+### Stage Files Before Backing Up
+
+**Recommended**: Stage all files to a single directory, then have Restic back up
+that directory - rather than backing up files directly from multiple paths.
+
+```text
+Source Files          Staging Directory           Remote Storage
+─────────────         ─────────────────           ──────────────
+.env             ─┐
+tracker.toml     ─┼──► /backups/TIMESTAMP/  ───► Restic repo
+prometheus.yml   ─┤        │
+grafana/         ─┤        ├── config/
+tracker.db       ─┘        ├── grafana-data/
+                           └── tracker.db
+                                   │
+                                   ▼
+                           backup_TIMESTAMP.tar.gz
+                           (kept locally for 7 days)
+```
+
+#### Why Stage First?
+
+| Approach                 | Pros                                                                         | Cons                                                     |
+| ------------------------ | ---------------------------------------------------------------------------- | -------------------------------------------------------- |
+| **Stage first → Restic** | Atomic snapshot, local backup available, simpler restore, one Restic command | Requires staging disk space                              |
+| **Restic directly**      | Saves disk space                                                             | Multiple paths, potential inconsistency, complex restore |
+
+**Benefits of staging:**
+
+1. **Atomic Consistency**: All files are captured at approximately the same
+   point in time. If Restic backed up directly from multiple paths, the config
+   files and database might be from different moments.
+
+2. **Local Backup Always Available**: The staged directory (or tar.gz) provides
+   instant local recovery without needing Restic:
+
+   ```bash
+   # Quick restore from local backup (no Restic needed)
+   tar -xzf /backups/backup_20260129_120000.tar.gz -C /tmp/restore/
+   ```
+
+3. **Simpler Restic Command**: One path to backup instead of multiple:
+
+   ```bash
+   # One path to backup
+   restic backup /backups/20260129_120000/
+
+   # vs. multiple paths (harder to manage)
+   restic backup /data/config/.env /data/tracker/etc/ /data/prometheus/etc/ ...
+   ```
+
+4. **Easier Restore**: You restore one archive and everything is in predictable
+   locations:
+
+   ```bash
+   restic restore latest --target /tmp/restore/
+   # Everything is in /tmp/restore/20260129_120000/
+   ```
+
+#### Recommended Backup Script Pattern
+
+```bash
+#!/bin/bash
+set -e
+
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+STAGING_DIR="/backups/${TIMESTAMP}"
+
+# 1. Stage all files to single directory
+mkdir -p "$STAGING_DIR/config"
+
+cp /data/config/.env "$STAGING_DIR/config/"
+cp /data/tracker/etc/tracker.toml "$STAGING_DIR/config/"
+cp /data/prometheus/etc/prometheus.yml "$STAGING_DIR/config/"
+cp -r /data/grafana/provisioning "$STAGING_DIR/config/grafana-provisioning"
+cp -r /data/grafana/data "$STAGING_DIR/grafana-data"
+
+# 2. Backup database to staging
+sqlite3 /data/tracker/lib/database/tracker.db ".backup '$STAGING_DIR/tracker.db'"
+# Or for MySQL:
+# mysqldump --single-transaction ... > "$STAGING_DIR/tracker.sql"
+
+# 3. Create local archive (optional but recommended)
+cd /backups
+tar -czf "backup_${TIMESTAMP}.tar.gz" "$TIMESTAMP"
+rm -rf "$TIMESTAMP"  # Keep only the archive
+
+# 4. Push to Restic (backs up the tar.gz)
+restic backup "/backups/backup_${TIMESTAMP}.tar.gz" --tag "complete-backup"
+
+# 5. Apply retention policies
+restic forget --prune --keep-daily 7 --keep-weekly 4 --keep-monthly 12
+
+# 6. Cleanup old local archives
+find /backups -name "backup_*.tar.gz" -mtime +7 -delete
+```
+
+### Use Tags for Organization
+
+Tag snapshots for easier filtering and searching:
+
+```bash
+# Add multiple tags
+restic backup /backups --tag "torrust" --tag "daily" --tag "$(hostname)"
+
+# List only tagged snapshots
+restic snapshots --tag "torrust"
+
+# Forget with tag filtering
+restic forget --tag "daily" --keep-daily 7
+```
+
+### Verify Backups Regularly
+
+Schedule integrity checks (e.g., weekly):
+
+```bash
+# Quick check (verifies metadata and structure)
+restic check
+
+# Full check (also verifies data blobs - slower)
+restic check --read-data
+
+# Check only a subset of data (faster for large repos)
+restic check --read-data-subset=10%
+```
+
+### Secure the Repository Password
+
+The Restic repository password is critical - if lost, data cannot be recovered.
+
+```bash
+# Store password in environment variable (never in scripts)
+export RESTIC_PASSWORD_FILE=/run/secrets/restic-password
+
+# Or use password command
+export RESTIC_PASSWORD_COMMAND="cat /run/secrets/restic-password"
+```
+
+For Docker deployments, use Docker secrets or environment variables from a
+secure `.env` file that is itself backed up separately.
+
+### Test Restores Periodically
+
+Backups are only useful if they can be restored. Schedule periodic restore tests:
+
+```bash
+#!/bin/bash
+# test-restore.sh - Run monthly
+
+RESTORE_DIR="/tmp/restore-test-$(date +%Y%m%d)"
+
+# Restore latest snapshot
+restic restore latest --target "$RESTORE_DIR"
+
+# Verify key files exist
+if [ -f "$RESTORE_DIR/config/.env" ] && \
+   [ -f "$RESTORE_DIR/config/tracker.toml" ] && \
+   [ -f "$RESTORE_DIR/tracker.db" ]; then
+    echo "✅ Restore test passed"
+else
+    echo "❌ Restore test FAILED - missing files!"
+    exit 1
+fi
+
+# Optional: Verify database integrity
+sqlite3 "$RESTORE_DIR/tracker.db" "PRAGMA integrity_check;"
+
+# Cleanup
+rm -rf "$RESTORE_DIR"
+```

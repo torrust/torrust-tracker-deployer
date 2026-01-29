@@ -34,7 +34,15 @@ See [requirements-notes.md](requirements-notes.md) for detailed explanation of e
 | Folder             | Description                                                          |
 | ------------------ | -------------------------------------------------------------------- |
 | [sqlite/](sqlite/) | SQLite backup research (approaches, current implementation analysis) |
-| mysql/             | MySQL backup research (to be created)                                |
+| [mysql/](mysql/)   | MySQL backup research (mysqldump, hot backups, locking behavior)     |
+
+### Solutions
+
+| Folder                   | Description                                          |
+| ------------------------ | ---------------------------------------------------- |
+| [solutions/](solutions/) | Proposed backup solutions and architectural patterns |
+
+**⭐ Recommended**: [Sidecar Container Pattern](solutions/sidecar-container.md) - A dedicated backup container in the Docker Compose stack that handles all backup operations portably.
 
 ## Research Status
 
@@ -47,9 +55,9 @@ See [requirements-notes.md](requirements-notes.md) for detailed explanation of e
 
 ### MySQL
 
-- [ ] Research mysqldump approaches
-- [ ] Research hot backup tools
-- [ ] Research Docker volume strategies
+- [x] Research mysqldump approaches
+- [x] Research hot backup tools (Percona XtraBackup)
+- [x] Document locking behavior (no lock needed for InnoDB)
 
 ### General
 
