@@ -27,10 +27,10 @@ moving to the next.
 
 **Goal**: Create and deploy a working tracker environment with MySQL.
 
-- [ ] Create environment configuration file
-- [ ] Run deployer commands: create → provision → configure → release → run
-- [ ] Verify tracker is running and accessible
-- [ ] Verify MySQL has tracker tables
+- [x] Create environment configuration file
+- [x] Run deployer commands: create → provision → configure → release → run
+- [x] Verify tracker is running and accessible
+- [x] Verify MySQL has tracker tables
 
 **Validation**: Can access tracker API and MySQL shows InnoDB tables.
 
@@ -131,9 +131,50 @@ docker/
 
 ### Phase 1: Environment Setup
 
-**Status**: Not started
+**Status**: ✅ Complete
 
-<!-- Log entries will be added here as we progress -->
+**Date**: 2026-01-29
+
+**Steps completed**:
+
+1. Created environment config file: `envs/manual-test-sidecar-backup.json`
+2. Ran deployer commands:
+   - `cargo run -- create environment --env-file envs/manual-test-sidecar-backup.json`
+   - `cargo run -- provision manual-test-sidecar-backup` (28s)
+   - `cargo run -- configure manual-test-sidecar-backup` (45s)
+   - `cargo run -- release manual-test-sidecar-backup` (16s)
+   - `cargo run -- run manual-test-sidecar-backup` (37s)
+
+**Instance details**:
+
+- IP: `10.140.190.35`
+- SSH: `ssh -i fixtures/testing_rsa torrust@10.140.190.35`
+
+**Validation results**:
+
+```text
+Docker Compose services:
+NAME         IMAGE                     STATUS
+grafana      grafana/grafana:12.3.1    Up (healthy)
+mysql        mysql:8.4                 Up (healthy)
+prometheus   prom/prometheus:v3.5.0    Up (healthy)
+tracker      torrust/tracker:develop   Up (healthy)
+
+MySQL tables (all InnoDB):
+TABLE_NAME                 ENGINE
+keys                       InnoDB
+torrent_aggregate_metrics  InnoDB
+torrents                   InnoDB
+whitelist                  InnoDB
+
+Tracker API: ✅ Responding at http://10.140.190.35:1212/api/v1/stats
+```
+
+---
+
+### Phase 2: Minimal Backup Container
+
+**Status**: Not started
 
 ---
 
