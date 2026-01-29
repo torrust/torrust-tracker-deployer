@@ -24,7 +24,7 @@ test environment, progressively adding features and documenting findings.
 | Phase | Description              | Status         | Document                                                    |
 | ----- | ------------------------ | -------------- | ----------------------------------------------------------- |
 | 1     | Environment Setup        | ✅ Complete    | [01-environment-setup.md](phases/01-environment-setup.md)   |
-| 2     | Minimal Backup Container | 🔲 Not started | [02-minimal-container.md](phases/02-minimal-container.md)   |
+| 2     | Minimal Backup Container | ✅ Complete    | [02-minimal-container.md](phases/02-minimal-container.md)   |
 | 3     | MySQL Backup             | 🔲 Not started | [03-mysql-backup.md](phases/03-mysql-backup.md)             |
 | 4     | Config Files Backup      | 🔲 Not started | [04-config-backup.md](phases/04-config-backup.md)           |
 | 5     | Archive Creation         | 🔲 Not started | [05-archive-creation.md](phases/05-archive-creation.md)     |
@@ -38,11 +38,10 @@ poc/
 ├── README.md                    # This file - overview and status
 ├── artifacts/                   # Configuration files and scripts
 │   ├── environment-config.json  # Environment configuration
-│   ├── docker-compose-backup.yml # Backup service additions
-│   └── scripts/                 # Backup scripts
-│       ├── entrypoint.sh
-│       ├── backup-mysql.sh
-│       └── backup-all.sh
+│   ├── Dockerfile               # Backup container Dockerfile
+│   ├── entrypoint.sh            # Backup container entrypoint
+│   ├── docker-compose-original.yml    # Original docker-compose
+│   └── docker-compose-with-backup.yml # With backup service
 ├── phases/                      # Detailed documentation per phase
 │   ├── 01-environment-setup.md
 │   ├── 02-minimal-container.md

@@ -8,7 +8,7 @@
 | Phase | Description              | Status         |
 | ----- | ------------------------ | -------------- |
 | 1     | Environment Setup        | ✅ Complete    |
-| 2     | Minimal Backup Container | 🔲 Not started |
+| 2     | Minimal Backup Container | ✅ Complete    |
 | 3     | MySQL Backup             | 🔲 Not started |
 | 4     | Config Files Backup      | 🔲 Not started |
 | 5     | Archive Creation         | 🔲 Not started |
@@ -22,11 +22,13 @@ poc/
 ├── README.md                    # Overview and status tracking
 ├── artifacts/                   # Configuration files and scripts
 │   ├── environment-config.json
-│   ├── docker-compose-backup.yml
-│   └── scripts/
+│   ├── Dockerfile
+│   ├── entrypoint.sh
+│   ├── docker-compose-original.yml
+│   └── docker-compose-with-backup.yml
 ├── phases/                      # Detailed docs per phase
 │   ├── 01-environment-setup.md  # ✅ Complete
-│   ├── 02-minimal-container.md
+│   ├── 02-minimal-container.md  # ✅ Complete
 │   └── ...
 └── troubleshooting.md           # Common issues
 ```
