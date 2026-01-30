@@ -9,12 +9,35 @@ This folder contains research documentation for SQLite database backup strategie
 
 ## Documents
 
-| Document                                  | Description                                         |
-| ----------------------------------------- | --------------------------------------------------- |
-| [Backup Approaches](backup-approaches.md) | Comparison of different SQLite backup methods       |
-| [Torrust Live Demo](torrust-live-demo/)   | Research related to the production demo environment |
+| Document                                          | Description                                         |
+| ------------------------------------------------- | --------------------------------------------------- |
+| [Backup Approaches](backup-approaches.md)         | Comparison of different SQLite backup methods       |
+| [Large Database Backup](large-database-backup.md) | **Critical**: Performance for databases >1GB        |
+| [Torrust Live Demo](torrust-live-demo/)           | Research related to the production demo environment |
 
 See also: [General Requirements Notes](../requirements-notes.md) for requirements that apply to all backup types.
+
+## ⚠️ Database Size Considerations
+
+**Critical finding from production testing**: SQLite's `.backup` command does not
+scale well for large databases under concurrent load.
+
+| Database Size | `.backup` Viability | Recommendation            |
+| ------------- | ------------------- | ------------------------- |
+| < 100 MB      | ✅ Excellent        | Use `.backup`             |
+| 100 MB - 1 GB | ✅ Good             | Use `.backup`             |
+| 1 GB - 5 GB   | ⚠️ Slow             | Consider alternatives     |
+| 5 GB - 10 GB  | ❌ Impractical      | Use alternatives          |
+| > 10 GB       | ❌ Unusable         | **Must use alternatives** |
+
+**Real-world example**: A 17GB production database took ~37 MB/hour with `.backup`,
+resulting in an estimated **17 days** to complete a single backup.
+
+See [Large Database Backup](large-database-backup.md) for:
+
+- Detailed performance analysis
+- Alternative approaches (filesystem snapshots, Litestream, maintenance windows)
+- Recommendations by deployment size
 
 ## Key Findings Summary
 

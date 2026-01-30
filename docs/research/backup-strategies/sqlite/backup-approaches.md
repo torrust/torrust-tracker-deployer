@@ -6,6 +6,11 @@
 
 This document explores different approaches for backing up SQLite databases that are actively in use. The core challenge is ensuring **consistency** - if you copy a database file while it's being written to, you may get a corrupted backup.
 
+> ⚠️ **Large Database Warning**: The approaches in this document work well for
+> databases up to ~1GB. For larger databases, see
+> [Large Database Backup](large-database-backup.md) for alternative strategies.
+> Production testing showed that a 17GB database took ~17 days with `.backup`.
+
 ## The Core Challenge
 
 SQLite stores everything in a single file (or multiple files with WAL mode). Unlike client-server databases, there's no built-in backup protocol - you're essentially backing up a file that may be actively modified.

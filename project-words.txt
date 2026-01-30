@@ -36,6 +36,7 @@ Inno
 Kopia
 LUKS
 Liskov
+Litestream
 MAAACBA
 MLKEM
 MVCC
@@ -211,6 +212,7 @@ lifecycles
 lineinfile
 listenfd
 listhost
+litestream
 logfile
 logfiles
 logicaldisk
@@ -312,6 +314,7 @@ rustc
 rustflags
 rustls
 rustup
+rwxrwx
 sandboxed
 sarif
 schemafile
