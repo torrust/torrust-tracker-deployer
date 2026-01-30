@@ -39,10 +39,11 @@ set -e
 # =============================================================================
 # Constants
 # =============================================================================
+# These can be overridden for testing by setting them before sourcing the script.
 
-readonly BACKUP_DIR_MYSQL="/backups/mysql"
-readonly BACKUP_DIR_CONFIG="/backups/config"
-readonly PACKAGE_AGE_MINUTES=60
+BACKUP_DIR_MYSQL="${BACKUP_DIR_MYSQL:-/backups/mysql}"
+BACKUP_DIR_CONFIG="${BACKUP_DIR_CONFIG:-/backups/config}"
+PACKAGE_AGE_MINUTES="${PACKAGE_AGE_MINUTES:-60}"
 
 # =============================================================================
 # Main Entry Point
@@ -446,10 +447,11 @@ cleanup_empty_directories() {
 #   $1 - line: The line to check
 #
 # Returns:
-#   0 (true) if line is empty or starts with #, 1 (false) otherwise
+#   0 (true) if line is empty, whitespace-only, or starts with #
+#   1 (false) otherwise
 is_comment_or_empty() {
     local line="$1"
-    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*$ || "$line" =~ ^[[:space:]]*# ]]
 }
 
 # Removes leading and trailing whitespace from a string.

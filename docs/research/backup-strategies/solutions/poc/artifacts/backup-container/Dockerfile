@@ -19,9 +19,12 @@
 # Security:
 #   Container runs as uid 1000 (torrust user) to match app file ownership.
 #   This ensures backup files are accessible by the application user.
+#
+# Testing:
+#   Tests run during build using bats-core. Build fails if tests fail.
 # ============================================================================
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim AS base
 
 # Install utilities
 # - bash: for scripting
@@ -32,6 +35,34 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     default-mysql-client \
     gzip \
     && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# Test Stage - Run unit tests during build
+# =============================================================================
+FROM base AS test
+
+# Install bats-core for testing
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bats \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy test files
+COPY backup.sh /scripts/backup.sh
+COPY backup_test.bats /scripts/backup_test.bats
+RUN chmod +x /scripts/backup.sh
+
+# Run tests - build fails if tests fail
+# Create a marker file to prove tests passed
+RUN cd /scripts && bats backup_test.bats && touch /scripts/.tests_passed
+
+# =============================================================================
+# Production Stage
+# =============================================================================
+FROM base AS production
+
+# Require tests to have passed by copying marker from test stage
+# This ensures test stage is always executed before production stage
+COPY --from=test /scripts/.tests_passed /tmp/.tests_passed
 
 # Create backup user with same UID as torrust app user
 # This ensures backup files have correct ownership on host
@@ -45,7 +76,7 @@ RUN groupadd -g ${BACKUP_GID} torrust || true && \
 RUN mkdir -p /scripts /backups/mysql /backups/config && \
     chown -R ${BACKUP_UID}:${BACKUP_GID} /backups
 
-# Copy unified backup script
+# Copy unified backup script (tests already passed in test stage)
 COPY backup.sh /scripts/backup.sh
 RUN chmod +x /scripts/backup.sh
 
