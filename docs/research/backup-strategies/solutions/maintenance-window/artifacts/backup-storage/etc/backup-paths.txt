@@ -1,0 +1,31 @@
+# ============================================================================
+# Backup Paths Configuration
+# ============================================================================
+# List of files and directories to backup (one per line).
+# Paths are relative to /data mount point in the container.
+#
+# Format:
+#   /data/path/to/file.txt     - Single file
+#   /data/path/to/directory    - Entire directory (recursive)
+#
+# Lines starting with # are comments.
+# Empty lines are ignored.
+#
+# NOTE: The /data mount maps to the ENTIRE deployment directory (./) because:
+#   - Root-level files (.env, docker-compose.yml) contain critical config
+#   - Service configs are in ./storage/ subdirectory
+# ============================================================================
+
+# Root-level deployment configuration
+# These files are in the deployment root folder (not inside storage/)
+/data/.env
+/data/docker-compose.yml
+
+# Tracker configuration (entire etc directory for future additions)
+/data/storage/tracker/etc
+
+# Prometheus configuration (entire etc directory for future additions)
+/data/storage/prometheus/etc
+
+# Grafana provisioning (dashboards and datasources)
+/data/storage/grafana/provisioning

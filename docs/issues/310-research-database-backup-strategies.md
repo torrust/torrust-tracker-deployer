@@ -12,33 +12,33 @@ Research and document backup strategies for SQLite databases, MySQL databases, a
 
 ### SQLite Backup
 
-- [ ] Learn how to backup SQLite files safely while used in production (no locks, safe copying)
-- [ ] Research tools and techniques for copying and compressing SQLite backups
-- [ ] Investigate redundancy strategies for SQLite backups (cloud volumes, S3, backup services, snapshots)
-- [ ] Document current Torrust Live Demo SQLite backup implementation
+- [x] Learn how to backup SQLite files safely while used in production (no locks, safe copying)
+- [x] Research tools and techniques for copying and compressing SQLite backups
+- [x] Investigate redundancy strategies for SQLite backups (cloud volumes, S3, backup services, snapshots)
+- [x] Document current Torrust Live Demo SQLite backup implementation
 
 ### MySQL Backup
 
-- [ ] Research MySQL backup approaches for containerized deployments
-- [ ] Learn about MySQL-specific backup tools (mysqldump, hot backup, volume snapshots)
-- [ ] Investigate compression and redundancy strategies for MySQL backups
+- [x] Research MySQL backup approaches for containerized deployments
+- [x] Learn about MySQL-specific backup tools (mysqldump, hot backup, volume snapshots)
+- [x] Investigate compression and redundancy strategies for MySQL backups
 
 ### Complete Storage Folder Backup
 
-- [ ] Research approaches for backing up the entire deployment storage folder
-- [ ] Learn about tools for full directory backups (tar, rsync, volume snapshots)
-- [ ] Understand trade-offs between full storage backup and selective approaches
+- [x] Research approaches for backing up the entire deployment storage folder
+- [x] Learn about tools for full directory backups (tar, rsync, volume snapshots)
+- [x] Understand trade-offs between full storage backup and selective approaches
 
 ### Selective Files Backup
 
-- [ ] Identify which configuration files and directories need backup
-- [ ] Research strategies for backing up specific files (docker-compose, tracker config, etc.)
-- [ ] Learn about version control and organization for selective backups
+- [x] Identify which configuration files and directories need backup
+- [x] Research strategies for backing up specific files (docker-compose, tracker config, etc.)
+- [x] Learn about version control and organization for selective backups
 
 ### General Research
 
-- [ ] Explore different backup scope strategies and their trade-offs
-- [ ] Document all findings in `docs/research/backup-strategies/` (to be created during research)
+- [x] Explore different backup scope strategies and their trade-offs
+- [x] Document all findings in `docs/research/backup-strategies/` (to be created during research)
 
 ## 🏗️ Architecture Requirements
 
@@ -221,52 +221,52 @@ Research different approaches to defining backup scope:
 
 ### Phase 1: SQLite Research (estimated 4-6 hours)
 
-- [ ] Read SQLite backup documentation
-- [ ] Research safe file copy approaches while database is in use
-- [ ] Investigate SQLite locking mechanisms and WAL mode
-- [ ] Research compression tools and techniques
-- [ ] Learn about cloud volume attachment and snapshot strategies
-- [ ] Study S3 and backup service integration options
-- [ ] Analyze Torrust Live Demo backup script implementation
-- [ ] Document all findings in `docs/research/backup-strategies/sqlite-backup-strategies.md` (create folder and file)
+- [x] Read SQLite backup documentation
+- [x] Research safe file copy approaches while database is in use
+- [x] Investigate SQLite locking mechanisms and WAL mode
+- [x] Research compression tools and techniques
+- [x] Learn about cloud volume attachment and snapshot strategies
+- [x] Study S3 and backup service integration options
+- [x] Analyze Torrust Live Demo backup script implementation
+- [x] Document all findings in `docs/research/backup-strategies/sqlite-backup-strategies.md` (create folder and file)
 
 ### Phase 2: MySQL Research (estimated 4-6 hours)
 
-- [ ] Read MySQL backup documentation
-- [ ] Research `mysqldump` usage and locking behavior
-- [ ] Investigate physical backup tools (Percona XtraBackup)
-- [ ] Learn about Docker volume backup strategies
-- [ ] Research compression techniques for MySQL dumps
-- [ ] Study cloud redundancy options for MySQL backups
-- [ ] Test basic mysqldump in Docker container (optional hands-on)
-- [ ] Document all findings in `docs/research/backup-strategies/mysql-backup-strategies.md`
+- [x] Read MySQL backup documentation
+- [x] Research `mysqldump` usage and locking behavior
+- [x] Investigate physical backup tools (Percona XtraBackup)
+- [x] Learn about Docker volume backup strategies
+- [x] Research compression techniques for MySQL dumps
+- [x] Study cloud redundancy options for MySQL backups
+- [x] Test basic mysqldump in Docker container (optional hands-on)
+- [x] Document all findings in `docs/research/backup-strategies/mysql-backup-strategies.md`
 
 ### Phase 3: Configuration Research (estimated 2-3 hours)
 
-- [ ] Identify all configuration files and directories
-- [ ] Research file copy and archive tools (`tar`, `rsync`)
-- [ ] Learn about compression options and trade-offs
-- [ ] Study configuration storage strategies
-- [ ] Research version control for config backups
-- [ ] Document all findings in `docs/research/backup-strategies/configuration-backup-strategies.md`
+- [x] Identify all configuration files and directories
+- [x] Research file copy and archive tools (`tar`, `rsync`)
+- [x] Learn about compression options and trade-offs
+- [x] Study configuration storage strategies
+- [x] Research version control for config backups
+- [x] Document all findings in `docs/research/backup-strategies/configuration-backup-strategies.md`
 
 ### Phase 4: Backup Scope Strategies (estimated 2-3 hours)
 
-- [ ] Research full storage backup approaches
-- [ ] Compare database-only backup patterns
-- [ ] Study selective backup strategies
-- [ ] Learn about layered backup approaches
-- [ ] Document trade-offs for each strategy
-- [ ] Document all findings in `docs/research/backup-strategies/backup-scope-strategies.md`
+- [x] Research full storage backup approaches
+- [x] Compare database-only backup patterns
+- [x] Study selective backup strategies
+- [x] Learn about layered backup approaches
+- [x] Document trade-offs for each strategy
+- [x] Document all findings in `docs/research/backup-strategies/backup-scope-strategies.md`
 
 ### Phase 5: Documentation Review (estimated 1 hour)
 
-- [ ] Review all research documents for completeness
-- [ ] Create README in research folder with overview
-- [ ] Ensure all research questions are addressed
-- [ ] Cross-reference with Torrust Live Demo implementation
-- [ ] Run linters and ensure documentation quality
-- [ ] Update issue with any follow-up questions or findings
+- [x] Review all research documents for completeness
+- [x] Create README in research folder with overview
+- [x] Ensure all research questions are addressed
+- [x] Cross-reference with Torrust Live Demo implementation
+- [x] Run linters and ensure documentation quality
+- [x] Update issue with any follow-up questions or findings
 
 ## Acceptance Criteria
 
@@ -274,34 +274,34 @@ Research different approaches to defining backup scope:
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
 
 **Research Documentation**:
 
-- [ ] SQLite backup approaches documented (safe copying, compression, redundancy)
-- [ ] MySQL backup approaches documented (tools, techniques, containerization)
-- [ ] Configuration backup approaches documented
-- [ ] Backup scope strategies compared
-- [ ] Torrust Live Demo implementation analyzed and documented
-- [ ] All research questions addressed with sufficient detail
-- [ ] Cloud redundancy strategies documented (volumes, S3, snapshots)
-- [ ] Compression techniques compared
+- [x] SQLite backup approaches documented (safe copying, compression, redundancy)
+- [x] MySQL backup approaches documented (tools, techniques, containerization)
+- [x] Configuration backup approaches documented
+- [x] Backup scope strategies compared
+- [x] Torrust Live Demo implementation analyzed and documented
+- [x] All research questions addressed with sufficient detail
+- [x] Cloud redundancy strategies documented (volumes, S3, snapshots)
+- [x] Compression techniques compared
 
 **Research Completeness**:
 
-- [ ] All research questions in specifications section answered
-- [ ] Tools and techniques identified for each backup type
-- [ ] Trade-offs documented for different approaches
-- [ ] References to official documentation included
-- [ ] Findings organized in `docs/research/backup-strategies/` folder
-- [ ] README created in research folder with overview
+- [x] All research questions in specifications section answered
+- [x] Tools and techniques identified for each backup type
+- [x] Trade-offs documented for different approaches
+- [x] References to official documentation included
+- [x] Findings organized in `docs/research/backup-strategies/` folder
+- [x] README created in research folder with overview
 
 **Documentation Quality**:
 
-- [ ] Markdown linting passes (markdownlint)
-- [ ] Spell checking passes (cspell)
-- [ ] All links valid and properly formatted
-- [ ] Code examples properly formatted with syntax highlighting (if any)
+- [x] Markdown linting passes (markdownlint)
+- [x] Spell checking passes (cspell)
+- [x] All links valid and properly formatted
+- [x] Code examples properly formatted with syntax highlighting (if any)
 
 ## Related Documentation
 

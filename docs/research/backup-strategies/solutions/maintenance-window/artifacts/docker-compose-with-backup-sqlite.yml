@@ -1,0 +1,204 @@
+# Docker Compose for Torrust Tracker with Backup Sidecar (SQLite)
+# ================================================================
+#
+# PROOF OF CONCEPT: Backup sidecar for the Torrust Tracker with SQLite.
+# See docker-compose-with-backup-mysql.yml for the MySQL version.
+#
+# This is a research artifact for Issue #310: Research Database Backup Strategies
+# https://github.com/torrust/torrust-tracker-deployer/issues/310
+#
+# Key Differences from MySQL Version:
+# - No mysql service (SQLite uses embedded database file)
+# - No database_network (tracker doesn't need network for SQLite)
+# - Backup container mounts tracker storage to access SQLite database
+# - Backup container uses BACKUP_SQLITE_ENABLED instead of BACKUP_MYSQL_ENABLED
+#
+# SQLite Database Path: /data/storage/tracker/lib/tracker.db
+# (Mounted from ./storage/tracker/lib on the host)
+#
+# Usage:
+#   docker compose -f docker-compose-with-backup-sqlite.yml up -d
+#
+# Environment Variables Required (.env file):
+#   - TRACKER_API_TOKEN: API token for the tracker
+#   - GF_SECURITY_ADMIN_USER: Grafana admin username
+#   - GF_SECURITY_ADMIN_PASSWORD: Grafana admin password
+#
+# See: docs/research/backup-strategies/solutions/maintenance-window/README.md
+
+x-common: &defaults
+  restart: unless-stopped
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+
+  # =========================================================================
+  # Tracker (SQLite Backend)
+  # =========================================================================
+  # The tracker uses SQLite as an embedded database.
+  # The database file is stored in /var/lib/torrust/tracker/tracker.db
+  tracker:
+    <<: *defaults
+    image: torrust/tracker:v3.1.1
+    container_name: tracker
+    # tty: true enables colorized output from the tracker container
+    tty: true
+    user: root
+    environment:
+      - USER_ID=${USER_ID}
+      - TORRUST_TRACKER_API_ADMIN_TOKEN=${TRACKER_API_TOKEN}
+      - TORRUST_TRACKER_CONFIG_TOML_PATH=/etc/torrust/tracker/tracker.toml
+    networks:
+      - metrics_network
+    ports:
+      # HTTP Tracker
+      - "7070:7070"
+      # Tracker API
+      - "1212:1212"
+      # UDP Tracker
+      - "6969:6969/udp"
+      # Tracker HTTP Health Check
+      - "1313:1313"
+    volumes:
+      - ./storage/tracker/etc:/etc/torrust/tracker:ro
+      - ./storage/tracker/lib:/var/lib/torrust/tracker
+      - ./storage/tracker/log:/var/log/torrust/tracker
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--spider",
+          "-q",
+          "http://localhost:1313/health_check",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  prometheus:
+    <<: *defaults
+    image: prom/prometheus:v3.4.2
+    container_name: prometheus
+    networks:
+      - metrics_network
+      - visualization_network
+    # SECURITY: Prometheus port is NOT exposed to the host/external network.
+    # - Only Grafana can access Prometheus via Docker's internal visualization_network
+    # - The healthcheck runs inside the container, so no external port is needed
+    # - This prevents unauthorized external access to metrics data
+    # See: https://github.com/torrust/torrust-tracker-deployer/issues/277
+    volumes:
+      - ./storage/prometheus/etc:/etc/prometheus:ro
+      - ./storage/prometheus/data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      - tracker
+
+  grafana:
+    <<: *defaults
+    image: grafana/grafana:12.3.1
+    container_name: grafana
+    networks:
+      - visualization_network
+    ports:
+      # Grafana dashboard
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+    volumes:
+      - ./storage/grafana/data:/var/lib/grafana
+      - ./storage/grafana/provisioning:/etc/grafana/provisioning:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  # =========================================================================
+  # Backup Sidecar (SQLite Configuration)
+  # =========================================================================
+  # Backup container configured for SQLite database backup.
+  # All behavior is controlled via environment variables - no rebuild needed.
+  #
+  # Public Interface (Environment Variables):
+  #   BACKUP_MODE          - "single" (one backup) or "continuous" (loop)
+  #   BACKUP_INTERVAL      - Seconds between backups (for continuous mode)
+  #   BACKUP_SQLITE_ENABLED - Enable SQLite database backup (true/false)
+  #   SQLITE_DATABASE_PATH  - Path to SQLite database file
+  #   BACKUP_PATHS_FILE    - Path to file listing config paths to backup
+  #
+  # Mount Points:
+  #   /backups - Output directory for all backups
+  #   /data    - Source data (app storage, read-only)
+  #   /config  - Backup configuration files (etc)
+  #   /logs    - Backup logs (log)
+  backup:
+    <<: *defaults
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    container_name: backup
+    environment:
+      # Backup mode: "single" for one backup, "continuous" for loop
+      - BACKUP_MODE=single
+      # Backup schedule (for continuous mode only)
+      - BACKUP_INTERVAL=86400
+      # Retention policy (days to keep backups)
+      - BACKUP_RETENTION_DAYS=7
+      # SQLite backup settings
+      - BACKUP_SQLITE_ENABLED=true
+      - SQLITE_DATABASE_PATH=/data/storage/tracker/lib/tracker.db
+      # MySQL backup disabled (using SQLite instead)
+      - BACKUP_MYSQL_ENABLED=false
+      # Config files backup settings
+      - BACKUP_PATHS_FILE=/config/backup-paths.txt
+    volumes:
+      # Backup configuration (etc)
+      - ./storage/backup/etc:/config:ro
+      # Backup output directory (lib)
+      - ./storage/backup/lib:/backups
+      # Backup logs (log) - future use
+      - ./storage/backup/log:/logs
+      # Source data directory (read-only)
+      # NOTE: We mount the ENTIRE deployment directory (./) not just ./storage because:
+      #   - .env file (secrets, passwords) is in the root folder
+      #   - docker-compose.yml (deployment config) is in the root folder
+      #   - storage/ subdirectory contains service configs (tracker, prometheus, grafana)
+      # See backup-paths.txt for the complete list of backed up paths.
+      - ./:/data:ro
+    depends_on:
+      tracker:
+        condition: service_healthy
+
+# Networks are derived from service configurations in Rust code.
+# See: src/domain/topology/network.rs for security rationale.
+#
+# NOTE: No database_network needed for SQLite (embedded database, no network access)
+
+networks:
+  # Metrics scraping: Tracker ↔ Prometheus
+  metrics_network:
+    driver: bridge
+  # Dashboard queries: Prometheus ↔ Grafana
+  visualization_network:
+    driver: bridge
