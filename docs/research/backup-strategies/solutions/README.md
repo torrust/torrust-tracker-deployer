@@ -5,9 +5,9 @@ in Torrust Tracker deployments.
 
 ## Solutions
 
-| Solution                                  | Status         | Description                                        |
-| ----------------------------------------- | -------------- | -------------------------------------------------- |
-| [Sidecar Container](sidecar-container.md) | ⭐ Recommended | Dedicated backup container in Docker Compose stack |
+| Solution                                | Status         | Description                                        |
+| --------------------------------------- | -------------- | -------------------------------------------------- |
+| [Sidecar Container](sidecar-container/) | ⭐ Recommended | Dedicated backup container in Docker Compose stack |
 
 ## Selection Criteria
 

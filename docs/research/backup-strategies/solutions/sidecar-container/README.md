@@ -3,7 +3,7 @@
 ## Overview
 
 This folder contains the practical implementation and validation of the
-[sidecar container backup solution](../sidecar-container.md).
+sidecar container backup solution (see [design.md](design.md) for details).
 
 **Goal**: Validate the sidecar container pattern by implementing it in a real
 test environment, progressively adding features and documenting findings.
@@ -37,13 +37,13 @@ test environment, progressively adding features and documenting findings.
 
 Real-world testing on a 17GB production database revealed that the sidecar
 container pattern (using SQLite `.backup`) is **only practical for databases
-< 1 GB**. See [Large Database Backup](../../sqlite/large-database-backup.md)
+< 1 GB**. See [Large Database Backup](../../databases/sqlite/large-database-backup.md)
 for alternatives.
 
 ## Directory Structure
 
 ```text
-poc/
+sidecar-container/
 ├── README.md                    # This file - overview and status
 ├── artifacts/                   # Configuration files and scripts
 │   ├── environment-config.json  # Environment configuration
@@ -98,6 +98,6 @@ docker compose exec backup /scripts/backup-all.sh
 
 ## References
 
-- [Sidecar Container Solution](../sidecar-container.md)
-- [MySQL Backup Approaches](../../mysql/backup-approaches.md)
+- [Sidecar Container Design](design.md)
+- [MySQL Backup Approaches](../../databases/mysql/backup-approaches.md)
 - [Restic Best Practices](../../tools/restic.md#best-practices)

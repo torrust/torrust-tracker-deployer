@@ -7,7 +7,7 @@
 
 This folder contains research documentation for backup strategies in the context of Torrust Tracker deployments. The research covers different backup types, database-specific approaches, and general requirements.
 
-> **📋 See [Preliminary Conclusions](preliminary-conclusions.md) for a summary of key findings and recommendations.**
+> **📋 See [Conclusions](conclusions.md) for a summary of key findings and recommendations.**
 
 ## Backup Types
 
@@ -19,22 +19,35 @@ The research is organized around three backup types:
 | **Database Backup**  | Database-specific backup using safe tools       | In progress |
 | **Selective Backup** | Partial storage backup (e.g., config only)      | Not started |
 
-See [requirements-notes.md](requirements-notes.md) for detailed explanation of each type.
+See [requirements.md](requirements.md) for detailed explanation of each type.
 
 ## Documents
 
 ### General
 
-| Document                                    | Description                                                      |
-| ------------------------------------------- | ---------------------------------------------------------------- |
-| [Requirements Notes](requirements-notes.md) | Collected requirements, constraints, and backup type definitions |
+| Document                        | Description                                                      |
+| ------------------------------- | ---------------------------------------------------------------- |
+| [Requirements](requirements.md) | Collected requirements, constraints, and backup type definitions |
+| [Conclusions](conclusions.md)   | Summary of key findings and recommendations                      |
 
 ### Database-Specific
 
-| Folder             | Description                                                          |
-| ------------------ | -------------------------------------------------------------------- |
-| [sqlite/](sqlite/) | SQLite backup research (approaches, current implementation analysis) |
-| [mysql/](mysql/)   | MySQL backup research (mysqldump, hot backups, locking behavior)     |
+| Folder                                 | Description                                                          |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| [databases/sqlite/](databases/sqlite/) | SQLite backup research (approaches, current implementation analysis) |
+| [databases/mysql/](databases/mysql/)   | MySQL backup research (mysqldump, hot backups, locking behavior)     |
+
+### Architectures
+
+| Document                                                                   | Description                                  |
+| -------------------------------------------------------------------------- | -------------------------------------------- |
+| [architectures/container-patterns.md](architectures/container-patterns.md) | Container-based backup architecture patterns |
+
+### Tools
+
+| Document         | Description                        |
+| ---------------- | ---------------------------------- |
+| [tools/](tools/) | Backup tool research (restic, etc) |
 
 ### Solutions
 
@@ -42,7 +55,7 @@ See [requirements-notes.md](requirements-notes.md) for detailed explanation of e
 | ------------------------ | ---------------------------------------------------- |
 | [solutions/](solutions/) | Proposed backup solutions and architectural patterns |
 
-**⭐ Recommended**: [Sidecar Container Pattern](solutions/sidecar-container.md) - A dedicated backup container in the Docker Compose stack that handles all backup operations portably.
+**⭐ Recommended**: [Sidecar Container Pattern](solutions/sidecar-container/) - A dedicated backup container in the Docker Compose stack that handles all backup operations portably.
 
 ## Research Status
 

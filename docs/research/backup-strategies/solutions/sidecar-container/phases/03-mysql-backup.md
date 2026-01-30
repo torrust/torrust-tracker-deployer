@@ -27,13 +27,13 @@ Backup MySQL database using `mysqldump --single-transaction`.
 
 ```bash
 scp -i fixtures/testing_rsa \
-  docs/research/backup-strategies/solutions/poc/artifacts/Dockerfile \
-  docs/research/backup-strategies/solutions/poc/artifacts/entrypoint.sh \
-  docs/research/backup-strategies/solutions/poc/artifacts/backup-mysql.sh \
+  docs/research/backup-strategies/solutions/sidecar-container/artifacts/Dockerfile \
+  docs/research/backup-strategies/solutions/sidecar-container/artifacts/entrypoint.sh \
+  docs/research/backup-strategies/solutions/sidecar-container/artifacts/backup-mysql.sh \
   torrust@10.140.190.35:/opt/torrust/backup/
 
 scp -i fixtures/testing_rsa \
-  docs/research/backup-strategies/solutions/poc/artifacts/docker-compose-with-backup.yml \
+  docs/research/backup-strategies/solutions/sidecar-container/artifacts/docker-compose-with-backup.yml \
   torrust@10.140.190.35:/tmp/docker-compose.yml
 
 ssh -i fixtures/testing_rsa torrust@10.140.190.35 \

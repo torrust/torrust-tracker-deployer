@@ -19,19 +19,19 @@ Update research documentation with findings from real-world testing.
 
 ### New Documents Created
 
-| Document                                                             | Description                                             |
-| -------------------------------------------------------------------- | ------------------------------------------------------- |
-| [large-database-backup.md](../../../sqlite/large-database-backup.md) | Critical findings from 17GB production database testing |
-| [06-restore-validation.md](06-restore-validation.md)                 | Complete restore procedures and disaster recovery       |
+| Document                                                                       | Description                                             |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| [large-database-backup.md](../../../databases/sqlite/large-database-backup.md) | Critical findings from 17GB production database testing |
+| [06-restore-validation.md](06-restore-validation.md)                           | Complete restore procedures and disaster recovery       |
 
 ### Documents Updated
 
-| Document                                                          | Changes                                                           |
-| ----------------------------------------------------------------- | ----------------------------------------------------------------- |
-| [preliminary-conclusions.md](../../../preliminary-conclusions.md) | Added critical large database warning, size-based recommendations |
-| [sqlite/README.md](../../../sqlite/README.md)                     | Added size-based viability table, link to large database findings |
-| [backup-approaches.md](../../../sqlite/backup-approaches.md)      | Added warning about large database limitations                    |
-| [POC README.md](../README.md)                                     | Updated phase status, IP address                                  |
+| Document                                                               | Changes                                                           |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [conclusions.md](../../../conclusions.md)                              | Added critical large database warning, size-based recommendations |
+| [sqlite/README.md](../../../databases/sqlite/README.md)                | Added size-based viability table, link to large database findings |
+| [backup-approaches.md](../../../databases/sqlite/backup-approaches.md) | Added warning about large database limitations                    |
+| [POC README.md](../README.md)                                          | Updated phase status, IP address                                  |
 
 ## Lessons Learned
 
@@ -160,7 +160,7 @@ Do NOT use the sidecar container pattern. Instead:
 3. **Litestream**: Continuous SQLite replication to S3
 4. **Consider MySQL**: Better tooling for large databases
 
-See [Large Database Backup](../../../sqlite/large-database-backup.md) for
+See [Large Database Backup](../../../databases/sqlite/large-database-backup.md) for
 detailed analysis.
 
 ## Next Steps
