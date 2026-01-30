@@ -28,7 +28,7 @@ test environment, progressively adding features and documenting findings.
 | 3     | MySQL Backup             | ✅ Complete    | [03-mysql-backup.md](phases/03-mysql-backup.md)             |
 | 4     | Config Files Backup      | ✅ Complete    | [04-config-backup.md](phases/04-config-backup.md)           |
 | 5     | Backup Maintenance       | ✅ Complete    | [05-archive-creation.md](phases/05-archive-creation.md)     |
-| 6     | Restore Validation       | 🔲 Not started | [06-restore-validation.md](phases/06-restore-validation.md) |
+| 6     | Restore Validation       | ✅ Complete    | [06-restore-validation.md](phases/06-restore-validation.md) |
 | 7     | Documentation Update     | 🔲 Not started | [07-documentation.md](phases/07-documentation.md)           |
 
 ## Directory Structure
