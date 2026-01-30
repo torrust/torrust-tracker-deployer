@@ -154,13 +154,14 @@ services:
       start_period: 30s
 
   # =========================================================================
-  # Backup Sidecar (PoC Phase 4)
+  # Backup Sidecar (MySQL Configuration)
   # =========================================================================
-  # Backup container for proof of concept.
+  # Backup container configured for MySQL database backup.
   # All behavior is controlled via environment variables - no rebuild needed.
   #
   # Public Interface (Environment Variables):
-  #   BACKUP_INTERVAL      - Seconds between backups
+  #   BACKUP_MODE          - "single" (one backup) or "continuous" (loop)
+  #   BACKUP_INTERVAL      - Seconds between backups (for continuous mode)
   #   BACKUP_MYSQL_ENABLED - Enable MySQL database backup (true/false)
   #   BACKUP_PATHS_FILE    - Path to file listing config paths to backup
   #   MYSQL_*              - Database connection settings
@@ -178,12 +179,16 @@ services:
       dockerfile: Dockerfile
     container_name: backup
     environment:
-      # Backup schedule
-      - BACKUP_INTERVAL=120
+      # Backup mode: "single" for one backup, "continuous" for loop
+      - BACKUP_MODE=single
+      # Backup schedule (for continuous mode only)
+      - BACKUP_INTERVAL=86400
       # Retention policy (days to keep backups)
       - BACKUP_RETENTION_DAYS=7
       # MySQL backup settings
       - BACKUP_MYSQL_ENABLED=true
+      # SQLite backup disabled (using MySQL instead)
+      - BACKUP_SQLITE_ENABLED=false
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_DATABASE=${MYSQL_DATABASE}

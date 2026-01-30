@@ -8,8 +8,10 @@
 #   BACKUP_INTERVAL        - Seconds between backups (default: 120)
 #   BACKUP_RETENTION_DAYS  - Days to keep backups before deletion (default: 7)
 #   BACKUP_MYSQL_ENABLED   - Enable MySQL backup: true/false (default: false)
+#   BACKUP_SQLITE_ENABLED  - Enable SQLite backup: true/false (default: false)
 #   BACKUP_PATHS_FILE      - Path to file listing paths to backup (optional)
 #   MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
+#   SQLITE_DATABASE_PATH   - Path to SQLite database file (default: /data/storage/tracker/lib/database/tracker.db)
 #
 # Mount Points:
 #   /backups  - Output directory for all backups
@@ -29,10 +31,12 @@ FROM debian:bookworm-slim AS base
 # Install utilities
 # - bash: for scripting
 # - default-mysql-client: MariaDB client (compatible with MySQL 8)
+# - sqlite3: SQLite client for .backup command
 # - gzip: for compression
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     default-mysql-client \
+    sqlite3 \
     gzip \
     && rm -rf /var/lib/apt/lists/*
 
@@ -73,7 +77,7 @@ RUN groupadd -g ${BACKUP_GID} torrust || true && \
     useradd -u ${BACKUP_UID} -g ${BACKUP_GID} -s /bin/bash torrust || true
 
 # Create directories with correct ownership
-RUN mkdir -p /scripts /backups/mysql /backups/config && \
+RUN mkdir -p /scripts /backups/mysql /backups/sqlite /backups/config && \
     chown -R ${BACKUP_UID}:${BACKUP_GID} /backups
 
 # Copy unified backup script (tests already passed in test stage)
@@ -81,8 +85,9 @@ COPY backup.sh /scripts/backup.sh
 RUN chmod +x /scripts/backup.sh
 
 # Default configuration (override via docker-compose environment)
-ENV BACKUP_INTERVAL=120
+ENV BACKUP_INTERVAL=86400
 ENV BACKUP_MYSQL_ENABLED=false
+ENV BACKUP_SQLITE_ENABLED=false
 
 # MySQL connection defaults
 ENV MYSQL_HOST=mysql
@@ -90,6 +95,9 @@ ENV MYSQL_PORT=3306
 ENV MYSQL_DATABASE=torrust_tracker
 ENV MYSQL_USER=tracker_user
 # MYSQL_PASSWORD must be provided via docker-compose environment
+
+# SQLite defaults
+ENV SQLITE_DATABASE_PATH=/data/storage/tracker/lib/database/tracker.db
 
 # Run as non-root user (torrust, uid 1000)
 USER torrust

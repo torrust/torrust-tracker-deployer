@@ -30,6 +30,7 @@ setup() {
     # Create temp directories for test isolation
     export TEST_TMPDIR="${BATS_TEST_TMPDIR}"
     mkdir -p "${TEST_TMPDIR}/backups/mysql"
+    mkdir -p "${TEST_TMPDIR}/backups/sqlite"
     mkdir -p "${TEST_TMPDIR}/backups/config"
     mkdir -p "${TEST_TMPDIR}/data"
     mkdir -p "${TEST_TMPDIR}/config"
@@ -162,10 +163,10 @@ teardown() {
 # Backup Mode Tests
 # =============================================================================
 
-@test "is_single_mode: it should return false when BACKUP_MODE is not set" {
+@test "is_single_mode: it should return true when BACKUP_MODE is not set" {
     unset BACKUP_MODE
     run is_single_mode
-    [ "$status" -eq 1 ]
+    [ "$status" -eq 0 ]
 }
 
 @test "is_single_mode: it should return false when BACKUP_MODE is continuous" {
@@ -181,7 +182,7 @@ teardown() {
 }
 
 @test "is_single_mode: it should return false when BACKUP_MODE is non-single value" {
-    BACKUP_MODE=once
+    BACKUP_MODE=loop
     run is_single_mode
     [ "$status" -eq 1 ]
 }
@@ -329,6 +330,84 @@ teardown() {
 
     run validate_mysql_configuration
     [ "$status" -eq 0 ]
+}
+
+# =============================================================================
+# SQLite Configuration Tests
+# =============================================================================
+
+@test "is_sqlite_enabled: it should return false when BACKUP_SQLITE_ENABLED is not set" {
+    unset BACKUP_SQLITE_ENABLED
+    run is_sqlite_enabled
+    [ "$status" -eq 1 ]
+}
+
+@test "is_sqlite_enabled: it should return false when BACKUP_SQLITE_ENABLED is false" {
+    BACKUP_SQLITE_ENABLED=false
+    run is_sqlite_enabled
+    [ "$status" -eq 1 ]
+}
+
+@test "is_sqlite_enabled: it should return true when BACKUP_SQLITE_ENABLED is true" {
+    BACKUP_SQLITE_ENABLED=true
+    run is_sqlite_enabled
+    [ "$status" -eq 0 ]
+}
+
+@test "is_sqlite_enabled: it should return false when BACKUP_SQLITE_ENABLED is non-true value" {
+    BACKUP_SQLITE_ENABLED=yes
+    run is_sqlite_enabled
+    [ "$status" -eq 1 ]
+}
+
+@test "get_sqlite_database_path: it should return default path when SQLITE_DATABASE_PATH is not set" {
+    unset SQLITE_DATABASE_PATH
+    result=$(get_sqlite_database_path)
+    [ "$result" = "/data/storage/tracker/lib/database/tracker.db" ]
+}
+
+@test "get_sqlite_database_path: it should return custom path when SQLITE_DATABASE_PATH is set" {
+    SQLITE_DATABASE_PATH="/custom/path/database.db"
+    result=$(get_sqlite_database_path)
+    [ "$result" = "/custom/path/database.db" ]
+}
+
+@test "validate_sqlite_configuration: it should exit when database file does not exist" {
+    export SQLITE_DATABASE_PATH="/nonexistent/database.db"
+
+    run validate_sqlite_configuration
+    [ "$status" -eq 1 ]
+    [[ "$output" =~ "database not found" ]]
+}
+
+@test "validate_sqlite_configuration: it should succeed when database file exists" {
+    local test_db="${TEST_TMPDIR}/test.db"
+    touch "$test_db"
+    export SQLITE_DATABASE_PATH="$test_db"
+
+    run validate_sqlite_configuration
+    [ "$status" -eq 0 ]
+}
+
+# =============================================================================
+# SQLite Backup Path Generation Tests
+# =============================================================================
+
+@test "generate_sqlite_backup_path: it should return path with timestamp format" {
+    # Override constant for testing
+    BACKUP_DIR_SQLITE="${TEST_TMPDIR}/backups/sqlite"
+
+    result=$(generate_sqlite_backup_path)
+
+    # Should match pattern: /path/sqlite_YYYYMMDD_HHMMSS.db.gz
+    [[ "$result" =~ sqlite_[0-9]{8}_[0-9]{6}\.db\.gz$ ]]
+}
+
+@test "generate_sqlite_backup_path: it should use BACKUP_DIR_SQLITE constant" {
+    # The function should use the constant, not hardcoded path
+    result=$(generate_sqlite_backup_path)
+
+    [[ "$result" == /backups/sqlite/sqlite_* ]]
 }
 
 # =============================================================================

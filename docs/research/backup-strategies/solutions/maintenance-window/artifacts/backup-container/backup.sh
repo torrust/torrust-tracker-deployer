@@ -9,8 +9,10 @@
 #   BACKUP_INTERVAL        - Seconds between backups (default: 86400 = 24h)
 #   BACKUP_RETENTION_DAYS  - Days to keep backups before deletion (default: 7)
 #   BACKUP_MYSQL_ENABLED   - Enable MySQL backup: true/false (default: false)
+#   BACKUP_SQLITE_ENABLED  - Enable SQLite backup: true/false (default: false)
 #   BACKUP_PATHS_FILE      - Path to file listing paths to backup (optional)
 #   MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
+#   SQLITE_DATABASE_PATH   - Path to SQLite database file (default: /data/storage/tracker/lib/database/tracker.db)
 #
 # Paths File Format (one path per line):
 #   # Comment lines start with #
@@ -25,8 +27,9 @@
 #   /data     - Source data directory (mount app storage here, read-only)
 #
 # Output Structure:
-#   /backups/mysql/mysql_YYYYMMDD_HHMMSS.sql.gz  - MySQL dumps (compressed)
-#   /backups/config/                             - Config file copies
+#   /backups/mysql/mysql_YYYYMMDD_HHMMSS.sql.gz   - MySQL dumps (compressed)
+#   /backups/sqlite/sqlite_YYYYMMDD_HHMMSS.db.gz  - SQLite backups (compressed)
+#   /backups/config/                              - Config file copies
 #
 # Maintenance:
 #   After each backup cycle, the script:
@@ -42,6 +45,7 @@ set -e
 # These can be overridden for testing by setting them before sourcing the script.
 
 BACKUP_DIR_MYSQL="${BACKUP_DIR_MYSQL:-/backups/mysql}"
+BACKUP_DIR_SQLITE="${BACKUP_DIR_SQLITE:-/backups/sqlite}"
 BACKUP_DIR_CONFIG="${BACKUP_DIR_CONFIG:-/backups/config}"
 PACKAGE_AGE_MINUTES="${PACKAGE_AGE_MINUTES:-60}"
 
@@ -79,13 +83,13 @@ main() {
 
 # Checks if backup should run once and exit.
 #
-# Single mode is used for maintenance-window backups where the host
-# orchestrates the container lifecycle.
+# Single mode (default) is used for maintenance-window backups where the host
+# orchestrates the container lifecycle. Use BACKUP_MODE=continuous for sidecar pattern.
 #
 # Returns:
-#   0 (true) if BACKUP_MODE is "single", 1 (false) otherwise
+#   0 (true) if BACKUP_MODE is "single" or not set, 1 (false) otherwise
 is_single_mode() {
-    [ "${BACKUP_MODE:-continuous}" = "single" ]
+    [ "${BACKUP_MODE:-single}" = "single" ]
 }
 
 # Runs a single backup cycle and exits.
@@ -105,6 +109,9 @@ run_single_backup() {
 validate_configuration() {
     if is_mysql_enabled; then
         validate_mysql_configuration
+    fi
+    if is_sqlite_enabled; then
+        validate_sqlite_configuration
     fi
 }
 
@@ -130,16 +137,44 @@ validate_mysql_configuration() {
     fi
 }
 
+# Validates SQLite backup configuration.
+#
+# Checks that the SQLite database file exists and is accessible.
+#
+# Side Effects:
+#   - Exits with code 1 if database file doesn't exist
+#   - Logs descriptive error message
+validate_sqlite_configuration() {
+    local db_path
+    db_path=$(get_sqlite_database_path)
+
+    if [ ! -f "$db_path" ]; then
+        log_error "SQLite backup enabled but database not found: ${db_path}"
+        exit 1
+    fi
+}
+
 # Logs the current configuration on startup.
 #
-# Displays: mode, interval, retention days, MySQL enabled state, paths file location.
+# Displays: mode, interval, retention days, database enabled states, paths file location.
 print_configuration() {
     log "Backup container starting..."
+    
     log "Configuration:"
-    log_item "Mode: ${BACKUP_MODE:-continuous}"
+    log_item "Mode: ${BACKUP_MODE:-single}"
     log_item "Interval: $(get_interval)s"
     log_item "Retention: $(get_retention_days) days"
+    
     log_item "MySQL backup: ${BACKUP_MYSQL_ENABLED:-false}"
+    if is_mysql_enabled; then
+        log_item "MySQL database: ${MYSQL_DATABASE}@${MYSQL_HOST}:${MYSQL_PORT:-3306}"
+    fi
+    
+    log_item "SQLite backup: ${BACKUP_SQLITE_ENABLED:-false}"
+    if is_sqlite_enabled; then
+        log_item "SQLite database: $(get_sqlite_database_path)"
+    fi
+    
     log_item "Paths file: ${BACKUP_PATHS_FILE:-<not set>}"
 }
 
@@ -164,16 +199,18 @@ run_scheduled_backups() {
     done
 }
 
-# Executes a complete backup cycle: MySQL, config files, then maintenance.
+# Executes a complete backup cycle: MySQL, SQLite, config files, then maintenance.
 #
 # Sequence:
 #   1. Backup MySQL database (if enabled)
-#   2. Backup config files (if paths file configured)
-#   3. Run maintenance (package old files, delete expired backups)
+#   2. Backup SQLite database (if enabled)
+#   3. Backup config files (if paths file configured)
+#   4. Run maintenance (package old files, delete expired backups)
 run_backup_cycle() {
     log_header "Backup cycle starting"
 
     backup_mysql
+    backup_sqlite
     backup_config_files
     run_maintenance
 
@@ -247,6 +284,73 @@ dump_mysql_database() {
         --triggers \
         --no-tablespaces \
         "${MYSQL_DATABASE}" | gzip > "${output_file}"
+}
+
+# =============================================================================
+# SQLite Backup
+# =============================================================================
+
+# Creates a compressed backup of the SQLite database.
+#
+# Uses SQLite's .backup command for a consistent copy while the database
+# may still be in use. This is safer than simple file copy as it handles
+# WAL mode and ensures consistency.
+#
+# Side Effects:
+#   - Creates /backups/sqlite directory if it doesn't exist
+#   - Writes compressed backup to /backups/sqlite/sqlite_YYYYMMDD_HHMMSS.db.gz
+#   - Logs progress and final file size
+backup_sqlite() {
+    if ! is_sqlite_enabled; then
+        return 0
+    fi
+
+    log "Starting SQLite backup..."
+
+    ensure_directory_exists "${BACKUP_DIR_SQLITE}"
+
+    local db_path output_file temp_file
+    db_path=$(get_sqlite_database_path)
+    output_file=$(generate_sqlite_backup_path)
+    temp_file="${output_file%.gz}"
+
+    log_item "Database: ${db_path}"
+
+    # Use SQLite's .backup command for consistent backup
+    dump_sqlite_database "${db_path}" "${temp_file}"
+
+    # Compress the backup
+    gzip "${temp_file}"
+
+    log_item "Output: ${output_file} ($(get_file_size "${output_file}"))"
+    log "SQLite backup complete"
+}
+
+# Generates a timestamped file path for a SQLite backup.
+#
+# Returns:
+#   Path string: /backups/sqlite/sqlite_YYYYMMDD_HHMMSS.db.gz
+generate_sqlite_backup_path() {
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    echo "${BACKUP_DIR_SQLITE}/sqlite_${timestamp}.db.gz"
+}
+
+# Executes SQLite backup using the .backup command.
+#
+# Arguments:
+#   $1 - source_db: Path to the source SQLite database
+#   $2 - output_file: Path where the backup will be written
+#
+# Uses SQLite's .backup command which:
+#   - Creates a consistent snapshot even with active connections
+#   - Handles WAL mode properly
+#   - Is safer than simple file copy
+dump_sqlite_database() {
+    local source_db="$1"
+    local output_file="$2"
+
+    sqlite3 "${source_db}" ".backup '${output_file}'"
 }
 
 # =============================================================================
@@ -406,25 +510,27 @@ find_uncompressed_old_files() {
 
 # Deletes backups older than the configured retention period.
 #
-# Applies retention policy to both MySQL dumps and config files.
+# Applies retention policy to MySQL dumps, SQLite backups, and config files.
 # Also cleans up any empty directories left after deletion.
 #
 # Side Effects:
-#   - Deletes old backup files from both backup directories
+#   - Deletes old backup files from all backup directories
 #   - Removes empty directories in the config backup tree
 #   - Logs total count of deleted files
 delete_expired_backups() {
     local retention_days
     retention_days=$(get_retention_days)
 
-    local mysql_deleted config_deleted
+    local mysql_deleted sqlite_deleted config_deleted
     mysql_deleted=$(delete_old_files_from "${BACKUP_DIR_MYSQL}" "*.sql.gz" "${retention_days}")
+    sqlite_deleted=$(delete_old_files_from "${BACKUP_DIR_SQLITE}" "*.db.gz" "${retention_days}")
     config_deleted=$(delete_old_files_from "${BACKUP_DIR_CONFIG}" "*" "${retention_days}")
 
     cleanup_empty_directories "${BACKUP_DIR_CONFIG}"
 
-    if [ "$mysql_deleted" -gt 0 ] || [ "$config_deleted" -gt 0 ]; then
-        log_item "Retention: removed ${mysql_deleted} MySQL, ${config_deleted} config files"
+    local total_deleted=$((mysql_deleted + sqlite_deleted + config_deleted))
+    if [ "$total_deleted" -gt 0 ]; then
+        log_item "Retention: removed ${mysql_deleted} MySQL, ${sqlite_deleted} SQLite, ${config_deleted} config files"
     fi
 }
 
@@ -558,6 +664,22 @@ get_paths_file() {
 #   0 (true) if BACKUP_MYSQL_ENABLED is "true", 1 (false) otherwise
 is_mysql_enabled() {
     [ "${BACKUP_MYSQL_ENABLED:-false}" = "true" ]
+}
+
+# Checks if SQLite backup is enabled.
+#
+# Returns:
+#   0 (true) if BACKUP_SQLITE_ENABLED is "true", 1 (false) otherwise
+is_sqlite_enabled() {
+    [ "${BACKUP_SQLITE_ENABLED:-false}" = "true" ]
+}
+
+# Returns the path to the SQLite database file.
+#
+# Returns:
+#   SQLITE_DATABASE_PATH or default path for Torrust Tracker
+get_sqlite_database_path() {
+    echo "${SQLITE_DATABASE_PATH:-/data/storage/tracker/lib/database/tracker.db}"
 }
 
 # =============================================================================

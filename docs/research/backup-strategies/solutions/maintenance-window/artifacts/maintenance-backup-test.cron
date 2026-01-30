@@ -1,0 +1,26 @@
+# ============================================================================
+# Maintenance Window Backup - TEST Crontab Configuration
+# ============================================================================
+# This is a TEST configuration with short intervals for verification.
+# For production, use maintenance-backup.cron with daily schedule.
+#
+# Installation:
+#   sudo crontab maintenance-backup-test.cron
+#
+# To verify it's installed:
+#   sudo crontab -l
+#
+# To remove:
+#   sudo crontab -r
+# ============================================================================
+
+# Environment variables for the backup script
+COMPOSE_DIR=/opt/torrust
+
+# ============================================================================
+# TEST Schedule: Every 2 minutes
+# ============================================================================
+# For testing only! Change to daily schedule in production.
+# ============================================================================
+
+*/2 * * * * /opt/torrust/scripts/maintenance-backup.sh >> /var/log/tracker-backup.log 2>&1
