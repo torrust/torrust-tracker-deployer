@@ -55,7 +55,14 @@ See [requirements.md](requirements.md) for detailed explanation of each type.
 | ------------------------ | ---------------------------------------------------- |
 | [solutions/](solutions/) | Proposed backup solutions and architectural patterns |
 
-**⭐ Recommended**: [Sidecar Container Pattern](solutions/sidecar-container/) - A dedicated backup container in the Docker Compose stack that handles all backup operations portably.
+**⭐ Recommended**: [Maintenance Window Pattern](solutions/maintenance-window/) -
+A hybrid approach combining container-based backup with host-level orchestration.
+The backup container runs once per day (triggered by crontab), not continuously.
+This works for databases of any size and preserves container portability.
+
+**Alternative**: [Sidecar Container Pattern](solutions/sidecar-container/) -
+A dedicated backup container that runs continuously. Only practical for small
+databases (< 1GB) due to SQLite locking issues under load.
 
 ## Research Status
 

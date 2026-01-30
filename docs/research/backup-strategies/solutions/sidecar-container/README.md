@@ -1,5 +1,7 @@
 # Sidecar Container Backup - Proof of Concept
 
+**Status**: ✅ POC Complete | ⚠️ **Limited to small databases (< 1GB)**
+
 ## Overview
 
 This folder contains the practical implementation and validation of the
@@ -7,6 +9,20 @@ sidecar container backup solution (see [design.md](design.md) for details).
 
 **Goal**: Validate the sidecar container pattern by implementing it in a real
 test environment, progressively adding features and documenting findings.
+
+## ⚠️ Important Limitation
+
+Real-world testing on a 17GB production database revealed that the sidecar
+container pattern (using SQLite `.backup` or running continuously) is **only
+practical for databases < 1GB**.
+
+| Database Size | Sidecar Viability | Recommendation                                           |
+| ------------- | ----------------- | -------------------------------------------------------- |
+| < 1 GB        | ✅ Works          | Sidecar container is acceptable                          |
+| > 1 GB        | ❌ Unusable       | Use [Maintenance Window](../maintenance-window/) instead |
+
+**For production deployments, we recommend the [Maintenance Window](../maintenance-window/)
+approach regardless of database size** - it's simpler and scales to any size.
 
 ## Environment
 
@@ -32,13 +48,6 @@ test environment, progressively adding features and documenting findings.
 | 7     | Documentation Update     | ✅ Complete | [07-documentation.md](phases/07-documentation.md)           |
 
 **POC Status**: ✅ **Complete** - All phases validated and documented.
-
-### ⚠️ Critical Finding
-
-Real-world testing on a 17GB production database revealed that the sidecar
-container pattern (using SQLite `.backup`) is **only practical for databases
-< 1 GB**. See [Large Database Backup](../../databases/sqlite/large-database-backup.md)
-for alternatives.
 
 ## Directory Structure
 

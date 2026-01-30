@@ -5,14 +5,28 @@ in Torrust Tracker deployments.
 
 ## Solutions
 
-| Solution                                  | Status         | Description                                        |
-| ----------------------------------------- | -------------- | -------------------------------------------------- |
-| [Sidecar Container](sidecar-container/)   | ⭐ Recommended | Dedicated backup container in Docker Compose stack |
-| [Exclude Statistics](exclude-statistics/) | 🔬 Proposed    | Backup only essential data, exclude large stats    |
-| [Maintenance Window](maintenance-window/) | 🔬 Proposed    | Host-level script: stop tracker, copy DB, restart  |
+| Solution                                  | Status             | Best For                   |
+| ----------------------------------------- | ------------------ | -------------------------- |
+| [Maintenance Window](maintenance-window/) | ⭐ **Recommended** | All production deployments |
+| [Sidecar Container](sidecar-container/)   | ✅ POC Complete    | Small databases (< 1GB)    |
+| [Exclude Statistics](exclude-statistics/) | 🔬 Proposed        | Size optimization only     |
 
-> **Note**: The sidecar container approach is only practical for databases < 1GB.
-> For larger databases, consider the alternative solutions.
+## Recommendation
+
+**Use the Maintenance Window approach for all production deployments.**
+
+The sidecar container approach is elegant but only works for small databases.
+Real-world testing on a 17GB production database showed:
+
+- SQLite `.backup`: 16+ hours (stalled at 10%)
+- Maintenance window: **90 seconds** (complete backup)
+
+The maintenance-window hybrid approach provides:
+
+- **95%+ portable** - Backup logic in container, only ~50 lines on host
+- **Scales to any DB size** - No locking issues
+- **Acceptable downtime** - ~90s at 3 AM for most trackers
+- **Deployer-compatible** - Could automate crontab in "Configure" phase
 
 ## Selection Criteria
 
