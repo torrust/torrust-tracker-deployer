@@ -5,9 +5,14 @@ in Torrust Tracker deployments.
 
 ## Solutions
 
-| Solution                                | Status         | Description                                        |
-| --------------------------------------- | -------------- | -------------------------------------------------- |
-| [Sidecar Container](sidecar-container/) | ⭐ Recommended | Dedicated backup container in Docker Compose stack |
+| Solution                                  | Status         | Description                                        |
+| ----------------------------------------- | -------------- | -------------------------------------------------- |
+| [Sidecar Container](sidecar-container/)   | ⭐ Recommended | Dedicated backup container in Docker Compose stack |
+| [Exclude Statistics](exclude-statistics/) | 🔬 Proposed    | Backup only essential data, exclude large stats    |
+| [Maintenance Window](maintenance-window/) | 🔬 Proposed    | Host-level script: stop tracker, copy DB, restart  |
+
+> **Note**: The sidecar container approach is only practical for databases < 1GB.
+> For larger databases, consider the alternative solutions.
 
 ## Selection Criteria
 
