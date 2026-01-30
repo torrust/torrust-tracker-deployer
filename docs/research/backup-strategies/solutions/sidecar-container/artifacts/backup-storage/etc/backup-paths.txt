@@ -10,9 +10,14 @@
 #
 # Lines starting with # are comments.
 # Empty lines are ignored.
+#
+# NOTE: The /data mount maps to the ENTIRE deployment directory (./) because:
+#   - Root-level files (.env, docker-compose.yml) contain critical config
+#   - Service configs are in ./storage/ subdirectory
 # ============================================================================
 
-# Docker Compose deployment configuration
+# Root-level deployment configuration
+# These files are in the deployment root folder (not inside storage/)
 /data/.env
 /data/docker-compose.yml
 

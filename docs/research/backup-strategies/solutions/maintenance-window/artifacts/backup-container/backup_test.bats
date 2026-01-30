@@ -9,7 +9,14 @@
 #
 # Test naming convention follows project standards:
 #   it_should_{expected_behavior}_when_{condition}
+#
+# ShellCheck Directives:
+#   SC1091: Ignore "not following" for sourced files (bats handles this)
+#   SC2034: Variables set for sourced functions appear "unused" to shellcheck
+#   SC2030/SC2031: Bats test functions run in subshells by design
 # ============================================================================
+
+# shellcheck disable=SC1091,SC2034,SC2030,SC2031
 
 # =============================================================================
 # Test Setup
@@ -341,8 +348,9 @@ teardown() {
     local source_path="${TEST_TMPDIR}/data/storage/tracker/etc/config.toml"
 
     # Create a wrapper that adjusts paths for testing
-    local relative_path="${source_path#${TEST_TMPDIR}/data/}"
-    local target_dir="${BACKUP_DIR_CONFIG}/$(dirname "$relative_path")"
+    local relative_path="${source_path#"${TEST_TMPDIR}"/data/}"
+    local target_dir
+    target_dir="${BACKUP_DIR_CONFIG}/$(dirname "$relative_path")"
     mkdir -p "$target_dir"
     cp -r "$source_path" "$target_dir/"
 

@@ -199,6 +199,11 @@ services:
       # Backup logs (log) - future use
       - ./storage/backup/log:/logs
       # Source data directory (read-only)
+      # NOTE: We mount the ENTIRE deployment directory (./) not just ./storage because:
+      #   - .env file (secrets, passwords) is in the root folder
+      #   - docker-compose.yml (deployment config) is in the root folder
+      #   - storage/ subdirectory contains service configs (tracker, prometheus, grafana)
+      # See backup-paths.txt for the complete list of backed up paths.
       - ./:/data:ro
     depends_on:
       mysql:
