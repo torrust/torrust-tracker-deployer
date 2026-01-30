@@ -1,0 +1,35 @@
+# ============================================================================
+# Maintenance Window Backup - Crontab Configuration
+# ============================================================================
+#
+# Installation (as root or with sudo):
+#   sudo crontab -l > /tmp/crontab.bak
+#   sudo cat /tmp/crontab.bak maintenance-backup.cron | sudo crontab -
+#
+# Or manually add to crontab:
+#   sudo crontab -e
+#
+# Environment:
+#   COMPOSE_DIR must match your Docker Compose installation directory
+# ============================================================================
+
+# Environment variables for the backup script
+COMPOSE_DIR=/opt/tracker
+LOG_FILE=/var/log/tracker-backup.log
+
+# ============================================================================
+# Maintenance Window Backup Schedule
+# ============================================================================
+# Runs daily at 3:00 AM local time
+# Adjust the hour (3) to match your lowest traffic period
+#
+# Cron format: minute hour day-of-month month day-of-week command
+#
+# Examples:
+#   0 3 * * *     - Daily at 3:00 AM
+#   0 3 * * 0     - Weekly on Sunday at 3:00 AM
+#   0 3 1 * *     - Monthly on the 1st at 3:00 AM
+#   0 3 * * 1-5   - Weekdays only at 3:00 AM
+# ============================================================================
+
+0 3 * * * /opt/tracker/scripts/maintenance-backup.sh >> /var/log/tracker-backup.log 2>&1
