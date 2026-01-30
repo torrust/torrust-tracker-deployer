@@ -21,15 +21,24 @@ test environment, progressively adding features and documenting findings.
 
 ## Implementation Status
 
-| Phase | Description              | Status         | Document                                                    |
-| ----- | ------------------------ | -------------- | ----------------------------------------------------------- |
-| 1     | Environment Setup        | ✅ Complete    | [01-environment-setup.md](phases/01-environment-setup.md)   |
-| 2     | Minimal Backup Container | ✅ Complete    | [02-minimal-container.md](phases/02-minimal-container.md)   |
-| 3     | MySQL Backup             | ✅ Complete    | [03-mysql-backup.md](phases/03-mysql-backup.md)             |
-| 4     | Config Files Backup      | ✅ Complete    | [04-config-backup.md](phases/04-config-backup.md)           |
-| 5     | Backup Maintenance       | ✅ Complete    | [05-archive-creation.md](phases/05-archive-creation.md)     |
-| 6     | Restore Validation       | ✅ Complete    | [06-restore-validation.md](phases/06-restore-validation.md) |
-| 7     | Documentation Update     | 🔲 Not started | [07-documentation.md](phases/07-documentation.md)           |
+| Phase | Description              | Status      | Document                                                    |
+| ----- | ------------------------ | ----------- | ----------------------------------------------------------- |
+| 1     | Environment Setup        | ✅ Complete | [01-environment-setup.md](phases/01-environment-setup.md)   |
+| 2     | Minimal Backup Container | ✅ Complete | [02-minimal-container.md](phases/02-minimal-container.md)   |
+| 3     | MySQL Backup             | ✅ Complete | [03-mysql-backup.md](phases/03-mysql-backup.md)             |
+| 4     | Config Files Backup      | ✅ Complete | [04-config-backup.md](phases/04-config-backup.md)           |
+| 5     | Backup Maintenance       | ✅ Complete | [05-archive-creation.md](phases/05-archive-creation.md)     |
+| 6     | Restore Validation       | ✅ Complete | [06-restore-validation.md](phases/06-restore-validation.md) |
+| 7     | Documentation Update     | ✅ Complete | [07-documentation.md](phases/07-documentation.md)           |
+
+**POC Status**: ✅ **Complete** - All phases validated and documented.
+
+### ⚠️ Critical Finding
+
+Real-world testing on a 17GB production database revealed that the sidecar
+container pattern (using SQLite `.backup`) is **only practical for databases
+< 1 GB**. See [Large Database Backup](../../sqlite/large-database-backup.md)
+for alternatives.
 
 ## Directory Structure
 

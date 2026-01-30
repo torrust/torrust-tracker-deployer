@@ -17,6 +17,37 @@ This document summarizes the key findings from the database backup strategies re
 
 **Key insight**: The `.backup` command is safe during concurrent writes because it uses SQLite's Online Backup API, which handles page-level consistency internally.
 
+### ⚠️ Critical Finding: Large Database Limitations
+
+**Real-world testing on the 17GB Torrust Demo production database revealed that
+the `.backup` command is impractical for large databases under load.**
+
+| Database Size | `.backup` Viability | Recommendation                       |
+| ------------- | ------------------- | ------------------------------------ |
+| < 1 GB        | ✅ Works well       | Use `.backup` (sidecar container OK) |
+| 1 GB - 10 GB  | ⚠️ Slow             | Consider maintenance window          |
+| > 10 GB       | ❌ Unusable         | **Must use alternatives**            |
+
+**Test results (17GB database)**:
+
+- `.backup` ran for 16+ hours, stalled at 10% (~37 MB/hour)
+- Disk capable of 445 MB/s - SQLite locking is the bottleneck
+- Simple `cp` with tracker stopped: **72 seconds** (complete backup)
+
+**Implication for backup sidecar container**:
+
+The backup sidecar container approach (using `.backup` inside a Docker container)
+is **only practical for small databases (< 1GB)**. For larger databases:
+
+1. **Maintenance window backup**: Stop the tracker, copy files, restart (~90
+   seconds downtime for 17GB)
+2. **Filesystem snapshots**: Use LVM/ZFS snapshots (instant, no downtime)
+3. **Litestream**: Continuous replication to S3 (near-zero RPO)
+4. **Migrate to MySQL**: Better tooling for large databases
+
+See [Large Database Backup](sqlite/large-database-backup.md) for detailed
+analysis and recommendations.
+
 ## Backup Tool
 
 | Finding          | Recommendation                                          |
@@ -71,6 +102,8 @@ These may be addressed in future research if needed.
 ## References
 
 - [SQLite Backup Approaches](sqlite/backup-approaches.md)
+- [SQLite Large Database Backup](sqlite/large-database-backup.md) ⚠️ **Critical
+  for databases > 1GB**
 - [Container Backup Architectures](container-backup-architectures.md)
 - [Restic Evaluation](tools/restic.md)
 - [Restic vs Kopia Comparison](tools/restic-vs-kopia.md)
