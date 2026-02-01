@@ -265,7 +265,7 @@ mounted files).
 
 ```text
 docker/backup/
-├── Dockerfile           # Backup container image
+├── Dockerfile           # Backup container image (base: debian:bookworm-slim)
 ├── backup.sh            # Main backup script (58 unit tests)
 └── README.md            # Container documentation
 ```
@@ -273,7 +273,10 @@ docker/backup/
 **Tasks**:
 
 - [ ] Create `docker/backup/` directory
-- [ ] Copy POC artifacts (`Dockerfile`, `backup.sh`) from research directory
+- [ ] Review and refactor POC artifacts (`Dockerfile`, `backup.sh`) from research directory
+  - Align with project-specific conventions
+  - Ensure production-ready quality
+  - Base image: `debian:bookworm-slim` (from POC)
 - [ ] Add README.md documenting the container's purpose and usage
 - [ ] Verify container builds and runs correctly locally
 
@@ -306,11 +309,23 @@ manual testing procedures.
 **Tasks**:
 
 - [ ] Create `.github/workflows/backup-container.yaml`
-- [ ] Publish to Docker Hub as `torrust/backup`
-- [ ] Add Trivy security scanning
-- [ ] Tag with version and `latest`
+  - Follow same pattern as `.github/workflows/container.yaml` (deployer image)
+  - Use `dockerhub-torrust-backup` environment (not `dockerhub-torrust`)
+  - Trigger on changes to `docker/backup/**` path
+  - Publish to Docker Hub as `torrust/backup`
+  - Tag with version and `latest`
+- [ ] Run manual security scan as per `docs/security/docker/README.md`
+  - `trivy image --severity HIGH,CRITICAL torrust/backup:latest`
+  - Document scan results
+- [ ] Add backup image to `.github/workflows/docker-security-scan.yml`
+  - Add to `scan-project-images` matrix
+  - Add SARIF upload step in `upload-sarif-results` job
 
-**Manual Testing**: Verify image is published and pullable from Docker Hub.
+**Manual Testing**:
+
+- Verify image is published and pullable from Docker Hub
+- Confirm no HIGH/CRITICAL vulnerabilities in Trivy scan
+- Verify security scan workflow includes backup image
 
 ---
 
@@ -351,9 +366,26 @@ pub struct BackupConfig {
 }
 
 /// Validated cron schedule (5-field format)
+/// Uses the `cron` crate for full validation (ranges, steps, lists)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CronSchedule(String);
+
+impl CronSchedule {
+    /// Validates cron expression using the `cron` crate
+    /// Rejects invalid schedules like "70 * * * *" or "0 0 32 * *"
+    pub fn new(schedule: String) -> Result<Self, BackupError> {
+        use cron::Schedule;
+        use std::str::FromStr;
+
+        Schedule::from_str(&schedule)
+            .map_err(|e| BackupError::InvalidCronSchedule(schedule.clone(), e.to_string()))?;
+
+        Ok(Self(schedule))
+    }
+}
 ```
+
+**Dependencies**: Add `cron = "0.12"` to `Cargo.toml` for validation
 
 **Topology Domain** (`src/domain/topology/`):
 
