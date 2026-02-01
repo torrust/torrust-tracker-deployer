@@ -50,68 +50,49 @@ The epic covers three types of backup targets:
 
 ## Goals
 
-- [ ] Research and document backup strategies for each target type (Task 7.1)
-- [ ] Design backup feature specification with configuration schema (Task 7.2)
-- [ ] Implement configuration file backup functionality (Task 7.3)
-- [ ] Implement SQLite database backup functionality (Task 7.4)
-- [ ] Implement MySQL database backup functionality (Task 7.5)
+- [x] Research and document backup strategies for each target type (Task 7.1) ✅ Completed
+- [ ] Implement backup support with all features (Task 7.2 - consolidates original 7.2-7.5)
+  - Backup container templates (Dockerfile, backup.sh)
+  - Docker Compose integration (backup service)
+  - Configuration schema extension
+  - Ansible deployment playbooks
+  - Crontab installation for scheduled backups
+  - MySQL, SQLite, and config file backup support
+
+## Research Findings Summary
+
+The research phase (Issue #310, PR #312) recommended the **maintenance-window
+hybrid approach**:
+
+- **95% Container**: Backup logic in Docker container (portable, tested)
+- **5% Host Script**: Simple crontab + shell script for scheduling
+- **Architecture**: Crontab → Stop tracker → Run backup container → Start tracker
+- **Artifacts**: 58 unit tests, production-ready scripts and Dockerfile
+
+Key decision: Use maintenance-window backups for all production deployments.
+The always-running sidecar approach is only viable for small databases (< 1GB).
+
+See [Research Conclusions](../research/backup-strategies/conclusions.md) for
+detailed findings.
 
 ## Implementation Approach
 
-### Phase 1: Research (Task 7.1)
+### Phase 1: Research ✅ COMPLETED (Task 7.1)
 
-Research and document backup approaches for SQLite, MySQL, and configuration files. Focus on understanding:
+Research documented backup approaches for SQLite, MySQL, and configuration files:
 
-- Available tools and techniques
-- Trade-offs between different approaches
-- Cloud redundancy strategies
-- Current Torrust Live Demo implementation
+- Evaluated safe backup techniques for each database type
+- Tested with real 17GB production database (Torrust Demo)
+- Built and tested POC with 58 unit tests
+- Recommended maintenance-window hybrid approach
 
-**Deliverable**: Research documentation in `docs/research/backup-strategies/`
+**Deliverable**: Research documentation in `docs/research/backup-strategies/` ✅
 
-### Phase 2: Specification (Task 7.2)
+### Phase 2: Implementation (Task 7.2)
 
-Design the backup feature specification based on research findings:
-
-- Backup configuration schema (per-service-type enablement)
-- User-provided destination paths
-- Integration with existing command structure
-- DDD architecture planning
-
-**Deliverable**: Feature specification document
-
-### Phase 3: Configuration Backups (Task 7.3)
-
-Implement backup support for configuration files:
-
-- Identify and document all configuration files
-- Create backup commands/steps
-- Support user-provided backup destinations
-- Test with E2E scenarios
-
-**Deliverable**: Working configuration backup functionality
-
-### Phase 4: SQLite Backups (Task 7.4)
-
-Implement SQLite backup based on research and Live Demo approach:
-
-- Safe file copying mechanism
-- Compression support
-- Integration with deployment workflow
-- E2E testing
-
-**Deliverable**: Working SQLite backup functionality
-
-### Phase 5: MySQL Backups (Task 7.5)
-
-Implement MySQL backup based on research findings:
-
-- Tool selection (mysqldump, physical backup, etc.)
-- Concurrency handling
-- Docker container integration
-- E2E testing with MySQL deployments
-
-**Deliverable**: Working MySQL backup functionality
+Based on research findings, implement backup support as a single integrated feature.
+See [implementation spec](315-implement-backup-support.md) for the detailed implementation
+plan with incremental steps.
 
 ## Context: Torrust Live Demo Implementation
 
@@ -134,13 +115,13 @@ This provides a proven baseline for SQLite backups in production, but opportunit
 
 ## Tasks
 
-- [ ] #310 - Research database backup strategies
-- [ ] #TBD - Define backup feature specification
-- [ ] #TBD - Implement configuration file backups
-- [ ] #TBD - Implement SQLite database backups
-- [ ] #TBD - Implement MySQL database backups
+- [x] #310 - Research database backup strategies ✅ Completed
+- [ ] #315 - Implement backup support (consolidates original tasks 7.2-7.5)
 
-(Tasks will be created and linked as work progresses)
+**Note**: Based on research findings (PR #312), the original tasks 7.2-7.5 have been
+consolidated into a single implementation issue (see [spec](315-implement-backup-support.md)). The research provided
+production-ready POC artifacts and clear implementation guidance that makes
+incremental sub-issues unnecessary.
 
 ## Scope Boundaries
 
@@ -150,17 +131,18 @@ This provides a proven baseline for SQLite backups in production, but opportunit
 - ✅ Configuration file backup
 - ✅ User-provided backup destination paths
 - ✅ Compression support
+- ✅ Backup retention cleanup (configurable days)
+- ✅ Scheduled backups via crontab (deployer installs crontab)
 - ✅ Integration with existing command structure
 
 ### Out of Scope
 
-- ❌ Automated backup scheduling (users can use cron/systemd timers)
 - ❌ Backup encryption (future enhancement)
 - ❌ Automated restore functionality (future enhancement)
 - ❌ Backup testing/verification (future enhancement)
 - ❌ Multi-region backup replication (users handle with volumes/cloud services)
-- ❌ Backup retention policies (users manage retention)
 - ❌ Volume management (users provide mounted locations)
+- ❌ Backup notifications/alerts (future enhancement)
 
 **Note**: Volume management is explicitly out of scope. Users are responsible for:
 
@@ -174,11 +156,14 @@ The deployer will assume backup destinations are already mounted and accessible.
 
 This epic is complete when:
 
-- [ ] Research is documented for all backup target types
-- [ ] Feature specification is complete and approved
-- [ ] Configuration file backup is implemented and tested
-- [ ] SQLite backup is implemented and tested (compatible with Live Demo approach)
+- [x] Research is documented for all backup target types
+- [ ] Backup container templates are integrated into deployer
+- [ ] Backup configuration is part of environment creation schema
+- [ ] Backup artifacts are deployed via Ansible playbooks
+- [ ] Crontab is installed for scheduled backups
+- [ ] SQLite backup is implemented and tested
 - [ ] MySQL backup is implemented and tested
+- [ ] Configuration file backup is implemented and tested
 - [ ] All E2E tests pass
 - [ ] Documentation is updated (user guide, commands reference)
 - [ ] Pre-commit checks pass for all changes
@@ -198,9 +183,12 @@ This epic is complete when:
 
 The Torrust Tracker stores critical data:
 
-- **Peer information**: Active peers and swarm state
-- **Torrent statistics**: Upload/download counters, peer counts
+- **Torrent statistics**: Upload/download counters, peer counts, torrent metadata
 - **Authentication tokens**: User credentials and access control
+- **Whitelisted torrents**: List of allowed torrents (if private tracker)
+
+**Note**: Peer information (active peers and swarm state) is kept in memory only
+and is not persisted to the database, so it cannot be backed up.
 
 Losing this data would be catastrophic for tracker operators. Backups must be:
 

@@ -133,21 +133,19 @@ When starting work on a new feature:
 
 **Epic Issue**: [#309 - Add backup support](https://github.com/torrust/torrust-tracker-deployer/issues/309)
 
-- [ ] **7.1** Research database backup strategies - [Issue #310](https://github.com/torrust/torrust-tracker-deployer/issues/310)
-  - Investigate SQLite backup approaches (file copy while service is running)
-  - Investigate MySQL backup approaches (concurrency issues, locking, `mysqldump` vs hot backups)
-  - Document findings and recommend approach for each database type
-- [ ] **7.2** Define backup feature specification
-  - Design backup configuration schema (enabled per service type)
-  - Configuration file backups (affects all services)
-  - Database backups with per-database-type configuration (SQLite, MySQL)
-  - User-provided destination path for backup files
+- [x] **7.1** Research database backup strategies - [Issue #310](https://github.com/torrust/torrust-tracker-deployer/issues/310) ✅ Completed
+  - Investigated SQLite and MySQL backup approaches
+  - Recommended **maintenance-window hybrid approach** (container + crontab)
+  - Built and tested POC with 58 unit tests
+  - Documented findings in `docs/research/backup-strategies/`
+- [ ] **7.2** Implement backup support - [Issue #315](https://github.com/torrust/torrust-tracker-deployer/issues/315) (see [spec](./issues/315-implement-backup-support.md))
+  - Add backup container templates (Dockerfile, backup.sh)
+  - Add backup service to Docker Compose template
+  - Extend environment configuration schema with backup settings
+  - Deploy backup artifacts via Ansible playbooks
+  - Install crontab for scheduled maintenance-window backups
+  - Supports: MySQL dumps, SQLite file copy, config archives
   - **Note**: Volume management is out of scope - user provides a mounted location
-- [ ] **7.3** Implement configuration file backups
-- [ ] **7.4** Implement SQLite database backups
-  - Based on Torrust Live Demo approach (copy and compress DB file)
-- [ ] **7.5** Implement MySQL database backups
-  - Based on research findings for handling concurrency
 
 ### 8. Add levels of verbosity
 
