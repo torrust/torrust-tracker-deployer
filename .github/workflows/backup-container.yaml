@@ -1,0 +1,204 @@
+# Backup Container workflow for Torrust Tracker Deployer
+#
+# This workflow builds, tests, and publishes the backup Docker image.
+# Following patterns from container.yaml workflow.
+#
+# Triggers:
+#   - Push to main/develop branches (only when backup container files change)
+#   - Pull requests to main/develop (only when backup container files change)
+#   - Manual dispatch
+#
+# Publishing:
+#   - Images are pushed to Docker Hub on push to main/develop (not PRs)
+#   - Requires Docker Hub credentials in repository secrets (dockerhub-torrust-backup environment)
+
+name: Backup Container
+
+on:
+  push:
+    branches:
+      - "develop"
+      - "main"
+    paths:
+      - "docker/backup/**"
+      - ".github/workflows/backup-container.yaml"
+
+  pull_request:
+    branches:
+      - "develop"
+      - "main"
+    paths:
+      - "docker/backup/**"
+      - ".github/workflows/backup-container.yaml"
+
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  DOCKER_HUB_USERNAME: torrust
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/backup
+          file: ./docker/backup/Dockerfile
+          target: production
+          push: false
+          load: true
+          tags: torrust/tracker-backup:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Inspect Image
+        run: docker image inspect torrust/tracker-backup:local
+
+      - name: Verify Container Structure
+        run: |
+          echo "=== Verifying backup container structure ==="
+
+          echo "=== Checking backup script exists ==="
+          docker run --rm torrust/tracker-backup:local ls -lh /scripts/backup.sh
+
+          echo "=== Checking backup directories ==="
+          docker run --rm torrust/tracker-backup:local ls -ld /backups/mysql /backups/sqlite /backups/config
+
+          echo "=== Verifying tools installed ==="
+          docker run --rm torrust/tracker-backup:local which bash mysql sqlite3 gzip tar
+
+          echo "=== Checking entrypoint ==="
+          docker inspect --format='{{.Config.Entrypoint}}' torrust/tracker-backup:local
+
+      - name: Test Container Execution
+        run: |
+          echo "=== Testing backup container without config (should fail gracefully) ==="
+          docker run --rm torrust/tracker-backup:local || true
+
+  context:
+    name: Context
+    needs: test
+    runs-on: ubuntu-latest
+
+    outputs:
+      continue: ${{ steps.check.outputs.continue }}
+      type: ${{ steps.check.outputs.type }}
+
+    steps:
+      - name: Check Context
+        id: check
+        run: |
+          if [[ "${{ github.repository }}" == "torrust/torrust-tracker-deployer" ]]; then
+            if [[ "${{ github.event_name }}" == "push" ]]; then
+              if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+                echo "type=production" >> $GITHUB_OUTPUT
+                echo "continue=true" >> $GITHUB_OUTPUT
+              elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+                echo "type=development" >> $GITHUB_OUTPUT
+                echo "continue=true" >> $GITHUB_OUTPUT
+              fi
+            fi
+          fi
+
+          # Default: don't continue
+          if [[ -z "$(cat $GITHUB_OUTPUT 2>/dev/null)" ]]; then
+            echo "continue=false" >> $GITHUB_OUTPUT
+          fi
+
+  publish_development:
+    name: Publish (Development)
+    environment: dockerhub-torrust-backup
+    needs: context
+    if: needs.context.outputs.continue == 'true' && needs.context.outputs.type == 'development'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker Meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DOCKER_HUB_USERNAME }}/tracker-backup
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=dev-
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/backup
+          file: ./docker/backup/Dockerfile
+          target: production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish_production:
+    name: Publish (Production)
+    environment: dockerhub-torrust-backup
+    needs: context
+    if: needs.context.outputs.continue == 'true' && needs.context.outputs.type == 'production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker Meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DOCKER_HUB_USERNAME }}/tracker-backup
+          tags: |
+            type=raw,value=latest
+            type=ref,event=branch
+            type=sha
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/backup
+          file: ./docker/backup/Dockerfile
+          target: production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

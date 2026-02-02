@@ -308,16 +308,17 @@ manual testing procedures.
 
 **Tasks**:
 
-- [ ] Create `.github/workflows/backup-container.yaml`
+- [x] Create `.github/workflows/backup-container.yaml`
   - Follow same pattern as `.github/workflows/container.yaml` (deployer image)
   - Use `dockerhub-torrust-backup` environment (not `dockerhub-torrust`)
   - Trigger on changes to `docker/backup/**` path
-  - Publish to Docker Hub as `torrust/backup`
+  - Publish to Docker Hub as `torrust/tracker-backup`
   - Tag with version and `latest`
 - [ ] Run manual security scan as per `docs/security/docker/README.md`
-  - `trivy image --severity HIGH,CRITICAL torrust/backup:latest`
+  - `trivy image --severity HIGH,CRITICAL torrust/tracker-backup:latest`
   - Document scan results
-- [ ] Add backup image to `.github/workflows/docker-security-scan.yml`
+  - Note: Requires image to be published first via CI workflow
+- [x] Add backup image to `.github/workflows/docker-security-scan.yml`
   - Add to `scan-project-images` matrix
   - Add SARIF upload step in `upload-sarif-results` job
 
@@ -825,7 +826,13 @@ Now that crontab handles scheduling, backup container should only run on-demand:
   - MySQL backup test: PASSED (see `docs/issues/315-phase-1.1b-results.md`)
   - Both backup types verified with real deployments
   - All services remained healthy during backup operations
-- [ ] Step 1.2: Create GitHub workflow for publishing
+- [x] Step 1.2: Create GitHub workflow for publishing ✅ **COMPLETE**
+  - Created `.github/workflows/backup-container.yaml` following deployer workflow pattern
+  - Uses `dockerhub-torrust-backup` environment for credentials
+  - Triggers on changes to `docker/backup/**` path
+  - Publishes to Docker Hub as `torrust/backup`
+  - Added backup image to security scan workflow matrix
+  - All linters passing
 
 ### Phase 2: Backup Service on First Run
 

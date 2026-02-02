@@ -42,6 +42,9 @@ jobs:
           - dockerfile: docker/ssh-server/Dockerfile
             context: docker/ssh-server
             name: ssh-server
+          - dockerfile: docker/backup/Dockerfile
+            context: docker/backup
+            name: tracker-backup
 
     steps:
       - name: Checkout code
