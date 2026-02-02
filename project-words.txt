@@ -278,6 +278,7 @@ pingoo
 pingooio
 pipefail
 pipx
+pkcs
 pkill
 postconditions
 preconfigured
@@ -374,6 +375,7 @@ tmpfs
 tmptu
 torrust
 transactionally
+trixie
 tryfrom
 tulnp
 tulpn

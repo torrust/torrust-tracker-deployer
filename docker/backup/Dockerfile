@@ -25,7 +25,7 @@
 #   Tests run during build using bats-core. Build fails if tests fail.
 # ============================================================================
 
-FROM debian:bookworm-slim AS base
+FROM debian:trixie-slim AS base
 
 # Install required utilities
 # - bash: for scripting
