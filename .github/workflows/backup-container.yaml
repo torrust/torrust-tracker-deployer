@@ -70,13 +70,17 @@ jobs:
           echo "=== Verifying backup container structure ==="
 
           echo "=== Checking backup script exists ==="
-          docker run --rm torrust/tracker-backup:local ls -lh /scripts/backup.sh
+          docker run --rm --entrypoint ls torrust/tracker-backup:local -lh /scripts/backup.sh
 
           echo "=== Checking backup directories ==="
-          docker run --rm torrust/tracker-backup:local ls -ld /backups/mysql /backups/sqlite /backups/config
+          docker run --rm --entrypoint ls torrust/tracker-backup:local -ld /backups/mysql /backups/sqlite /backups/config
 
           echo "=== Verifying tools installed ==="
-          docker run --rm torrust/tracker-backup:local which bash mysql sqlite3 gzip tar
+          docker run --rm --entrypoint which torrust/tracker-backup:local bash
+          docker run --rm --entrypoint which torrust/tracker-backup:local mysql
+          docker run --rm --entrypoint which torrust/tracker-backup:local sqlite3
+          docker run --rm --entrypoint which torrust/tracker-backup:local gzip
+          docker run --rm --entrypoint which torrust/tracker-backup:local tar
 
           echo "=== Checking entrypoint ==="
           docker inspect --format='{{.Config.Entrypoint}}' torrust/tracker-backup:local
