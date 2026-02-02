@@ -172,6 +172,7 @@ fswc
 getent
 getopt
 gobinary
+gpgv
 gosu
 handleable
 hashset
@@ -205,6 +206,7 @@ leechers
 letsencrypt
 libc
 libldap
+libmariadb
 libpam
 libpython
 libsqlite
@@ -221,6 +223,7 @@ lspconfig
 lvremove
 lxdbr
 maxbytes
+memalign
 mgmt
 millis
 minizip

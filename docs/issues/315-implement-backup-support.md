@@ -314,10 +314,15 @@ manual testing procedures.
   - Trigger on changes to `docker/backup/**` path
   - Publish to Docker Hub as `torrust/tracker-backup`
   - Tag with version and `latest`
-- [ ] Run manual security scan as per `docs/security/docker/README.md`
-  - `trivy image --severity HIGH,CRITICAL torrust/tracker-backup:latest`
-  - Document scan results
-  - Note: Requires image to be published first via CI workflow
+- [x] Run manual security scan as per `docs/security/docker/README.md`
+  - `trivy image --severity HIGH,CRITICAL torrust/tracker-backup:local`
+  - ⚠️ **10 vulnerabilities found** (7 HIGH, 3 CRITICAL)
+  - All vulnerabilities are in upstream Debian base OS packages (status: affected or will_not_fix)
+  - Critical CVEs: SQLite integer overflow (CVE-2025-7458), zlib buffer overflow (CVE-2023-45853)
+  - High CVEs: MariaDB RCE (CVE-2025-13699), glibc overflow (CVE-2026-0861), GnuPG overflow (CVE-2026-24882)
+  - Results documented in `docs/security/docker/scans/tracker-backup.md`
+  - **Status**: ⚠️ ACCEPTABLE RISK - vulnerabilities are in base OS, no fixes available from Debian yet
+  - **Mitigation**: Container runs with read-only data access, isolated network, non-root user, exits immediately after backup
 - [x] Add backup image to `.github/workflows/docker-security-scan.yml`
   - Add to `scan-project-images` matrix
   - Add SARIF upload step in `upload-sarif-results` job
