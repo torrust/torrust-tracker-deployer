@@ -814,7 +814,17 @@ Now that crontab handles scheduling, backup container should only run on-demand:
 
 ### Phase 1: Backup Container Image (Prerequisite)
 
-- [ ] Step 1.1: Create backup container directory (`docker/backup/`)
+- [x] Step 1.1: Create backup container directory (`docker/backup/`) ✅ **COMPLETE**
+  - Created `docker/backup/` with Dockerfile, backup.sh (360 lines), backup_test.bats (44 tests)
+  - All 44 unit tests passing
+  - Comprehensive function documentation added
+  - Code refactored for quality (DRY principle, extracted utilities)
+  - Container builds successfully with integrated testing
+- [x] Step 1.1b: Manual E2E Integration Test ✅ **COMPLETE**
+  - SQLite backup test: PASSED (see `docs/issues/315-phase-1.1b-results.md`)
+  - MySQL backup test: PASSED (see `docs/issues/315-phase-1.1b-results.md`)
+  - Both backup types verified with real deployments
+  - All services remained healthy during backup operations
 - [ ] Step 1.2: Create GitHub workflow for publishing
 
 ### Phase 2: Backup Service on First Run
