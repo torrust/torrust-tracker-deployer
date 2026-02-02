@@ -830,7 +830,7 @@ Now that crontab handles scheduling, backup container should only run on-demand:
   - Created `.github/workflows/backup-container.yaml` following deployer workflow pattern
   - Uses `dockerhub-torrust-backup` environment for credentials
   - Triggers on changes to `docker/backup/**` path
-  - Publishes to Docker Hub as `torrust/backup`
+  - Publishes to Docker Hub as `torrust/tracker-backup`
   - Added backup image to security scan workflow matrix
   - All linters passing
 
