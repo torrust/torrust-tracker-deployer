@@ -841,7 +841,22 @@ Now that crontab handles scheduling, backup container should only run on-demand:
 
 ### Phase 2: Backup Service on First Run
 
-- [ ] Step 2.1: Add backup configuration to create command
+- [x] Step 2.1: Add backup configuration to create command ✅ **COMPLETE**
+  - Created domain layer (`src/domain/backup/`): `BackupConfig`, `CronSchedule`, `RetentionDays`
+  - 39 parametrized unit tests (rstest) - all passing
+  - Custom `Deserialize` with validation for cron expressions
+  - Prevents command injection (validates cron format, rejects invalid characters)
+  - Created application layer DTO (`BackupSection` in `src/application/command_handlers/create/config/backup.rs`)
+  - 10 DTO tests covering defaults, validation, serialization
+  - Integrated into `EnvironmentCreationConfig` as `backup: Option<BackupSection>`
+  - Added `InvalidBackupConfig` error variant with comprehensive help messages
+  - Updated all test cases (25+ files) to include backup parameter
+  - Fixed 5 doc examples to include backup parameter
+  - Added backup section to JSON documentation example
+  - Fixed Dockerfile COPY paths for CI build context (repo root)
+  - All linters passing (markdown, yaml, toml, cspell, clippy, rustfmt, shellcheck)
+  - All 2138 lib tests passing, all 408 doc tests passing
+  - Defaults: schedule "0 3 \* \* \*" (3 AM daily), retention 7 days
 - [ ] Step 2.2: Add backup templates and docker-compose integration
 - [ ] Step 2.3: Add backup step to Release command
 - [ ] Step 2.4: Update create template command
