@@ -24,7 +24,7 @@
 # =============================================================================
 
 # Number of days to retain old backups before deletion
-BACKUP_RETENTION_DAYS={{ backup.retention_days }}
+BACKUP_RETENTION_DAYS={{ retention_days }}
 
 # Path to file containing list of files/directories to backup
 BACKUP_PATHS_FILE=/etc/backup/backup-paths.txt
@@ -33,16 +33,15 @@ BACKUP_PATHS_FILE=/etc/backup/backup-paths.txt
 # Database Configuration
 # =============================================================================
 
-{%- if mysql %}
+DB_TYPE={{ type }}
+{%- if type == "mysql" %}
 # MySQL database backup configuration
-DB_TYPE=mysql
-DB_HOST=mysql
-DB_PORT=3306
-DB_USER={{ mysql.user }}
-DB_PASSWORD={{ mysql.password }}
-DB_NAME={{ mysql.database }}
+DB_HOST={{ host }}
+DB_PORT={{ port }}
+DB_USER={{ user }}
+DB_PASSWORD={{ password }}
+DB_NAME={{ database }}
 {%- else %}
 # SQLite database backup configuration
-DB_TYPE=sqlite
-DB_PATH=/data/storage/tracker/lib/tracker.db
+DB_PATH={{ path }}
 {%- endif %}
