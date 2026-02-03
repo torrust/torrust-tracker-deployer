@@ -135,7 +135,7 @@ impl<S> RenderBackupTemplatesStep<S> {
 
         let backup_dir_path = self.build_dir.join("backup/etc");
 
-        generator.render(&context).await?;
+        generator.render(&context, backup_config.schedule()).await?;
 
         info!(
             step = "render_backup_templates",

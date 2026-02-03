@@ -7,9 +7,13 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use thiserror::Error;
 
+use crate::domain::backup::CronSchedule;
 use crate::domain::template::{TemplateManager, TemplateManagerError};
 use crate::infrastructure::templating::backup::template::renderer::backup_config::{
     BackupConfigRenderer, BackupConfigRendererError,
+};
+use crate::infrastructure::templating::backup::template::renderer::maintenance_cron::{
+    MaintenanceCronRenderer, MaintenanceCronRendererError,
 };
 use crate::infrastructure::templating::backup::template::wrapper::BackupContext;
 
@@ -46,6 +50,13 @@ pub enum BackupProjectGeneratorError {
         #[source]
         source: BackupConfigRendererError,
     },
+
+    /// Failed to render maintenance cron template
+    #[error("Failed to render maintenance cron template: {source}")]
+    MaintenanceCronRenderingFailed {
+        #[source]
+        source: MaintenanceCronRendererError,
+    },
 }
 
 /// Renders backup templates to a build directory
@@ -53,11 +64,13 @@ pub enum BackupProjectGeneratorError {
 /// This orchestrator is responsible for preparing backup templates for deployment.
 /// It handles:
 /// - Dynamic template rendering (backup.conf.tera with variables)
-/// - Static file copying (backup-paths.txt)
+/// - Dynamic template rendering (maintenance-backup.cron.tera with schedule)
+/// - Static file copying (backup-paths.txt, maintenance-backup.sh)
 pub struct BackupProjectGenerator {
     build_dir: PathBuf,
     template_manager: Arc<TemplateManager>,
     backup_config_renderer: BackupConfigRenderer,
+    maintenance_cron_renderer: MaintenanceCronRenderer,
 }
 
 impl BackupProjectGenerator {
@@ -76,11 +89,13 @@ impl BackupProjectGenerator {
     #[must_use]
     pub fn new<P: AsRef<Path>>(build_dir: P, template_manager: Arc<TemplateManager>) -> Self {
         let backup_config_renderer = BackupConfigRenderer::new(template_manager.clone());
+        let maintenance_cron_renderer = MaintenanceCronRenderer::new(template_manager.clone());
 
         Self {
             build_dir: build_dir.as_ref().to_path_buf(),
             template_manager,
             backup_config_renderer,
+            maintenance_cron_renderer,
         }
     }
 
@@ -89,12 +104,14 @@ impl BackupProjectGenerator {
     /// This method:
     /// 1. Creates the build directory structure for backup
     /// 2. Renders dynamic Tera templates with runtime variables (backup.conf.tera)
-    /// 3. Copies static templates (backup-paths.txt)
-    /// 4. Provides debug logging via the tracing crate
+    /// 3. Renders maintenance cron template with schedule (maintenance-backup.cron.tera)
+    /// 4. Copies static templates (backup-paths.txt, maintenance-backup.sh)
+    /// 5. Provides debug logging via the tracing crate
     ///
     /// # Arguments
     ///
     /// * `context` - Runtime context for backup template rendering (retention, database config)
+    /// * `schedule` - Cron schedule for backup execution
     ///
     /// # Returns
     ///
@@ -108,7 +125,11 @@ impl BackupProjectGenerator {
     /// - Template manager cannot provide required templates
     /// - Dynamic template rendering fails
     /// - Runtime variable substitution fails
-    pub async fn render(&self, context: &BackupContext) -> Result<(), BackupProjectGeneratorError> {
+    pub async fn render(
+        &self,
+        context: &BackupContext,
+        schedule: &CronSchedule,
+    ) -> Result<(), BackupProjectGeneratorError> {
         tracing::info!(template_type = "backup", "Rendering backup templates");
 
         // Create build directory structure
@@ -121,7 +142,14 @@ impl BackupProjectGenerator {
                 |source| BackupProjectGeneratorError::BackupConfigRenderingFailed { source },
             )?;
 
-        // Copy static backup-paths.txt file
+        // Render maintenance-backup.cron template with schedule
+        self.maintenance_cron_renderer
+            .render(schedule, &build_backup_dir)
+            .map_err(
+                |source| BackupProjectGeneratorError::MaintenanceCronRenderingFailed { source },
+            )?;
+
+        // Copy static backup-paths.txt and maintenance-backup.sh files
         self.copy_static_templates(&self.template_manager, &build_backup_dir)
             .await?;
 
@@ -165,7 +193,9 @@ impl BackupProjectGenerator {
 
     /// Copies static backup template files that don't require variable substitution
     ///
-    /// Currently only copies backup-paths.txt which contains the static list of files to backup.
+    /// Copies:
+    /// - backup-paths.txt: Static list of configuration files to backup
+    /// - maintenance-backup.sh: Host orchestration script for graceful backup execution
     async fn copy_static_templates(
         &self,
         template_manager: &TemplateManager,
@@ -177,7 +207,11 @@ impl BackupProjectGenerator {
         self.copy_static_file(template_manager, "backup-paths.txt", destination_dir)
             .await?;
 
-        tracing::debug!("Successfully copied 1 static template file");
+        // Copy maintenance backup script
+        self.copy_static_file(template_manager, "maintenance-backup.sh", destination_dir)
+            .await?;
+
+        tracing::debug!("Successfully copied 2 static template files");
 
         Ok(())
     }
@@ -219,6 +253,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
+    use crate::domain::backup::CronSchedule;
     use crate::infrastructure::templating::backup::BackupDatabaseConfig;
     use crate::infrastructure::templating::TemplateMetadata;
     use chrono::TimeZone;
@@ -242,8 +277,9 @@ mod tests {
             path: "/data/storage/tracker/lib/tracker.db".to_string(),
         };
         let context = BackupContext::new(metadata, 7, db_config);
+        let schedule = CronSchedule::default();
 
-        let result = generator.render(&context).await;
+        let result = generator.render(&context, &schedule).await;
 
         assert!(result.is_ok());
 
@@ -257,6 +293,17 @@ mod tests {
         // Verify backup-paths.txt was copied
         let backup_paths = build_dir.path().join("backup/etc/backup-paths.txt");
         assert!(backup_paths.exists());
+
+        // Verify maintenance-backup.cron was rendered
+        let maintenance_cron = build_dir.path().join("backup/etc/maintenance-backup.cron");
+        assert!(maintenance_cron.exists());
+        let file_content = std::fs::read_to_string(maintenance_cron)
+            .expect("Failed to read maintenance-backup.cron");
+        assert!(file_content.contains("0 3 * * *"));
+
+        // Verify maintenance-backup.sh was copied
+        let maintenance_script = build_dir.path().join("backup/etc/maintenance-backup.sh");
+        assert!(maintenance_script.exists());
     }
 
     #[tokio::test]
@@ -275,8 +322,9 @@ mod tests {
             password: "tracker_password".to_string(),
         };
         let context = BackupContext::new(metadata, 14, db_config);
+        let schedule = CronSchedule::default();
 
-        let result = generator.render(&context).await;
+        let result = generator.render(&context, &schedule).await;
 
         assert!(result.is_ok());
 
@@ -286,5 +334,13 @@ mod tests {
             std::fs::read_to_string(backup_conf).expect("Failed to read backup.conf");
         assert!(file_content.contains("DB_TYPE=mysql"));
         assert!(file_content.contains("DB_HOST=mysql"));
+
+        // Verify maintenance-backup.cron was rendered
+        let maintenance_cron = build_dir.path().join("backup/etc/maintenance-backup.cron");
+        assert!(maintenance_cron.exists());
+
+        // Verify maintenance-backup.sh was copied
+        let maintenance_script = build_dir.path().join("backup/etc/maintenance-backup.sh");
+        assert!(maintenance_script.exists());
     }
 }
