@@ -52,8 +52,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy test files
-COPY backup.sh /scripts/backup.sh
-COPY backup_test.bats /scripts/backup_test.bats
+COPY docker/backup/backup.sh /scripts/backup.sh
+COPY docker/backup/backup_test.bats /scripts/backup_test.bats
 RUN chmod +x /scripts/backup.sh
 
 # Run tests - build fails if tests fail
@@ -82,7 +82,7 @@ RUN mkdir -p /scripts /backups/mysql /backups/sqlite /backups/config && \
     chown -R ${BACKUP_UID}:${BACKUP_GID} /backups
 
 # Copy backup script (tests already passed in test stage)
-COPY backup.sh /scripts/backup.sh
+COPY docker/backup/backup.sh /scripts/backup.sh
 RUN chmod +x /scripts/backup.sh
 
 # Run as non-root user (torrust, uid 1000)
