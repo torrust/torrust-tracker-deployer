@@ -75,6 +75,10 @@ use super::tracker::TrackerSection;
 ///     "grafana": {
 ///         "admin_user": "admin",
 ///         "admin_password": "admin"
+///     },
+///     "backup": {
+///         "schedule": "0 3 * * *",
+///         "retention_days": 7
 ///     }
 /// }"#;
 ///
