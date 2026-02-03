@@ -1,0 +1,23 @@
+# ============================================================================
+# Torrust Backup Paths Configuration
+# ============================================================================
+#
+# List of files and directories to include in configuration backups.
+# One path per line. Paths are relative to the container's /data mount point.
+#
+# This is a static file - no template variables needed as the deployment
+# structure is fixed and consistent across all environments.
+#
+# ============================================================================
+
+# Tracker configuration
+/data/storage/tracker/etc/tracker.toml
+
+# Prometheus configuration
+/data/storage/prometheus/etc/prometheus.yml
+
+# Grafana provisioning (dashboards and datasources)
+/data/storage/grafana/provisioning
+
+# Caddy configuration (if HTTPS is enabled)
+/data/storage/caddy/etc/Caddyfile
