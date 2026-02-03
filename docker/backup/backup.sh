@@ -331,11 +331,14 @@ backup_mysql() {
     ensure_backup_directory "$BACKUP_DIR_MYSQL"
 
     # Perform backup with compression
+    # Use MYSQL_PWD env var to avoid password on command line
+    export MYSQL_PWD="$DB_PASSWORD"
+    
     if mysqldump \
+        --defaults-file=/etc/mysql/mysql-client.cnf \
         --host="$DB_HOST" \
         --port="$DB_PORT" \
         --user="$DB_USER" \
-        --password="$DB_PASSWORD" \
         --single-transaction \
         --quick \
         --lock-tables=false \

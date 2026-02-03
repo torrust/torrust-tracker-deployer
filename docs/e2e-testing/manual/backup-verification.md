@@ -341,6 +341,24 @@ Error: Failed to connect to MySQL at mysql:3306
 2. Check backup service has database_network: `docker compose config | grep -A 20 backup:`
 3. Wait for MySQL to be healthy: `docker compose ps` should show "healthy" status
 
+### Issue: MySQL backup fails with TLS/SSL error
+
+**Symptoms**:
+
+```text
+mysqldump: Got error: 2026: "TLS/SSL error: self-signed certificate in certificate chain"
+```
+
+**Cause**: MySQL 8.0+ enforces SSL by default, but the backup container needs to connect without strict SSL verification
+
+**Solution**: This is **automatically handled** by the backup container:
+
+- The Docker image includes a MySQL client configuration file at `/etc/mysql/mysql-client.cnf` with `ssl=FALSE` setting
+- The backup script references this config file via `--defaults-file=/etc/mysql/mysql-client.cnf`
+- Uses `MYSQL_PWD` environment variable for secure password handling
+
+**Status**: ✅ **FIXED** - Backup container v1.0+ includes proper SSL handling
+
 ### Issue: Backup files not created
 
 **Symptoms**: `/opt/torrust/storage/backup/database/` is empty after manual backup

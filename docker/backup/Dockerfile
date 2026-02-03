@@ -52,8 +52,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy test files
-COPY docker/backup/backup.sh /scripts/backup.sh
-COPY docker/backup/backup_test.bats /scripts/backup_test.bats
+COPY backup.sh /scripts/backup.sh
+COPY backup_test.bats /scripts/backup_test.bats
 RUN chmod +x /scripts/backup.sh
 
 # Run tests - build fails if tests fail
@@ -78,11 +78,18 @@ RUN groupadd -g ${BACKUP_GID} torrust 2>/dev/null || true && \
     useradd -u ${BACKUP_UID} -g ${BACKUP_GID} -s /bin/bash torrust 2>/dev/null || true
 
 # Create directories with correct ownership
-RUN mkdir -p /scripts /backups/mysql /backups/sqlite /backups/config && \
+RUN mkdir -p /scripts /backups/mysql /backups/sqlite /backups/config /etc/mysql && \
     chown -R ${BACKUP_UID}:${BACKUP_GID} /backups
 
+# Create MySQL client configuration (disable SSL verification for Docker connections)
+RUN cat > /etc/mysql/mysql-client.cnf <<'EOF' && \
+chmod 644 /etc/mysql/mysql-client.cnf
+[mysqldump]
+ssl=FALSE
+EOF
+
 # Copy backup script (tests already passed in test stage)
-COPY docker/backup/backup.sh /scripts/backup.sh
+COPY backup.sh /scripts/backup.sh
 RUN chmod +x /scripts/backup.sh
 
 # Run as non-root user (torrust, uid 1000)
