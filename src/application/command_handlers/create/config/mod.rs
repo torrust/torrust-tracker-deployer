@@ -132,6 +132,7 @@
 //! - **Actionable Feedback**: All errors provide `.help()` with troubleshooting steps
 //! - **Clean Separation**: Config layer is distinct from domain and adapter layers
 
+pub mod backup;
 pub mod environment_config;
 pub mod errors;
 pub mod grafana;
@@ -143,6 +144,7 @@ pub mod tracker;
 pub mod validated_params;
 
 // Re-export commonly used types for convenience
+pub use backup::BackupSection;
 pub use environment_config::{EnvironmentCreationConfig, EnvironmentSection};
 pub use errors::CreateConfigError;
 pub use grafana::GrafanaSection;

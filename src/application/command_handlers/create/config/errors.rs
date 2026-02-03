@@ -110,6 +110,10 @@ pub enum CreateConfigError {
     #[error("Invalid Prometheus configuration: {0}")]
     InvalidPrometheusConfig(String),
 
+    /// Invalid Backup configuration
+    #[error("Invalid Backup configuration: {0}")]
+    InvalidBackupConfig(String),
+
     /// Tracker configuration validation failed
     #[error("Tracker configuration validation failed: {0}")]
     TrackerConfigValidation(#[from] TrackerConfigError),
@@ -509,6 +513,42 @@ impl CreateConfigError {
                  \n\
                  Note: The template automatically adds the 's' suffix (e.g., 15 becomes '15s'),\n\
                  so you only need to specify the numeric value."
+            }
+            Self::InvalidBackupConfig(_) => {
+                "Invalid Backup configuration.\n\
+                 \n\
+                 Backup configuration errors can occur due to:\n\
+                 1. Invalid cron schedule format\n\
+                 2. Invalid retention days (must be greater than 0)\n\
+                 \n\
+                 Cron Schedule Requirements:\n\
+                 - Must use 5-field format: minute hour day month weekday\n\
+                 - Only supports: digits, *, -, /, , (comma), and spaces\n\
+                 - Each field must have valid values for its position\n\
+                 \n\
+                 Common cron schedules:\n\
+                 - \"0 3 * * *\" - 3:00 AM daily (default)\n\
+                 - \"0 */6 * * *\" - Every 6 hours\n\
+                 - \"0 0 * * 0\" - Midnight every Sunday\n\
+                 - \"30 2 1 * *\" - 2:30 AM on the 1st of every month\n\
+                 \n\
+                 Retention Days Requirements:\n\
+                 - Must be greater than 0\n\
+                 - Represents how many days to keep backup files\n\
+                 \n\
+                 Fix:\n\
+                 Update your backup configuration:\n\
+                 \n\
+                 \"backup\": {\n\
+                   \"schedule\": \"0 3 * * *\",\n\
+                   \"retention_days\": 7\n\
+                 }\n\
+                 \n\
+                 Or use defaults by providing an empty object:\n\
+                 \n\
+                 \"backup\": {}\n\
+                 \n\
+                 Note: All fields have sensible defaults (3:00 AM daily, 7 days retention)."
             }
             Self::TrackerConfigValidation(_) => {
                 "Tracker configuration validation failed.\n\
