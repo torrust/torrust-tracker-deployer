@@ -869,7 +869,21 @@ Now that crontab handles scheduling, backup container should only run on-demand:
   - Fixed GitHub workflow Docker build context (changed from `./docker/backup` to `.` for consistency)
   - Added comprehensive unit tests (15 tests total)
   - All 2148 lib tests passing, all 462 doc tests passing
-- [ ] Step 2.3: Add backup step to Release command
+- [x] Step 2.3: Add backup step to Release command ✅ **COMPLETE**
+  - Created `RenderBackupTemplatesStep` (async, converts database config to backup format)
+  - Created `CreateBackupStorageStep` for creating `/opt/torrust/storage/backup/etc` directory
+  - Created `DeployBackupConfigStep` for deploying backup.conf and backup-paths.txt via Ansible
+  - Added `backup::release()` orchestration module following prometheus/grafana pattern
+  - Created two Ansible playbooks:
+    - `create-backup-storage.yml` - Creates backup directory structure
+    - `deploy-backup-config.yml` - Deploys configuration files to existing directories
+  - Followed established two-step pattern (storage creation → config deployment)
+  - Added error handling: `CreateBackupStorageFailed`, `DeployBackupConfigFailed`
+  - Updated `ReleaseStep` enum with `CreateBackupStorage` variant
+  - Wired into release workflow between MySQL and Caddy steps
+  - Fixed linting issues (clippy, rustfmt, cspell)
+  - All 2163 lib tests passing, all 467 doc tests passing
+  - Pre-commit checks passing (lib tests, E2E tests, linters, machete)
 - [ ] Step 2.4: Update create template command
 
 ### Phase 3: Scheduled Backups via Crontab

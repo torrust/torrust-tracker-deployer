@@ -160,6 +160,7 @@ impl EnvironmentTestBuilder {
                 .as_ref()
                 .map(|_| GrafanaConfig::default()),
             None,
+            None, // No backup
         )
         .expect("Test UserInputs should always be valid with defaults");
 

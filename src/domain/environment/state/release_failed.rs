@@ -52,6 +52,12 @@ pub enum ReleaseStep {
     DeployGrafanaProvisioning,
     /// Creating `MySQL` storage directories on remote host
     CreateMysqlStorage,
+    /// Rendering Backup configuration templates to the build directory (if backup enabled)
+    RenderBackupTemplates,
+    /// Creating Backup storage directories on remote host (if backup enabled)
+    CreateBackupStorage,
+    /// Deploying Backup configuration to the remote host via Ansible (if backup enabled)
+    DeployBackupConfigToRemote,
     /// Rendering Caddy configuration templates to the build directory (if HTTPS enabled)
     RenderCaddyTemplates,
     /// Deploying Caddy configuration to the remote host via Ansible (if HTTPS enabled)
@@ -76,6 +82,9 @@ impl fmt::Display for ReleaseStep {
             Self::RenderGrafanaTemplates => "Render Grafana Templates",
             Self::DeployGrafanaProvisioning => "Deploy Grafana Provisioning",
             Self::CreateMysqlStorage => "Create MySQL Storage",
+            Self::RenderBackupTemplates => "Render Backup Templates",
+            Self::CreateBackupStorage => "Create Backup Storage",
+            Self::DeployBackupConfigToRemote => "Deploy Backup Config to Remote",
             Self::RenderCaddyTemplates => "Render Caddy Templates",
             Self::DeployCaddyConfigToRemote => "Deploy Caddy Config to Remote",
             Self::RenderDockerComposeTemplates => "Render Docker Compose Templates",

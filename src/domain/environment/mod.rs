@@ -1118,6 +1118,7 @@ mod tests {
                 Some(PrometheusConfig::default()),
                 Some(GrafanaConfig::default()),
                 None,
+                None, // No backup
             )
             .expect("Test UserInputs should always be valid with defaults");
 

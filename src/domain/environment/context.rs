@@ -241,6 +241,7 @@ impl EnvironmentContext {
                 params.prometheus_config,
                 params.grafana_config,
                 params.https_config,
+                None, // No backup (not yet passed through params)
             )?,
             internal_config: InternalConfig::with_working_dir(
                 &params.environment_name,

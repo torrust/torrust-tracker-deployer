@@ -24,7 +24,7 @@
 //! **Preferred pattern**: In cases where there are fewer, well-defined error sources,
 //! prefer using concrete types with `#[source]` for better type safety and traceability.
 
-use crate::domain::environment::state::StateTypeError;
+use crate::domain::environment::state::{ReleaseStep, StateTypeError};
 use crate::shared::error::{ErrorKind, Traceable};
 
 /// Type alias for boxed step errors to reduce verbosity
@@ -122,6 +122,42 @@ pub enum ReleaseCommandHandlerError {
         source: BoxedStepError,
     },
 
+    /// Backup template rendering failed
+    #[error("Backup template rendering failed: {message}")]
+    RenderBackupTemplatesFailed {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the rendering step
+        #[source]
+        source: BoxedStepError,
+        /// The release step that failed
+        step: ReleaseStep,
+    },
+
+    /// Backup configuration deployment failed
+    #[error("Backup configuration deployment failed: {message}")]
+    DeployBackupConfigFailed {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the deployment step
+        #[source]
+        source: BoxedStepError,
+        /// The release step that failed
+        step: ReleaseStep,
+    },
+
+    /// Backup storage directory creation failed
+    #[error("Backup storage creation failed: {message}")]
+    CreateBackupStorageFailed {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the storage creation step
+        #[source]
+        source: BoxedStepError,
+        /// The release step that failed
+        step: ReleaseStep,
+    },
+
     /// Caddy configuration deployment failed
     #[error("Caddy configuration deployment failed: {message}")]
     CaddyConfigDeployment {
@@ -217,6 +253,15 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::MysqlStorageCreation { message, .. } => {
                 format!("ReleaseCommandHandlerError: MySQL storage creation failed - {message}")
             }
+            Self::RenderBackupTemplatesFailed { message, .. } => {
+                format!("ReleaseCommandHandlerError: Backup template rendering failed - {message}")
+            }
+            Self::CreateBackupStorageFailed { message, .. } => {
+                format!("ReleaseCommandHandlerError: Backup storage creation failed - {message}")
+            }
+            Self::DeployBackupConfigFailed { message, .. } => {
+                format!("ReleaseCommandHandlerError: Backup configuration deployment failed - {message}")
+            }
             Self::CaddyConfigDeployment { message, .. } => {
                 format!(
                     "ReleaseCommandHandlerError: Caddy configuration deployment failed - {message}"
@@ -263,6 +308,9 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::PrometheusStorageCreation { .. }
             | Self::GrafanaStorageCreation { .. }
             | Self::MysqlStorageCreation { .. }
+            | Self::RenderBackupTemplatesFailed { .. }
+            | Self::CreateBackupStorageFailed { .. }
+            | Self::DeployBackupConfigFailed { .. }
             | Self::CaddyConfigDeployment { .. }
             | Self::TrackerConfigDeployment { .. }
             | Self::GrafanaProvisioningDeployment { .. }
@@ -284,6 +332,9 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::PrometheusStorageCreation { .. }
             | Self::GrafanaStorageCreation { .. }
             | Self::MysqlStorageCreation { .. }
+            | Self::RenderBackupTemplatesFailed { .. }
+            | Self::CreateBackupStorageFailed { .. }
+            | Self::DeployBackupConfigFailed { .. }
             | Self::CaddyConfigDeployment { .. }
             | Self::TrackerConfigDeployment { .. }
             | Self::GrafanaProvisioningDeployment { .. }
@@ -529,6 +580,48 @@ Common causes:
 - Network connectivity issues
 
 For more information, see docs/user-guide/commands.md"
+            }
+            Self::RenderBackupTemplatesFailed { .. } => {
+                "Backup Template Rendering Failed - Troubleshooting:
+
+1. Verify backup configuration is present in environment
+2. Check template files exist:
+   ls templates/backup/
+
+3. Verify backup templates are valid:
+   - backup.conf.tera should exist
+   - backup-paths.txt should exist
+
+4. Check template rendering permissions
+5. Review the error message above for specific details"
+            }
+            Self::CreateBackupStorageFailed { .. } => {
+                "Backup Storage Creation Failed - Troubleshooting:
+
+1. Verify SSH connection to remote host
+2. Check Ansible playbook exists:
+   ls templates/ansible/create-backup-storage.yml
+
+3. Check remote host permissions:
+   ssh <user>@<host> 'ls -la /opt/torrust/storage/'
+
+4. Verify disk space on remote host:
+   ssh <user>@<host> 'df -h'
+
+5. Review Ansible playbook execution logs above"
+            }
+            Self::DeployBackupConfigFailed { .. } => {
+                "Backup Configuration Deployment Failed - Troubleshooting:
+
+1. Verify SSH connection to remote host
+2. Check Ansible playbook exists:
+   ls templates/ansible/deploy-backup-config.yml
+
+3. Verify remote storage directory exists:
+   ssh <user>@<host> 'ls -la /opt/torrust/storage/backup/'
+
+4. Check file permissions on remote host
+5. Review Ansible playbook execution logs above"
             }
             Self::CaddyConfigDeployment { .. } => {
                 "Caddy Configuration Deployment Failed - Troubleshooting:

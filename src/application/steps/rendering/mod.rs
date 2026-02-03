@@ -12,6 +12,7 @@
 //! - `tracker_templates` - Tracker configuration template rendering
 //! - `prometheus_templates` - Prometheus configuration template rendering
 //! - `grafana_templates` - Grafana provisioning template rendering
+//! - `backup_templates` - Backup configuration template rendering
 //!
 //! ## Key Features
 //!
@@ -24,6 +25,7 @@
 //! runtime information like IP addresses, SSH keys, and deployment settings.
 
 pub mod ansible_templates;
+pub mod backup_templates;
 pub mod caddy_templates;
 pub mod docker_compose_templates;
 pub mod grafana_templates;
@@ -32,6 +34,7 @@ pub mod prometheus_templates;
 pub mod tracker_templates;
 
 pub use ansible_templates::RenderAnsibleTemplatesStep;
+pub use backup_templates::RenderBackupTemplatesStep;
 pub use caddy_templates::RenderCaddyTemplatesStep;
 pub use docker_compose_templates::RenderDockerComposeTemplatesStep;
 pub use grafana_templates::RenderGrafanaTemplatesStep;
