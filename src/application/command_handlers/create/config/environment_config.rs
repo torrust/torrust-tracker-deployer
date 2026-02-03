@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::provider::Provider;
 
+use super::backup::BackupSection;
 use super::errors::CreateConfigError;
 use super::grafana::GrafanaSection;
 use super::https::HttpsSection;
@@ -130,6 +131,19 @@ pub struct EnvironmentCreationConfig {
     /// Uses `HttpsSection` for JSON parsing.
     #[serde(default)]
     pub https: Option<HttpsSection>,
+
+    /// Backup configuration (optional)
+    ///
+    /// When present, automated backups will be configured for the tracker
+    /// database and other persistent data.
+    ///
+    /// Uses `BackupSection` for JSON parsing with String primitives (cron schedule).
+    /// Converted to domain `BackupConfig` via `TryInto<EnvironmentParams>`.
+    ///
+    /// Default schedule: 3:00 AM daily ("0 3 * * *")
+    /// Default retention: 7 days
+    #[serde(default)]
+    pub backup: Option<BackupSection>,
 }
 
 /// Environment-specific configuration section
@@ -188,9 +202,11 @@ impl EnvironmentCreationConfig {
     ///     None,
     ///     None,
     ///     None,
+    ///     None,
     /// );
     /// ```
     #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         environment: EnvironmentSection,
         ssh_credentials: SshCredentialsConfig,
@@ -199,6 +215,7 @@ impl EnvironmentCreationConfig {
         prometheus: Option<PrometheusSection>,
         grafana: Option<GrafanaSection>,
         https: Option<HttpsSection>,
+        backup: Option<BackupSection>,
     ) -> Self {
         Self {
             environment,
@@ -208,6 +225,7 @@ impl EnvironmentCreationConfig {
             prometheus,
             grafana,
             https,
+            backup,
         }
     }
 
@@ -324,7 +342,8 @@ impl EnvironmentCreationConfig {
             },
             prometheus: Some(PrometheusSection::default()),
             grafana: Some(GrafanaSection::default()),
-            https: None, // Set to HttpsSection with admin_email for HTTPS deployments
+            https: None,  // Set to HttpsSection with admin_email for HTTPS deployments
+            backup: None, // Set to BackupSection or empty object {} for automated backups
         }
     }
 
@@ -429,6 +448,7 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
             None,
             None,
             None,
@@ -582,6 +602,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         let json = serde_json::to_string(&config).unwrap();
@@ -606,6 +627,7 @@ mod tests {
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
             None,
             None,
             None,
@@ -642,6 +664,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         let result: Result<EnvironmentParams, _> = config.try_into();
@@ -669,6 +692,7 @@ mod tests {
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile"),
             TrackerSection::default(),
+            None,
             None,
             None,
             None,
@@ -704,6 +728,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         let result: Result<EnvironmentParams, _> = config.try_into();
@@ -736,6 +761,7 @@ mod tests {
                 profile_name: "invalid-".to_string(), // ends with dash - invalid
             }),
             TrackerSection::default(),
+            None,
             None,
             None,
             None,
@@ -776,6 +802,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         let result: Result<EnvironmentParams, _> = config.try_into();
@@ -809,6 +836,7 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
             None,
             None,
             None,
@@ -848,6 +876,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         let result: Result<EnvironmentParams, _> = config.try_into();
@@ -882,6 +911,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         let params: EnvironmentParams = config.try_into().unwrap();
@@ -912,6 +942,7 @@ mod tests {
             ),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
             None,
             None,
             None,
@@ -1003,6 +1034,7 @@ mod tests {
             ),
             default_lxd_provider("test-profile"),
             TrackerSection::default(),
+            None,
             None,
             None,
             None,
@@ -1158,6 +1190,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         assert!(!config.has_any_tls_configured());
@@ -1211,6 +1244,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         assert!(config.has_any_tls_configured());
@@ -1232,6 +1266,7 @@ mod tests {
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
             default_lxd_provider("torrust-profile-dev"),
             TrackerSection::default(),
+            None,
             None,
             None,
             None,
@@ -1272,6 +1307,7 @@ mod tests {
                 admin_email: "admin@example.com".to_string(),
                 use_staging: false,
             }),
+            None,
         );
 
         // HTTPS section with valid email should convert successfully
@@ -1304,6 +1340,7 @@ mod tests {
                 admin_email: "invalid-email".to_string(), // Invalid email
                 use_staging: false,
             }),
+            None,
         );
 
         let result: Result<EnvironmentParams, _> = config.try_into();
@@ -1366,6 +1403,7 @@ mod tests {
                 admin_email: "admin@example.com".to_string(),
                 use_staging: false,
             }),
+            None,
         );
 
         // Note: Email validation now happens in domain layer (HttpsConfig::new())

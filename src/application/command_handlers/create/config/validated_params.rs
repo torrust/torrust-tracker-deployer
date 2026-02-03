@@ -167,6 +167,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
     }
 
@@ -201,6 +202,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         let params: EnvironmentParams = config.try_into().unwrap();
@@ -223,6 +225,7 @@ mod tests {
                 profile_name: "lxd-test".to_string(),
             }),
             TrackerSection::default(),
+            None,
             None,
             None,
             None,
