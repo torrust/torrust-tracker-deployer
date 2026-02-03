@@ -78,6 +78,7 @@ use super::errors::CreateCommandHandlerError;
 ///     None, // prometheus
 ///     None, // grafana
 ///     None, // https
+///     None, // backup
 /// );
 ///
 /// // Execute command with working directory
@@ -195,6 +196,7 @@ impl CreateCommandHandler {
     ///     None, // prometheus
     ///     None, // grafana
     ///     None, // https
+    ///     None, // backup
     /// );
     ///
     /// let working_dir = std::path::Path::new(".");

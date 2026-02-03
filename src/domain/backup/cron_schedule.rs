@@ -44,7 +44,7 @@ impl CronSchedule {
     /// # Examples
     ///
     /// ```
-    /// use torrust_tracker_deployer::domain::backup::CronSchedule;
+    /// use torrust_tracker_deployer_lib::domain::backup::CronSchedule;
     ///
     /// let schedule = CronSchedule::new("0 3 * * *".to_string())?;
     /// assert_eq!(schedule.as_str(), "0 3 * * *");

@@ -30,7 +30,7 @@ impl RetentionDays {
     /// # Examples
     ///
     /// ```
-    /// use torrust_tracker_deployer::domain::backup::RetentionDays;
+    /// use torrust_tracker_deployer_lib::domain::backup::RetentionDays;
     ///
     /// let retention = RetentionDays::new(7)?;
     /// assert_eq!(retention.as_u32(), 7);
