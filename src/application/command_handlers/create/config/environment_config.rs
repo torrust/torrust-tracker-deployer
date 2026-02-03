@@ -346,8 +346,8 @@ impl EnvironmentCreationConfig {
             },
             prometheus: Some(PrometheusSection::default()),
             grafana: Some(GrafanaSection::default()),
-            https: None,  // Set to HttpsSection with admin_email for HTTPS deployments
-            backup: None, // Set to BackupSection or empty object {} for automated backups
+            https: None, // Set to HttpsSection with admin_email for HTTPS deployments
+            backup: Some(super::backup::BackupSection::default()), // Backups enabled by default with daily 3 AM schedule and 7-day retention
         }
     }
 
