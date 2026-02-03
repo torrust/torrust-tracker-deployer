@@ -857,7 +857,18 @@ Now that crontab handles scheduling, backup container should only run on-demand:
   - All linters passing (markdown, yaml, toml, cspell, clippy, rustfmt, shellcheck)
   - All 2138 lib tests passing, all 408 doc tests passing
   - Defaults: schedule "0 3 \* \* \*" (3 AM daily), retention 7 days
-- [ ] Step 2.2: Add backup templates and docker-compose integration
+- [x] Step 2.2: Add backup templates and docker-compose integration ✅ **COMPLETE**
+  - Created `templates/backup/backup.conf.tera` (dynamic template for backup configuration)
+  - Created `templates/backup/backup-paths.txt` (static list of files to backup)
+  - Added backup service to `docker-compose.yml.tera` (conditional on backup section)
+  - Created `BackupProjectGenerator` for template orchestration
+  - Added `BackupContext` with MySQL/SQLite database config variants (tagged enum, flattened)
+  - Implemented `BackupConfigRenderer` for backup.conf.tera rendering
+  - Added `BackupTemplate` wrapper for Tera template handling
+  - Registered backup module in templating infrastructure
+  - Fixed GitHub workflow Docker build context (changed from `./docker/backup` to `.` for consistency)
+  - Added comprehensive unit tests (15 tests total)
+  - All 2148 lib tests passing, all 462 doc tests passing
 - [ ] Step 2.3: Add backup step to Release command
 - [ ] Step 2.4: Update create template command
 
