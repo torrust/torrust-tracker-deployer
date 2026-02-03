@@ -893,7 +893,19 @@ Now that crontab handles scheduling, backup container should only run on-demand:
   - Fixed linting issues (clippy, rustfmt, cspell)
   - All 2163 lib tests passing, all 467 doc tests passing
   - Pre-commit checks passing (lib tests, E2E tests, linters, machete)
-- [ ] Step 2.4: Update create template command
+- [x] Step 2.4: Update create template command ✅ **COMPLETE**
+  - Modified `EnvironmentCreationConfig::template()` to include `BackupSection::default()`
+  - Backup now enabled by default in generated templates with:
+    - Default schedule: 3:00 AM daily (`0 3 * * *`)
+    - Default retention: 7 days
+  - Regenerated JSON schema with complete `BackupSection` definition:
+    - `schedule` field with examples and constraints
+    - `retention_days` field with validation rules
+    - Full documentation for IDE autocomplete and validation
+  - Fixed schema file header (removed cargo build output)
+  - All linters passing (markdown, yaml, toml, cspell, clippy, rustfmt, shellcheck)
+  - All pre-commit checks passing (2163+ lib tests, E2E tests)
+  - Commit: `549fcaf6` - feat: [#315] Step 2.4 - Update create template command
 
 ### Phase 3: Scheduled Backups via Crontab
 
