@@ -136,6 +136,9 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
         // Apply Grafana configuration (independent of database choice)
         let builder = self.apply_grafana_config(builder);
 
+        // Apply Backup configuration (if configured)
+        let builder = self.apply_backup_config(builder);
+
         // Apply Caddy configuration (if HTTPS enabled)
         let builder = self.apply_caddy_config(builder);
         let docker_compose_context = builder.build();
@@ -281,6 +284,17 @@ impl<S> RenderDockerComposeTemplatesStep<S> {
     ) -> DockerComposeContextBuilder {
         if let Some(grafana_config) = self.environment.grafana_config() {
             builder.with_grafana(grafana_config.clone())
+        } else {
+            builder
+        }
+    }
+
+    fn apply_backup_config(
+        &self,
+        builder: DockerComposeContextBuilder,
+    ) -> DockerComposeContextBuilder {
+        if let Some(backup_config) = self.environment.backup_config() {
+            builder.with_backup(backup_config.clone())
         } else {
             builder
         }

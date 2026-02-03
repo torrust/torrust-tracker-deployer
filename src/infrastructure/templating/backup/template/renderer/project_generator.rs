@@ -62,7 +62,7 @@ pub struct BackupProjectGenerator {
 
 impl BackupProjectGenerator {
     /// Default relative path for backup configuration files
-    const BACKUP_BUILD_PATH: &'static str = "storage/backup/etc";
+    const BACKUP_BUILD_PATH: &'static str = "backup/etc";
 
     /// Default template path prefix for backup templates
     const BACKUP_TEMPLATE_PATH: &'static str = "backup";
@@ -248,14 +248,14 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify backup.conf was rendered
-        let backup_conf = build_dir.path().join("storage/backup/etc/backup.conf");
+        let backup_conf = build_dir.path().join("backup/etc/backup.conf");
         assert!(backup_conf.exists());
         let file_content =
             std::fs::read_to_string(backup_conf).expect("Failed to read backup.conf");
         assert!(file_content.contains("DB_TYPE=sqlite"));
 
         // Verify backup-paths.txt was copied
-        let backup_paths = build_dir.path().join("storage/backup/etc/backup-paths.txt");
+        let backup_paths = build_dir.path().join("backup/etc/backup-paths.txt");
         assert!(backup_paths.exists());
     }
 
@@ -280,7 +280,7 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let backup_conf = build_dir.path().join("storage/backup/etc/backup.conf");
+        let backup_conf = build_dir.path().join("backup/etc/backup.conf");
         assert!(backup_conf.exists());
         let file_content =
             std::fs::read_to_string(backup_conf).expect("Failed to read backup.conf");

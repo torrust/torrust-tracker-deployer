@@ -36,7 +36,7 @@
   tasks:
     - name: Copy backup.conf to VM
       ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../backup/backup.conf"
+        src: "{{ playbook_dir }}/../backup/etc/backup.conf"
         dest: /opt/torrust/storage/backup/etc/backup.conf
         mode: "0644"
         owner: "{{ ansible_user }}"
@@ -44,7 +44,7 @@
 
     - name: Copy backup-paths.txt to VM
       ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../backup/backup-paths.txt"
+        src: "{{ playbook_dir }}/../backup/etc/backup-paths.txt"
         dest: /opt/torrust/storage/backup/etc/backup-paths.txt
         mode: "0644"
         owner: "{{ ansible_user }}"

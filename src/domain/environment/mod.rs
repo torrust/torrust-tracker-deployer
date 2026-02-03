@@ -141,6 +141,9 @@ pub use crate::domain::prometheus::PrometheusConfig;
 // Re-export Grafana types for convenience
 pub use crate::domain::grafana::GrafanaConfig;
 
+// Re-export Backup types for convenience
+pub use crate::domain::backup::BackupConfig;
+
 use crate::adapters::ssh::SshCredentials;
 use crate::domain::provider::ProviderConfig;
 use crate::domain::{InstanceName, ProfileName};
@@ -474,6 +477,12 @@ impl<S> Environment<S> {
     #[must_use]
     pub fn grafana_config(&self) -> Option<&GrafanaConfig> {
         self.context.grafana_config()
+    }
+
+    /// Returns the Backup configuration if enabled
+    #[must_use]
+    pub fn backup_config(&self) -> Option<&BackupConfig> {
+        self.context.backup_config()
     }
 
     /// Returns the SSH username for this environment

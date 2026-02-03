@@ -133,7 +133,7 @@ impl<S> RenderBackupTemplatesStep<S> {
 
         let context = BackupContext::from_config(metadata, backup_config, backup_database_config);
 
-        let backup_dir_path = self.build_dir.join("storage/backup/etc");
+        let backup_dir_path = self.build_dir.join("backup/etc");
 
         generator.render(&context).await?;
 
@@ -156,7 +156,7 @@ fn convert_database_config_to_backup(config: &DatabaseConfig) -> BackupDatabaseC
     match config {
         DatabaseConfig::Sqlite(sqlite_config) => BackupDatabaseConfig::Sqlite {
             path: format!(
-                "/data/storage/tracker/lib/{}",
+                "/data/storage/tracker/lib/database/{}",
                 sqlite_config.database_name()
             ),
         },
@@ -214,8 +214,9 @@ mod tests {
         let templates_dir = TempDir::new().expect("Failed to create templates dir");
         let build_dir = TempDir::new().expect("Failed to create build dir");
 
-        let (environment, _, _, _temp_dir) =
-            EnvironmentTestBuilder::new().build_with_custom_paths();
+        let (environment, _, _, _temp_dir) = EnvironmentTestBuilder::new()
+            .with_backup_config(Some(crate::domain::backup::BackupConfig::default()))
+            .build_with_custom_paths();
         let environment = Arc::new(environment);
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
@@ -230,8 +231,12 @@ mod tests {
         let result = step.execute().await;
 
         // Assert
-        // Since we can't configure backup via the builder, this will skip rendering
+        // With backup configured, templates should render
         assert!(result.is_ok());
+        assert!(
+            result.unwrap().is_some(),
+            "Should return Some when backup is configured"
+        );
     }
 
     #[tokio::test]
@@ -240,8 +245,9 @@ mod tests {
         let templates_dir = TempDir::new().expect("Failed to create templates dir");
         let build_dir = TempDir::new().expect("Failed to create build dir");
 
-        let (environment, _, _, _temp_dir) =
-            EnvironmentTestBuilder::new().build_with_custom_paths();
+        let (environment, _, _, _temp_dir) = EnvironmentTestBuilder::new()
+            .with_backup_config(Some(crate::domain::backup::BackupConfig::default()))
+            .build_with_custom_paths();
         let environment = Arc::new(environment);
 
         let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
@@ -256,7 +262,11 @@ mod tests {
         let result = step.execute().await;
 
         // Assert
-        // Since we can't configure backup via the builder, this will skip rendering
+        // With backup configured, templates should render
         assert!(result.is_ok());
+        assert!(
+            result.unwrap().is_some(),
+            "Should return Some when backup is configured"
+        );
     }
 }
