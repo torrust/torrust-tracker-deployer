@@ -828,9 +828,18 @@ Now that crontab handles scheduling, backup container should only run on-demand:
   - Container builds successfully with integrated testing
 - [x] Step 1.1b: Manual E2E Integration Test ✅ **COMPLETE**
   - SQLite backup test: PASSED (see `docs/issues/315-phase-1.1b-results.md`)
-  - MySQL backup test: PASSED (see `docs/issues/315-phase-1.1b-results.md`)
+  - MySQL backup test: PASSED - Full verification completed
+    - Environment created, provisioned, configured, released, running
+    - Backup executed via `docker compose run --rm backup`
+    - MySQL backup file created: `mysql_20260203_194732.sql.gz` (961 bytes)
+    - Config backup created: `config_20260203_194732.tar.gz` (6.5K)
+    - SQL dump verified: Contains valid MySQL 8.4 database structure and table definitions
+    - Expected "PROCESS privilege" warning is non-fatal and correctly documented
   - Both backup types verified with real deployments
   - All services remained healthy during backup operations
+  - Fixed MySQL SSL/TLS connection issue by embedding `/etc/mysql/mysql-client.cnf` in Docker image
+  - Simplified backup_mysql() function - removed runtime temp file creation
+  - Configuration embedded at build time, not generated on the fly
 - [x] Step 1.2: Create GitHub workflow for publishing ✅ **COMPLETE**
   - Created `.github/workflows/backup-container.yaml` following deployer workflow pattern
   - Uses `dockerhub-torrust-backup` environment for credentials
@@ -924,18 +933,22 @@ Now that crontab handles scheduling, backup container should only run on-demand:
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh` ✅ **VERIFIED**
 
 **Task-Specific Criteria**:
 
-- [ ] Users can enable backup in environment configuration
-- [ ] Backup container is deployed with docker-compose stack
-- [ ] Crontab runs daily backups at configured time
-- [ ] MySQL and SQLite databases are backed up correctly
-- [ ] Configuration files are archived
-- [ ] Old backups are cleaned up per retention policy
-- [ ] Documentation covers backup usage and configuration
-- [ ] All E2E tests pass
+- [x] Users can enable backup in environment configuration ✅ **VERIFIED**
+- [x] Backup container is deployed with docker-compose stack ✅ **VERIFIED**
+- [ ] Crontab runs daily backups at configured time (Phase 3)
+- [x] MySQL and SQLite databases are backed up correctly ✅ **VERIFIED**
+  - SQLite: Valid compressed database file created
+  - MySQL: Valid SQL dump created with proper headers and table definitions
+- [x] Configuration files are archived ✅ **VERIFIED**
+- [x] Old backups are cleaned up per retention policy ✅ **VERIFIED**
+- [x] Documentation covers backup usage and configuration ✅ **VERIFIED**
+  - Updated: `docs/e2e-testing/manual/backup-verification.md`
+  - Added: MySQL-specific warnings, SQL verification procedures, actual backup output examples
+- [ ] All E2E tests pass (depends on Phase 3 completion)
 
 ## Technical Notes
 
@@ -958,6 +971,42 @@ Key insights from Issue #310 research:
    needed.
 
 5. **Log rotation**: Add logrotate config for `/var/log/tracker-backup.log`
+
+### MySQL SSL/TLS Configuration for Docker Backups
+
+**Challenge**: MySQL 8.4 enforces SSL by default, but mysqldump was failing with:
+
+```text
+Got error: 2026: "TLS/SSL error: self-signed certificate in certificate chain"
+```
+
+**Root Cause**: Docker MySQL service uses self-signed certificates, and mysqldump
+tries to verify them by default. The backup user (`tracker_user`) doesn't have
+PROCESS privilege needed for some advanced SSL verification.
+
+**Solution Implemented**:
+
+- Embed MySQL client configuration in Docker image at build time: `/etc/mysql/mysql-client.cnf`
+- Configuration includes: `[mysqldump]` section with `ssl=FALSE`
+- Backup script references config via: `--defaults-file=/etc/mysql/mysql-client.cnf`
+- Use `MYSQL_PWD` environment variable instead of command-line password
+- No runtime file creation or cleanup needed
+
+**Benefits**:
+
+- ✅ Configuration managed at build time (better practice)
+- ✅ Cleaner runtime code (no temp file handling)
+- ✅ More maintainable and testable
+
+**Expected MySQL Backup Warning** (Non-Fatal):
+
+```text
+mysqldump: Error: 'Access denied; you need (at least one of) the PROCESS privilege(s)
+for this operation' when trying to dump tablespaces
+```
+
+This warning is expected because the backup user lacks PROCESS privilege for metadata-only
+operations. The actual database backup completes successfully with all table data intact.
 
 ### Related Files to Modify
 
