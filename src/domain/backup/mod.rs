@@ -13,6 +13,14 @@ pub use retention_days::RetentionDays;
 
 use serde::{Deserialize, Serialize};
 
+use crate::domain::topology::{
+    DependencyCondition, EnabledServices, Network, NetworkDerivation, PortBinding, PortDerivation,
+    Service, ServiceDependency,
+};
+
+// Re-export the trait so users can import it from this module
+pub use crate::domain::topology::traits::DependencyDerivation;
+
 /// Backup configuration for a deployed tracker instance.
 ///
 /// Specifies when backups run (cron schedule) and how long to keep them (retention).
@@ -61,6 +69,53 @@ impl Default for BackupConfig {
         Self {
             schedule: CronSchedule::default(),
             retention_days: RetentionDays::default(),
+        }
+    }
+}
+
+// =============================================================================
+// Topology Trait Implementations
+// =============================================================================
+
+impl PortDerivation for BackupConfig {
+    /// Backup service exposes no ports
+    ///
+    /// The backup container runs as a one-shot service and doesn't listen
+    /// on any network ports.
+    fn derive_ports(&self) -> Vec<PortBinding> {
+        vec![]
+    }
+}
+
+impl NetworkDerivation for BackupConfig {
+    /// Backup connects to Database network when `MySQL` is enabled
+    ///
+    /// When `MySQL` is the database driver, the backup container needs access
+    /// to the database network to connect to `MySQL` for database dumps.
+    /// For `SQLite`, no network access is needed (file access via volume).
+    fn derive_networks(&self, enabled_services: &EnabledServices) -> Vec<Network> {
+        if enabled_services.has(Service::MySQL) {
+            vec![Network::Database]
+        } else {
+            vec![]
+        }
+    }
+}
+
+impl DependencyDerivation for BackupConfig {
+    /// Backup depends on `MySQL` service being healthy when `MySQL` is enabled
+    ///
+    /// When `MySQL` is the database driver, the backup must wait for `MySQL`
+    /// to be ready before attempting database dumps.
+    /// For `SQLite`, no external dependencies are needed.
+    fn derive_dependencies(&self, enabled_services: &EnabledServices) -> Vec<ServiceDependency> {
+        if enabled_services.has(Service::MySQL) {
+            vec![ServiceDependency {
+                service: Service::MySQL,
+                condition: DependencyCondition::ServiceHealthy,
+            }]
+        } else {
+            vec![]
         }
     }
 }

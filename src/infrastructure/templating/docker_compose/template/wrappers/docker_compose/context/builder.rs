@@ -3,11 +3,13 @@
 use std::collections::{HashMap, HashSet};
 
 // Internal crate
+use crate::domain::backup::BackupConfig;
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::topology::{EnabledServices, Network, Service};
 use crate::infrastructure::templating::TemplateMetadata;
 
+use super::backup::BackupServiceContext;
 use super::caddy::CaddyServiceContext;
 use super::database::{DatabaseConfig, MysqlSetupConfig, DRIVER_MYSQL, DRIVER_SQLITE};
 use super::grafana::GrafanaServiceContext;
@@ -30,6 +32,7 @@ pub struct DockerComposeContextBuilder {
     database: DatabaseConfig,
     prometheus_config: Option<PrometheusConfig>,
     grafana_config: Option<GrafanaConfig>,
+    backup_config: Option<BackupConfig>,
     has_caddy: bool,
 }
 
@@ -45,6 +48,7 @@ impl DockerComposeContextBuilder {
             },
             prometheus_config: None,
             grafana_config: None,
+            backup_config: None,
             has_caddy: false,
         }
     }
@@ -82,6 +86,17 @@ impl DockerComposeContextBuilder {
     #[must_use]
     pub fn with_grafana(mut self, grafana_config: GrafanaConfig) -> Self {
         self.grafana_config = Some(grafana_config);
+        self
+    }
+
+    /// Adds Backup configuration
+    ///
+    /// # Arguments
+    ///
+    /// * `backup_config` - Backup configuration
+    #[must_use]
+    pub fn with_backup(mut self, backup_config: BackupConfig) -> Self {
+        self.backup_config = Some(backup_config);
         self
     }
 
@@ -160,6 +175,7 @@ impl DockerComposeContextBuilder {
         let has_caddy = self.has_caddy;
         let has_prometheus = self.prometheus_config.is_some();
         let has_mysql = self.database.driver == DRIVER_MYSQL;
+        let _has_backup = self.backup_config.is_some(); // Will be used when backup is added to topology
 
         // Build list of enabled services for topology context
         let mut enabled_services = Vec::new();
@@ -204,6 +220,12 @@ impl DockerComposeContextBuilder {
             None
         };
 
+        // Build Backup service config if enabled
+        let backup = self
+            .backup_config
+            .as_ref()
+            .map(|config| BackupServiceContext::from_domain_config(config, &topology_context));
+
         // Derive required networks from all service configurations
         let required_networks = Self::derive_required_networks(
             &self.tracker,
@@ -211,6 +233,7 @@ impl DockerComposeContextBuilder {
             grafana.as_ref(),
             caddy.as_ref(),
             mysql.as_ref(),
+            backup.as_ref(),
         );
 
         DockerComposeContext {
@@ -221,6 +244,7 @@ impl DockerComposeContextBuilder {
             grafana,
             caddy,
             mysql,
+            backup,
             required_networks,
         }
     }
@@ -235,6 +259,7 @@ impl DockerComposeContextBuilder {
         grafana: Option<&GrafanaServiceContext>,
         caddy: Option<&CaddyServiceContext>,
         mysql: Option<&MysqlServiceContext>,
+        backup: Option<&BackupServiceContext>,
     ) -> Vec<NetworkDefinition> {
         let mut networks: HashSet<Network> = HashSet::new();
 
@@ -253,6 +278,9 @@ impl DockerComposeContextBuilder {
         }
         if let Some(my) = mysql {
             networks.extend(my.networks().iter().copied());
+        }
+        if let Some(bak) = backup {
+            networks.extend(bak.networks().iter().copied());
         }
 
         // Sort for deterministic output (alphabetically by name)

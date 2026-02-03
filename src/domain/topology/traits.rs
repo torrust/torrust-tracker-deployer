@@ -15,8 +15,9 @@
 //!   configuration without knowledge of other services.
 
 use super::enabled_services::EnabledServices;
-use super::Network;
-use super::PortBinding;
+use super::network::Network;
+use super::port::PortBinding;
+use super::service_dependency::ServiceDependency;
 
 /// Trait for services that can derive their port bindings
 ///
@@ -89,4 +90,50 @@ pub trait NetworkDerivation {
     ///
     /// A vector of [`Network`] that this service should be connected to.
     fn derive_networks(&self, enabled_services: &EnabledServices) -> Vec<Network>;
+}
+
+// =============================================================================
+// Service Dependency Derivation Trait
+// =============================================================================
+
+/// Trait for services that can derive their dependencies
+///
+/// This trait enables domain-driven dependency computation: each service
+/// determines which other services it depends on based on its configuration
+/// and the topology context.
+///
+/// # Dependency Rules Reference
+///
+/// Each implementation applies service-specific DEP-* rules:
+///
+/// | Rule   | Service | Description                                       |
+/// |--------|---------|---------------------------------------------------|
+/// | DEP-01 | Backup  | Depends on `MySQL` (healthy) when `MySQL` enabled     |
+/// | DEP-02 | Backup  | No dependencies when `SQLite` enabled               |
+///
+/// # Example
+///
+/// ```rust
+/// use torrust_tracker_deployer_lib::domain::backup::BackupConfig;
+/// use torrust_tracker_deployer_lib::domain::backup::DependencyDerivation;
+/// use torrust_tracker_deployer_lib::domain::topology::{EnabledServices, Service};
+///
+/// let backup_config = BackupConfig::default();
+/// let enabled = EnabledServices::from(&[Service::MySQL]);
+///
+/// let deps = backup_config.derive_dependencies(&enabled);
+/// assert_eq!(deps.len(), 1);
+/// assert_eq!(deps[0].service, Service::MySQL);
+/// ```
+pub trait DependencyDerivation {
+    /// Derives service dependencies based on enabled services
+    ///
+    /// # Arguments
+    ///
+    /// * `enabled_services` - Information about which other services are enabled
+    ///
+    /// # Returns
+    ///
+    /// A vector of [`ServiceDependency`] representing services this service depends on.
+    fn derive_dependencies(&self, enabled_services: &EnabledServices) -> Vec<ServiceDependency>;
 }
