@@ -57,7 +57,7 @@ jobs:
           docker build \
             -t torrust-tracker-deployer/${{ matrix.image.name }}:latest \
             -f ${{ matrix.image.dockerfile }} \
-            .
+            ${{ matrix.image.context }}
 
       # Human-readable output in logs
       # This NEVER fails the job; it’s only for visibility
