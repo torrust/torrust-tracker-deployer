@@ -53,7 +53,7 @@ jobs:
       - name: Build Image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./docker/backup
           file: ./docker/backup/Dockerfile
           target: production
           push: false
