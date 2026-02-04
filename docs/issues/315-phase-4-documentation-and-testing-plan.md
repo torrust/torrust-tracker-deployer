@@ -3,7 +3,11 @@
 **Issue**: #315 - Implement Backup Support
 **Phase**: 4 (Documentation and Final Testing)
 **Date**: February 4, 2026
-**Status**: ~95% Complete (Parts 1 & 2 nearly finished, Part 2.2 remaining)
+**Status**: Documentation Complete - No test code needed
+
+- Part 1: Documentation ✅ 100% COMPLETE
+- Part 2: E2E Tests - No code implementation (backup invocation not yet in run handler)
+- All documentation corrected to reflect current implementation state
 
 ## Overview
 
@@ -155,6 +159,39 @@ Recommended sequence:
 - ✅ Troubleshooting section covers common problems
 - ✅ Log inspection procedures documented
 - ✅ Recovery procedures documented
+
+---
+
+## Phase 4 Completion Notes
+
+### Discovery During Documentation Review
+
+During Phase 4, we discovered that the `run` command handler does not currently invoke the initial backup. The documentation previously stated that initial backups would be created automatically during the `run` command, but this was not yet implemented.
+
+**What was implemented:**
+
+- Backup service is defined in docker-compose.yml
+- Backup configuration is deployed during the `release` command
+- Crontab entry is installed for scheduled backups
+- Backup container is ready to run on-demand
+
+**What was NOT implemented:**
+
+- Initial backup invocation during `run` command
+- This requires adding an `InitialBackupStep` to the run workflow handler
+
+**Documentation Correction:**
+All user-facing documentation has been corrected to accurately reflect the current state:
+
+- `docs/user-guide/backup.md`: Updated deployment phases section
+- `docs/user-guide/commands/run.md`: Removed mention of automatic initial backup, documented manual trigger procedure
+- Both documents mark initial backup automation as a planned enhancement for Phase 4.2.2
+
+**User Impact:**
+
+- Users can still create initial backups manually: `docker compose --profile backup run --rm backup`
+- Scheduled backups work as documented via crontab
+- No functional impact, only documentation accuracy
 
 ---
 
