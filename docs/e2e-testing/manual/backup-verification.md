@@ -55,7 +55,7 @@ cat data/$ENV_NAME/environment.json | jq '.Created.context.user_inputs.backup'
 
 If this shows `null`, backup configuration was not loaded from the config file. Verify the backup section is correctly formatted in your environment JSON file.
 
-**Note**: The backup service can be deployed and executed **manually** using `docker compose run`. Automatic scheduled backups via crontab are a future enhancement.
+**Current State**: The backup service is deployed with automatic scheduled execution via crontab. The initial backup runs during the `run` command, then additional backups run automatically on the configured schedule.
 
 ## Test Scenarios
 
@@ -314,7 +314,71 @@ This confirms:
 - ✅ Table definitions are included
 - ✅ File is restorable using `mysql < backup.sql`
 
-### Step 10: Verify Backup Container Logs
+### Step 10: Verify Crontab Installation
+
+Verify the backup cron job was installed during the `release` command:
+
+```bash
+# Check if crontab exists for torrust user
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+  torrust@$INSTANCE_IP "crontab -l"
+```
+
+**Expected output** (for schedule `0 3 * * *`):
+
+```text
+# Backup cron job (managed by Torrust)
+0 3 * * * cd /opt/torrust && docker compose run --rm backup > /var/log/torrust-backup.log 2>&1 || true
+```
+
+**If crontab shows nothing or different output**:
+
+- The `release` command did not properly configure crontab
+- Re-run the `release` command or configure manually
+
+**Note**: The backup will run automatically at the scheduled time (3 AM UTC in this example). To verify automatic execution, you can either:
+
+1. Wait for the scheduled time and check logs
+2. Manually trigger a backup (see Step 6) to verify functionality
+3. Check backup container logs (see Step 11 below)
+
+### Step 11: Monitor Automatic Backup Execution
+
+To verify automatic backups are running on schedule, monitor the backup logs:
+
+```bash
+# SSH into VM
+ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+  torrust@$INSTANCE_IP
+
+# Watch backup log in real-time (check after scheduled time)
+tail -f /var/log/torrust-backup.log
+
+# Or view recent backup entries
+grep "Backup cycle" /var/log/torrust-backup.log
+
+# Check backup directory for multiple backup files (evidence of automatic execution)
+ls -lh /opt/torrust/storage/backup/sqlite/
+ls -lh /opt/torrust/storage/backup/mysql/
+```
+
+**Expected** (after multiple scheduled runs):
+
+- Multiple backup files with different timestamps
+- Log entries showing successful backup cycles
+- For example: `sqlite_20260203_030000.db.gz`, `sqlite_20260204_030000.db.gz`, `sqlite_20260205_030000.db.gz`
+
+**Retention cleanup example**:
+
+When backups older than the retention period exist, you'll see cleanup messages in logs:
+
+```text
+[2026-02-10 03:00:00] Cleaning up backups older than 7 days
+[2026-02-10 03:00:00]   Deleted: sqlite_20260203_030000.db.gz
+[2026-02-10 03:00:00]   Freed space: 4.0K
+```
+
+### Step 12: Verify Backup Container Logs
 
 Check the backup container logs for any errors:
 
@@ -329,6 +393,8 @@ ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/d
 
 Use this checklist to track verification progress:
 
+**Configuration & Deployment**:
+
 - [ ] Backup storage directory exists (`/opt/torrust/storage/backup/etc/`)
 - [ ] backup.conf deployed with correct database type and path
 - [ ] backup-paths.txt deployed with correct paths
@@ -336,12 +402,40 @@ Use this checklist to track verification progress:
 - [ ] Backup service has correct restart policy (`"no"`)
 - [ ] Backup service has correct volumes
 - [ ] Backup service has correct networks (none for SQLite, database_network for MySQL)
-- [ ] Manual backup executes without errors
-- [ ] Database backup file created in correct directory (`sqlite/` for SQLite, `mysql/` for MySQL)
-- [ ] Backup files are compressed (`.db.gz` for SQLite, `.sql.gz` for MySQL)
+
+**Initial Backup (during `run` command)**:
+
+- [ ] Initial backup files created after `run` command
+- [ ] Database backup file exists in correct directory (`sqlite/` or `mysql/`)
 - [ ] Config backup tar.gz created in `config/` directory
-- [ ] Backup files contain valid data (checked with file/gunzip/tar commands)
+- [ ] Files are compressed (`.db.gz` or `.sql.gz`)
+
+**Manual Backup Execution**:
+
+- [ ] Manual backup executes without errors (`docker compose run --rm backup`)
+- [ ] Database backup file created with new timestamp
+- [ ] Config backup created with new timestamp
+- [ ] Backup container logs show successful completion
+
+**Automatic Scheduled Execution (Crontab)**:
+
+- [ ] Crontab entry installed for torrust user
+- [ ] Crontab schedule matches environment configuration
+- [ ] Crontab log file exists (`/var/log/torrust-backup.log`)
+- [ ] Multiple backup files present (evidence of multiple automated runs)
+- [ ] Backup files have different timestamps (at least 2-3 backups)
+
+**Data Integrity**:
+
+- [ ] Database backup files contain valid data (checked with file/gunzip/zcat)
+- [ ] Config backup tar.gz contains expected files
 - [ ] No errors in backup container logs
+
+**Retention Cleanup**:
+
+- [ ] Retention days parameter is set correctly in backup.conf
+- [ ] Old backups are cleaned up after retention period
+- [ ] Cleanup messages appear in backup logs
 
 ## Troubleshooting
 
@@ -418,20 +512,69 @@ mysqldump: Got error: 2026: "TLS/SSL error: self-signed certificate in certifica
 2. Manual execution: `docker compose run --rm backup`
 3. (Future) Scheduled via crontab
 
-## Known Limitations
+## Current Implementation Status
 
-- ❌ **No automatic scheduled backups** - Backups must be triggered manually
-- ❌ **No crontab integration** - Future enhancement
-- ✅ **Manual backup execution works** - Can run on-demand with `docker compose run`
+**Implemented Features**:
+
+- ✅ **Initial backup** - Created automatically during `run` command (via `docker-compose.yml`)
+- ✅ **Crontab integration** - Automatic scheduled backups at configured schedule
+- ✅ **Manual execution** - Can run on-demand with `docker compose run --rm backup`
+- ✅ **Retention cleanup** - Automatically removes backups older than retention period
+- ✅ **Database support** - Works with both SQLite and MySQL
+- ✅ **Configuration backup** - Backs up tracker config, prometheus config, and Grafana provisioning
+
+**Known Limitations**:
+
+- ❌ **Recovery from backup** - Not yet implemented (requires manual restore process)
+- ❌ **Backup verification API** - No remote endpoint to verify backup status
+- ❌ **Backup encryption** - Backups are compressed but not encrypted
+
+## Testing Workflows
+
+### Quick Verification (10 minutes)
+
+For rapid verification after deployment:
+
+1. Run `provision` command
+2. Run `release` command (installs crontab)
+3. Run `run` command (creates initial backup)
+4. SSH to VM and verify initial backup exists: `ls -lh /opt/torrust/storage/backup/sqlite/`
+5. Manually run a second backup: `docker compose run --rm backup`
+6. Verify second backup created: `ls -lh /opt/torrust/storage/backup/sqlite/`
+
+**Success**: Two backup files with different timestamps exist
+
+### Full E2E Testing (Multiple Days)
+
+For comprehensive automated backup testing:
+
+1. Deploy with configured backup schedule (e.g., every hour for testing)
+2. Wait for scheduled backup time to pass
+3. Verify automatic backup executed: `grep "Backup cycle" /var/log/torrust-backup.log`
+4. Check multiple backup files created: `ls -lh /opt/torrust/storage/backup/*/`
+5. Modify a configuration file, wait for next backup
+6. Verify new backup contains the modification
+7. Wait for retention cleanup to occur (after retention_days)
+8. Verify old backups were deleted
+
+### Retention Testing (7+ Days)
+
+To verify retention cleanup with 7-day retention period:
+
+1. Deploy with `retention_days: 7`
+2. Create manual backups (simulating daily backups): `docker compose run --rm backup` (repeat 8 times)
+3. Force manual backup on day 8
+4. Check `/var/log/torrust-backup.log` for cleanup messages
+5. Verify first backup was deleted, most recent 7 kept
 
 ## Next Steps
 
 After verifying the backup service works correctly:
 
-1. Test backup restoration (manual process)
-2. Verify backup file integrity
-3. Test with different retention periods
-4. Monitor disk space usage with multiple backups
+1. Test backup restoration (manual process) - **Future enhancement**
+2. Implement automated retention testing
+3. Monitor disk space usage with production workloads
+4. Test backup functionality with different retention periods
 
 ## Related Documentation
 
