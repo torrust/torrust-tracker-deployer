@@ -134,17 +134,27 @@ This schedule would never run (February 31st doesn't exist). Manual backups can 
 
 ### Deployment Phases
 
-#### Phase 1: Initial Backup (during `run` command)
+#### Phase 1: Backup Setup (during `release` and `run` commands)
 
-When you run the `run` command, the backup service creates an initial backup:
+During the `release` command:
 
-1. Backup container starts
-2. Reads configuration
-3. Backs up database and config files
-4. Creates compressed backup files
-5. Container exits successfully
+1. Backup storage directories are created
+2. Backup configuration files are deployed
+3. Crontab entry is installed for scheduled backups
 
-This initial backup proves the backup system is working and provides a recovery point right after deployment.
+During the `run` command:
+
+1. Docker Compose is started with the backup service defined
+2. **Initial backup is NOT automatically triggered** (planned for Phase 4.2.2)
+3. Scheduled backups are ready to run on the configured schedule
+
+**To create an initial backup manually**:
+
+```bash
+ssh -i ~/.ssh/your-key user@$VM_IP
+cd /opt/torrust
+docker compose --profile backup run --rm backup
+```
 
 #### Phase 2: Scheduled Backups (via crontab)
 

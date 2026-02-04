@@ -35,29 +35,29 @@ torrust-tracker-deployer run <ENVIRONMENT>
 When you run an environment:
 
 1. **Starts Docker Compose services** - Brings up tracker container (`docker compose up -d`)
-2. **Creates initial backup** - If backup is enabled, runs initial backup before starting tracker
-3. **Validates services are running** - Checks Docker Compose status
-4. **Validates external accessibility** - Verifies tracker services respond from outside VM
+2. **Validates services are running** - Checks Docker Compose status
+3. **Validates external accessibility** - Verifies tracker services respond from outside VM
    - Tracker API health check (port 1212) - **required**
    - HTTP Tracker health checks (all configured HTTP tracker ports) - **optional**
 
 **Note**: All tracker ports must be explicitly configured (port 0 for dynamic assignment is not supported). See [ADR: Port Zero Not Supported](../../decisions/port-zero-not-supported.md) for details.
 
-### Initial Backup
+### Backup Setup
 
-If backup was enabled during environment creation, the `run` command:
+**Important**: Initial backup creation is not yet automatically triggered during the `run` command. This is a planned enhancement (Phase 4 Part 2.2).
 
-1. Executes the backup service to create an initial backup
-2. Backs up the database and configuration files
-3. Stores compressed backup files in `/opt/torrust/storage/backup/`
-4. Installs crontab job for automatic scheduled backups (if configured)
-5. Then starts the tracker service
+Currently, after the `run` command completes:
 
-The initial backup provides:
+1. The backup service is configured and the crontab entry is installed
+2. Scheduled backups will run automatically on your configured schedule via crontab
+3. You can manually trigger an initial backup using:
+   ```bash
+   ssh -i <key> user@<instance-ip>
+   cd /opt/torrust
+   docker compose --profile backup run --rm backup
+   ```
 
-- Proof that the backup system is working correctly
-- A recovery point right after deployment
-- Validation that backup container and configuration are functional
+For more information on manual backup procedures, see [Backup Management](../backup.md#triggering-manual-backups).
 
 ## Services Started
 
