@@ -935,7 +935,7 @@ Now that crontab handles scheduling, backup container should only run on-demand:
   - Environment: manual-cron-test deployed and running
   - Instance IP: 10.140.190.248
   - Complete deployment workflow: Create → Provision → Configure → Release → Run (121.3 seconds total)
-  - Crontab installation verified: `/etc/cron.d/tracker-backup` (_/5 _ \* \* \* schedule)
+  - Crontab installation verified: `/etc/cron.d/tracker-backup` (`_/5 _ * * *` schedule)
   - Maintenance script verified: `/usr/local/bin/maintenance-backup.sh` (0755, executable)
   - **Cron execution test**: 30 backup cycles over 5+ minutes
     - **Success rate**: 100% (30/30 successful)
@@ -992,8 +992,8 @@ Now that crontab handles scheduling, backup container should only run on-demand:
 - [x] Users can enable backup in environment configuration ✅ **VERIFIED**
 - [x] Backup container is deployed with docker-compose stack ✅ **VERIFIED**
 - [x] Crontab runs scheduled backups at configured time ✅ **VERIFIED (Phase 3)**
-  - Every 5 minutes for testing (_/5 _ \* \* \*)
-  - Default schedule: 3:00 AM daily (0 3 \* \* \*)
+  - Every 5 minutes for testing (`_/5 _ * * *`)
+  - Default schedule: 3:00 AM daily (`0 3 * * *`)
   - 30 successful backup cycles with 100% success rate
   - Exit codes: 0 (perfect record)
 - [x] MySQL and SQLite databases are backed up correctly ✅ **VERIFIED**
