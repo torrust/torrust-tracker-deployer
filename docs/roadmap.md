@@ -129,7 +129,7 @@ When starting work on a new feature:
   - Added HTTPS support for Grafana
   - **Research Complete**: [Issue #270](https://github.com/torrust/torrust-tracker-deployer/issues/270) - Caddy evaluation successful, production deployment verified
 
-### 7. Add backup support
+### 7. Add backup support ✅ COMPLETED
 
 **Epic Issue**: [#309 - Add backup support](https://github.com/torrust/torrust-tracker-deployer/issues/309)
 
@@ -138,14 +138,16 @@ When starting work on a new feature:
   - Recommended **maintenance-window hybrid approach** (container + crontab)
   - Built and tested POC with 58 unit tests
   - Documented findings in `docs/research/backup-strategies/`
-- [ ] **7.2** Implement backup support - [Issue #315](https://github.com/torrust/torrust-tracker-deployer/issues/315) (see [spec](./issues/315-implement-backup-support.md))
-  - Add backup container templates (Dockerfile, backup.sh)
-  - Add backup service to Docker Compose template
-  - Extend environment configuration schema with backup settings
-  - Deploy backup artifacts via Ansible playbooks
-  - Install crontab for scheduled maintenance-window backups
+- [x] **7.2** Implement backup support - [Issue #315](https://github.com/torrust/torrust-tracker-deployer/issues/315) ✅ Completed
+  - Added backup container templates (Dockerfile, backup.sh) - Published to Docker Hub
+  - Added backup service to Docker Compose template with profile-based enablement
+  - Extended environment configuration schema with backup settings
+  - Deployed backup artifacts via Ansible playbooks
+  - Installed crontab for scheduled maintenance-window backups (3 AM daily)
   - Supports: MySQL dumps, SQLite file copy, config archives
+  - Backup retention cleanup (configurable days, default 7)
   - **Note**: Volume management is out of scope - user provides a mounted location
+  - **Implementation Details**: Phase 1-4 completed (container, service integration, crontab scheduling, documentation)
 
 ### 8. Add levels of verbosity
 
