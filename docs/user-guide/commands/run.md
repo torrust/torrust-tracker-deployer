@@ -51,6 +51,7 @@ Currently, after the `run` command completes:
 1. The backup service is configured and the crontab entry is installed
 2. Scheduled backups will run automatically on your configured schedule via crontab
 3. You can manually trigger an initial backup using:
+
    ```bash
    ssh -i <key> user@<instance-ip>
    cd /opt/torrust
