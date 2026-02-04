@@ -307,18 +307,150 @@ torrust-tracker-deployer create environment \
   --log-output file-only
 ```
 
-## What Gets Created
+## Backup Configuration
+
+The backup feature can be enabled and configured during environment creation.
+
+### Enabling Backups
+
+Add a `backup` section to your configuration file:
+
+```json
+{
+  "environment": {
+    "name": "my-env"
+  },
+  "backup": {
+    "schedule": "0 3 * * *",
+    "retention_days": 7
+  }
+}
+```
+
+### Backup Options
+
+#### `schedule` (required)
+
+Cron expression for automatic backup schedule.
+
+**Format**: Standard cron format `minute hour day month day_of_week`
+
+**Examples:**
+
+- `0 3 * * *` - Every day at 3:00 AM UTC
+- `0 2 * * 1` - Every Monday at 2:00 AM UTC
+- `0 */6 * * *` - Every 6 hours
+- `0 0 1 * *` - First day of every month
+
+**Constraints**: Must be a valid cron expression
+
+#### `retention_days` (required)
+
+How many days to keep backups before automatic deletion.
+
+**Range**: 1-365 days
+
+**Recommended values:**
+
+- Development: 3-7 days
+- Production: 7-30 days
+- High-importance: 30-90 days
+
+### Example Configurations
+
+#### Enable Backups (Minimal)
+
+```json
+{
+  "environment": {
+    "name": "my-tracker"
+  },
+  "ssh_credentials": {
+    "private_key_path": "~/.ssh/id_rsa",
+    "public_key_path": "~/.ssh/id_rsa.pub",
+    "username": "torrust",
+    "port": 22
+  },
+  "backup": {
+    "schedule": "0 3 * * *",
+    "retention_days": 7
+  }
+}
+```
+
+Daily backups at 3 AM UTC, keep one week of backups.
+
+#### Frequent Backups (Every 6 Hours)
+
+```json
+{
+  "backup": {
+    "schedule": "0 */6 * * *",
+    "retention_days": 3
+  }
+}
+```
+
+Backup every 6 hours, keep 3 days (18 backup files).
+
+#### Weekly Backups with Long Retention
+
+```json
+{
+  "backup": {
+    "schedule": "0 3 * * 0",
+    "retention_days": 90
+  }
+}
+```
+
+Weekly backups on Sundays at 3 AM UTC, keep 90 days.
+
+### What Gets Backed Up
+
+When backups are enabled, the following are automatically backed up:
+
+- Database (SQLite or MySQL depending on configuration)
+- Tracker configuration file (`tracker.toml`)
+- Prometheus configuration
+- Grafana provisioning files (dashboards, datasources)
+
+Backups are:
+
+- Compressed to save storage space
+- Stored in `/opt/torrust/storage/backup/` on the deployment VM
+- Created initially during the `run` command
+- Then run automatically on the configured schedule via crontab
+
+### Monitoring Backups
+
+After deployment, verify backups are working:
+
+```bash
+# SSH to deployed VM
+ssh torrust@<instance-ip>
+
+# Check if backup files exist
+ls -lh /opt/torrust/storage/backup/sqlite/
+ls -lh /opt/torrust/storage/backup/config/
+
+# Check crontab for backup schedule
+crontab -l
+
+# Monitor backup logs (check after scheduled time)
+tail -f /var/log/torrust-backup.log
+```
+
+For more information, see the [Backup Management Guide](../backup.md).
 
 The create environment command initializes:
 
 1. **Environment Directory Structure**
-
    - Creates `data/<environment-name>/` directory
    - Stores environment configuration
    - Prepares space for state files
 
 2. **Environment State**
-
    - Initializes environment state to `Created`
    - Records environment metadata
    - Prepares for provisioning workflow

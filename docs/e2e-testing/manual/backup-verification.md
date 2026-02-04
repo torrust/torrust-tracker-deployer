@@ -316,48 +316,53 @@ This confirms:
 
 ### Step 10: Verify Crontab Installation
 
-Verify the backup cron job was installed during the `release` command:
+Verify the backup system cron entry was installed during the `release` command:
 
 ```bash
-# Check if crontab exists for torrust user
+# Check if system cron entry exists
 ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-  torrust@$INSTANCE_IP "crontab -l"
+  torrust@$INSTANCE_IP "cat /etc/cron.d/tracker-backup"
 ```
 
 **Expected output** (for schedule `0 3 * * *`):
 
 ```text
-# Backup cron job (managed by Torrust)
-0 3 * * * cd /opt/torrust && docker compose run --rm backup > /var/log/torrust-backup.log 2>&1 || true
+# Cron expression: min hour day month dow command
+# Runs at schedule: 0 3 * * *
+0 3 * * * root cd /opt/torrust && /usr/local/bin/maintenance-backup.sh >> /var/log/tracker-backup.log 2>&1
 ```
 
-**If crontab shows nothing or different output**:
+The maintenance script:
 
-- The `release` command did not properly configure crontab
-- Re-run the `release` command or configure manually
+1. Stops the tracker service
+2. Runs backup container
+3. Restarts tracker service
+4. Logs all output to `/var/log/tracker-backup.log`
+
+**If cron entry not found**:
+
+- The `release` command did not properly install the cron entry
+- Re-run the `release` command
 
 **Note**: The backup will run automatically at the scheduled time (3 AM UTC in this example). To verify automatic execution, you can either:
 
 1. Wait for the scheduled time and check logs
 2. Manually trigger a backup (see Step 6) to verify functionality
-3. Check backup container logs (see Step 11 below)
+3. Check backup maintenance logs (see Step 11 below)
 
 ### Step 11: Monitor Automatic Backup Execution
 
-To verify automatic backups are running on schedule, monitor the backup logs:
+To verify automatic backups are running on schedule, monitor the maintenance logs:
 
 ```bash
 # SSH into VM
 ssh -i fixtures/testing_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
   torrust@$INSTANCE_IP
 
-# Watch backup log in real-time (check after scheduled time)
-tail -f /var/log/torrust-backup.log
+# Watch backup maintenance log in real-time (check after scheduled time)
+tail -f /var/log/tracker-backup.log
 
-# Or view recent backup entries
-grep "Backup cycle" /var/log/torrust-backup.log
-
-# Check backup directory for multiple backup files (evidence of automatic execution)
+# Or check backup directory for multiple backup files (evidence of automatic execution)
 ls -lh /opt/torrust/storage/backup/sqlite/
 ls -lh /opt/torrust/storage/backup/mysql/
 ```
@@ -365,18 +370,18 @@ ls -lh /opt/torrust/storage/backup/mysql/
 **Expected** (after multiple scheduled runs):
 
 - Multiple backup files with different timestamps
-- Log entries showing successful backup cycles
+- Log entries showing successful backup maintenance cycles:
+
+  ```text
+  [2026-02-04 16:35:01] INFO: Tracker stopped successfully
+  [2026-02-04 16:35:01] INFO: Running backup container...
+  [2026-02-04 16:35:06] INFO: Backup completed successfully
+  [2026-02-04 16:35:06] INFO: Starting tracker container...
+  [2026-02-04 16:35:21] INFO: Tracker started successfully
+  [2026-02-04 16:35:21] Backup maintenance completed (exit code: 0)
+  ```
+
 - For example: `sqlite_20260203_030000.db.gz`, `sqlite_20260204_030000.db.gz`, `sqlite_20260205_030000.db.gz`
-
-**Retention cleanup example**:
-
-When backups older than the retention period exist, you'll see cleanup messages in logs:
-
-```text
-[2026-02-10 03:00:00] Cleaning up backups older than 7 days
-[2026-02-10 03:00:00]   Deleted: sqlite_20260203_030000.db.gz
-[2026-02-10 03:00:00]   Freed space: 4.0K
-```
 
 ### Step 12: Verify Backup Container Logs
 
@@ -419,9 +424,9 @@ Use this checklist to track verification progress:
 
 **Automatic Scheduled Execution (Crontab)**:
 
-- [ ] Crontab entry installed for torrust user
-- [ ] Crontab schedule matches environment configuration
-- [ ] Crontab log file exists (`/var/log/torrust-backup.log`)
+- [ ] System cron entry installed at `/etc/cron.d/tracker-backup`
+- [ ] Cron schedule matches environment configuration
+- [ ] Maintenance log file exists (`/var/log/tracker-backup.log`)
 - [ ] Multiple backup files present (evidence of multiple automated runs)
 - [ ] Backup files have different timestamps (at least 2-3 backups)
 
@@ -429,7 +434,7 @@ Use this checklist to track verification progress:
 
 - [ ] Database backup files contain valid data (checked with file/gunzip/zcat)
 - [ ] Config backup tar.gz contains expected files
-- [ ] No errors in backup container logs
+- [ ] No errors in backup maintenance logs
 
 **Retention Cleanup**:
 

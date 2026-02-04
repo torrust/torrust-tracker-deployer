@@ -35,12 +35,29 @@ torrust-tracker-deployer run <ENVIRONMENT>
 When you run an environment:
 
 1. **Starts Docker Compose services** - Brings up tracker container (`docker compose up -d`)
-2. **Validates services are running** - Checks Docker Compose status
-3. **Validates external accessibility** - Verifies tracker services respond from outside VM
+2. **Creates initial backup** - If backup is enabled, runs initial backup before starting tracker
+3. **Validates services are running** - Checks Docker Compose status
+4. **Validates external accessibility** - Verifies tracker services respond from outside VM
    - Tracker API health check (port 1212) - **required**
    - HTTP Tracker health checks (all configured HTTP tracker ports) - **optional**
 
 **Note**: All tracker ports must be explicitly configured (port 0 for dynamic assignment is not supported). See [ADR: Port Zero Not Supported](../../decisions/port-zero-not-supported.md) for details.
+
+### Initial Backup
+
+If backup was enabled during environment creation, the `run` command:
+
+1. Executes the backup service to create an initial backup
+2. Backs up the database and configuration files
+3. Stores compressed backup files in `/opt/torrust/storage/backup/`
+4. Installs crontab job for automatic scheduled backups (if configured)
+5. Then starts the tracker service
+
+The initial backup provides:
+
+- Proof that the backup system is working correctly
+- A recovery point right after deployment
+- Validation that backup container and configuration are functional
 
 ## Services Started
 
@@ -127,6 +144,28 @@ docker compose logs tracker
 
 # Follow tracker logs in real-time
 docker compose logs -f tracker
+```
+
+### Verify Backup (if enabled)
+
+If you enabled backup in your environment configuration:
+
+```bash
+# Check if backup files were created
+ssh -i ~/.ssh/your-key user@$VM_IP "ls -lh /opt/torrust/storage/backup/sqlite/"
+ssh -i ~/.ssh/your-key user@$VM_IP "ls -lh /opt/torrust/storage/backup/config/"
+
+# Expected: Files like sqlite_20260203_030000.db.gz and config_20260203_030000.tar.gz
+
+# Check crontab for scheduled backups
+ssh -i ~/.ssh/your-key user@$VM_IP "crontab -l"
+
+# Expected: Backup cron job with your configured schedule
+
+# View backup logs
+ssh -i ~/.ssh/your-key user@$VM_IP "tail -20 /var/log/torrust-backup.log"
+
+# Expected: Messages showing backup cycle completed successfully
 ```
 
 ## Service Ports
@@ -250,18 +289,15 @@ ssh -i ~/.ssh/your-key user@$VM_IP "cd /opt/torrust && docker compose up -d"
 The `run` command performs external health checks to validate deployment:
 
 1. **Docker Compose Status Check** (internal, via SSH)
-
    - Verifies tracker container is in "running" state
    - Checks via `docker compose ps`
 
 2. **Tracker API Health Check** (external, direct HTTP)
-
    - Tests `http://<vm-ip>:1212/api/health_check`
    - **Required check** - deployment fails if not accessible
    - Validates both service functionality AND firewall rules
 
 3. **HTTP Tracker Health Checks** (external, direct HTTP)
-
    - Tests `http://<vm-ip>:<port>/health_check` for **all configured HTTP trackers**
    - **Required checks** - deployment fails if not accessible
    - If you configure multiple HTTP trackers (e.g., ports 7070, 7071, 7072), all will be validated

@@ -33,7 +33,7 @@ mkdir -p "$LOG_DIR"
 log_info() {
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[$timestamp] INFO: $*" | tee -a "$LOG_FILE"
+    echo "[$timestamp] INFO: $*" >> "$LOG_FILE"
 }
 
 log_error() {
@@ -45,10 +45,12 @@ log_error() {
 log_section() {
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "" | tee -a "$LOG_FILE"
-    echo "[$timestamp] ========================================" | tee -a "$LOG_FILE"
-    echo "[$timestamp] $*" | tee -a "$LOG_FILE"
-    echo "[$timestamp] ========================================" | tee -a "$LOG_FILE"
+    {
+        echo ""
+        echo "[$timestamp] ========================================"
+        echo "[$timestamp] $*"
+        echo "[$timestamp] ========================================"
+    } >> "$LOG_FILE"
 }
 
 # Trap errors and ensure tracker is restarted even if backup fails
