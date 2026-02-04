@@ -151,6 +151,9 @@ impl StoppedProvisionedContainer {
             .with_dockerfile(std::path::PathBuf::from(
                 "docker/provisioned-instance/Dockerfile",
             ))
+            .with_context(std::path::PathBuf::from(
+                "docker/provisioned-instance",
+            ))
             .with_build_timeout(docker_build_timeout);
         builder.build().map_err(|e| {
             Box::new(ContainerError::ContainerImage {
