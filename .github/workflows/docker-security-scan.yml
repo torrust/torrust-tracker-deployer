@@ -42,6 +42,9 @@ jobs:
           - dockerfile: docker/ssh-server/Dockerfile
             context: docker/ssh-server
             name: ssh-server
+          - dockerfile: docker/backup/Dockerfile
+            context: docker/backup
+            name: tracker-backup
 
     steps:
       - name: Checkout code
@@ -54,7 +57,7 @@ jobs:
           docker build \
             -t torrust-tracker-deployer/${{ matrix.image.name }}:latest \
             -f ${{ matrix.image.dockerfile }} \
-            .
+            ${{ matrix.image.context }}
 
       # Human-readable output in logs
       # This NEVER fails the job; it’s only for visibility

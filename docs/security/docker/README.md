@@ -121,6 +121,7 @@ trivy image --severity HIGH,CRITICAL prom/prometheus:v3.5.0
 See the [scans/](scans/) directory for historical security scan results:
 
 - [Torrust Tracker Deployer](scans/torrust-tracker-deployer.md)
+- [Torrust Tracker Backup](scans/tracker-backup.md)
 - [Prometheus](scans/prometheus.md)
 - [Grafana](scans/grafana.md)
 - [MySQL](scans/mysql.md)

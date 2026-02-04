@@ -5,6 +5,7 @@
 
 use super::*;
 use crate::adapters::ssh::SshCredentials;
+use crate::domain::backup::BackupConfig;
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::prometheus::PrometheusConfig;
 use crate::domain::provider::{LxdConfig, ProviderConfig};
@@ -48,6 +49,7 @@ pub struct EnvironmentTestBuilder {
     ssh_username: String,
     temp_dir: TempDir,
     prometheus_config: Option<PrometheusConfig>,
+    backup_config: Option<BackupConfig>,
 }
 
 impl EnvironmentTestBuilder {
@@ -64,6 +66,7 @@ impl EnvironmentTestBuilder {
             ssh_username: "torrust".to_string(),
             temp_dir: TempDir::new().expect("Failed to create temp directory"),
             prometheus_config: Some(PrometheusConfig::default()),
+            backup_config: None,
         }
     }
 
@@ -92,6 +95,13 @@ impl EnvironmentTestBuilder {
     #[must_use]
     pub fn with_prometheus_config(mut self, config: Option<PrometheusConfig>) -> Self {
         self.prometheus_config = config;
+        self
+    }
+
+    /// Sets the Backup configuration
+    #[must_use]
+    pub fn with_backup_config(mut self, config: Option<BackupConfig>) -> Self {
+        self.backup_config = config;
         self
     }
 
@@ -160,6 +170,7 @@ impl EnvironmentTestBuilder {
                 .as_ref()
                 .map(|_| GrafanaConfig::default()),
             None,
+            self.backup_config,
         )
         .expect("Test UserInputs should always be valid with defaults");
 

@@ -111,6 +111,9 @@ impl TryFrom<EnvironmentCreationConfig> for EnvironmentParams {
             .map(|section| HttpsConfig::new(section.admin_email, section.use_staging))
             .transpose()?;
 
+        // Convert Backup section to domain type
+        let backup_config = config.backup.map(TryInto::try_into).transpose()?;
+
         Ok(EnvironmentParams::new(
             environment_name,
             instance_name,
@@ -121,6 +124,7 @@ impl TryFrom<EnvironmentCreationConfig> for EnvironmentParams {
             prometheus_config,
             grafana_config,
             https_config,
+            backup_config,
         ))
     }
 }
@@ -167,6 +171,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
     }
 
@@ -201,6 +206,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         let params: EnvironmentParams = config.try_into().unwrap();
@@ -223,6 +229,7 @@ mod tests {
                 profile_name: "lxd-test".to_string(),
             }),
             TrackerSection::default(),
+            None,
             None,
             None,
             None,

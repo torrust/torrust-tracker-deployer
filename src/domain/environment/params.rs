@@ -40,6 +40,7 @@
 //! ```
 
 use crate::adapters::ssh::SshCredentials;
+use crate::domain::backup::BackupConfig;
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::https::HttpsConfig;
 use crate::domain::prometheus::PrometheusConfig;
@@ -97,6 +98,9 @@ pub struct EnvironmentParams {
 
     /// Optional HTTPS/TLS configuration for secure endpoints
     pub https_config: Option<HttpsConfig>,
+
+    /// Optional backup service configuration
+    pub backup_config: Option<BackupConfig>,
 }
 
 impl EnvironmentParams {
@@ -117,6 +121,7 @@ impl EnvironmentParams {
     /// * `prometheus_config` - Optional Prometheus configuration
     /// * `grafana_config` - Optional Grafana configuration
     /// * `https_config` - Optional HTTPS configuration
+    /// * `backup_config` - Optional backup configuration
     #[must_use]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -129,6 +134,7 @@ impl EnvironmentParams {
         prometheus_config: Option<PrometheusConfig>,
         grafana_config: Option<GrafanaConfig>,
         https_config: Option<HttpsConfig>,
+        backup_config: Option<BackupConfig>,
     ) -> Self {
         Self {
             environment_name,
@@ -140,6 +146,7 @@ impl EnvironmentParams {
             prometheus_config,
             grafana_config,
             https_config,
+            backup_config,
         }
     }
 }
@@ -179,6 +186,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         assert_eq!(params.environment_name.as_str(), "test-env");
@@ -197,6 +205,7 @@ mod tests {
             sample_ssh_credentials(),
             2222,
             sample_tracker_config(),
+            None,
             None,
             None,
             None,

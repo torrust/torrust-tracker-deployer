@@ -24,18 +24,22 @@
 //! - [`NetworkDerivation`] - Trait for services that derive their network assignments
 
 pub mod aggregate;
+pub mod dependency_condition;
 pub mod enabled_services;
 pub mod error;
 pub mod network;
 pub mod port;
 pub mod service;
+pub mod service_dependency;
 pub mod traits;
 
 // Re-export main types for convenience
 pub use aggregate::{DockerComposeTopology, ServiceTopology};
+pub use dependency_condition::DependencyCondition;
 pub use enabled_services::EnabledServices;
 pub use error::{PortConflict, TopologyError};
 pub use network::Network;
 pub use port::PortBinding;
 pub use service::Service;
-pub use traits::{NetworkDerivation, PortDerivation};
+pub use service_dependency::ServiceDependency;
+pub use traits::{DependencyDerivation, NetworkDerivation, PortDerivation};

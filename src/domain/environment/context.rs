@@ -36,6 +36,7 @@
 //! where to add new fields as the application evolves.
 
 use crate::adapters::ssh::SshCredentials;
+use crate::domain::backup::BackupConfig;
 use crate::domain::environment::{
     EnvironmentName, EnvironmentParams, InternalConfig, RuntimeOutputs, UserInputs,
 };
@@ -241,6 +242,7 @@ impl EnvironmentContext {
                 params.prometheus_config,
                 params.grafana_config,
                 params.https_config,
+                params.backup_config,
             )?,
             internal_config: InternalConfig::with_working_dir(
                 &params.environment_name,
@@ -382,6 +384,12 @@ impl EnvironmentContext {
     #[must_use]
     pub fn grafana_config(&self) -> Option<&GrafanaConfig> {
         self.user_inputs.grafana()
+    }
+
+    /// Returns the Backup configuration if enabled
+    #[must_use]
+    pub fn backup_config(&self) -> Option<&BackupConfig> {
+        self.user_inputs.backup()
     }
 
     /// Returns the build directory

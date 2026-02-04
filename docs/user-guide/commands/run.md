@@ -42,6 +42,24 @@ When you run an environment:
 
 **Note**: All tracker ports must be explicitly configured (port 0 for dynamic assignment is not supported). See [ADR: Port Zero Not Supported](../../decisions/port-zero-not-supported.md) for details.
 
+### Backup Setup
+
+**Important**: Initial backup creation is not yet automatically triggered during the `run` command. This is a planned enhancement (Phase 4 Part 2.2).
+
+Currently, after the `run` command completes:
+
+1. The backup service is configured and the crontab entry is installed
+2. Scheduled backups will run automatically on your configured schedule via crontab
+3. You can manually trigger an initial backup using:
+
+   ```bash
+   ssh -i <key> user@<instance-ip>
+   cd /opt/torrust
+   docker compose --profile backup run --rm backup
+   ```
+
+For more information on manual backup procedures, see [Backup Management](../backup.md#triggering-manual-backups).
+
 ## Services Started
 
 ### Tracker Service
@@ -127,6 +145,28 @@ docker compose logs tracker
 
 # Follow tracker logs in real-time
 docker compose logs -f tracker
+```
+
+### Verify Backup (if enabled)
+
+If you enabled backup in your environment configuration:
+
+```bash
+# Check if backup files were created
+ssh -i ~/.ssh/your-key user@$VM_IP "ls -lh /opt/torrust/storage/backup/sqlite/"
+ssh -i ~/.ssh/your-key user@$VM_IP "ls -lh /opt/torrust/storage/backup/config/"
+
+# Expected: Files like sqlite_20260203_030000.db.gz and config_20260203_030000.tar.gz
+
+# Check crontab for scheduled backups
+ssh -i ~/.ssh/your-key user@$VM_IP "crontab -l"
+
+# Expected: Backup cron job with your configured schedule
+
+# View backup logs
+ssh -i ~/.ssh/your-key user@$VM_IP "tail -20 /var/log/torrust-backup.log"
+
+# Expected: Messages showing backup cycle completed successfully
 ```
 
 ## Service Ports
@@ -250,18 +290,15 @@ ssh -i ~/.ssh/your-key user@$VM_IP "cd /opt/torrust && docker compose up -d"
 The `run` command performs external health checks to validate deployment:
 
 1. **Docker Compose Status Check** (internal, via SSH)
-
    - Verifies tracker container is in "running" state
    - Checks via `docker compose ps`
 
 2. **Tracker API Health Check** (external, direct HTTP)
-
    - Tests `http://<vm-ip>:1212/api/health_check`
    - **Required check** - deployment fails if not accessible
    - Validates both service functionality AND firewall rules
 
 3. **HTTP Tracker Health Checks** (external, direct HTTP)
-
    - Tests `http://<vm-ip>:<port>/health_check` for **all configured HTTP trackers**
    - **Required checks** - deployment fails if not accessible
    - If you configure multiple HTTP trackers (e.g., ports 7070, 7071, 7072), all will be validated

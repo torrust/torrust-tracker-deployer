@@ -103,6 +103,7 @@ pub fn run_create_command(
         None,
         None,
         None, // HTTPS configuration
+        None, // Backup configuration
     );
 
     // Execute the command

@@ -60,6 +60,7 @@
 //!     None, // prometheus
 //!     None, // grafana
 //!     None, // https
+//!     None, // backup
 //! );
 //!
 //! // Execute command with working directory

@@ -35,7 +35,6 @@ torrust-tracker-deployer release <ENVIRONMENT>
 When you release an environment:
 
 1. **Creates storage directories** - Sets up tracker data directories (`/opt/torrust/storage/tracker/`)
-
    - `etc/` - Configuration files
    - `lib/database/` - SQLite database
    - `log/` - Log files
@@ -43,12 +42,10 @@ When you release an environment:
 2. **Initializes SQLite database** - Creates empty tracker database file
 
 3. **Renders tracker templates** - Generates configuration from environment settings
-
    - `tracker.toml` - Tracker configuration
    - `.env` - Docker Compose environment variables
 
 4. **Deploys configuration files** - Copies files to VM
-
    - `/opt/torrust/storage/tracker/etc/tracker.toml`
    - `/opt/torrust/.env`
 
@@ -70,6 +67,28 @@ When you release an environment:
         │       └── tracker.db             # SQLite database
         └── log/                           # Log files (created at runtime)
 ```
+
+### Backup Configuration Deployment
+
+If backup is enabled in your environment configuration, the release command also deploys backup service configuration:
+
+```text
+/opt/torrust/storage/backup/
+├── etc/
+│   ├── backup.conf                   # Backup service configuration
+│   └── backup-paths.txt              # Paths to backup
+└── sqlite/                           # SQLite database backups (created at runtime)
+    └── (backup files created during run)
+```
+
+**What gets deployed for backup:**
+
+- Backup configuration file with database type and retention settings
+- Backup paths file with list of directories to backup
+- Empty backup directories (sqlite/, mysql/, config/) for backup files
+- Crontab entry for scheduled backup execution (installed by `run` command)
+
+**Note**: Initial backup files are created when the `run` command executes, not during release.
 
 ## Example Usage
 

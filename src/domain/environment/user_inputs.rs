@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::adapters::ssh::SshCredentials;
+use crate::domain::backup::BackupConfig;
 use crate::domain::environment::EnvironmentName;
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::https::HttpsConfig;
@@ -170,6 +171,13 @@ pub struct UserInputs {
     /// When absent (`None`), services are exposed directly over HTTP.
     /// Requires at least one service to have TLS configuration.
     https: Option<HttpsConfig>,
+
+    /// Backup configuration (optional)
+    ///
+    /// When present, backup service is enabled with scheduled backups.
+    /// When absent (`None`), backup service is disabled.
+    /// Default: `None` in generated templates.
+    backup: Option<BackupConfig>,
 }
 
 impl UserInputs {
@@ -231,7 +239,7 @@ impl UserInputs {
         ssh_credentials: SshCredentials,
         ssh_port: u16,
     ) -> Result<Self, UserInputsError> {
-        // Default configuration: Prometheus + Grafana, no HTTPS
+        // Default configuration: Prometheus + Grafana, no HTTPS, no backup
         // This always passes validation (Grafana has Prometheus, no TLS configured)
         Self::with_tracker(
             name,
@@ -241,6 +249,7 @@ impl UserInputs {
             TrackerConfig::default(),
             Some(PrometheusConfig::default()),
             Some(GrafanaConfig::default()),
+            None,
             None,
         )
     }
@@ -260,6 +269,7 @@ impl UserInputs {
     /// * `prometheus` - Optional Prometheus configuration
     /// * `grafana` - Optional Grafana configuration (requires Prometheus)
     /// * `https` - Optional HTTPS/TLS configuration (requires TLS services)
+    /// * `backup` - Optional backup configuration
     ///
     /// # Errors
     ///
@@ -276,6 +286,7 @@ impl UserInputs {
         prometheus: Option<PrometheusConfig>,
         grafana: Option<GrafanaConfig>,
         https: Option<HttpsConfig>,
+        backup: Option<BackupConfig>,
     ) -> Result<Self, UserInputsError> {
         // Cross-service invariant: Grafana requires Prometheus as data source
         if grafana.is_some() && prometheus.is_none() {
@@ -305,6 +316,7 @@ impl UserInputs {
             prometheus,
             grafana,
             https,
+            backup,
         })
     }
 
@@ -358,6 +370,12 @@ impl UserInputs {
     #[must_use]
     pub fn https(&self) -> Option<&HttpsConfig> {
         self.https.as_ref()
+    }
+
+    /// Returns the backup configuration if enabled
+    #[must_use]
+    pub fn backup(&self) -> Option<&BackupConfig> {
+        self.backup.as_ref()
     }
 
     // ========================================================================
@@ -571,6 +589,7 @@ mod tests {
             None,                           // No Prometheus
             Some(GrafanaConfig::default()), // Grafana enabled
             None,
+            None, // No backup
         );
 
         assert!(
@@ -594,6 +613,7 @@ mod tests {
             Some(PrometheusConfig::default()), // Prometheus enabled
             Some(GrafanaConfig::default()),    // Grafana enabled
             None,
+            None, // No backup
         );
 
         assert!(result.is_ok());
@@ -614,6 +634,7 @@ mod tests {
             Some(PrometheusConfig::default()),
             Some(GrafanaConfig::default()),
             Some(HttpsConfig::new("admin@example.com", false).expect("valid email")), // HTTPS section present
+            None,                                                                     // No backup
         );
 
         assert!(
@@ -637,6 +658,7 @@ mod tests {
             Some(PrometheusConfig::default()),
             Some(GrafanaConfig::default()),
             None, // No HTTPS section
+            None, // No backup
         );
 
         assert!(
@@ -660,6 +682,7 @@ mod tests {
             Some(PrometheusConfig::default()),
             Some(GrafanaConfig::default()),
             Some(HttpsConfig::new("admin@example.com", false).expect("valid email")),
+            None, // No backup
         );
 
         assert!(result.is_ok());
@@ -680,6 +703,7 @@ mod tests {
             Some(PrometheusConfig::default()),
             Some(GrafanaConfig::default()),
             None, // No HTTPS
+            None, // No backup
         );
 
         assert!(result.is_ok());

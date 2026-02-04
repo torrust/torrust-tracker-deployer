@@ -208,6 +208,40 @@ services:
       retries: 5
       start_period: 30s
 {%- endif %}
+{%- if backup %}
+
+  # Backup service for database and configuration backups
+  # Runs on-demand via "docker compose run --rm backup" (triggered by crontab)
+  # Uses profiles to prevent automatic startup on "docker compose up"
+  backup:
+    <<: *defaults
+    image: torrust/tracker-backup:latest
+    container_name: backup
+    restart: "no"  # Override defaults - backup runs once and exits
+    profiles:
+      - backup    # Only runs when explicitly invoked, not on "docker compose up"
+{%- if backup.dependencies | length > 0 %}
+    depends_on:
+{%- for dep in backup.dependencies %}
+      {{ dep.service }}:
+        condition: {{ dep.condition }}
+{%- endfor %}
+{%- endif %}
+    volumes:
+      # Backup configuration (sourceable by backup.sh)
+      - ./storage/backup/etc/backup.conf:/etc/backup/backup.conf:ro
+      - ./storage/backup/etc/backup-paths.txt:/etc/backup/backup-paths.txt:ro
+      # Mount storage read-only for config file backup
+      - ./storage:/data/storage:ro
+      # Mount backup output directory read-write
+      - ./storage/backup:/backups
+{%- if backup.networks | length > 0 %}
+    networks:
+{%- for network in backup.networks %}
+      - {{ network }}
+{%- endfor %}
+{%- endif %}
+{%- endif %}
 
 # Networks are derived from service configurations in Rust code.
 # See: src/domain/topology/network.rs for security rationale.

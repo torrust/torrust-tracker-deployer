@@ -517,6 +517,17 @@ If your deployment includes Grafana for metrics visualization, see the [Grafana 
 - Test end-to-end data flow (Tracker → Prometheus → Grafana)
 - Troubleshoot Grafana-specific issues
 
+### Backup Service
+
+If your deployment includes backup support (optional), see the [Backup Verification Guide](backup-verification.md) for detailed steps to:
+
+- Verify backup configuration deployment
+- Check backup storage directory structure
+- Test manual backup execution
+- Validate database backup files (SQLite vs MySQL)
+- Verify configuration archive creation
+- Troubleshoot backup-specific issues
+
 ### Basic Tracker Verification
 
 For quick basic tracker functionality checks without the detailed guide:

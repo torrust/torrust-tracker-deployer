@@ -38,7 +38,10 @@ pub use rendering::{
     RenderDockerComposeTemplatesStep, RenderOpenTofuTemplatesStep,
 };
 pub use software::{InstallDockerComposeStep, InstallDockerStep};
-pub use system::{ConfigureFirewallStep, ConfigureSecurityUpdatesStep, WaitForCloudInitStep};
+pub use system::{
+    ConfigureFirewallStep, ConfigureSecurityUpdatesStep, InstallBackupCrontabStep,
+    WaitForCloudInitStep,
+};
 pub use validation::{
     ValidateCloudInitCompletionStep, ValidateDockerComposeInstallationStep,
     ValidateDockerInstallationStep,

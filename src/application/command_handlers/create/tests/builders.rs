@@ -280,6 +280,7 @@ pub fn create_valid_test_config(temp_dir: &TempDir, env_name: &str) -> Environme
         None,
         None,
         None, // HTTPS configuration
+        None, // Backup configuration
     )
 }
 

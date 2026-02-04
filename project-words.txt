@@ -172,6 +172,7 @@ fswc
 getent
 getopt
 gobinary
+gpgv
 gosu
 handleable
 hashset
@@ -188,6 +189,7 @@ impls
 incompletei
 intervali
 ionice
+isdir
 isreg
 josecelano
 journalctl
@@ -205,6 +207,7 @@ leechers
 letsencrypt
 libc
 libldap
+libmariadb
 libpam
 libpython
 libsqlite
@@ -221,6 +224,7 @@ lspconfig
 lvremove
 lxdbr
 maxbytes
+memalign
 mgmt
 millis
 minizip
@@ -275,6 +279,7 @@ pingoo
 pingooio
 pipefail
 pipx
+pkcs
 pkill
 postconditions
 preconfigured
@@ -371,6 +376,7 @@ tmpfs
 tmptu
 torrust
 transactionally
+trixie
 tryfrom
 tulnp
 tulpn

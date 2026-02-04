@@ -5,6 +5,7 @@
 //!
 //! ## Components
 //!
+//! - `backup` - Backup configuration domain types (cron schedule, retention)
 //! - `caddy` - Caddy TLS reverse proxy service domain types
 //! - `environment` - Environment module with entity, name validation, and state management
 //!   - `environment::name` - Environment name validation and management
@@ -16,6 +17,7 @@
 //! - `template` - Core template domain models and business logic
 //! - `topology` - Docker Compose topology domain types (networks, services)
 
+pub mod backup;
 pub mod caddy;
 pub mod environment;
 pub mod grafana;
@@ -30,6 +32,7 @@ pub mod topology;
 pub mod tracker;
 
 // Re-export commonly used domain types for convenience
+pub use backup::{BackupConfig, CronSchedule, RetentionDays};
 pub use caddy::CaddyConfig;
 pub use environment::{
     name::{EnvironmentName, EnvironmentNameError},

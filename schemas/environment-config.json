@@ -1,17 +1,27 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.10s
-     Running `target/debug/torrust-tracker-deployer create schema`
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "EnvironmentCreationConfig",
-  "description": "Configuration for creating a deployment environment\n\nThis is the top-level configuration object that contains all information\nneeded to create a new deployment environment. It deserializes from JSON\nconfiguration and provides type-safe conversion to domain parameters.\n\n# Examples\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::{\n    EnvironmentCreationConfig, EnvironmentSection, ProviderSection, LxdProviderSection\n};\n\nlet json = r#\"{\n    \"environment\": {\n        \"name\": \"dev\"\n    },\n    \"ssh_credentials\": {\n        \"private_key_path\": \"fixtures/testing_rsa\",\n        \"public_key_path\": \"fixtures/testing_rsa.pub\"\n    },\n    \"provider\": {\n        \"provider\": \"lxd\",\n        \"profile_name\": \"torrust-profile-dev\"\n    },\n    \"tracker\": {\n        \"core\": {\n            \"database\": {\n                \"driver\": \"sqlite3\",\n                \"database_name\": \"tracker.db\"\n            },\n            \"private\": false\n        },\n        \"udp_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:6969\"\n            }\n        ],\n        \"http_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:7070\"\n            }\n        ],\n        \"http_api\": {\n            \"bind_address\": \"0.0.0.0:1212\",\n            \"admin_token\": \"MyAccessToken\"\n        },\n        \"health_check_api\": {\n            \"bind_address\": \"127.0.0.1:1313\"\n        }\n    },\n    \"prometheus\": {\n        \"scrape_interval_in_secs\": 15\n    },\n    \"grafana\": {\n        \"admin_user\": \"admin\",\n        \"admin_password\": \"admin\"\n    }\n}\"#;\n\nlet config: EnvironmentCreationConfig = serde_json::from_str(json)?;\n# Ok::<(), Box<dyn std::error::Error>>(())\n```",
+  "description": "Configuration for creating a deployment environment\n\nThis is the top-level configuration object that contains all information\nneeded to create a new deployment environment. It deserializes from JSON\nconfiguration and provides type-safe conversion to domain parameters.\n\n# Examples\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::{\n    EnvironmentCreationConfig, EnvironmentSection, ProviderSection, LxdProviderSection\n};\n\nlet json = r#\"{\n    \"environment\": {\n        \"name\": \"dev\"\n    },\n    \"ssh_credentials\": {\n        \"private_key_path\": \"fixtures/testing_rsa\",\n        \"public_key_path\": \"fixtures/testing_rsa.pub\"\n    },\n    \"provider\": {\n        \"provider\": \"lxd\",\n        \"profile_name\": \"torrust-profile-dev\"\n    },\n    \"tracker\": {\n        \"core\": {\n            \"database\": {\n                \"driver\": \"sqlite3\",\n                \"database_name\": \"tracker.db\"\n            },\n            \"private\": false\n        },\n        \"udp_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:6969\"\n            }\n        ],\n        \"http_trackers\": [\n            {\n                \"bind_address\": \"0.0.0.0:7070\"\n            }\n        ],\n        \"http_api\": {\n            \"bind_address\": \"0.0.0.0:1212\",\n            \"admin_token\": \"MyAccessToken\"\n        },\n        \"health_check_api\": {\n            \"bind_address\": \"127.0.0.1:1313\"\n        }\n    },\n    \"prometheus\": {\n        \"scrape_interval_in_secs\": 15\n    },\n    \"grafana\": {\n        \"admin_user\": \"admin\",\n        \"admin_password\": \"admin\"\n    },\n    \"backup\": {\n        \"schedule\": \"0 3 * * *\",\n        \"retention_days\": 7\n    }\n}\"#;\n\nlet config: EnvironmentCreationConfig = serde_json::from_str(json)?;\n# Ok::<(), Box<dyn std::error::Error>>(())\n```",
   "type": "object",
   "properties": {
+    "backup": {
+      "description": "Backup configuration (optional)\n\nWhen present, automated backups will be configured for the tracker\ndatabase and other persistent data.\n\nUses `BackupSection` for JSON parsing with String primitives (cron schedule).\nConverted to domain `BackupConfig` via `TryInto<EnvironmentParams>`.\n\nDefault schedule: 3:00 AM daily (\"0 3 * * *\")\nDefault retention: 7 days",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BackupSection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "environment": {
       "description": "Environment-specific settings",
       "$ref": "#/$defs/EnvironmentSection"
     },
     "grafana": {
-      "description": "Grafana dashboard configuration (optional)\n\nWhen present, Grafana will be deployed for visualization.\n**Requires Prometheus to be configured** - Grafana depends on\nPrometheus as its data source.\n\nUses `GrafanaSection` for JSON parsing with String primitives.\nConverted to domain `GrafanaConfig` via `to_environment_params()`.",
+      "description": "Grafana dashboard configuration (optional)\n\nWhen present, Grafana will be deployed for visualization.\n**Requires Prometheus to be configured** - Grafana depends on\nPrometheus as its data source.\n\nUses `GrafanaSection` for JSON parsing with String primitives.\nConverted to domain `GrafanaConfig` via `TryInto<EnvironmentParams>`.",
       "anyOf": [
         {
           "$ref": "#/$defs/GrafanaSection"
@@ -35,7 +45,7 @@
       "default": null
     },
     "prometheus": {
-      "description": "Prometheus monitoring configuration (optional)\n\nWhen present, Prometheus will be deployed to monitor the tracker.\nUses `PrometheusSection` for JSON parsing with String primitives.\nConverted to domain `PrometheusConfig` via `to_environment_params()`.",
+      "description": "Prometheus monitoring configuration (optional)\n\nWhen present, Prometheus will be deployed to monitor the tracker.\nUses `PrometheusSection` for JSON parsing with String primitives.\nConverted to domain `PrometheusConfig` via `TryInto<EnvironmentParams>`.",
       "anyOf": [
         {
           "$ref": "#/$defs/PrometheusSection"
@@ -47,7 +57,7 @@
       "default": null
     },
     "provider": {
-      "description": "Provider-specific configuration (LXD, Hetzner, etc.)\n\nUses `ProviderSection` for JSON parsing with raw primitives.\nConverted to domain `ProviderConfig` via `to_environment_params()`.",
+      "description": "Provider-specific configuration (LXD, Hetzner, etc.)\n\nUses `ProviderSection` for JSON parsing with raw primitives.\nConverted to domain `ProviderConfig` via `TryInto<EnvironmentParams>`.",
       "$ref": "#/$defs/ProviderSection"
     },
     "ssh_credentials": {
@@ -55,7 +65,7 @@
       "$ref": "#/$defs/SshCredentialsConfig"
     },
     "tracker": {
-      "description": "Tracker deployment configuration\n\nUses `TrackerSection` for JSON parsing with String primitives.\nConverted to domain `TrackerConfig` via `to_environment_params()`.",
+      "description": "Tracker deployment configuration\n\nUses `TrackerSection` for JSON parsing with String primitives.\nConverted to domain `TrackerConfig` via `TryInto<EnvironmentParams>`.",
       "$ref": "#/$defs/TrackerSection"
     }
   },
@@ -66,6 +76,24 @@
     "tracker"
   ],
   "$defs": {
+    "BackupSection": {
+      "description": "Backup configuration section (DTO)\n\nOptional configuration for automated backups. If present, backup support\nis enabled with the specified schedule and retention policy.\n\n# Examples\n\n```json\n{\n    \"schedule\": \"0 3 * * *\",\n    \"retention_days\": 7\n}\n```\n\nAll fields have defaults, so you can enable backup with minimal config:\n\n```json\n{\n    \"backup\": {}\n}\n```",
+      "type": "object",
+      "properties": {
+        "retention_days": {
+          "description": "Number of days to retain backups before automatic deletion\n\nDefault: 7 days\n\nMust be greater than 0.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 7,
+          "minimum": 0
+        },
+        "schedule": {
+          "description": "Cron schedule for backups (5-field format: minute hour day month weekday)\n\nDefault: \"0 3 * * *\" (3:00 AM daily)\n\nExamples:\n- \"0 3 * * *\" - 3:00 AM daily\n- \"0 */6 * * *\" - Every 6 hours\n- \"0 0 * * 0\" - Midnight every Sunday",
+          "type": "string",
+          "default": "0 3 * * *"
+        }
+      }
+    },
     "DatabaseSection": {
       "description": "Database configuration section (application DTO)\n\nMirrors the domain `DatabaseConfig` enum but at the application layer.\nSupports both `SQLite` and `MySQL` database backends.\n\n# Examples\n\n```json\n{\n  \"driver\": \"sqlite3\",\n  \"database_name\": \"tracker.db\"\n}\n```\n\n```json\n{\n  \"driver\": \"mysql\",\n  \"host\": \"localhost\",\n  \"port\": 3306,\n  \"database_name\": \"tracker\",\n  \"username\": \"tracker_user\",\n  \"password\": \"secure_password\"\n}\n```",
       "oneOf": [
@@ -237,12 +265,15 @@
       ]
     },
     "HttpApiSection": {
+      "description": "HTTP API configuration section (Application DTO)\n\nThis is a Data Transfer Object that uses primitive types (`String`) for\nJSON deserialization. It converts to the domain type `HttpApiConfig` via\nthe `TryFrom` trait, which delegates validation to the domain layer.\n\n# Responsibility Split\n\n- **This DTO**: Parse strings into typed values (`SocketAddr`, `DomainName`)\n- **Domain type**: Enforce business invariants (port != 0, TLS requires domain, etc.)\n\n# Usage\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::HttpApiSection;\nuse torrust_tracker_deployer_lib::domain::tracker::HttpApiConfig;\n\nlet section = HttpApiSection {\n    bind_address: \"0.0.0.0:1212\".to_string(),\n    admin_token: \"MyToken\".to_string(),\n    domain: None,\n    use_tls_proxy: None,\n};\n\nlet config: HttpApiConfig = section.try_into()?;\n# Ok::<(), Box<dyn std::error::Error>>(())\n```\n\n# JSON Example\n\n```json\n{\n    \"bind_address\": \"0.0.0.0:1212\",\n    \"admin_token\": \"MyAccessToken\",\n    \"domain\": \"api.example.com\",\n    \"use_tls_proxy\": true\n}\n```",
       "type": "object",
       "properties": {
         "admin_token": {
+          "description": "Admin token as plain string (at DTO boundary)\n\nConverted to `ApiToken` (secrecy-wrapped) in domain layer.",
           "type": "string"
         },
         "bind_address": {
+          "description": "Bind address as string (e.g., \"0.0.0.0:1212\")\n\nParsed to `SocketAddr` during conversion.",
           "type": "string"
         },
         "domain": {
@@ -337,7 +368,7 @@
       ]
     },
     "ProviderSection": {
-      "description": "Provider-specific configuration section\n\nEach variant contains the configuration fields specific to that provider\nusing **raw primitives** (`String`) for JSON deserialization.\n\nThis is a tagged enum that deserializes based on the `\"provider\"` field in JSON.\n\n# Conversion\n\nUse `to_provider_config()` to validate and convert to domain types.\n\n# Examples\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::{\n    ProviderSection, LxdProviderSection\n};\n\nlet section = ProviderSection::Lxd(LxdProviderSection {\n    profile_name: \"torrust-profile-dev\".to_string(),\n});\n\nlet config = section.to_provider_config().unwrap();\nassert_eq!(config.provider_name(), \"lxd\");\n```",
+      "description": "Provider-specific configuration section\n\nEach variant contains the configuration fields specific to that provider\nusing **raw primitives** (`String`) for JSON deserialization.\n\nThis is a tagged enum that deserializes based on the `\"provider\"` field in JSON.\n\n# Conversion\n\nUse `try_into()` or `ProviderConfig::try_from()` to validate and convert to domain types.\n\n# Examples\n\n```rust\nuse torrust_tracker_deployer_lib::application::command_handlers::create::config::{\n    ProviderSection, LxdProviderSection\n};\nuse torrust_tracker_deployer_lib::domain::provider::ProviderConfig;\nuse std::convert::TryInto;\n\nlet section = ProviderSection::Lxd(LxdProviderSection {\n    profile_name: \"torrust-profile-dev\".to_string(),\n});\n\nlet config: ProviderConfig = section.try_into().unwrap();\nassert_eq!(config.provider_name(), \"lxd\");\n```",
       "oneOf": [
         {
           "description": "LXD provider configuration",

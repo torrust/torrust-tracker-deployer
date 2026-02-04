@@ -308,6 +308,13 @@ The Torrust Tracker Deployer supports optional services that can be enabled in y
 
 ### Available Services
 
+- **[Backup Management](backup.md)** - Automatic database and configuration backups with retention policies (enabled by default)
+  - Automatic scheduled backups at configurable intervals
+  - Retention-based cleanup of old backups
+  - Support for both SQLite and MySQL databases
+  - Compressed backup files for storage efficiency
+  - Manual backup execution anytime on-demand
+
 - **[HTTPS Support](services/https.md)** - Automatic TLS/SSL with Let's Encrypt (disabled by default)
   - Automatic certificate management via Caddy reverse proxy
   - Per-service TLS configuration (API, HTTP trackers, Health Check API, Grafana)

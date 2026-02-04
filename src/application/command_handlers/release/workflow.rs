@@ -4,7 +4,7 @@
 //! all service-specific release steps in the correct order.
 
 use super::errors::ReleaseCommandHandlerError;
-use super::steps::{caddy, compose, grafana, mysql, prometheus, tracker};
+use super::steps::{backup, caddy, compose, grafana, mysql, prometheus, tracker};
 use crate::application::command_handlers::common::StepResult;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Released, Releasing};
@@ -25,6 +25,7 @@ pub async fn execute(
     prometheus::release(environment)?;
     grafana::release(environment)?;
     mysql::release(environment)?;
+    backup::release(environment).await?;
     caddy::release(environment)?;
     compose::release(environment).await?;
 

@@ -80,10 +80,10 @@ EXPOSE 22
 WORKDIR /home/torrust
 
 # Create supervisor configuration
-COPY docker/provisioned-instance/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Create entrypoint script for initialization
-COPY docker/provisioned-instance/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set entrypoint

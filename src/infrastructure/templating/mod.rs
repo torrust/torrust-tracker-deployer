@@ -28,6 +28,8 @@
 //!   - `template` - Template renderers for Prometheus configuration files
 //! - `grafana` - Grafana metrics visualization configuration
 //!   - `template` - Template renderers for Grafana provisioning files
+//! - `backup` - Backup configuration management
+//!   - `template` - Template renderers for backup configuration files
 //!
 //! ## Template Rendering
 //!
@@ -37,6 +39,7 @@
 //! - Handle template validation and error reporting
 
 pub mod ansible;
+pub mod backup;
 pub mod caddy;
 pub mod docker_compose;
 pub mod grafana;

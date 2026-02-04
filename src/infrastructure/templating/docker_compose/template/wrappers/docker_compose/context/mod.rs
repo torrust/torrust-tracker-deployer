@@ -9,6 +9,7 @@ use serde::Serialize;
 use crate::infrastructure::templating::TemplateMetadata;
 
 // Submodules
+mod backup;
 mod builder;
 mod caddy;
 mod database;
@@ -17,10 +18,12 @@ mod mysql;
 mod network_definition;
 mod port_definition;
 mod prometheus;
+mod service_dependency;
 mod service_topology;
 mod tracker;
 
 // Re-exports - service contexts
+pub use backup::BackupServiceContext;
 pub use caddy::CaddyServiceContext;
 pub use grafana::GrafanaServiceContext;
 pub use mysql::MysqlServiceContext;
@@ -32,6 +35,7 @@ pub use builder::{DockerComposeContextBuilder, PortConflictError};
 pub use database::{DatabaseConfig, MysqlSetupConfig};
 pub use network_definition::NetworkDefinition;
 pub use port_definition::PortDefinition;
+pub use service_dependency::ServiceDependency;
 pub use service_topology::ServiceTopology;
 
 /// Context for rendering the docker-compose.yml template
@@ -68,6 +72,12 @@ pub struct DockerComposeContext {
     /// This is separate from `MysqlSetupConfig` which contains credentials.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mysql: Option<MysqlServiceContext>,
+    /// Backup service configuration (optional)
+    ///
+    /// When present, the backup service is included in the deployment.
+    /// Contains network and dependency configuration for the backup service.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backup: Option<BackupServiceContext>,
     /// All networks required by enabled services (derived)
     ///
     /// This list is computed from the networks used by all services.
