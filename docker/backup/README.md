@@ -131,6 +131,62 @@ services:
 - Backup files inherit the same ownership as application files
 - Database credentials stored in config file (mounted read-only)
 
+## Building the Container
+
+### Docker Build Context
+
+The backup container build uses a specific build context strategy to maintain consistency between local development and CI environments. This prevents subtle build failures caused by context/path mismatches.
+
+**Critical Concept**: In Docker, `COPY` and `ADD` commands resolve paths **relative to the build context**, NOT relative to the Dockerfile location. Understanding this is essential to prevent regression.
+
+### Local Build
+
+```bash
+cd /path/to/docker/backup
+docker build -t torrust/backup:latest .
+```
+
+Or from repository root:
+
+```bash
+# Correct: context is ./docker/backup directory
+docker build -f docker/backup/Dockerfile -t torrust/backup:latest docker/backup
+
+# Incorrect: would break COPY commands
+docker build -f docker/backup/Dockerfile -t torrust/backup:latest .
+```
+
+**Key Point**: When you run `docker build -t image:tag <CONTEXT>`, the `<CONTEXT>` path becomes the root for all COPY/ADD commands in the Dockerfile. Our Dockerfile uses simple relative paths (`COPY backup.sh`) which work when context is `./docker/backup`.
+
+### CI/GitHub Workflow Build
+
+The GitHub Actions workflow specifies build context explicitly:
+
+```yaml
+uses: docker/build-push-action@v6
+with:
+  context: ./docker/backup # Build context is the docker/backup directory
+  file: ./docker/backup/Dockerfile
+  # ...
+```
+
+This ensures the CI build behaves identically to local builds.
+
+### Why This Matters
+
+**Previous Regression (commit 9d297cc5)**:
+
+- Workflow used `context: .` (repository root)
+- Dockerfile had to use full paths: `COPY docker/backup/backup.sh /scripts/backup.sh`
+- This was confusing and error-prone because paths looked like they were from the root
+
+**Current Approach**:
+
+- Workflow uses `context: ./docker/backup`
+- Dockerfile uses natural relative paths: `COPY backup.sh /scripts/backup.sh`
+- Both local builds and CI builds work identically
+- Future developers won't accidentally change the context and break builds
+
 ## Testing
 
 Tests run automatically during container build:

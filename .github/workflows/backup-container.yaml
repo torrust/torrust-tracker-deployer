@@ -53,6 +53,17 @@ jobs:
       - name: Build Image
         uses: docker/build-push-action@v6
         with:
+          # CRITICAL: Context must be ./docker/backup (not ./)
+          # Docker COPY/ADD commands resolve paths RELATIVE TO BUILD CONTEXT, not Dockerfile location.
+          # Setting context: ./docker/backup allows the Dockerfile to use simple relative paths like:
+          #   COPY backup.sh /scripts/backup.sh
+          # This creates consistency between local builds and CI builds.
+          #
+          # Regression History: commit 9d297cc5 used context: . with full paths in Dockerfile
+          # (e.g., COPY docker/backup/backup.sh). This worked but was confusing and error-prone
+          # for future changes. The current approach is cleaner and prevents regression.
+          #
+          # See docker/backup/README.md "Building the Container" section for details.
           context: ./docker/backup
           file: ./docker/backup/Dockerfile
           target: production
