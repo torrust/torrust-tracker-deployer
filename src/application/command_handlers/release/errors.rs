@@ -146,6 +146,18 @@ pub enum ReleaseCommandHandlerError {
         step: ReleaseStep,
     },
 
+    /// Backup crontab installation failed
+    #[error("Backup crontab installation failed: {message}")]
+    InstallBackupCrontabFailed {
+        /// Description of the failure
+        message: String,
+        /// The underlying error from the installation step
+        #[source]
+        source: BoxedStepError,
+        /// The release step that failed
+        step: ReleaseStep,
+    },
+
     /// Backup storage directory creation failed
     #[error("Backup storage creation failed: {message}")]
     CreateBackupStorageFailed {
@@ -262,6 +274,11 @@ impl Traceable for ReleaseCommandHandlerError {
             Self::DeployBackupConfigFailed { message, .. } => {
                 format!("ReleaseCommandHandlerError: Backup configuration deployment failed - {message}")
             }
+            Self::InstallBackupCrontabFailed { message, .. } => {
+                format!(
+                    "ReleaseCommandHandlerError: Backup crontab installation failed - {message}"
+                )
+            }
             Self::CaddyConfigDeployment { message, .. } => {
                 format!(
                     "ReleaseCommandHandlerError: Caddy configuration deployment failed - {message}"
@@ -311,6 +328,7 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::RenderBackupTemplatesFailed { .. }
             | Self::CreateBackupStorageFailed { .. }
             | Self::DeployBackupConfigFailed { .. }
+            | Self::InstallBackupCrontabFailed { .. }
             | Self::CaddyConfigDeployment { .. }
             | Self::TrackerConfigDeployment { .. }
             | Self::GrafanaProvisioningDeployment { .. }
@@ -335,6 +353,7 @@ impl Traceable for ReleaseCommandHandlerError {
             | Self::RenderBackupTemplatesFailed { .. }
             | Self::CreateBackupStorageFailed { .. }
             | Self::DeployBackupConfigFailed { .. }
+            | Self::InstallBackupCrontabFailed { .. }
             | Self::CaddyConfigDeployment { .. }
             | Self::TrackerConfigDeployment { .. }
             | Self::GrafanaProvisioningDeployment { .. }
@@ -622,6 +641,37 @@ For more information, see docs/user-guide/commands.md"
 
 4. Check file permissions on remote host
 5. Review Ansible playbook execution logs above"
+            }
+            Self::InstallBackupCrontabFailed { .. } => {
+                "Backup Crontab Installation Failed - Troubleshooting:
+
+1. Verify SSH connection to remote host:
+   ssh <user>@<host>
+
+2. Check Ansible playbook exists:
+   ls templates/ansible/install-backup-crontab.yml
+
+3. Verify maintenance script is in build directory:
+   ls build/<env-name>/backup/etc/maintenance-backup.sh
+
+4. Verify crontab entry is generated:
+   ls build/<env-name>/backup/etc/maintenance-backup.cron
+
+5. Check that cron daemon is running on target:
+   ssh <user>@<host> 'systemctl status cron'
+
+6. Check file permissions and ownership on target:
+   ssh <user>@<host> 'ls -la /usr/local/bin/maintenance-backup.sh'
+   ssh <user>@<host> 'ls -la /etc/cron.d/tracker-backup'
+
+Common causes:
+- Cron daemon not installed or running
+- Permission denied on cron directory
+- Insufficient disk space on target
+- SSH authentication failure
+- Ansible playbook not found
+
+For more information, see docs/user-guide/commands.md"
             }
             Self::CaddyConfigDeployment { .. } => {
                 "Caddy Configuration Deployment Failed - Troubleshooting:

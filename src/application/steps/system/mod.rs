@@ -8,6 +8,7 @@
  * - Cloud-init completion waiting
  * - Automatic security updates configuration
  * - UFW firewall configuration (SSH access only)
+ * - Backup crontab installation
  *
  * Note: Tracker service ports are controlled via Docker port bindings in docker-compose,
  * not through UFW rules. Docker bypasses UFW for published container ports.
@@ -21,8 +22,10 @@
 
 pub mod configure_firewall;
 pub mod configure_security_updates;
+pub mod install_backup_crontab;
 pub mod wait_cloud_init;
 
 pub use configure_firewall::ConfigureFirewallStep;
 pub use configure_security_updates::ConfigureSecurityUpdatesStep;
+pub use install_backup_crontab::InstallBackupCrontabStep;
 pub use wait_cloud_init::WaitForCloudInitStep;

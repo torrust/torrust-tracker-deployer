@@ -58,6 +58,8 @@ pub enum ReleaseStep {
     CreateBackupStorage,
     /// Deploying Backup configuration to the remote host via Ansible (if backup enabled)
     DeployBackupConfigToRemote,
+    /// Installing backup crontab and maintenance script (if backup enabled)
+    InstallBackupCrontab,
     /// Rendering Caddy configuration templates to the build directory (if HTTPS enabled)
     RenderCaddyTemplates,
     /// Deploying Caddy configuration to the remote host via Ansible (if HTTPS enabled)
@@ -85,6 +87,7 @@ impl fmt::Display for ReleaseStep {
             Self::RenderBackupTemplates => "Render Backup Templates",
             Self::CreateBackupStorage => "Create Backup Storage",
             Self::DeployBackupConfigToRemote => "Deploy Backup Config to Remote",
+            Self::InstallBackupCrontab => "Install Backup Crontab",
             Self::RenderCaddyTemplates => "Render Caddy Templates",
             Self::DeployCaddyConfigToRemote => "Deploy Caddy Config to Remote",
             Self::RenderDockerComposeTemplates => "Render Docker Compose Templates",

@@ -109,9 +109,9 @@ start_tracker() {
 
 # Run the backup container
 run_backup() {
-    log_info "Running backup container..."
+    log_info "Running backup container (via backup profile)..."
     
-    if docker compose run --rm backup >/dev/null 2>&1; then
+    if docker compose --profile backup run --rm backup >/dev/null 2>&1; then
         log_info "Backup completed successfully"
         return 0
     else

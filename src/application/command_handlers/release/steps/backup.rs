@@ -13,6 +13,7 @@ use crate::application::command_handlers::common::StepResult;
 use crate::application::command_handlers::release::errors::ReleaseCommandHandlerError;
 use crate::application::steps::application::{CreateBackupStorageStep, DeployBackupConfigStep};
 use crate::application::steps::rendering::RenderBackupTemplatesStep;
+use crate::application::steps::system::InstallBackupCrontabStep;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
 use crate::domain::template::TemplateManager;
@@ -50,6 +51,7 @@ pub async fn release(
     render_templates(environment).await?;
     create_storage(environment)?;
     deploy_config_to_remote(environment)?;
+    install_crontab(environment)?;
 
     Ok(())
 }
@@ -153,6 +155,42 @@ fn deploy_config_to_remote(
         command = "release",
         step = %current_step,
         "Backup configuration deployed successfully"
+    );
+
+    Ok(())
+}
+
+/// Install backup crontab and maintenance script on the remote host
+///
+/// This installs the cron job that will execute backups on the configured schedule.
+/// The cron daemon is always running, so the job will automatically execute on schedule.
+///
+/// # Errors
+///
+/// Returns a tuple of (error, `ReleaseStep::InstallBackupCrontab`) if installation fails
+#[allow(clippy::result_large_err)]
+fn install_crontab(
+    environment: &Environment<Releasing>,
+) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
+    let current_step = ReleaseStep::InstallBackupCrontab;
+
+    InstallBackupCrontabStep::new(ansible_client(environment))
+        .execute()
+        .map_err(|e| {
+            (
+                ReleaseCommandHandlerError::InstallBackupCrontabFailed {
+                    message: e.to_string(),
+                    source: Box::new(e),
+                    step: current_step,
+                },
+                current_step,
+            )
+        })?;
+
+    info!(
+        command = "release",
+        step = %current_step,
+        "Backup crontab and maintenance script installed successfully"
     );
 
     Ok(())

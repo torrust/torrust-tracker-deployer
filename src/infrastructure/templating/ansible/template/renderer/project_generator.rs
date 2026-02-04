@@ -316,6 +316,7 @@ impl AnsibleProjectGenerator {
             "create-mysql-storage.yml",
             "create-backup-storage.yml",
             "deploy-backup-config.yml",
+            "install-backup-crontab.yml",
             "deploy-caddy-config.yml",
             "deploy-compose-files.yml",
             "run-compose-services.yml",
@@ -326,7 +327,7 @@ impl AnsibleProjectGenerator {
 
         tracing::debug!(
             "Successfully copied {} static template files",
-            22 // ansible.cfg + 21 playbooks
+            23 // ansible.cfg + 22 playbooks
         );
 
         Ok(())

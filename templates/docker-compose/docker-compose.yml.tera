@@ -211,13 +211,15 @@ services:
 {%- if backup %}
 
   # Backup service for database and configuration backups
-  # Runs once on docker compose up (single mode), exits when complete
-  # Scheduled backups are triggered via crontab on the host
+  # Runs on-demand via "docker compose run --rm backup" (triggered by crontab)
+  # Uses profiles to prevent automatic startup on "docker compose up"
   backup:
     <<: *defaults
     image: torrust/tracker-backup:latest
     container_name: backup
     restart: "no"  # Override defaults - backup runs once and exits
+    profiles:
+      - backup    # Only runs when explicitly invoked, not on "docker compose up"
 {%- if backup.dependencies | length > 0 %}
     depends_on:
 {%- for dep in backup.dependencies %}
