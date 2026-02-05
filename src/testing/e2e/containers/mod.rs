@@ -58,4 +58,4 @@ pub use config_builder::ContainerConfigBuilder;
 pub use executor::ContainerExecutor;
 
 // Re-export tracker ports for E2E testing
-pub use tracker_ports::{E2eEnvironmentInfo, TrackerPorts};
+pub use tracker_ports::{E2eConfigEnvironment, TrackerPorts};

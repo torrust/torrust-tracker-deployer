@@ -239,10 +239,6 @@ impl ContainerPorts {
     }
 }
 
-// Deprecated: Keep for backward compatibility during migration
-/// @deprecated Use `E2eConfigEnvironment` instead
-pub type E2eEnvironmentInfo = E2eConfigEnvironment;
-
 /// Tracker port configuration extracted from environment JSON file
 ///
 /// This is a simplified E2E-specific type that extracts only the port numbers
