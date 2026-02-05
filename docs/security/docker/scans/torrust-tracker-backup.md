@@ -4,80 +4,49 @@ Security scan history for the `torrust/tracker-backup` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status                        | Last Scan   |
-| ------- | ---- | -------- | ----------------------------- | ----------- |
-| local   | 9    | 2        | ⚠️ Vulnerabilities in base OS | Feb 2, 2026 |
+| Version | HIGH | CRITICAL | Status               | Last Scan   |
+| ------- | ---- | -------- | -------------------- | ----------- |
+| trixie  | 7    | 0        | ℹ️ Base OS Monitored | Feb 5, 2026 |
+
+## Build & Scan Commands
+
+**Build the image**:
+
+```bash
+docker build --tag torrust/tracker-backup:local docker/backup/
+```
+
+**Run Trivy security scan**:
+
+```bash
+trivy image --severity HIGH,CRITICAL torrust/tracker-backup:local
+```
 
 ## Scan History
 
-### February 2, 2026
+### February 5, 2026
 
 **Image**: `torrust/tracker-backup:local`
 **Trivy Version**: 0.68.2
 **Base OS**: Debian 13.3 (trixie-slim)
-**Status**: ⚠️ **11 vulnerabilities found** (9 HIGH, 2 CRITICAL)
+**Status**: ℹ️ **7 vulnerabilities found** (7 HIGH, 0 CRITICAL) in Debian 13 base
 
 #### Summary
 
-The tracker-backup container is based on `debian:trixie-slim` (Debian 13, current stable). After upgrading from Debian 12 (bookworm) to Debian 13 (trixie), vulnerabilities remain in system libraries. **However, the OpenSSL vulnerabilities have fixes available in Debian 13.**
+The tracker-backup container uses `debian:trixie-slim` (Debian 13.3, current stable). All vulnerabilities are in base OS packages, not in application code. The container includes MySQL/MariaDB client and SQLite for database backups.
 
-**Installed Tools**:
+**Installed Components**:
 
 - `bash` - Backup script execution
-- `default-mysql-client` (MySQL 8) - Database dumps
-- `sqlite3` - SQLite backups
-- `gzip` - Compression
+- `default-mysql-client` (MariaDB 11.8.3) - MySQL/MariaDB database dumps
+- `sqlite3` - SQLite database backups
+- `gzip` - Compression for backups
 - `tar` - Archive creation
-- `bats` - Unit testing (only in test stage, not in production image)
+- `curl` - Remote backup transfers (optional)
+- `bats` - Unit testing (removed in production image)
 
-#### Detailed Results
+#### Detailed Vulnerabilities
 
-```text
-torrust/tracker-backup:local (debian 13.3)
-
-Total: 11 (HIGH: 9, CRITICAL: 2)
-
-┌─────────────────────────┬────────────────┬──────────┬──────────┬───────────────────┬─────────────────┬──────────────────────────────────────────────────────────────┐
-│         Library         │ Vulnerability  │ Severity │  Status  │ Installed Version │  Fixed Version  │                            Title                             │
-├─────────────────────────┼────────────────┼──────────┼──────────┼───────────────────┼─────────────────┼──────────────────────────────────────────────────────────────┤
-│ libc-bin                │ CVE-2026-0861  │ HIGH     │ affected │ 2.41-12+deb13u1   │                 │ glibc: Integer overflow in memalign leads to heap corruption │
-├─────────────────────────┤                │          │          │                   ├─────────────────┤                                                              │
-│ libc6                   │                │          │          │                   │                 │                                                              │
-├─────────────────────────┼────────────────┤          │          ├───────────────────┼─────────────────┼──────────────────────────────────────────────────────────────┤
-│ libmariadb3             │ CVE-2025-13699 │          │          │ 1:11.8.3-0+deb13u1│                 │ mariadb: mariadb-dump utility vulnerable to remote           │
-│                         │                │          │          │                   │                 │ code execution via improper path                             │
-├─────────────────────────┼────────────────┼──────────┼──────────┼───────────────────┼─────────────────┼──────────────────────────────────────────────────────────────┤
-│ libssl3t64              │ CVE-2025-15467 │ CRITICAL │ fixed    │ 3.5.4-1~deb13u1   │ 3.5.4-1~deb13u2 │ openssl: Remote code execution or Denial of Service          │
-│                         │                │          │          │                   │                 │ via oversized Initialization                                 │
-│                         ├────────────────┼──────────┤          │                   │                 ├──────────────────────────────────────────────────────────────┤
-│                         │ CVE-2025-69419 │ HIGH     │          │                   │                 │ openssl: Arbitrary code execution due to                     │
-│                         │                │          │          │                   │                 │ out-of-bounds write in PKCS#12 processing                    │
-├─────────────────────────┼────────────────┤          ├──────────┼───────────────────┼─────────────────┼──────────────────────────────────────────────────────────────┤
-│ mariadb-client          │ CVE-2025-13699 │          │ affected │ 1:11.8.3-0+deb13u1│                 │ mariadb: mariadb-dump utility vulnerable to remote           │
-│                         │                │          │          │                   │                 │ code execution via improper path                             │
-├─────────────────────────┤                │          │          │                   ├─────────────────┤                                                              │
-│ mariadb-client-compat   │                │          │          │                   │                 │                                                              │
-├─────────────────────────┤                │          │          │                   ├─────────────────┤                                                              │
-│ mariadb-client-core     │                │          │          │                   │                 │                                                              │
-├─────────────────────────┤                │          │          │                   ├─────────────────┤                                                              │
-│ mariadb-common          │                │          │          │                   │                 │                                                              │
-├─────────────────────────┼────────────────┼──────────┼──────────┼───────────────────┼─────────────────┼──────────────────────────────────────────────────────────────┤
-│ openssl-provider-legacy │ CVE-2025-15467 │ CRITICAL │ fixed    │ 3.5.4-1~deb13u1   │ 3.5.4-1~deb13u2 │ openssl: Remote code execution or Denial of Service          │
-│                         │                │          │          │                   │                 │ via oversized Initialization                                 │
-│                         ├────────────────┼──────────┤          │                   │                 ├──────────────────────────────────────────────────────────────┤
-│                         │ CVE-2025-69419 │ HIGH     │          │                   │                 │ openssl: Arbitrary code execution due to                     │
-│                         │                │          │          │                   │                 │ out-of-bounds write in PKCS#12 processing                    │
-└─────────────────────────┴────────────────┴──────────┴──────────┴───────────────────┴─────────────────┴──────────────────────────────────────────────────────────────┘
-```
-
-#### Risk Assessment
-
-**Current Risk Level**: ⚠️ **MEDIUM**
-
-**Security Improvement with Debian 13**: The upgrade from Debian 12 (bookworm) to Debian 13 (trixie) resolved 3 critical vulnerabilities that had no fixes available in the previous version:
-
-- ✅ CVE-2025-7458 (CRITICAL) - SQLite integer overflow - **RESOLVED**
-- ✅ CVE-2023-45853 (CRITICAL) - zlib buffer overflow - **RESOLVED**
 - ✅ CVE-2026-24882 (HIGH) - GnuPG buffer overflow - **RESOLVED**
 
 All remaining vulnerabilities are in upstream Debian packages. The container itself:

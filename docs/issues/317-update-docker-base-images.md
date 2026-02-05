@@ -137,7 +137,48 @@ Sources: https://hub.docker.com/_/rust, https://hub.docker.com/_/debian, https:/
 **Status**: ✅ Already on latest versions (no updates needed)  
 **No action required** - confirmed current with official sources
 
-## Acceptance Criteria
+## Build & Security Scan Commands
+
+### Build All Images
+
+```bash
+# Deployer (Rust build environment)
+docker build --target release --tag torrust/tracker-deployer:local --file docker/deployer/Dockerfile .
+
+# Backup container
+docker build --tag torrust/tracker-backup:local docker/backup/
+
+# SSH test server
+docker build --tag torrust/tracker-ssh-server:local docker/ssh-server/
+
+# Provisioned instance (Ubuntu test server)
+docker build --tag torrust/tracker-provisioned-instance:local docker/provisioned-instance/
+```
+
+### Run Security Scans for All Images
+
+```bash
+# Deployer scan
+trivy image --severity HIGH,CRITICAL torrust/tracker-deployer:local
+
+# Backup scan
+trivy image --severity HIGH,CRITICAL torrust/tracker-backup:local
+
+# SSH server scan
+trivy image --severity HIGH,CRITICAL torrust/tracker-ssh-server:local
+
+# Provisioned instance scan
+trivy image --severity HIGH,CRITICAL torrust/tracker-provisioned-instance:local
+```
+
+## Scan Reports
+
+Security scan results are documented in:
+
+- [Deployer Scan Report](../../security/docker/scans/torrust-tracker-deployer.md) - 1 HIGH (test artifact only)
+- [Backup Scan Report](../../security/docker/scans/torrust-tracker-backup.md) - 7 HIGH (base OS packages)
+- [SSH Server Scan Report](../../security/docker/scans/torrust-ssh-server.md) - 1 HIGH (test artifact only)
+- [Provisioned Instance Scan Report](../../security/docker/scans/torrust-tracker-provisioned-instance.md) - 11 HIGH (Ubuntu LTS base)
 
 > **Note for Contributors**: These criteria define what the PR reviewer will check. Use this as your pre-review checklist before submitting the PR to minimize back-and-forth iterations.
 

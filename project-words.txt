@@ -66,6 +66,7 @@ SARIF
 SCRIPTDIR
 Scriptability
 Silverlight
+StorageGRID
 Subissue
 Swatinem
 Tablespace
