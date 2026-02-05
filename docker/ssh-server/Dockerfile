@@ -2,7 +2,7 @@
 # Minimal Alpine container with SSH server for testing SSH client functionality
 # This container is used in integration tests to verify SSH connectivity and command execution
 
-FROM alpine:3.23.2
+FROM alpine:3.23.3
 
 # Metadata
 LABEL description="Minimal SSH server for integration testing"
