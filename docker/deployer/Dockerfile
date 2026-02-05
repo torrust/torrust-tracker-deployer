@@ -25,7 +25,7 @@
 ## =============================================================================
 ## Builder Image - Install cargo-chef for dependency caching
 ## =============================================================================
-FROM docker.io/library/rust:bookworm AS chef
+FROM docker.io/library/rust:trixie AS chef
 WORKDIR /tmp
 RUN curl -L --proto '=https' --tlsv1.2 -sSf \
     https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
