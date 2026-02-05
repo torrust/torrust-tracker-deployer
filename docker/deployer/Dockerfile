@@ -63,7 +63,7 @@ RUN mkdir -p /app/bin/ && cp /build/src/target/release/torrust-tracker-deployer 
 ## =============================================================================
 ## Runtime Image
 ## =============================================================================
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 
 # Metadata
 LABEL org.opencontainers.image.title="Torrust Tracker Deployer"
