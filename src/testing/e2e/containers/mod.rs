@@ -37,6 +37,7 @@ pub mod executor;
 pub mod image_builder;
 pub mod provisioned;
 pub mod timeout;
+pub mod tracker_container_setup;
 pub mod tracker_ports;
 
 // Re-export provisioned container types for backward compatibility
