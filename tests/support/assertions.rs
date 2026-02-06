@@ -42,6 +42,54 @@ impl EnvironmentStateAssertions {
         );
     }
 
+    /// Assert that the environment does not exist (has been purged)
+    ///
+    /// Verifies that the environment state file does not exist after purge.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the environment file still exists.
+    pub fn assert_environment_not_exists(&self, env_name: &str) {
+        let env_file_path = self.environment_json_path(env_name);
+        assert!(
+            !env_file_path.exists(),
+            "Environment file should not exist at: {}",
+            env_file_path.display()
+        );
+    }
+
+    /// Assert that the data directory does not exist (has been purged)
+    ///
+    /// Verifies that the environment's entire data directory was removed.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the data directory still exists.
+    pub fn assert_data_directory_not_exists(&self, env_name: &str) {
+        let data_dir = self.workspace_path.join("data").join(env_name);
+        assert!(
+            !data_dir.exists(),
+            "Data directory should not exist at: {}",
+            data_dir.display()
+        );
+    }
+
+    /// Assert that the build directory does not exist (has been purged)
+    ///
+    /// Verifies that the environment's build directory was removed.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the build directory still exists.
+    pub fn assert_build_directory_not_exists(&self, env_name: &str) {
+        let build_dir = self.workspace_path.join("build").join(env_name);
+        assert!(
+            !build_dir.exists(),
+            "Build directory should not exist at: {}",
+            build_dir.display()
+        );
+    }
+
     /// Assert that the environment is in the expected state
     ///
     /// Verifies that the environment state matches the expected state string.
