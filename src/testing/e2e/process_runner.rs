@@ -431,6 +431,43 @@ impl ProcessRunner {
 
         Ok(ProcessResult::new(output))
     }
+
+    /// Run the purge command with the production binary
+    ///
+    /// This method runs `cargo run -- purge <environment_name> --force` with
+    /// optional working directory for the application itself via `--working-dir`.
+    /// Always uses `--force` flag to skip interactive confirmation prompts in tests.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory path contains invalid UTF-8.
+    pub fn run_purge_command(&self, environment_name: &str) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "purge",
+                environment_name,
+                "--force",
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args(["run", "--", "purge", environment_name, "--force"]);
+        }
+
+        let output = cmd.output().context("Failed to execute purge command")?;
+
+        Ok(ProcessResult::new(output))
+    }
 }
 
 impl Default for ProcessRunner {

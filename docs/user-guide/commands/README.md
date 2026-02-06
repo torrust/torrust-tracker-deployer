@@ -28,7 +28,8 @@ This directory contains detailed guides for all Torrust Tracker Deployer command
 
 ### Environment Cleanup
 
-- **[destroy](destroy.md)** - Destroy deployment environment
+- **[destroy](destroy.md)** - Destroy deployment infrastructure
+- **[purge](purge.md)** - Remove local environment data and free up names
 
 ## Command Workflow
 
@@ -44,7 +45,8 @@ The typical command sequence for a complete deployment:
 7. test               → Verify infrastructure readiness
 8. release            → Deploy application configuration and files
 9. run                → Start Torrust Tracker services
-10. destroy           → Clean up when done
+10. destroy           → Tear down infrastructure
+11. purge             → Remove local data (optional, for cleanup)
 ```
 
 ## Command Categories
@@ -60,6 +62,7 @@ These commands provide fine-grained control over each deployment step:
 - `test`
 - `release`
 - `run`
+- `purge`
 - `destroy`
 
 **Best for**: CI/CD pipelines, automation, advanced users, debugging
@@ -84,7 +87,8 @@ Simplified commands that orchestrate multiple plumbing commands:
 | `configure`          | Provisioned → Configured | Install software, firewall |
 | `test`               | (validation only)        | Verify infrastructure      |
 | `release`            | Configured → Released    | Deploy application files   |
-| `run`                | Released → Running       | Start tracker services     |
+| `run`                | Released → Running       | Tear down infrastructure   |
+| `purge`              | Any → (removed)          | Remove local data ices     |
 | `destroy`            | Any → Destroyed          | Clean up resources         |
 
 ## Getting Started

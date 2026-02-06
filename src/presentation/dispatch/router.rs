@@ -121,6 +121,14 @@ pub async fn route_command(
                 .await?;
             Ok(())
         }
+        Commands::Purge { environment, force } => {
+            context
+                .container()
+                .create_purge_controller()
+                .execute(&environment, force)
+                .await?;
+            Ok(())
+        }
         Commands::Provision { environment } => {
             context
                 .container()

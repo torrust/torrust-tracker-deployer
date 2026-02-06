@@ -14,6 +14,7 @@
 //! - `destroy` - Infrastructure destruction and teardown
 //! - `list` - List all environments in the workspace (read-only)
 //! - `provision` - Infrastructure provisioning using `OpenTofu`
+//! - `purge` - Remove all local environment data
 //! - `register` - Register existing instances as alternative to provisioning
 //! - `release` - Software release to target instances
 //! - `run` - Stack execution on target instances
@@ -29,6 +30,7 @@ pub mod create;
 pub mod destroy;
 pub mod list;
 pub mod provision;
+pub mod purge;
 pub mod register;
 pub mod release;
 pub mod run;
@@ -40,6 +42,7 @@ pub use create::CreateCommandHandler;
 pub use destroy::DestroyCommandHandler;
 pub use list::ListCommandHandler;
 pub use provision::ProvisionCommandHandler;
+pub use purge::handler::PurgeCommandHandler;
 pub use register::RegisterCommandHandler;
 pub use release::ReleaseCommandHandler;
 pub use run::RunCommandHandler;

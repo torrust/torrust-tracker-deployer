@@ -199,11 +199,21 @@ impl DestroyCommandController {
 
     /// Complete the workflow with success message
     ///
-    /// Shows final success message to the user with workflow summary.
+    /// Shows final success message to the user with workflow summary
+    /// and hints about purge command for complete cleanup.
     #[allow(clippy::result_large_err)]
     fn complete_workflow(&mut self, name: &str) -> Result<(), DestroySubcommandError> {
         self.progress
             .complete(&format!("Environment '{name}' destroyed successfully"))?;
+
+        // Add blank line for readability
+        self.progress.blank_line()?;
+
+        // Hint about purge command for complete cleanup
+        self.progress.output().lock().borrow_mut().result(&format!(
+            "💡 Local data preserved for debugging. To completely remove and reuse the name:\n   torrust-tracker-deployer purge {name} --force"
+        ));
+
         Ok(())
     }
 }
