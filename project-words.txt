@@ -47,6 +47,7 @@ MyISAM
 NOPASSWD
 OAAAAN
 OCSP
+OOXML
 OSSEC
 Ollama
 Osherove
@@ -188,6 +189,7 @@ hugepages
 idna
 impls
 incompletei
+instructionsets
 intervali
 ionice
 isdir
@@ -266,6 +268,7 @@ noout
 nslookup
 nullglob
 oneline
+ooxml
 overpromise
 pacman
 parameterizing
@@ -273,6 +276,9 @@ parseable
 passwordless
 pathbuf
 peerslee
+pdfminer
+pdfplumber
+pdfs
 pgzip
 pidfile
 pids
@@ -295,7 +301,9 @@ publickey
 publicsuffix
 pullable
 purgeable
+pypdf
 pytest
+pytesseract
 rclone
 readlink
 realpath
@@ -324,6 +332,7 @@ rustup
 rwxrwx
 sandboxed
 sarif
+scannability
 schemafile
 schemars
 secureboot

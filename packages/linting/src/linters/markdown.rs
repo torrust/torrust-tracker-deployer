@@ -54,11 +54,7 @@ pub fn run_markdown_linter() -> Result<()> {
     let mut cmd = Command::new("markdownlint");
     cmd.current_dir(&repo_root);
     cmd.arg("--config").arg(&config_path);
-    cmd.args(&file_list);
-    // Run markdownlint on all found files
-    let mut cmd = Command::new("markdownlint");
-    cmd.arg("--config").arg(".markdownlint.json");
-    cmd.current_dir("."); // Ensure we run from the repository root
+    cmd.arg("--dot"); // Include files in dot directories like .github/
     cmd.args(&file_list);
 
     let output = cmd.output()?;
