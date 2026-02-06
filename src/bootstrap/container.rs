@@ -19,6 +19,7 @@ use crate::presentation::controllers::create::subcommands::template::CreateTempl
 use crate::presentation::controllers::destroy::DestroyCommandController;
 use crate::presentation::controllers::list::ListCommandController;
 use crate::presentation::controllers::provision::ProvisionCommandController;
+use crate::presentation::controllers::purge::PurgeCommandController;
 use crate::presentation::controllers::register::RegisterCommandController;
 use crate::presentation::controllers::release::ReleaseCommandController;
 use crate::presentation::controllers::run::RunCommandController;
@@ -224,6 +225,12 @@ impl Container {
     #[must_use]
     pub fn create_destroy_controller(&self) -> DestroyCommandController {
         DestroyCommandController::new(self.repository(), self.clock(), self.user_output())
+    }
+
+    /// Create a new `PurgeCommandController`
+    #[must_use]
+    pub fn create_purge_controller(&self) -> PurgeCommandController {
+        PurgeCommandController::new(self.repository(), self.clock(), self.user_output())
     }
 
     /// Create a new `ConfigureCommandController`

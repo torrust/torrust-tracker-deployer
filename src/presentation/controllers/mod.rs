@@ -256,6 +256,7 @@ pub mod create;
 pub mod destroy;
 pub mod list;
 pub mod provision;
+pub mod purge;
 pub mod register;
 pub mod release;
 pub mod run;

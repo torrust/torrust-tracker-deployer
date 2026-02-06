@@ -37,6 +37,49 @@ pub enum Commands {
         environment: String,
     },
 
+    /// Purge local data for an environment
+    ///
+    /// This command removes all local data directories for an environment,
+    /// including the `data/{env-name}/` and `build/{env-name}/` directories.
+    ///
+    /// ### When to Use
+    ///
+    /// - After destroying an environment to reuse the environment name
+    /// - To free up disk space from environments that are no longer needed
+    /// - To clean up state when infrastructure was destroyed independently
+    ///
+    /// ### Important Notes
+    ///
+    /// - Always prompts for confirmation unless `--force` is provided
+    /// - Works on any environment state, but most commonly used after `destroy`
+    /// - For running environments, only removes local data (does NOT destroy infrastructure)
+    /// - This operation is irreversible - all local environment data will be permanently deleted
+    ///
+    /// ### Examples
+    ///
+    /// ```text
+    /// # After destroying an environment
+    /// torrust-tracker-deployer purge my-env
+    ///
+    /// # Skip confirmation (for automation/scripts)
+    /// torrust-tracker-deployer purge my-env --force
+    /// ```
+    Purge {
+        /// Name of the environment to purge
+        ///
+        /// The environment name must match an existing environment in the
+        /// local data directory.
+        environment: String,
+
+        /// Skip confirmation prompt
+        ///
+        /// When provided, the purge operation proceeds without asking for
+        /// user confirmation. Use with caution, especially for non-destroyed
+        /// environments.
+        #[arg(short, long)]
+        force: bool,
+    },
+
     /// Provision a new deployment environment infrastructure
     ///
     /// This command provisions the virtual machine infrastructure for a deployment
