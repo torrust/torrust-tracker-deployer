@@ -20,8 +20,9 @@ pub fn run_cspell_linter() -> Result<()> {
     info!(target: "cspell", "Running spell check on all files...");
 
     // Run cspell on the entire project (it will use cspell.json configuration)
+    // Note: We explicitly include .github/** because cspell skips dot directories by default
     let mut cmd = Command::new("cspell");
-    cmd.args([".", "--no-progress", "--show-context"]);
+    cmd.args([".", ".github/**/*", "--no-progress", "--show-context"]);
 
     let output = cmd.output()?;
 
