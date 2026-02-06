@@ -67,7 +67,7 @@ use torrust_tracker_deployer_lib::testing::e2e::containers::actions::{
     SshKeySetupAction, SshWaitAction,
 };
 use torrust_tracker_deployer_lib::testing::e2e::containers::timeout::ContainerTimeouts;
-use torrust_tracker_deployer_lib::testing::e2e::containers::tracker_ports::{
+use torrust_tracker_deployer_lib::testing::e2e::containers::tracker_container_setup::{
     ContainerPorts, E2eConfigEnvironment, E2eRuntimeEnvironment,
 };
 use torrust_tracker_deployer_lib::testing::e2e::containers::{

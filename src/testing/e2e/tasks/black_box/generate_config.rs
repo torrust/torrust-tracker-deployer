@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use tracing::info;
 
-use crate::testing::e2e::containers::E2eEnvironmentInfo;
+use crate::testing::e2e::containers::E2eConfigEnvironment;
 
 /// Generates the environment configuration file with absolute SSH key paths.
 ///
@@ -66,7 +66,7 @@ pub fn generate_environment_config(environment_name: &str) -> Result<PathBuf> {
 ///
 /// # Returns
 ///
-/// Returns `E2eEnvironmentInfo` containing all necessary information for E2E testing:
+/// Returns `E2eConfigEnvironment` containing all necessary information for E2E testing:
 /// - Environment name
 /// - Path where config should be written (if needed)
 /// - SSH port (22 - default for test containers)
@@ -85,7 +85,7 @@ pub fn generate_environment_config(environment_name: &str) -> Result<PathBuf> {
 /// let socket_addr = env_info.ssh_socket_addr();
 /// ```
 #[must_use]
-pub fn build_e2e_test_config(environment_name: &str) -> E2eEnvironmentInfo {
+pub fn build_e2e_test_config(environment_name: &str) -> E2eConfigEnvironment {
     use crate::testing::e2e::containers::TrackerPorts;
 
     let project_root = std::env::current_dir().expect("Failed to get current directory");
@@ -102,7 +102,7 @@ pub fn build_e2e_test_config(environment_name: &str) -> E2eEnvironmentInfo {
         "Generated E2E environment configuration in-memory"
     );
 
-    E2eEnvironmentInfo::new(
+    E2eConfigEnvironment::new(
         environment_name.to_string(),
         config_path,
         ssh_port,
@@ -136,7 +136,7 @@ pub fn build_e2e_test_config(environment_name: &str) -> E2eEnvironmentInfo {
 /// let env_info = build_e2e_test_config("e2e-config");
 /// write_environment_config(&env_info)?;
 /// ```
-pub fn write_environment_config(config_env: &E2eEnvironmentInfo) -> Result<()> {
+pub fn write_environment_config(config_env: &E2eConfigEnvironment) -> Result<()> {
     use std::fs;
 
     let config_json = config_env.to_json_config();
