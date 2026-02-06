@@ -118,11 +118,20 @@ impl PurgeCommandController {
     ) -> Result<(), PurgeSubcommandError> {
         let env_name = self.validate_environment_name(environment_name)?;
 
-        // TODO: Phase 3 - Add confirmation logic here
+        // Handle confirmation unless --force flag provided
         if !force {
             self.progress
                 .start_step(PurgeStep::ConfirmOperation.description())?;
-            // Confirmation will be implemented in Phase 3
+
+            // Show warning and prompt for confirmation
+            self.show_confirmation_prompt(environment_name);
+
+            // Read user response
+            if !Self::read_user_confirmation()? {
+                self.progress.complete_step(None)?;
+                return Err(PurgeSubcommandError::UserCancelled);
+            }
+
             self.progress.complete_step(None)?;
         }
 
@@ -175,6 +184,51 @@ impl PurgeCommandController {
             "Environment '{environment_name}' purged successfully"
         ))?;
         Ok(())
+    }
+
+    /// Show confirmation prompt with warning message
+    ///
+    /// Displays a warning about the irreversible nature of the purge operation
+    /// and prompts the user to confirm.
+    fn show_confirmation_prompt(&mut self, environment_name: &str) {
+        let warning = format!(
+            "⚠️  WARNING: This will permanently delete all local data for '{environment_name}':\n\
+             • data/{environment_name}/ directory\n\
+             • build/{environment_name}/ directory\n\
+             • Environment registry entry\n\
+             \n\
+             This operation CANNOT be undone!\n"
+        );
+
+        self.progress.output().lock().borrow_mut().warn(&warning);
+
+        self.progress
+            .output()
+            .lock()
+            .borrow_mut()
+            .progress("Are you sure you want to continue? (y/N): ");
+    }
+
+    /// Read user confirmation from stdin
+    ///
+    /// Returns `true` if user confirms (enters 'y' or 'Y'), `false` otherwise.
+    #[allow(clippy::result_large_err)]
+    fn read_user_confirmation() -> Result<bool, PurgeSubcommandError> {
+        use std::io::{self, BufRead};
+
+        let stdin = io::stdin();
+        let mut line = String::new();
+
+        stdin
+            .lock()
+            .read_line(&mut line)
+            .map_err(|source| PurgeSubcommandError::IoError {
+                operation: "reading user confirmation".to_string(),
+                source,
+            })?;
+
+        let response = line.trim().to_lowercase();
+        Ok(response == "y" || response == "yes")
     }
 }
 

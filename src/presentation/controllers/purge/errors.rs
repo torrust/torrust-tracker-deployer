@@ -47,6 +47,16 @@ Tip: Check if environment exists: ls -la {data_dir}/"
     #[error("Purge cancelled by user")]
     UserCancelled,
 
+    /// I/O operation failed during user interaction
+    ///
+    /// Failed to read user input from stdin or write prompts.
+    #[error("Failed during {operation}: {source}")]
+    IoError {
+        operation: String,
+        #[source]
+        source: std::io::Error,
+    },
+
     // ===== Repository Access Errors =====
     /// Repository operation failed
     ///
@@ -192,6 +202,25 @@ To proceed with purge:
    torrust-tracker-deployer purge <environment-name> --force
 
 Warning: Purge is irreversible - all local environment data will be permanently deleted."
+            }
+            Self::IoError { .. } => {
+                r"Failed to read user input or write prompts.
+
+Possible causes:
+1. stdin is not connected (running in non-interactive environment)
+2. Terminal I/O error
+3. Pipe closed unexpectedly
+
+Troubleshooting steps:
+1. Ensure running in an interactive terminal
+2. Use --force flag to skip confirmation prompt:
+   torrust-tracker-deployer purge <environment-name> --force
+
+3. Check if stdin is available:
+   test -t 0 && echo 'stdin is terminal' || echo 'stdin is not terminal'
+
+4. Run from a proper terminal (not via automation/CI)
+   - For automation, always use --force flag"
             }
             Self::RepositoryAccessFailed { .. } => {
                 r"Failed to access environment repository.
