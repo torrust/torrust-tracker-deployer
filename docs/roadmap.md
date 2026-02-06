@@ -193,11 +193,12 @@ Minor changes to improve the output of some commands and overall user experience
   - Verify configured domains resolve to the expected instance IP
   - Advisory warning only (doesn't fail tests) - DNS is decoupled from service tests
   - See draft: [`docs/issues/drafts/add-dns-resolution-check-to-test-command.md`](./issues/drafts/add-dns-resolution-check-to-test-command.md)
-- [ ] **10.4** Add `purge` command to remove local environment data
+- [x] **10.4** Add `purge` command to remove local environment data - [Issue #322](https://github.com/torrust/torrust-tracker-deployer/issues/322) ✅ Completed
   - Removes `data/{env}/` and `build/{env}/` for destroyed environments
   - Allows reusing environment names after destruction
   - Users don't need to know internal storage details
-  - See draft: [`docs/issues/drafts/add-purge-command-to-remove-local-data.md`](./issues/drafts/add-purge-command-to-remove-local-data.md)
+  - Added confirmation prompt with `--force` flag
+  - Added comprehensive user documentation
 
 ### 11. Improve AI agent experience
 
