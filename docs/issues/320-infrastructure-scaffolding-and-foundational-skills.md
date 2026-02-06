@@ -19,15 +19,15 @@ This issue sets up the complete infrastructure for Agent Skills and creates two 
 
 ### Infrastructure
 
-- [ ] Create `.github/skills/` directory structure
+- [x] Create `.github/skills/` directory structure
 - [ ] Install and configure `skills-ref` validation tool
 - [ ] Document VS Code configuration for Agent Skills (`chat.useAgentSkills` setting)
-- [ ] Add "Auto-Invoke Skills" section to AGENTS.md
+- [x] Add "Auto-Invoke Skills" section to AGENTS.md
 
 ### Skills
 
-- [ ] Create `run-linters` skill with proper frontmatter and instructions
-- [ ] Create `add-new-skill` meta-skill
+- [x] Create `run-linters` skill with proper frontmatter and instructions
+- [x] Create `add-new-skill` meta-skill
 - [ ] Validate both skills using `skills-ref` tool
 
 ### Testing & Validation
@@ -269,34 +269,34 @@ When performing these tasks, automatically load the corresponding skill:
 
 ### Step 1: Infrastructure Setup (20 minutes)
 
-- [ ] Create `.github/skills/` directory
-- [ ] Create skill subdirectories: `run-linters/` and `add-new-skill/`
+- [x] Create `.github/skills/` directory
+- [x] Create skill subdirectories: `run-linters/` and `add-new-skill/`
 - [ ] Install `skills-ref` tool: `pip install agentskills` or `pipx install agentskills`
 - [ ] Create `docs/user-guide/vscode-skills-setup.md` documentation
 
 ### Step 2: Create `run-linters` Skill (30 minutes)
 
-- [ ] Create `.github/skills/run-linters/skill.md` with proper frontmatter
-- [ ] Write "When to Use This Skill" section
-- [ ] Document all available linters
-- [ ] Add common workflows section
-- [ ] Include troubleshooting for common issues
-- [ ] Link to existing documentation ([docs/linting.md](../linting.md))
-- [ ] Create `references/linters.md` with detailed linter information (optional)
+- [x] Create `.github/skills/run-linters/skill.md` with proper frontmatter
+- [x] Write "When to Use This Skill" section
+- [x] Document all available linters
+- [x] Add common workflows section
+- [x] Include troubleshooting for common issues
+- [x] Link to existing documentation ([docs/linting.md](../linting.md))
+- [x] Create `references/linters.md` with detailed linter information (optional)
 
 ### Step 3: Create `add-new-skill` Skill (40 minutes)
 
 Following Anthropic's [skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator) pattern:
 
-- [ ] Create `.github/skills/add-new-skill/skill.md` with proper frontmatter
-- [ ] Write "About Skills" section (what they are, progressive disclosure)
-- [ ] Document "Core Principles" (concise, degrees of freedom, anatomy, progressive disclosure)
-- [ ] Write "Skill Creation Process" (7 steps: understand → plan → create → write → add resources → validate → iterate)
-- [ ] Include frontmatter requirements (name + description with triggers)
-- [ ] Document body content guidelines (imperative form, progressive disclosure patterns)
-- [ ] Describe bundled resources (scripts/, references/, assets/)
-- [ ] Add validation and integration instructions
-- [ ] Create reference files: specification.md, patterns.md, examples.md (optional)
+- [x] Create `.github/skills/add-new-skill/skill.md` with proper frontmatter
+- [x] Write "About Skills" section (what they are, progressive disclosure)
+- [x] Document "Core Principles" (concise, degrees of freedom, anatomy, progressive disclosure, content strategy)
+- [x] Write "Skill Creation Process" (7 steps: understand → plan → create → write → add resources → validate → iterate)
+- [x] Include frontmatter requirements (name + description with triggers)
+- [x] Document body content guidelines (imperative form, progressive disclosure patterns)
+- [x] Describe bundled resources (scripts/, references/, assets/)
+- [x] Add validation and integration instructions
+- [x] Create reference files: specification.md, patterns.md, examples.md (optional)
 
 ### Step 4: Validation (25 minutes)
 
@@ -328,32 +328,32 @@ Following Anthropic's [skill-creator](https://github.com/anthropics/skills/tree/
 
 **Infrastructure Criteria**:
 
-- [ ] `.github/skills/` directory exists
+- [x] `.github/skills/` directory exists
 - [ ] `skills-ref` tool installed and functional
 - [ ] `docs/user-guide/vscode-skills-setup.md` created with configuration instructions
-- [ ] "Auto-Invoke Skills" section added to AGENTS.md
+- [x] "Auto-Invoke Skills" section added to AGENTS.md
 
 **Skill 1: `run-linters` Criteria**:
 
-- [ ] `.github/skills/run-linters/skill.md` exists with valid frontmatter
-- [ ] Skill name matches directory name: `run-linters`
-- [ ] Description is clear, under 1024 chars, includes trigger phrases
-- [ ] Body content is under 500 lines and 5000 tokens (progressive disclosure)
-- [ ] Skill includes all required sections (when to use, workflows, common issues)
-- [ ] References to existing documentation are correct
+- [x] `.github/skills/run-linters/skill.md` exists with valid frontmatter
+- [x] Skill name matches directory name: `run-linters`
+- [x] Description is clear, under 1024 chars, includes trigger phrases
+- [x] Body content is under 500 lines and 5000 tokens (progressive disclosure)
+- [x] Skill includes all required sections (when to use, workflows, common issues)
+- [x] References to existing documentation are correct
 - [ ] Skill tested with GitHub Copilot and activates correctly
 
 **Skill 2: `add-new-skill` Criteria**:
 
-- [ ] `.github/skills/add-new-skill/skill.md` exists with valid frontmatter
-- [ ] Skill name matches directory name: `add-new-skill`
-- [ ] Description is clear, under 1024 chars, includes trigger phrases
-- [ ] Follows Anthropic's skill-creator pattern structure
-- [ ] Includes "About Skills", "Core Principles", and "Skill Creation Process" sections
-- [ ] Documents 7-step creation process
-- [ ] Covers frontmatter requirements, body guidelines, and bundled resources
-- [ ] Includes validation and testing instructions
-- [ ] References Agent Skills specification and Anthropic examples
+- [x] `.github/skills/add-new-skill/skill.md` exists with valid frontmatter
+- [x] Skill name matches directory name: `add-new-skill`
+- [x] Description is clear, under 1024 chars, includes trigger phrases
+- [x] Follows Anthropic's skill-creator pattern structure
+- [x] Includes "About Skills", "Core Principles", and "Skill Creation Process" sections
+- [x] Documents 7-step creation process
+- [x] Covers frontmatter requirements, body guidelines, and bundled resources
+- [x] Includes validation and testing instructions
+- [x] References Agent Skills specification and Anthropic examples
 - [ ] Skill tested with GitHub Copilot and activates correctly
 
 **Validation Requirements**:

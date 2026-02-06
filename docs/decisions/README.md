@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                                  | Summary                                                                                    |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ✅ Accepted   | 2026-02-06 | [Agent Skills Content Strategy](./skill-content-strategy-duplication-vs-linking.md)                       | Three-tier content strategy: self-contained workflows, progressive disclosure, linked docs |
 | ✅ Accepted   | 2026-01-27 | [Atomic Ansible Playbooks](./atomic-ansible-playbooks.md)                                                 | Require one-responsibility playbooks with Rust-side gating and registered static templates |
 | ✅ Accepted   | 2026-01-24 | [Bind Mount Standardization](./bind-mount-standardization.md)                                             | Use bind mounts exclusively for all Docker Compose volumes for observability and backup    |
 | ✅ Accepted   | 2026-01-21 | [TryFrom for DTO to Domain Conversion](./tryfrom-for-dto-to-domain-conversion.md)                         | Use standard TryFrom trait for self-documenting, discoverable DTO→Domain conversions       |

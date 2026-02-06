@@ -209,6 +209,23 @@ For detailed information about working with deployed instances, see [`docs/user-
 
 Follow the project conventions and ensure all checks pass.
 
+## 🎯 Auto-Invoke Skills
+
+The project provides Agent Skills in `.github/skills/` for specialized workflows. Skills are loaded on-demand when tasks match their descriptions.
+
+Available skills:
+
+| Task                | Skill to Load                           |
+| ------------------- | --------------------------------------- |
+| Running linters     | `.github/skills/run-linters/skill.md`   |
+| Creating new skills | `.github/skills/add-new-skill/skill.md` |
+
+Skills supplement (not replace) the rules in this file. Rules apply always; skills activate when their workflows are needed.
+
+**For VS Code**: Enable `chat.useAgentSkills` in settings to activate skill discovery.
+
+**Learn more**: See [Agent Skills Specification (agentskills.io)](https://agentskills.io/specification) for the open format documentation.
+
 ## 📚 Documentation
 
 The project has comprehensive documentation organized in the [`docs/`](docs/) directory. See the complete [Documentation Index](docs/README.md) for detailed navigation.
