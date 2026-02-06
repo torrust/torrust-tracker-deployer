@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
+use crate::application::command_handlers::PurgeCommandHandler;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::controllers::configure::ConfigureCommandController;
@@ -230,7 +231,9 @@ impl Container {
     /// Create a new `PurgeCommandController`
     #[must_use]
     pub fn create_purge_controller(&self) -> PurgeCommandController {
-        PurgeCommandController::new(self.repository(), self.clock(), self.user_output())
+        let handler =
+            PurgeCommandHandler::new(self.repository(), (*self.data_directory).to_path_buf());
+        PurgeCommandController::new(handler, self.user_output())
     }
 
     /// Create a new `ConfigureCommandController`

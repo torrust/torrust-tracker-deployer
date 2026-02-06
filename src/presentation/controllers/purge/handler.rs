@@ -8,11 +8,10 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
+use crate::application::command_handlers::purge::handler::PurgeCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
-use crate::domain::environment::repository::EnvironmentRepository;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
-use crate::shared::clock::Clock;
 
 use super::errors::PurgeSubcommandError;
 
@@ -65,31 +64,24 @@ impl PurgeStep {
 /// This controller sits in the presentation layer and handles all user-facing
 /// concerns. It delegates actual business logic to the application layer's
 /// `PurgeCommandHandler`, maintaining clear separation of concerns.
-#[allow(dead_code)] // TODO: Remove when implementing actual purge logic in Phase 3
 pub struct PurgeCommandController {
-    repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-    clock: Arc<dyn Clock>,
+    handler: PurgeCommandHandler,
     progress: ProgressReporter,
 }
 
 impl PurgeCommandController {
     /// Create a new purge command controller
     ///
-    /// Creates a `PurgeCommandController` with direct repository injection.
+    /// Creates a `PurgeCommandController` with the application handler.
     /// This follows the single container architecture pattern.
     #[allow(clippy::needless_pass_by_value)] // Constructor takes ownership of Arc parameters
     pub fn new(
-        repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-        clock: Arc<dyn Clock>,
+        handler: PurgeCommandHandler,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
         let progress = ProgressReporter::new(user_output, PurgeStep::count());
 
-        Self {
-            repository,
-            clock,
-            progress,
-        }
+        Self { handler, progress }
     }
 
     /// Execute the complete purge workflow
@@ -124,9 +116,9 @@ impl PurgeCommandController {
         environment_name: &str,
         force: bool,
     ) -> Result<(), PurgeSubcommandError> {
-        let _env_name = self.validate_environment_name(environment_name)?;
+        let env_name = self.validate_environment_name(environment_name)?;
 
-        // TODO: Phase 2 - Add confirmation logic here
+        // TODO: Phase 3 - Add confirmation logic here
         if !force {
             self.progress
                 .start_step(PurgeStep::ConfirmOperation.description())?;
@@ -134,10 +126,15 @@ impl PurgeCommandController {
             self.progress.complete_step(None)?;
         }
 
-        // TODO: Phase 2 - Create command handler and execute purge
+        // Execute purge via application handler
         self.progress
             .start_step(PurgeStep::PurgeLocalData.description())?;
-        // Actual purge will be implemented in Phase 3
+        self.handler.execute(&env_name).map_err(|source| {
+            PurgeSubcommandError::PurgeOperationFailed {
+                name: environment_name.to_string(),
+                source,
+            }
+        })?;
         self.progress.complete_step(None)?;
 
         self.complete_workflow(environment_name)?;

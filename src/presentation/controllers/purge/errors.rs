@@ -6,6 +6,7 @@
 
 use thiserror::Error;
 
+use crate::application::command_handlers::purge::errors::PurgeCommandHandlerError;
 use crate::domain::environment::name::EnvironmentNameError;
 use crate::presentation::views::progress::ProgressReporterError;
 
@@ -62,11 +63,12 @@ Tip: Check directory permissions and disk space"
     ///
     /// The purge process encountered an error during execution.
     /// Use `.help()` for detailed troubleshooting steps.
-    #[error(
-        "Failed to purge environment '{name}': {reason}
-Tip: Check logs and try running with --log-output file-and-stderr for more details"
-    )]
-    PurgeOperationFailed { name: String, reason: String },
+    #[error("Failed to purge environment '{name}': {source}")]
+    PurgeOperationFailed {
+        name: String,
+        #[source]
+        source: PurgeCommandHandlerError,
+    },
 
     // ===== Internal Errors =====
     /// Progress reporting failed
@@ -107,19 +109,19 @@ impl PurgeSubcommandError {
     /// use std::time::Duration;
     /// use std::cell::RefCell;
     /// use parking_lot::ReentrantMutex;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::purge::handler::PurgeCommandHandler;
     /// use torrust_tracker_deployer_lib::presentation::controllers::purge::handler::PurgeCommandController;
     /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-    /// use torrust_tracker_deployer_lib::shared::clock::SystemClock;
     ///
     /// # #[tokio::main]
     /// # async fn main() {
     /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
     /// let data_dir = PathBuf::from("./data");
     /// let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
-    /// let repository = repository_factory.create(data_dir);
-    /// let clock = Arc::new(SystemClock);
-    /// if let Err(e) = PurgeCommandController::new(repository, clock, output).execute("test-env", false).await {
+    /// let repository = repository_factory.create(data_dir.clone());
+    /// let handler = PurgeCommandHandler::new(repository, data_dir);
+    /// if let Err(e) = PurgeCommandController::new(handler, output).execute("test-env", false).await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }

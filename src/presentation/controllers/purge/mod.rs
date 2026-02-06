@@ -45,19 +45,19 @@
 //! use std::time::Duration;
 //! use parking_lot::ReentrantMutex;
 //! use std::cell::RefCell;
+//! use torrust_tracker_deployer_lib::application::command_handlers::purge::handler::PurgeCommandHandler;
 //! use torrust_tracker_deployer_lib::presentation::controllers::purge::handler::PurgeCommandController;
 //! use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
 //! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-//! use torrust_tracker_deployer_lib::shared::clock::SystemClock;
 //!
 //! # #[tokio::main]
 //! # async fn main() {
 //! let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
 //! let data_dir = PathBuf::from("./data");
 //! let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
-//! let repository = repository_factory.create(data_dir);
-//! let clock = Arc::new(SystemClock);
-//! if let Err(e) = PurgeCommandController::new(repository, clock, output).execute("test-env", false).await {
+//! let repository = repository_factory.create(data_dir.clone());
+//! let handler = PurgeCommandHandler::new(repository, data_dir);
+//! if let Err(e) = PurgeCommandController::new(handler, output).execute("test-env", false).await {
 //!     eprintln!("Purge failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }
