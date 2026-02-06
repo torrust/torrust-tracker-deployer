@@ -1,12 +1,12 @@
-# Consider Using agentskills.io
+# EPIC: Adopt Agent Skills Specification
 
 **Issue**: [#274](https://github.com/torrust/torrust-tracker-deployer/issues/274)
-**Type**: Feature / Enhancement
+**Type**: Epic
 **Status**: 🔄 Open
 
 ## Overview
 
-[agentskills.io](https://agentskills.io) is an open format for extending AI agent capabilities with specialized knowledge and workflows. This issue proposes adopting the Agent Skills specification **as a supplement to our existing `AGENTS.md`** - not a replacement.
+[agentskills.io](https://agentskills.io) is an open format for extending AI agent capabilities with specialized knowledge and workflows. This epic tracks the adoption of the Agent Skills specification **as a supplement to our existing `AGENTS.md`** - not a replacement.
 
 ## Key Insight: Skills vs Rules
 
@@ -77,187 +77,110 @@ Step-by-step guidance for the agent.
 3. Finally, output Z
 ```
 
+## Approach
+
+This epic tracks the adoption of Agent Skills on an **on-demand basis**. Rather than committing to implement all potential skills upfront, we:
+
+1. **Start with scaffolding** (#320): Set up infrastructure, tooling, and create two foundational skills
+2. **Add skills as needed**: Create new skills when workflows become repetitive or complex
+3. **Evolve organically**: The list of potential skills may change based on actual needs
+4. **Close when mature**: Eventually close this epic and add new skills independently
+
+## Tasks
+
+### Completed
+
+- [ ] #320 - Infrastructure Scaffolding and Foundational Skills (`run-linters` + `add-new-skill`)
+
+### Future Skills (On-Demand)
+
+These may be implemented as separate issues when needed:
+
+- `create-environment-config` - Generate valid environment configurations
+- `add-feature-to-deployer` - Add features following DDD architecture
+- `deploy-tracker` - Full deployment workflow guide
+- `troubleshoot-deployment` - Diagnose deployment issues
+- `git-pr-workflow` - Create PRs following conventions
+- `write-issue-spec` - Document features using templates
+- `run-e2e-tests` - Run and interpret E2E test results
+
 ## Goals
 
-- [ ] Evaluate which workflows would benefit from skills
-- [ ] Create initial set of skills for common workflows
+The goals of this epic are to:
+
+- [ ] Set up Agent Skills infrastructure and tooling
+- [ ] Create foundational skills (`run-linters` and `add-new-skill`)
+- [ ] Establish patterns for creating new skills
 - [ ] Add an "Auto-Invoke Skills" section to AGENTS.md
-- [ ] Validate skills using the official `skills-ref` tool
+- [ ] Validate all skills using the official `skills-ref` tool
 
-## Proposed Skills for Tracker Deployer
+## Potential Skills for Tracker Deployer
 
-Based on analyzing our `AGENTS.md` and common workflows, here are the high-value skill candidates:
+Based on analyzing our `AGENTS.md` and common workflows, here are potential skill candidates. These will be implemented **on-demand** when we identify the need:
 
-### Skill 1: `deploy-tracker` (High Priority)
+### Foundational Skills (Issue #275)
 
-**Trigger phrases**: "deploy tracker", "provision environment", "create LXD instance", "full deployment"
+#### `run-linters`
 
-**Why a skill?**: This is a complex multi-step workflow (create → provision → configure → release → run → test) that requires specific command sequences, environment config generation, and validation steps.
+**Purpose**: Document how to run the project's comprehensive linting system.
 
-**Would include**:
+**Why first?**: Simple, well-defined, frequently used workflow that validates the Agent Skills format.
 
-- Step-by-step deployment workflow
-- Environment config template in `assets/`
-- Scripts for validation checks
-- Common troubleshooting steps
+#### `add-new-skill`
 
-```yaml
----
-name: deploy-tracker
-description: |
-  Deploy a Torrust Tracker to LXD or Hetzner. Complete workflow from 
-  environment creation to running services. Triggers when user says 
-  "deploy tracker", "provision environment", "full deployment", or 
-  "create LXD instance".
----
-```
+**Purpose**: Meta-skill that documents how to create new skills following the Agent Skills specification.
 
-### Skill 2: `create-environment-config` (High Priority)
+**Why included?**: Makes the system self-documenting and enables easy addition of future skills.
 
-**Trigger phrases**: "create config", "generate environment JSON", "setup deployment config"
+### Future Skills (Implement On-Demand)
 
-**Why a skill?**: Environment configs have complex validation rules (see rule 20 in AGENTS.md). AI agents often hallucinate invalid configurations. A skill can bundle the schema, examples, and validation constraints.
+#### `create-environment-config`
 
-**Would include**:
+**Purpose**: Generate valid environment configuration JSON files.
 
-- JSON schema reference
-- Example configs for SQLite, MySQL, LXD, Hetzner
-- Rust type constraints (NonZeroU32, tagged enums)
-- Common configuration patterns
+**Value**: Environment configs have complex validation rules. AI agents often hallucinate invalid configurations.
 
-```yaml
----
-name: create-environment-config
-description: |
-  Generate valid environment configuration JSON files for the deployer.
-  Triggers when user needs to create deployment configs or asks about 
-  environment settings. Always validates against Rust type constraints.
----
-```
+#### `add-feature-to-deployer`
 
-### Skill 3: `add-feature-to-deployer` (High Priority)
+**Purpose**: Guide adding new features following DDD architecture, template system, error handling, and testing conventions.
 
-**Trigger phrases**: "add command", "implement feature", "extend deployer", "add new step"
+**Value**: Most complex workflow requiring understanding of multiple AGENTS.md rules.
 
-**Why a skill?**: This is our most complex workflow. It requires understanding DDD layers (rule 2), template system (rule 17), error handling (rule 9), output handling (rule 10), and testing conventions (rule 18). Currently all in AGENTS.md as rules.
+#### `deploy-tracker`
 
-**Would include**:
+**Purpose**: Complete multi-step deployment workflow (create → provision → configure → release → run → test).
 
-- DDD layer decision flowchart
-- Module structure templates
-- Error type boilerplate
-- Test naming examples
-- References to ADRs
+**Value**: Complex workflow requiring specific command sequences and validation steps.
 
-```yaml
----
-name: add-feature-to-deployer
-description: |
-  Add new features to the deployer following DDD architecture. 
-  Includes command handlers, steps, actions, templates, and tests.
-  Triggers when user says "add command", "implement feature", 
-  "extend deployer", or "create new step".
-allowed-tools:
-  - Read
-  - Write
----
-```
+#### `troubleshoot-deployment`
 
-### Skill 4: `troubleshoot-deployment` (Medium Priority)
+**Purpose**: Diagnose and fix deployment issues systematically.
 
-**Trigger phrases**: "deployment failed", "tracker not starting", "debug deployment", "SSH error"
+**Value**: Common issues have known solutions; skill guides systematic diagnosis.
 
-**Why a skill?**: Troubleshooting follows patterns. Common issues (SSH key problems, port conflicts, Docker not ready) have known solutions. A skill can guide systematic diagnosis.
+#### `git-pr-workflow`
 
-**Would include**:
+**Purpose**: Create PRs following project conventions (branching, commits, pre-commit checks).
 
-- Diagnostic command sequences
-- Common error patterns and fixes
-- Log inspection steps
-- Known issues reference
+**Value**: Bundles rules 4, 5, 6 from AGENTS.md into single workflow.
 
-```yaml
----
-name: troubleshoot-deployment
-description: |
-  Diagnose and fix deployment issues. Covers SSH problems, Docker 
-  failures, port conflicts, and service startup issues. Triggers 
-  when deployment fails or services are not responding.
----
-```
+#### `write-issue-spec`
 
-### Skill 5: `git-pr-workflow` (Medium Priority)
+**Purpose**: Create issue specifications using project templates.
 
-**Trigger phrases**: "create PR", "ready for review", "commit changes", "prepare branch"
+**Value**: Guides proper use of SPECIFICATION-TEMPLATE.md or EPIC-TEMPLATE.md.
 
-**Why a skill?**: Rules 4, 5, 6 in AGENTS.md cover branching, commits, and pre-commit checks. A skill can bundle these into a single workflow with templates.
+#### `run-e2e-tests`
 
-**Would include**:
+**Purpose**: Run and interpret E2E test results, including expected warnings.
 
-- Branch naming template
-- Commit message format
-- Pre-commit checklist
-- PR body template
+**Value**: E2E testing has specific requirements and expected warning patterns.
 
-```yaml
----
-name: git-pr-workflow
-description: |
-  Create PRs following project conventions. Handles branch naming,
-  conventional commits, pre-commit checks, and PR formatting.
-  Triggers when user says "create PR", "commit changes", or 
-  "ready for review".
----
-```
-
-### Skill 6: `write-issue-spec` (Medium Priority)
-
-**Trigger phrases**: "create issue spec", "write issue specification", "document issue"
-
-**Why a skill?**: We have templates in `docs/issues/` (SPECIFICATION-TEMPLATE.md, EPIC-TEMPLATE.md). A skill can guide using the correct template and filling it properly.
-
-**Would include**:
-
-- Template selection logic
-- Example specs
-- DDD layer guidance for architecture section
-
-```yaml
----
-name: write-issue-spec
-description: |
-  Create detailed issue specifications using project templates.
-  Guides through SPECIFICATION-TEMPLATE.md or EPIC-TEMPLATE.md.
-  Triggers when user needs to document a feature or task.
----
-```
-
-### Skill 7: `run-e2e-tests` (Lower Priority)
-
-**Trigger phrases**: "run E2E tests", "test deployment", "verify changes"
-
-**Why a skill?**: E2E testing has specific requirements (container setup, timeouts, expected warnings). A skill can guide the process and interpret results.
-
-**Would include**:
-
-- Test selection guidance
-- Expected warning patterns (SSH host key warnings)
-- Troubleshooting failed tests
-
-```yaml
----
-name: run-e2e-tests
-description: |
-  Run end-to-end tests for the deployer. Handles infrastructure 
-  lifecycle tests and deployment workflow tests. Interprets results
-  including expected warnings. Triggers when user says "run E2E tests"
-  or "verify changes".
----
-```
+### Skill 5: `troubleshoot-deployment` (Phase 3 - Medium Priority)
 
 ## Recommended AGENTS.md Addition
 
-Following the best practice from the articles, add an "Auto-Invoke Skills" section:
+Following the best practice, add an "Auto-Invoke Skills" section to AGENTS.md as skills are created:
 
 ```markdown
 ## Auto-invoke Skills
@@ -266,57 +189,35 @@ When performing these tasks, automatically load the corresponding skill:
 
 | Task                         | Skill to Load                                       |
 | ---------------------------- | --------------------------------------------------- |
-| Deploying a tracker          | `.github/skills/deploy-tracker/SKILL.md`            |
+| Running linters              | `.github/skills/run-linters/SKILL.md`               |
+| Adding new skills            | `.github/skills/add-new-skill/SKILL.md`             |
 | Creating environment configs | `.github/skills/create-environment-config/SKILL.md` |
 | Adding new features          | `.github/skills/add-feature-to-deployer/SKILL.md`   |
+| Deploying a tracker          | `.github/skills/deploy-tracker/SKILL.md`            |
 | Troubleshooting deployments  | `.github/skills/troubleshoot-deployment/SKILL.md`   |
 | Creating PRs                 | `.github/skills/git-pr-workflow/SKILL.md`           |
 | Writing issue specs          | `.github/skills/write-issue-spec/SKILL.md`          |
 | Running E2E tests            | `.github/skills/run-e2e-tests/SKILL.md`             |
 ```
 
-## Implementation Plan
-
-### Phase 1: Setup and First Skill (2 hours)
-
-- [ ] Create `.github/skills/` directory structure
-- [ ] Enable `chat.useAgentSkills` setting in VS Code
-- [ ] Create `deploy-tracker` skill (highest value, most repeated workflow)
-- [ ] Test with VS Code Copilot
-
-### Phase 2: Config and Feature Skills (3 hours)
-
-- [ ] Create `create-environment-config` skill with schema references
-- [ ] Create `add-feature-to-deployer` skill with DDD guidance
-- [ ] Add assets (templates, scripts) to skills
-
-### Phase 3: Support Skills (2 hours)
-
-- [ ] Create `troubleshoot-deployment` skill
-- [ ] Create `git-pr-workflow` skill
-- [ ] Create `write-issue-spec` skill
-
-### Phase 4: Integration and Validation (1 hour)
-
-- [ ] Add "Auto-Invoke Skills" section to AGENTS.md
-- [ ] Install `skills-ref` validation tool
-- [ ] Validate all created skills
-- [ ] Test with different AI agents
-- [ ] Document findings
-
-## Acceptance Criteria
+## Epic Acceptance Criteria
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
 - [ ] All skills validate with `skills-ref validate ./skill-name`
+- [ ] Pre-commit checks pass for all changes
 
-**Task-Specific Criteria**:
+**Epic-Level Criteria**:
 
-- [ ] At least 3 skills created and validated
+- [ ] Infrastructure and tooling set up
+- [ ] Foundational skills created and validated (`run-linters`, `add-new-skill`)
+- [ ] Auto-invoke table added to AGENTS.md
 - [ ] Skills follow progressive disclosure (under 500 lines, under 5000 tokens)
+- [ ] Skills tested with VS Code Copilot
+- [ ] All skills follow progressive disclosure (under 500 lines, under 5000 tokens)
 - [ ] Auto-invoke table added to AGENTS.md
 - [ ] Skills tested with VS Code Copilot
+- [ ] Documentation updated with skills usage guide
 
 ## Related Documentation
 
@@ -328,6 +229,12 @@ When performing these tasks, automatically load the corresponding skill:
 - [skills-ref Validation Tool](https://github.com/agentskills/agentskills/tree/main/skills-ref)
 - [VS Code Skills Documentation](https://code.visualstudio.com/docs/copilot/copilot-customization)
 - [Current AGENTS.md](../../AGENTS.md)
+
+## Related Issues
+
+**Child Tasks**:
+
+- #275 - Phase 1: Setup and First Skill (`run-linters`)
 
 ## Notes
 
