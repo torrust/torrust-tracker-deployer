@@ -20,7 +20,7 @@ This issue sets up the complete infrastructure for Agent Skills and creates two 
 ### Infrastructure
 
 - [x] Create `.github/skills/` directory structure
-- [ ] Install and configure `skills-ref` validation tool
+- [x] Install and configure `skills-ref` validation tool
 - [ ] Document VS Code configuration for Agent Skills (`chat.useAgentSkills` setting)
 - [x] Add "Auto-Invoke Skills" section to AGENTS.md
 
@@ -28,7 +28,7 @@ This issue sets up the complete infrastructure for Agent Skills and creates two 
 
 - [x] Create `run-linters` skill with proper frontmatter and instructions
 - [x] Create `add-new-skill` meta-skill
-- [ ] Validate both skills using `skills-ref` tool
+- [x] Validate both skills using `skills-ref` tool
 
 ### Testing & Validation
 
@@ -271,7 +271,7 @@ When performing these tasks, automatically load the corresponding skill:
 
 - [x] Create `.github/skills/` directory
 - [x] Create skill subdirectories: `run-linters/` and `add-new-skill/`
-- [ ] Install `skills-ref` tool: `pip install agentskills` or `pipx install agentskills`
+- [x] Install `skills-ref` tool: `pipx install /tmp/agentskills/skills-ref/` (installed from cloned repository)
 - [ ] Create `docs/user-guide/vscode-skills-setup.md` documentation
 
 ### Step 2: Create `run-linters` Skill (30 minutes)
@@ -300,12 +300,12 @@ Following Anthropic's [skill-creator](https://github.com/anthropics/skills/tree/
 
 ### Step 4: Validation (25 minutes)
 
-- [ ] Validate `run-linters`: `skills-ref validate .github/skills/run-linters`
-- [ ] Validate `add-new-skill`: `skills-ref validate .github/skills/add-new-skill`
-- [ ] Fix any validation errors
-- [ ] Ensure names match directory names
-- [ ] Verify descriptions are under 1024 characters
-- [ ] Check all frontmatter fields are valid YAML
+- [x] Validate `run-linters`: `skills-ref validate .github/skills/run-linters` ✅ Valid
+- [x] Validate `add-new-skill`: `skills-ref validate .github/skills/add-new-skill` ✅ Valid
+- [x] Fix any validation errors (none found)
+- [x] Ensure names match directory names
+- [x] Verify descriptions are under 1024 characters
+- [x] Check all frontmatter fields are valid YAML
 
 ### Step 5: Integration and Testing (25 minutes)
 
@@ -324,12 +324,12 @@ Following Anthropic's [skill-creator](https://github.com/anthropics/skills/tree/
 **Quality Checks**:
 
 - [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
-- [ ] Both skills validate successfully: `skills-ref validate .github/skills/*`
+- [x] Both skills validate successfully: `skills-ref validate .github/skills/*`
 
 **Infrastructure Criteria**:
 
 - [x] `.github/skills/` directory exists
-- [ ] `skills-ref` tool installed and functional
+- [x] `skills-ref` tool installed and functional
 - [ ] `docs/user-guide/vscode-skills-setup.md` created with configuration instructions
 - [x] "Auto-Invoke Skills" section added to AGENTS.md
 
@@ -358,10 +358,10 @@ Following Anthropic's [skill-creator](https://github.com/anthropics/skills/tree/
 
 **Validation Requirements**:
 
-- [ ] Both skills pass `skills-ref validate` with no errors
-- [ ] Frontmatter YAML is valid for both skills
-- [ ] Names follow naming rules (lowercase, hyphens only, 1-64 chars)
-- [ ] All file references use relative paths from skill root
+- [x] Both skills pass `skills-ref validate` with no errors
+- [x] Frontmatter YAML is valid for both skills
+- [x] Names follow naming rules (lowercase, hyphens only, 1-64 chars)
+- [x] All file references use relative paths from skill root
 
 ## Related Documentation
 
