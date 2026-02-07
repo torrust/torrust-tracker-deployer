@@ -152,6 +152,13 @@ pub async fn route_command(
                 .await?;
             Ok(())
         }
+        Commands::Validate { env_file } => {
+            context
+                .container()
+                .create_validate_controller()
+                .execute(&env_file)?;
+            Ok(())
+        }
         Commands::Register {
             environment,
             instance_ip,

@@ -432,6 +432,42 @@ impl ProcessRunner {
         Ok(ProcessResult::new(output))
     }
 
+    /// Run the validate command with the production binary
+    ///
+    /// This method runs `cargo run -- validate -f <config_file>` with
+    /// optional working directory for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory path or config file path contains invalid UTF-8.
+    pub fn run_validate_command(&self, config_file: &str) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "validate",
+                "-f",
+                config_file,
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args(["run", "--", "validate", "-f", config_file]);
+        }
+
+        let output = cmd.output().context("Failed to execute validate command")?;
+
+        Ok(ProcessResult::new(output))
+    }
+
     /// Run the purge command with the production binary
     ///
     /// This method runs `cargo run -- purge <environment_name> --force` with

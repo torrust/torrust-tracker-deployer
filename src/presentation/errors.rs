@@ -25,6 +25,7 @@ use crate::presentation::controllers::{
     provision::ProvisionSubcommandError, purge::PurgeSubcommandError,
     register::errors::RegisterSubcommandError, release::ReleaseSubcommandError,
     run::RunSubcommandError, show::ShowSubcommandError, test::TestSubcommandError,
+    validate::errors::ValidateSubcommandError,
 };
 
 /// Errors that can occur during CLI command execution
@@ -111,6 +112,13 @@ pub enum CommandError {
     #[error("Purge command failed: {0}")]
     Purge(Box<PurgeSubcommandError>),
 
+    /// Validate command specific errors
+    ///
+    /// Encapsulates all errors that can occur during configuration validation.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Validate command failed: {0}")]
+    Validate(Box<ValidateSubcommandError>),
+
     /// User output lock acquisition failed
     ///
     /// Failed to acquire the mutex lock for user output. This typically indicates
@@ -185,6 +193,12 @@ impl From<PurgeSubcommandError> for CommandError {
     }
 }
 
+impl From<ValidateSubcommandError> for CommandError {
+    fn from(error: ValidateSubcommandError) -> Self {
+        Self::Validate(Box::new(error))
+    }
+}
+
 impl CommandError {
     /// Get detailed troubleshooting guidance for this error
     ///
@@ -232,6 +246,9 @@ impl CommandError {
             Self::Show(e) => e.help().to_string(),
             Self::List(e) => e.help().to_string(),
             Self::Purge(e) => e.help().to_string(),
+            Self::Validate(e) => e
+                .help()
+                .unwrap_or_else(|| "No additional help available".to_string()),
             Self::UserOutputLockFailed => "User Output Lock Failed - Detailed Troubleshooting:
 
 This error indicates that a panic occurred in another thread while it was using

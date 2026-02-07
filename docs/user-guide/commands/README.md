@@ -10,6 +10,10 @@ This directory contains detailed guides for all Torrust Tracker Deployer command
   - `create template` - Generate environment configuration template
   - `create environment` - Create deployment environment from configuration
 
+### Configuration Validation
+
+- **[validate](validate.md)** - Validate environment configuration files without deployment
+
 ### Environment Information
 
 - **[show](show.md)** - Display environment information with state-aware details
@@ -38,15 +42,16 @@ The typical command sequence for a complete deployment:
 ```text
 1. create template    → Generate configuration template
 2. (edit template)    → Customize your settings
-3. create environment → Create environment from config
-4. show               → View environment details
-5. provision          → Provision VM infrastructure
-6. configure          → Install Docker, Docker Compose, configure firewall
-7. test               → Verify infrastructure readiness
-8. release            → Deploy application configuration and files
-9. run                → Start Torrust Tracker services
-10. destroy           → Tear down infrastructure
-11. purge             → Remove local data (optional, for cleanup)
+3. validate           → Verify configuration is correct (optional but recommended)
+4. create environment → Create environment from config
+5. show               → View environment details
+6. provision          → Provision VM infrastructure
+7. configure          → Install Docker, Docker Compose, configure firewall
+8. test               → Verify infrastructure readiness
+9. release            → Deploy application configuration and files
+10. run               → Start Torrust Tracker services
+11. destroy           → Tear down infrastructure
+12. purge             → Remove local data (optional, for cleanup)
 ```
 
 ## Command Categories

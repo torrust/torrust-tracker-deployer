@@ -20,6 +20,7 @@
 //! - `run` - Stack execution on target instances
 //! - `show` - Display environment information and status (read-only)
 //! - `test` - Deployment testing and validation
+//! - `validate` - Validate environment configuration files (read-only)
 //!
 //! Each command handler encapsulates a complete business workflow, handling orchestration,
 //! error management, and coordination across multiple infrastructure services.
@@ -36,6 +37,7 @@ pub mod release;
 pub mod run;
 pub mod show;
 pub mod test;
+pub mod validate;
 
 pub use configure::ConfigureCommandHandler;
 pub use create::CreateCommandHandler;
@@ -48,3 +50,4 @@ pub use release::ReleaseCommandHandler;
 pub use run::RunCommandHandler;
 pub use show::ShowCommandHandler;
 pub use test::TestCommandHandler;
+pub use validate::ValidateCommandHandler;

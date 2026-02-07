@@ -262,6 +262,7 @@ pub mod release;
 pub mod run;
 pub mod show;
 pub mod test;
+pub mod validate;
 
 // Shared test utilities
 #[cfg(test)]

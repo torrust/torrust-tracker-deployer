@@ -133,6 +133,39 @@ pub enum Commands {
         environment: String,
     },
 
+    /// Validate environment configuration without deployment
+    ///
+    /// This command validates an environment configuration file without
+    /// executing any deployment operations. It performs comprehensive
+    /// validation including:
+    /// - JSON schema compliance
+    /// - Environment name format
+    /// - Provider configuration validity
+    /// - SSH key file existence
+    /// - Domain name format (if configured)
+    /// - Port number ranges
+    ///
+    /// This is a dry-run command useful for:
+    /// - Verifying configuration before creating environments
+    /// - AI agents validating user inputs
+    /// - CI/CD pipelines checking configurations
+    /// - Troubleshooting configuration issues
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// torrust-tracker-deployer validate --env-file envs/my-config.json
+    /// torrust-tracker-deployer validate -f production.json
+    /// ```
+    Validate {
+        /// Path to the environment configuration file
+        ///
+        /// The configuration file must be in JSON format. The file will be
+        /// validated against the environment configuration schema.
+        #[arg(long, short = 'f', value_name = "FILE")]
+        env_file: PathBuf,
+    },
+
     /// Register an existing instance as an alternative to provisioning
     ///
     /// This command registers an existing VM, physical server, or container
