@@ -903,6 +903,24 @@ Follow DDD layer placement rules from [`docs/contributing/ddd-layer-placement.md
 - Tests: [`tests/e2e/purge_command.rs`](../../../tests/e2e/purge_command.rs)
 - Docs: [`docs/user-guide/commands/purge.md`](../../../docs/user-guide/commands/purge.md)
 
+### Example: `validate` Command (This Skill Guide's Validation)
+
+**Read-only command following this skill guide (Phases 1-2, 4-5):**
+
+- Presentation: [`src/presentation/controllers/validate/handler.rs`](../../../src/presentation/controllers/validate/handler.rs)
+- Application: [`src/application/command_handlers/validate/handler.rs`](../../../src/application/command_handlers/validate/handler.rs)
+- Tests: [`tests/e2e/validate_command.rs`](../../../tests/e2e/validate_command.rs)
+- Docs: [`docs/user-guide/commands/validate.md`](../../../docs/user-guide/commands/validate.md)
+- Implementation commit: [272847e3](https://github.com/torrust/torrust-tracker-deployer/commit/272847e3)
+
+**Key learnings from validate implementation:**
+
+- Phase 3 skipped (read-only command needs no confirmation)
+- Phase 6 skipped (integration polish deferred to future iteration)
+- Domain validation reuses `EnvironmentParams` conversion (SSH key checking, constraints)
+- E2E tests verify read-only behavior (no deployment created)
+- Documentation includes "When NOT to Use" section for anti-patterns
+
 ## Tips & Best Practices
 
 ### Start Simple, Iterate Fast
