@@ -167,9 +167,10 @@ These commands complete a trilogy of "lightweight" entry points:
 
 This makes the deployer more versatile for different scenarios and more AI-agent friendly (dry-run commands provide feedback without side effects).
 
-- [ ] **9.1** Implement `validate` command
+- [x] **9.1** Implement `validate` command (✅ Completed in [272847e3](https://github.com/torrust/torrust-tracker-deployer/commit/272847e3))
   - Validate deployment configuration without executing any deployment steps
   - See feature specification: [`docs/features/config-validation-command/`](./features/config-validation-command/)
+  - User documentation: [`docs/user-guide/commands/validate.md`](./user-guide/commands/validate.md)
 - [ ] **9.2** Implement artifact generation command
   - **Command name TBD** - candidates: `render`, `generate`, `export`, `prepare`, `scaffold`
   - Generate all build artifacts (docker-compose, tracker config, Ansible playbooks, etc.) to a `build/` directory
