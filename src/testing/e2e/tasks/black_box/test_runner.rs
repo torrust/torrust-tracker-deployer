@@ -472,6 +472,55 @@ impl E2eTestRunner {
         Ok(())
     }
 
+    /// Purges all local environment data (build/, data/ directories).
+    ///
+    /// This removes all local state for the environment, including:
+    /// - Build directory (`build/{env-name}/`)
+    /// - Data directory (`data/{env-name}/`)
+    /// - Environment entry in the repository
+    ///
+    /// **Important**: This does NOT destroy infrastructure - only local files.
+    /// Use `destroy_infrastructure()` to tear down VMs/servers before purging.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the purge command fails.
+    pub fn purge_environment(&self) -> Result<()> {
+        info!(
+            step = "purge",
+            environment = %self.environment_name,
+            "Purging local environment data"
+        );
+
+        let purge_result = self
+            .runner
+            .run_purge_command(&self.environment_name)
+            .map_err(|e| anyhow::anyhow!("Failed to execute purge command: {e}"))?;
+
+        if !purge_result.success() {
+            error!(
+                step = "purge",
+                environment = %self.environment_name,
+                exit_code = ?purge_result.exit_code(),
+                stderr = %purge_result.stderr(),
+                "Purge command failed"
+            );
+            return Err(anyhow::anyhow!(
+                "Purge failed with exit code {:?}",
+                purge_result.exit_code()
+            ));
+        }
+
+        info!(
+            step = "purge",
+            environment = %self.environment_name,
+            status = "success",
+            "Local environment data purged successfully"
+        );
+
+        Ok(())
+    }
+
     /// Attempts to clean up infrastructure if `cleanup_on_failure` is enabled.
     ///
     /// This is called internally when tasks fail. It logs a warning and

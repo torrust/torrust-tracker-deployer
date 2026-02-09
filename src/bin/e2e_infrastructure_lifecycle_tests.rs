@@ -126,6 +126,35 @@ fn main() -> Result<()> {
                 status = "success",
                 "All provisioning and destruction tests passed successfully"
             );
+
+            // Clean up test state after successful run (only if destroy happened)
+            // If --keep flag is used, we skip purge to preserve state for debugging
+            if !cli.keep {
+                let test_runner = E2eTestRunner::new(ENVIRONMENT_NAME);
+                // Note: Purge failures are logged but don't fail the test since it already succeeded
+                if let Err(purge_error) = test_runner.purge_environment() {
+                    tracing::warn!(
+                        operation = "post_test_cleanup",
+                        environment = ENVIRONMENT_NAME,
+                        error = %purge_error,
+                        "Failed to purge test state after successful run (test still passed)"
+                    );
+                } else {
+                    info!(
+                        operation = "post_test_cleanup",
+                        environment = ENVIRONMENT_NAME,
+                        "Test state purged successfully"
+                    );
+                }
+            } else {
+                info!(
+                    operation = "post_test_cleanup",
+                    environment = ENVIRONMENT_NAME,
+                    status = "skipped",
+                    reason = "keep flag is set",
+                    "Skipping post-test purge to preserve state for debugging"
+                );
+            }
         }
         Err(e) => {
             error!(
