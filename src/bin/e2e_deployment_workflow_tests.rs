@@ -35,6 +35,7 @@
 //! 6. **Configure** - Apply Ansible playbooks to configure services (CLI: `configure`)
 //! 7. **Validation** - Verify deployments are working correctly
 //! 8. **Stop container** - Stop the test container (deletion handled automatically by testcontainers)
+//! 9. **Post-test cleanup** - Remove test artifacts after successful run (preserves state on failure)
 //!
 //! ## Black-box Testing Approach
 //!
@@ -88,6 +89,23 @@ use torrust_tracker_deployer_lib::testing::e2e::tasks::run_run_validation::{
 
 /// Environment name for this E2E test
 const ENVIRONMENT_NAME: &str = "e2e-deployment";
+
+/// Cleans up test artifacts after test execution.
+///
+/// This removes build/, templates/, and data/ directories for the environment.
+/// Despite the underlying function name suggesting "preflight", it's used here
+/// for post-test cleanup since the cleanup operation is identical.
+///
+/// # Arguments
+///
+/// * `environment_name` - The name of the environment to clean up
+///
+/// # Errors
+///
+/// Returns an error if cleanup fails.
+fn cleanup_test_artifacts(environment_name: &str) -> Result<()> {
+    run_container_preflight_cleanup(environment_name)
+}
 
 #[derive(Parser)]
 #[command(name = "e2e-deployment-workflow-tests")]
@@ -181,6 +199,24 @@ pub async fn main() -> Result<()> {
                 status = "success",
                 "All configuration and release tests passed successfully"
             );
+
+            // Clean up test state after successful run
+            // Note: Cleanup failures are logged but don't fail the test since it already succeeded
+            if let Err(cleanup_error) = cleanup_test_artifacts(ENVIRONMENT_NAME) {
+                tracing::warn!(
+                    operation = "post_test_cleanup",
+                    environment = ENVIRONMENT_NAME,
+                    error = %cleanup_error,
+                    "Failed to clean up test state after successful run (test still passed)"
+                );
+            } else {
+                info!(
+                    operation = "post_test_cleanup",
+                    environment = ENVIRONMENT_NAME,
+                    "Test state cleaned up successfully"
+                );
+            }
+
             Ok(())
         }
         Err(error) => {
