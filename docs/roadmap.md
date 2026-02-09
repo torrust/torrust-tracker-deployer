@@ -171,13 +171,15 @@ This makes the deployer more versatile for different scenarios and more AI-agent
   - Validate deployment configuration without executing any deployment steps
   - See feature specification: [`docs/features/config-validation-command/`](./features/config-validation-command/)
   - User documentation: [`docs/user-guide/commands/validate.md`](./user-guide/commands/validate.md)
-- [ ] **9.2** Implement artifact generation command
-  - **Command name TBD** - candidates: `render`, `generate`, `export`, `prepare`, `scaffold`
-  - Generate all build artifacts (docker-compose, tracker config, Ansible playbooks, etc.) to a `build/` directory
-  - Users can copy these files to their own servers and deploy manually
-  - Target audience: System administrators who only need the final configuration files
-  - Generate all artifacts and let users decide which ones to use
-  - **TODO**: Create feature specification in `docs/features/`
+- [ ] **9.2** Implement artifact generation command - [Issue #326](https://github.com/torrust/torrust-tracker-deployer/issues/326)
+  - **Command name**: `render` (recommended) or `generate` (alternative)
+  - Generate all deployment artifacts (docker-compose, tracker config, Ansible playbooks, Caddy, monitoring, backup, etc.) to user-specified output directory
+  - Requires `--output-dir` (avoid conflicts with internal `build/` directory)
+  - Requires instance IP (from environment data or `--ip` flag for config-file mode)
+  - No remote operations - purely local artifact generation
+  - Target audience: Users who want configuration files for manual deployment or inspection
+  - All templates always rendered (no conditional logic)
+  - Specification: [`docs/issues/326-implement-artifact-generation-command.md`](./issues/326-implement-artifact-generation-command.md)
 
 ### 10. Improve usability (UX)
 
