@@ -217,8 +217,9 @@ Available skills:
 
 | Task                | Skill to Load                           |
 | ------------------- | --------------------------------------- |
-| Running linters     | `.github/skills/run-linters/skill.md`   |
+| Creating issues     | `.github/skills/create-issue/skill.md`  |
 | Creating new skills | `.github/skills/add-new-skill/skill.md` |
+| Running linters     | `.github/skills/run-linters/skill.md`   |
 
 Skills supplement (not replace) the rules in this file. Rules apply always; skills activate when their workflows are needed.
 
