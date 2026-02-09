@@ -16,8 +16,7 @@
 //! - `provision` - Infrastructure provisioning using `OpenTofu`
 //! - `purge` - Remove all local environment data
 //! - `register` - Register existing instances as alternative to provisioning
-//! - `release` - Software release to target instances
-//! - `run` - Stack execution on target instances
+//! - `release` - Software release to target instances/// - `render` - Generate deployment artifacts without executing deployment//! - `run` - Stack execution on target instances
 //! - `show` - Display environment information and status (read-only)
 //! - `test` - Deployment testing and validation
 //! - `validate` - Validate environment configuration files (read-only)

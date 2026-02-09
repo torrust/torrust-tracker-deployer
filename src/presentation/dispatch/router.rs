@@ -179,6 +179,18 @@ pub async fn route_command(
                 .await?;
             Ok(())
         }
+        Commands::Render {
+            env_name,
+            env_file,
+            ip,
+        } => {
+            context.container().create_render_controller().execute(
+                env_name.as_deref(),
+                env_file.as_deref(),
+                &ip,
+            )?;
+            Ok(())
+        }
         Commands::Run { environment } => {
             context
                 .container()

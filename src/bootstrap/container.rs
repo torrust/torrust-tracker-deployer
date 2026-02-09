@@ -23,6 +23,7 @@ use crate::presentation::controllers::provision::ProvisionCommandController;
 use crate::presentation::controllers::purge::PurgeCommandController;
 use crate::presentation::controllers::register::RegisterCommandController;
 use crate::presentation::controllers::release::ReleaseCommandController;
+use crate::presentation::controllers::render::RenderCommandController;
 use crate::presentation::controllers::run::RunCommandController;
 use crate::presentation::controllers::show::ShowCommandController;
 use crate::presentation::controllers::test::handler::TestCommandController;
@@ -265,6 +266,12 @@ impl Container {
     #[must_use]
     pub fn create_release_controller(&self) -> ReleaseCommandController {
         ReleaseCommandController::new(self.repository(), self.clock(), self.user_output())
+    }
+
+    /// Create a new `RenderCommandController`
+    #[must_use]
+    pub fn create_render_controller(&self) -> RenderCommandController {
+        RenderCommandController::new(self.user_output())
     }
 
     /// Create a new `RunCommandController`

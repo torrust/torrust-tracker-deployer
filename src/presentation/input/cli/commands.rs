@@ -231,6 +231,58 @@ pub enum Commands {
         environment: String,
     },
 
+    /// Generate deployment artifacts without executing deployment
+    ///
+    /// This command generates all deployment artifacts (docker-compose files,
+    /// tracker configuration, Ansible playbooks, etc.) to the build directory
+    /// without executing any deployment operations.
+    ///
+    /// **Important**: This command is ONLY for environments in the "Created" state.
+    /// If the environment is already provisioned, artifacts already exist in the
+    /// build directory and will not be regenerated.
+    ///
+    /// Use cases:
+    /// - Preview artifacts before provisioning infrastructure
+    /// - Generate artifacts from config file without creating environment
+    /// - Inspect what will be deployed before committing to provision
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// # Generate from Created environment
+    /// torrust-tracker-deployer render --env-name my-env --ip 10.0.0.1
+    ///
+    /// # Generate from config file (no environment creation)
+    /// torrust-tracker-deployer render --env-file envs/my-config.json --ip 10.0.0.1
+    /// ```
+    Render {
+        /// Name of existing environment (mutually exclusive with --env-file)
+        ///
+        /// The environment must be in "Created" state (before provision).
+        /// If the environment is already provisioned, a message will indicate
+        /// where the artifacts are located.
+        #[arg(long, group = "input", conflicts_with = "env_file")]
+        env_name: Option<String>,
+
+        /// Path to environment configuration file (mutually exclusive with --env-name)
+        ///
+        /// Generate artifacts directly from a configuration file without
+        /// creating an environment.
+        #[arg(long, short = 'f', group = "input", conflicts_with = "env_name")]
+        env_file: Option<PathBuf>,
+
+        /// Target instance IP address (REQUIRED)
+        ///
+        /// IP address of the target server where artifacts will be deployed.
+        /// This is required because:
+        /// - In Created state: Environment hasn't been provisioned yet
+        /// - With config file: No infrastructure exists
+        ///
+        /// The IP will be used in generated Ansible inventory and configuration files.
+        #[arg(long, required = true)]
+        ip: String,
+    },
+
     /// Run the application stack on a released environment
     ///
     /// This command starts the docker compose services on a released VM.
