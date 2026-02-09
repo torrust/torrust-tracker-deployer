@@ -12,9 +12,13 @@ use super::errors::RenderCommandHandlerError;
 use crate::application::command_handlers::create::config::{
     CreateConfigError, EnvironmentCreationConfig,
 };
+use crate::application::services::AnsibleTemplateService;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::{Created, Environment, EnvironmentParams};
 use crate::domain::EnvironmentName;
+use crate::domain::TemplateManager;
+use crate::infrastructure::templating::tofu::TofuProjectGenerator;
+use crate::shared::{Clock, SystemClock};
 
 /// Input mode for render command
 ///
@@ -108,7 +112,7 @@ impl RenderCommandHandler {
             target_ip = %target_ip
         )
     )]
-    pub fn execute(
+    pub async fn execute(
         &self,
         input_mode: RenderInputMode,
         target_ip: &str,
@@ -121,9 +125,11 @@ impl RenderCommandHandler {
         match input_mode {
             RenderInputMode::EnvironmentName(ref env_name) => {
                 self.render_from_environment(env_name, ip_addr, working_dir)
+                    .await
             }
             RenderInputMode::ConfigFile(ref config_path) => {
                 self.render_from_config_file(config_path, ip_addr, working_dir)
+                    .await
             }
         }
     }
@@ -142,7 +148,7 @@ impl RenderCommandHandler {
     /// # Errors
     ///
     /// Returns error if environment not found, wrong state, or rendering fails
-    fn render_from_environment(
+    async fn render_from_environment(
         &self,
         env_name: &EnvironmentName,
         ip_addr: IpAddr,
@@ -173,13 +179,8 @@ impl RenderCommandHandler {
             }
         })?;
 
-        // TODO: Phase 3 - Render templates
-        // This will be implemented in the next phase with template orchestration
-        info!(
-            environment = %env_name,
-            target_ip = %ip_addr,
-            "Template rendering not yet implemented (Phase 3)"
-        );
+        // Render all templates
+        self.render_all_templates(&created_env, ip_addr).await?;
 
         let output_dir = working_dir.join("build").join(env_name.as_str());
 
@@ -205,7 +206,7 @@ impl RenderCommandHandler {
     /// # Errors
     ///
     /// Returns error if file not found, parsing fails, or rendering fails
-    fn render_from_config_file(
+    async fn render_from_config_file(
         &self,
         config_path: &Path,
         ip_addr: IpAddr,
@@ -233,31 +234,138 @@ impl RenderCommandHandler {
                 }
             })?;
 
-        // Validate configuration by converting to domain types
-        let _params: EnvironmentParams =
-            config.clone().try_into().map_err(|e: CreateConfigError| {
-                RenderCommandHandlerError::DomainValidationFailed {
-                    reason: e.to_string(),
-                }
-            })?;
+        // Validate configuration by converting to domain types (this moves config)
+        let params: EnvironmentParams = config.try_into().map_err(|e: CreateConfigError| {
+            RenderCommandHandlerError::DomainValidationFailed {
+                reason: e.to_string(),
+            }
+        })?;
 
-        // TODO: Phase 3 - Render templates
-        // This will be implemented in the next phase with template orchestration
-        info!(
-            config_file = %config_path.display(),
-            target_ip = %ip_addr,
-            "Template rendering not yet implemented (Phase 3)"
+        // Create a temporary environment for template rendering (not persisted)
+        let env_name = params.environment_name.clone();
+        let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+        let created_env = Environment::<Created>::new(
+            params.environment_name,
+            params.provider_config,
+            params.ssh_credentials,
+            params.ssh_port,
+            clock.now(),
         );
 
-        let env_name = &config.environment.name;
-        let output_dir = working_dir.join("build").join(env_name);
+        // Render all templates
+        self.render_all_templates(&created_env, ip_addr).await?;
+
+        let output_dir = working_dir.join("build").join(env_name.as_str());
 
         Ok(RenderResult {
-            environment_name: env_name.clone(),
+            environment_name: env_name.to_string(),
             target_ip: ip_addr,
             output_dir,
             config_source: format!("Config file: {}", config_path.display()),
         })
+    }
+
+    /// Render all deployment templates to the build directory
+    ///
+    /// This method orchestrates the rendering of all templates required for
+    /// deployment: OpenTofu, Ansible, Docker Compose, Tracker, Prometheus,
+    /// Grafana, Caddy, and Backup (conditional on configuration).
+    ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Created state
+    /// * `target_ip` - Target instance IP address
+    ///
+    /// # Errors
+    ///
+    /// Returns error if any template rendering fails
+    async fn render_all_templates(
+        &self,
+        environment: &Environment<Created>,
+        target_ip: IpAddr,
+    ) -> Result<(), RenderCommandHandlerError> {
+        info!(
+            environment = %environment.name(),
+            target_ip = %target_ip,
+            "Rendering all deployment templates"
+        );
+
+        let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+
+        // 1. Render OpenTofu templates (infrastructure provisioning)
+        self.render_opentofu_templates(environment, &clock).await?;
+
+        // 2. Render Ansible templates (configuration management)
+        self.render_ansible_templates(environment, target_ip, &clock)
+            .await?;
+
+        // TODO: Render application templates (Docker Compose, Tracker, Prometheus, etc.)
+        // This will be completed in subsequent commits
+
+        info!(
+            environment = %environment.name(),
+            "All deployment templates rendered successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Render OpenTofu templates for infrastructure provisioning
+    ///
+    /// # Errors
+    ///
+    /// Returns error if OpenTofu template rendering fails
+    async fn render_opentofu_templates(
+        &self,
+        environment: &Environment<Created>,
+        clock: &Arc<dyn Clock>,
+    ) -> Result<(), RenderCommandHandlerError> {
+        let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
+
+        let tofu_renderer = TofuProjectGenerator::new(
+            template_manager,
+            environment.build_dir(),
+            environment.ssh_credentials().clone(),
+            environment.ssh_port(),
+            environment.instance_name().clone(),
+            environment.provider_config().clone(),
+            clock.clone(),
+        );
+
+        tofu_renderer.render().await.map_err(|e| {
+            RenderCommandHandlerError::TemplateRenderingFailed {
+                reason: e.to_string(),
+            }
+        })?;
+
+        Ok(())
+    }
+
+    /// Render Ansible templates for configuration management
+    ///
+    /// # Errors
+    ///
+    /// Returns error if Ansible template rendering fails
+    async fn render_ansible_templates(
+        &self,
+        environment: &Environment<Created>,
+        target_ip: IpAddr,
+        clock: &Arc<dyn Clock>,
+    ) -> Result<(), RenderCommandHandlerError> {
+        let ansible_service = AnsibleTemplateService::from_paths(
+            environment.templates_dir(),
+            environment.build_dir().clone(),
+            clock.clone(),
+        );
+
+        ansible_service
+            .render_templates(&environment.context().user_inputs, target_ip, None)
+            .await
+            .map_err(|e| RenderCommandHandlerError::TemplateRenderingFailed {
+                reason: e.to_string(),
+            })?;
+
+        Ok(())
     }
 
     /// Parse and validate IP address

@@ -113,7 +113,7 @@ impl RenderCommandController {
     /// - Config file doesn't exist
     /// - Environment not found or wrong state
     /// - Template rendering fails
-    pub fn execute(
+    pub async fn execute(
         &mut self,
         env_name: Option<&str>,
         env_file: Option<&Path>,
@@ -181,6 +181,7 @@ impl RenderCommandController {
         let result = self
             .handler
             .execute(input_mode, ip, &working_dir)
+            .await
             .map_err(RenderCommandError::from)?;
 
         self.progress.complete_step(None)?;
