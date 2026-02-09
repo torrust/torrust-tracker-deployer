@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
+use crate::application::command_handlers::render::RenderCommandHandlerError;
 use crate::presentation::views::progress::ProgressReporterError;
 
 /// Errors that can occur in the render command controller
@@ -14,6 +15,7 @@ use crate::presentation::views::progress::ProgressReporterError;
 /// - Input validation
 /// - IP address parsing
 /// - Mode selection (env-name vs env-file)
+/// - Delegation to application handler
 #[derive(Debug, Error)]
 pub enum RenderCommandError {
     /// No input mode specified
@@ -24,7 +26,7 @@ pub enum RenderCommandError {
 
     /// Invalid IP address format
     ///
-    /// The IP address provided via --ip flag is not a valid IPv4 address
+    /// The IP address provided via --instance-ip flag is not a valid IPv4 address
     #[error("Invalid IP address format: {ip}")]
     InvalidIpAddress {
         /// The invalid IP string provided by the user
@@ -40,14 +42,31 @@ pub enum RenderCommandError {
         path: PathBuf,
     },
 
-    /// Placeholder for future application layer errors
+    /// Invalid environment name format
     ///
-    /// This will be replaced with actual application handler errors in Phase 2
-    #[error("Not yet implemented: {message}")]
-    NotImplemented {
-        /// Description of what's not implemented
-        message: String,
+    /// The environment name provided does not meet naming constraints
+    #[error("Invalid environment name: {value}")]
+    InvalidEnvironmentName {
+        /// The invalid environment name
+        value: String,
+        /// Reason for rejection
+        reason: String,
     },
+
+    /// Working directory unavailable
+    ///
+    /// Cannot determine current working directory
+    #[error("Cannot determine working directory: {reason}")]
+    WorkingDirectoryUnavailable {
+        /// Why the working directory is unavailable
+        reason: String,
+    },
+
+    /// Application handler error
+    ///
+    /// Error from the application layer handler
+    #[error("Render command failed: {0}")]
+    Handler(#[from] RenderCommandHandlerError),
 
     /// Progress reporter error
     ///
@@ -66,9 +85,9 @@ impl RenderCommandError {
             Self::NoInputMode => Some(
                 "You must specify an input mode:\n\n\
                 Option 1: Use existing Created environment\n  \
-                  torrust-tracker-deployer render --env-name my-env --ip 10.0.0.1\n\n\
+                  torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1\n\n\
                 Option 2: Use configuration file\n  \
-                  torrust-tracker-deployer render --env-file envs/my-config.json --ip 10.0.0.1\n\n\
+                  torrust-tracker-deployer render --env-file envs/my-config.json --instance-ip 10.0.0.1\n\n\
                 For more information, see: docs/user-guide/commands/render.md"
                     .to_string(),
             ),
@@ -76,8 +95,8 @@ impl RenderCommandError {
                 "The IP address '{}' is not a valid IPv4 address.\n\n\
                 Valid format: xxx.xxx.xxx.xxx (e.g., 10.0.0.1 or 192.168.1.100)\n\n\
                 Examples:\n  \
-                  torrust-tracker-deployer render --env-name my-env --ip 10.0.0.1\n  \
-                  torrust-tracker-deployer render --env-file envs/test.json --ip 192.168.1.50\n\n\
+                  torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1\n  \
+                  torrust-tracker-deployer render --env-file envs/test.json --instance-ip 192.168.1.50\n\n\
                 For more information, see: docs/user-guide/commands/render.md",
                 ip
             )),
@@ -90,12 +109,23 @@ impl RenderCommandError {
                 For more information, see: docs/user-guide/commands/render.md",
                 path.display()
             )),
-            Self::NotImplemented { .. } => Some(
-                "This command is not fully implemented yet.\n\n\
-                Phase 1 (presentation layer) is complete, but Phase 2 (application handler)\n\
-                needs to be implemented next."
-                    .to_string(),
-            ),
+            Self::InvalidEnvironmentName { value, reason } => Some(format!(
+                "Invalid environment name: {}\n\n\
+                Reason: {}\n\n\
+                Environment names must follow these rules:\n\
+                - Only lowercase alphanumeric and hyphens\n\
+                - Start and end with alphanumeric\n\
+                - Between 1 and 63 characters\n\n\
+                For more information, see: docs/user-guide/commands/render.md",
+                value, reason
+            )),
+            Self::WorkingDirectoryUnavailable { reason } => Some(format!(
+                "Cannot determine current working directory: {}\n\n\
+                This is unusual and may indicate filesystem or permission issues.\n\
+                Try running from a different directory or check filesystem status.",
+                reason
+            )),
+            Self::Handler(e) => Some(e.help()),
             Self::ProgressReporter(_) => None,
         }
     }

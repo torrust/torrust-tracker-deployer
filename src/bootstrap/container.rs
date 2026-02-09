@@ -271,7 +271,7 @@ impl Container {
     /// Create a new `RenderCommandController`
     #[must_use]
     pub fn create_render_controller(&self) -> RenderCommandController {
-        RenderCommandController::new(self.user_output())
+        RenderCommandController::new(self.repository(), self.user_output())
     }
 
     /// Create a new `RunCommandController`

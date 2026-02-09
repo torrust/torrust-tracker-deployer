@@ -250,10 +250,10 @@ pub enum Commands {
     ///
     /// ```text
     /// # Generate from Created environment
-    /// torrust-tracker-deployer render --env-name my-env --ip 10.0.0.1
+    /// torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1
     ///
     /// # Generate from config file (no environment creation)
-    /// torrust-tracker-deployer render --env-file envs/my-config.json --ip 10.0.0.1
+    /// torrust-tracker-deployer render --env-file envs/my-config.json --instance-ip 10.0.0.1
     /// ```
     Render {
         /// Name of existing environment (mutually exclusive with --env-file)
@@ -279,8 +279,8 @@ pub enum Commands {
         /// - With config file: No infrastructure exists
         ///
         /// The IP will be used in generated Ansible inventory and configuration files.
-        #[arg(long, required = true)]
-        ip: String,
+        #[arg(long, value_name = "IP_ADDRESS", required = true)]
+        instance_ip: String,
     },
 
     /// Run the application stack on a released environment
