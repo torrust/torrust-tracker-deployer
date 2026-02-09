@@ -92,6 +92,12 @@ impl EnvironmentListView {
             lines.push("For troubleshooting, see docs/user-guide/commands.md".to_string());
         }
 
+        // Hint about purge command
+        lines.push(String::new());
+        lines.push(
+            "Hint: Use 'purge' command to completely remove destroyed environments.".to_string(),
+        );
+
         lines.join("\n")
     }
 
@@ -183,6 +189,8 @@ mod tests {
         assert!(output.contains("State"));
         assert!(output.contains("Provider"));
         assert!(output.contains("Created"));
+        assert!(output
+            .contains("Hint: Use 'purge' command to completely remove destroyed environments."));
     }
 
     #[test]
@@ -212,6 +220,8 @@ mod tests {
         assert!(output.contains("staging"));
         assert!(output.contains("Provisioned"));
         assert!(output.contains("LXD"));
+        assert!(output
+            .contains("Hint: Use 'purge' command to completely remove destroyed environments."));
     }
 
     #[test]
@@ -235,6 +245,8 @@ mod tests {
         assert!(output.contains("Warning: Failed to load the following environments:"));
         assert!(output.contains("broken-env: Invalid JSON"));
         assert!(output.contains("old-env: Permission denied"));
+        assert!(output
+            .contains("Hint: Use 'purge' command to completely remove destroyed environments."));
     }
 
     #[test]
@@ -252,6 +264,8 @@ mod tests {
 
         // Should truncate the long name
         assert!(output.contains("very-long-environ..."));
+        assert!(output
+            .contains("Hint: Use 'purge' command to completely remove destroyed environments."));
     }
 
     #[test]
@@ -285,5 +299,7 @@ mod tests {
         assert!(output.contains("env1"));
         assert!(output.contains("env2"));
         assert!(output.contains("env3"));
+        assert!(output
+            .contains("Hint: Use 'purge' command to completely remove destroyed environments."));
     }
 }
