@@ -215,97 +215,170 @@ Files:
 
 ### Command Interface
 
-```bash
-# Primary usage - generate from existing environment
-torrust-tracker-deployer render --env-name <name> --output-dir <path>
+**Critical Design Rule**: The `render` command is ONLY for environments in the **Created** state (initial state before provisioning). Once an environment is provisioned, artifacts already exist in `build/{env}/` and should not be regenerated.
 
-# Alternative - generate from environment config file (requires IP)
-torrust-tracker-deployer render --env-file <path> --ip <ip-address> --output-dir <path>
+```bash
+# Mode 1: Generate from existing Created environment
+torrust-tracker-deployer render --env-name <name> --ip <ip-address>
+
+# Mode 2: Generate from config file (no environment creation)
+torrust-tracker-deployer render --env-file <path> --ip <ip-address>
 ```
 
 **Design Decisions**:
 
-1. **`--output-dir` is REQUIRED** (not optional)
-   - **Rationale**: Avoid conflicts with internal `build/` directory used by the deployer for actual deployment operations
-   - **Separation of concerns**: Internal build artifacts (deployment automation) vs user-facing generated artifacts (manual inspection/deployment)
-   - **User gets full control**: Explicit output location prevents accidental overwrites of deployer's internal state
+1. **IP address is ALWAYS REQUIRED** (via `--ip` flag)
+   - **Rationale**: User must explicitly specify target infrastructure IP
+   - Even when using `--env-name`, IP is required (environment hasn't been provisioned yet)
+   - Ansible inventory template requires IP address for all templates
 
-2. **Instance IP address is REQUIRED** for Ansible inventory template (`templates/ansible/inventory.yml.tera`)
-   - When using `--env-name`: IP is read from `data/{env}/environment.json` (infrastructure outputs)
-   - When using `--env-file`: IP must be provided via `--ip` flag (user must know target IP in advance)
+2. **Only works with "Created" state environments** (when using `--env-name`)
+   - **Created state**: Initial state after `create environment`, before `provision`
+   - **Provisioned+**: Artifacts already exist in `build/{env}/`, just show location message
+   - **Use case**: "Generate artifacts to preview before provisioning"
+
+3. **Artifacts written to `build/{env}/`** (standard build directory)
+   - Consistent with rest of deployer (provision, configure, release all write here)
+   - No `--output-dir` flag needed (always uses standard location)
+   - User can copy from `build/{env}/` if needed for manual deployment
 
 **Supported Input Modes**:
 
-1. **`--env-name`** (existing environment):
-   - Use case: "I have a deployed environment, regenerate artifacts"
-   - Use case: "Show me what was deployed"
-   - Reads from: `data/{env}/environment.json` (includes IP from infrastructure outputs)
-   - State: Must exist in data directory
-   - IP: Automatically extracted from environment data
+1. **`--env-name` + `--ip`** (existing Created environment):
+   - Use case: "I created an environment, generate artifacts before provisioning"
+   - Use case: "Preview what will be deployed to this IP"
+   - Reads from: `data/{env}/environment.json` (environment configuration)
+   - State: Must be in "Created" state (will show message if already provisioned)
+   - IP: User-provided via `--ip` flag
 
-2. **`--env-file` + `--ip`** (preview mode):
-   - Use case: "Generate artifacts from this config before deploying" (user knows target IP)
-   - Use case: "Preview what would be deployed to this specific server"
-   - Reads from: User-provided config file (e.g., `envs/my-config.json`) + explicit IP
+2. **`--env-file` + `--ip`** (preview mode without environment):
+   - Use case: "Generate artifacts from this config before creating environment"
+   - Use case: "I want artifacts only, no deployer state management"
+   - Reads from: User-provided config file (e.g., `envs/my-config.json`)
    - State: No environment created
-   - IP: User-provided (must be known in advance - e.g., pre-provisioned instance)
-   - Combines with `validate` workflow: `validate` → `render --ip <ip>` → manual deployment
+   - IP: User-provided via `--ip` flag
 
 ### Output Format
 
-**Simplified Output** - Only show output directory path and target IP. No need to list individual files since:
+**Simplified Output** - Only show build directory path and target IP.
 
-- All templates are always rendered (predictable output)
-- Listing files would require updating specification every time templates are added
-- User can easily explore the output directory themselves
-
-When generation succeeds, show:
+**When generation succeeds** (Created state or config file mode):
 
 ```text
 ✓ Generated deployment artifacts for environment: my-env
 
-Artifacts written to: /path/to/output/
+Artifacts written to: build/my-env/
 Target instance IP: 203.0.113.42
 
+Generated artifacts:
+  • OpenTofu infrastructure definitions
+  • Ansible playbooks and inventory
+  • Docker Compose stack configuration
+  • Tracker configuration (tracker.toml)
+  • Monitoring configuration (Prometheus, Grafana)
+  • Reverse proxy configuration (Caddy - if HTTPS configured)
+  • Backup configuration (if backups configured)
+
 Next steps:
-  1. Review generated artifacts in /path/to/output/
-  2. Copy artifacts to your target server (203.0.113.42)
-  3. Execute deployment manually:
-     - Run Ansible playbooks from ansible/ directory
-     - Deploy docker-compose stack from docker-compose/ directory
+  1. Review generated artifacts in build/my-env/
+  2. Either:
+     a. Continue with deployer: provision → configure → release → run
+     b. Copy artifacts to your target server (203.0.113.42) for manual deployment
+```
+
+**When environment already provisioned**:
+
+```text
+ℹ Environment 'my-env' is already provisioned (state: Provisioned)
+
+  Generated artifacts are available at: build/my-env/
+  Target instance IP: 203.0.113.42
+
+  The provision command automatically generates all artifacts.
+  No need to run 'render' for provisioned environments.
+
+  If you need to regenerate artifacts after provisioning:
+    - Modify configuration in data/my-env/environment.json
+    - Run: configure --env-name my-env
+          (or appropriate workflow command)
 ```
 
 ### Error Scenarios
 
 | Error Condition | Message | Exit Code |
 |--------------------------------------|----------------------------------------------------------------------|-----------||
-| Missing `--output-dir` | "Output directory is required: --output-dir <path>" | 1 |
+| Missing `--ip` | "IP address is required: --ip <ip-address>" | 1 |
+| Invalid IP address format | "Invalid IP address format: {ip}" | 1 |
 | Environment name doesn't exist | "Environment 'my-env' not found in data/" | 1 |
+| Environment not in Created state | (Show message: artifacts already at build/{env}/) | 0 |
 | Config file doesn't exist | "Configuration file not found: {path}" | 1 |
 | Config file invalid | "Invalid configuration: {validation errors}" | 1 |
-| Missing `--ip` with `--env-file` | "IP address required when using --env-file: --ip <ip-address>" | 1 |
-| Invalid IP address format | "Invalid IP address format: {ip}" | 1 |
 | Template rendering fails | "Failed to render {template}: {error}" | 1 |
-| Output directory not writable | "Cannot write to output directory: {path}" | 1 |
-| Output directory already exists | "Output directory already exists: {path} (use --force to overwrite)" | 1 |
+| Build directory not writable | "Cannot write to build directory: {path}" | 1 |
 
 ## Implementation Plan
 
-### Phase 1: Application Layer - Command Handler (2-3 hours)
+**Approach**: Outside-In Development (Presentation → Application → Infrastructure)
+
+Following `.github/skills/add-new-command/skill.md` for testability at each phase.
+
+### Phase 1: Presentation Layer Stub (2 hours)
+
+**Goal**: Make command runnable with routing and empty implementation.
+
+- [ ] Add CLI command variant in `src/presentation/input/cli/commands.rs`
+  - [ ] `Render { env_name: Option<String>, env_file: Option<PathBuf>, ip: String }`
+- [ ] Add routing in `src/presentation/dispatch/router.rs`
+- [ ] Create controller stub in `src/presentation/controllers/render/handler.rs`
+  - [ ] Show progress steps (stub)
+  - [ ] Basic input validation
+- [ ] Define presentation errors in `src/presentation/controllers/render/errors.rs`
+  - [ ] With `.help()` methods
+- [ ] Wire in `src/bootstrap/container.rs`
+
+**Test Phase 1**:
+
+```bash
+cargo run -- render --help           # Help text displays
+cargo run -- render --env-name test  # Error: missing --ip
+cargo run -- render --env-name test --ip 10.0.0.1  # Stub runs, shows progress
+```
+
+**Commit**: `feat: [#326] add render command presentation layer stub`
+
+### Phase 2: Application Layer - Command Handler (3 hours)
+
+**Goal**: Implement business logic for artifact generation.
 
 - [ ] Create `src/application/command_handlers/render/mod.rs`
 - [ ] Create `RenderCommandHandler` struct
-- [ ] Define `RenderInput` (environment name OR config file path + IP, plus output directory)
-- [ ] Define `RenderOutput` (output directory path + target IP)
-- [ ] Define `RenderCommandHandlerError` enum
+- [ ] Define `RenderInput` (environment name OR config file + IP)
+- [ ] Define `RenderOutput` (build path + target IP)
+- [ ] Define `RenderCommandHandlerError` enum with detailed help messages
 - [ ] Implement dual input modes:
-  - [ ] From environment data (IP extracted from infrastructure outputs)
-  - [ ] From config file + explicit IP parameter
-- [ ] Add IP address validation
+  - [ ] From environment data (Created state check)
+  - [ ] From config file + IP parameter
+- [ ] Add state validation (Created state only)
+- [ ] Add IP address validation (Ipv4Addr parsing)
 - [ ] Add comprehensive error messages with actionable instructions
 - [ ] Add unit tests for command handler logic
 
-### Phase 2: Template Orchestration (3-4 hours)
+**Test Phase 2**:
+
+```bash
+# Valid Created state environment
+cargo run -- render --env-name created-env --ip 10.0.0.1
+
+# Already provisioned environment (show message)
+cargo run -- render --env-name provisioned-env --ip 10.0.0.1
+
+# Config file mode
+cargo run -- render --env-file envs/test.json --ip 10.0.0.1
+```
+
+**Commit**: `feat: [#326] implement render command handler with state validation`
+
+### Phase 3: Template Orchestration (3-4 hours)
 
 - [ ] Identify all existing template renderers:
   - [ ] `TofuTemplateRenderer` (infrastructure)
@@ -313,65 +386,49 @@ Next steps:
   - [ ] `DockerComposeRenderer` (application stack)
   - [ ] Tracker config renderer (from release command)
   - [ ] Monitoring config renderers (Prometheus/Grafana)
-  - [ ] Caddy config renderer
-  - [ ] Backup config renderer
-- [ ] Create orchestration logic to invoke ALL renderers (no conditional logic)
-- [ ] Ensure all artifacts write to user-specified output directory subdirectories
+  - [ ] Caddy config renderer (if HTTPS)
+  - [ ] Backup config renderer (if backups)
+- [ ] Create orchestration logic to invoke ALL renderers
+- [ ] Ensure all artifacts write to `build/{env}/` subdirectories
 - [ ] Pass IP address to Ansible inventory template renderer
 - [ ] Add progress indicators using `UserOutput`
 - [ ] Add integration tests verifying all templates rendered with correct IP
 
-### Phase 3: Presentation Layer - CLI Command (2 hours)
-
-- [ ] Create `src/presentation/controllers/render/mod.rs`
-- [ ] Create `RenderCommandController`
-- [ ] Add CLI argument parsing:
-  - [ ] `--env-name <name>` (mutually exclusive with `--env-file`)
-  - [ ] `--env-file <path>` (mutually exclusive with `--env-name`, requires `--ip`)
-  - [ ] `--ip <ip-address>` (required when using `--env-file`, forbidden with `--env-name`)
-  - [ ] `--output-dir <path>` (REQUIRED always)
-  - [ ] `--force` (optional, overwrites existing output directory)
-- [ ] Implement input validation:
-  - [ ] Ensure `--env-name` and `--env-file` are mutually exclusive
-  - [ ] Ensure `--ip` is present when using `--env-file`
-  - [ ] Ensure `--ip` is NOT present when using `--env-name` (would be confusing)
-  - [ ] Validate IP address format
-  - [ ] Ensure `--output-dir` is always provided
-- [ ] Connect to `RenderCommandHandler`
-- [ ] Format output using `UserOutput` (progress, success, output directory path, target IP)
-- [ ] Handle errors with clear messages
-- [ ] Add help text and examples
-- [ ] Add unit tests for controller logic
+**Commit**: `feat: [#326] implement template rendering orchestration`
 
 ### Phase 4: Documentation and Testing (2-3 hours)
 
+**Goal**: Complete user documentation and E2E tests.
+
 - [ ] Create user guide: `docs/user-guide/commands/render.md`
-  - [ ] Overview and use cases
+  - [ ] Overview and use cases ("preview before provision")
   - [ ] Command syntax and options
   - [ ] Examples for common scenarios
   - [ ] Explanation of generated artifacts
-  - [ ] Integration with manual deployment workflow
+  - [ ] Integration with deployment workflow
 - [ ] Update `docs/console-commands.md` with render command
 - [ ] Update roadmap (`docs/roadmap.md`) - mark task 9.2 complete
 - [ ] Add E2E tests:
-  - [ ] Generate from existing environment (with `--env-name`)
-  - [ ] Generate from config file (with `--env-file` + `--ip`)
-  - [ ] Verify all expected files created
-  - [ ] Verify output directory structure
+  - [ ] Generate from Created environment (`--env-name` + `--ip`)
+  - [ ] Show message for Provisioned environment
+  - [ ] Generate from config file (`--env-file` + `--ip`)
+  - [ ] Verify all expected files created in `build/{env}/`
   - [ ] Verify Ansible inventory contains correct IP address
   - [ ] Test error conditions:
-    - [ ] Missing `--output-dir`
-    - [ ] Missing `--ip` when using `--env-file`
+    - [ ] Missing `--ip` flag
     - [ ] Invalid IP format
     - [ ] Missing environment
-    - [ ] Invalid config
-  - [ ] Test `--force` flag (overwrite existing output directory)
+    - [ ] Invalid config file
 - [ ] Run pre-commit checks: `./scripts/pre-commit.sh`
+
+**Commit**: `docs: [#326] add render command documentation and tests`
 
 ### Phase 5: Polish and Review (1-2 hours)
 
+**Goal**: Final quality checks and refinements.
+
 - [ ] Review generated artifact quality
-- [ ] Verify no external operations triggered
+- [ ] Verify no external operations triggered (templates only)
 - [ ] Test with various configuration combinations:
   - [ ] LXD provider
   - [ ] Hetzner provider
@@ -458,40 +515,46 @@ Next steps:
 
 ### Design Considerations
 
-1. **Separate Output from Internal Build**: The `--output-dir` parameter is **required** to avoid conflicts with the deployer's internal `build/` directory. This separation ensures:
-   - Internal deployment automation uses `build/` without user interference
-   - User-facing artifact generation goes to explicit, user-chosen location
-   - No risk of overwriting deployer's internal state
-   - Clear separation between "deployer internals" and "user artifacts"
+1. **IP Address Always Required**: User must explicitly provide target IP via `--ip` flag:
+   - Even when using `--env-name` (environment hasn't been provisioned yet, so no infrastructure IP available)
+   - This makes the command's requirements explicit and avoids confusion
+   - Aligns with "preview before provision" use case
 
-2. **Instance IP is Essential**: Templates (especially Ansible inventory) require the target instance IP address:
-   - When using `--env-name`: IP is extracted from stored environment data (infrastructure outputs)
-   - When using `--env-file`: IP must be provided via `--ip` flag (user must know target IP)
+2. **Created State Only**: The render command is specifically for environments in the "Created" state:
+   - **Created** = initial state after `create environment`, before `provision`
+   - **Provisioned+** = artifacts already exist in `build/{env}/`, no need to regenerate
+   - Use case: "Show me what will be deployed before I provision infrastructure"
+   - If environment is already provisioned, command shows informational message pointing to existing artifacts
+
+3. **Standard Build Directory**: Artifacts written to `build/{env}/` (not user-specified location):
+   - Consistent with rest of deployer (provision, configure, release all use build/)
+   - Simplifies implementation (no --output-dir flag needed)
+   - User can copy from build/ if needed for manual deployment
+   - No risk of conflicts since directory is environment-specific
+
+4. **Instance IP is Essential**: Templates (especially Ansible inventory) require the target instance IP address:
+   - When using `--env-name` + `--ip`: User provides target IP (environment not provisioned yet)
+   - When using `--env-file` + `--ip`: User provides target IP (no environment created)
    - This aligns with the `register` command pattern (for pre-provisioned instances)
 
-3. **No State Requirements (with caveats)**: Unlike other commands, render can work from existing environment OR just a config file:
-   - With `--env-name`: Full environment state provides everything (config + IP)
-   - With `--env-file` + `--ip`: No environment state needed, but user must know target IP
-   - This maximizes flexibility for different workflows
+5. **Reuse Over Reinvention**: This command is essentially "run all template renderers but don't execute anything." We should reuse existing renderer infrastructure rather than duplicating logic.
 
-4. **Reuse Over Reinvention**: This command is essentially "run all template renderers but don't execute anything." We should reuse existing renderer infrastructure rather than duplicating logic.
-
-5. **All Templates Always Rendered**: Current implementation renders ALL templates regardless of configuration:
+6. **All Templates Always Rendered**: Current implementation renders ALL templates regardless of configuration:
    - Simplifies rendering logic (no conditional checks)
    - User gets complete artifact set
    - Templates for optional services (MySQL, HTTPS, etc.) are still generated
    - May change in the future if inter-template dependencies emerge
-   - Only dynamic value is instance IP (from provision output or `--ip` flag)
+   - Only dynamic value is instance IP (user-provided via `--ip` flag)
    - All other values come from environment configuration
 
-6. **Simplified Output**: Show only output directory path and IP, not individual file list:
+7. **Simplified Output**: Show only build directory path and IP, not individual file list:
    - All templates are always rendered (predictable output)
    - Avoids maintenance burden of updating file list as templates change
-   - User can explore output directory directly
+   - User can explore build directory directly
 
-7. **AI Agent Friendly**: This command enables AI agents to inspect what would be deployed without executing deployment. Pairs well with `validate` for complete preview workflow.
+8. **AI Agent Friendly**: This command enables AI agents to inspect what would be deployed without executing deployment. Pairs well with `validate` for complete preview workflow.
 
-8. **Manual Deployment Bridge**: For organizations with strict change control, this enables: generate → review → approve → manual deploy.
+9. **Manual Deployment Bridge**: For organizations with strict change control, this enables: generate → review → approve → manual deploy.
 
 ### Future Enhancements
 
