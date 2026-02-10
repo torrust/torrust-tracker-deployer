@@ -1,0 +1,29 @@
+{
+    "name": "Torrust Tracker Deployer",
+    "image": "torrust/tracker-deployer:latest",
+    "features": {},
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "rust-lang.rust-analyzer",
+                "tamasfe.even-better-toml",
+                "redhat.vscode-yaml",
+                "github.copilot"
+            ],
+            "settings": {
+                "chat.useAgentSkills": true,
+                "evenBetterToml.formatter.allowedBlankLines": 1,
+                "json.schemas": [
+                    {
+                        "fileMatch": [
+                            "envs/*.json"
+                        ],
+                        "url": "./schemas/environment-config.json"
+                    }
+                ]
+            }
+        }
+    },
+    "postCreateCommand": "cargo build",
+    "remoteUser": "vscode"
+}
