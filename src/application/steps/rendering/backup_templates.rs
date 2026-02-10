@@ -30,16 +30,9 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::application::services::rendering::BackupTemplateRenderingService;
+use crate::application::services::rendering::BackupTemplateRenderingServiceError;
 use crate::domain::environment::Environment;
-use crate::domain::template::TemplateManager;
-use crate::domain::tracker::DatabaseConfig;
-use crate::infrastructure::templating::backup::template::wrapper::backup_config::context::{
-    BackupContext, BackupDatabaseConfig,
-};
-use crate::infrastructure::templating::backup::{
-    BackupProjectGenerator, BackupProjectGeneratorError,
-};
-use crate::infrastructure::templating::TemplateMetadata;
 
 /// Step that renders Backup templates to the build directory
 ///
@@ -48,7 +41,7 @@ use crate::infrastructure::templating::TemplateMetadata;
 /// then ready to be deployed to the remote host.
 pub struct RenderBackupTemplatesStep<S> {
     environment: Arc<Environment<S>>,
-    template_manager: Arc<TemplateManager>,
+    templates_dir: PathBuf,
     build_dir: PathBuf,
 }
 
@@ -58,17 +51,17 @@ impl<S> RenderBackupTemplatesStep<S> {
     /// # Arguments
     ///
     /// * `environment` - The deployment environment
-    /// * `template_manager` - The template manager for accessing templates
+    /// * `templates_dir` - The templates directory
     /// * `build_dir` - The build directory where templates will be rendered
     #[must_use]
     pub fn new(
         environment: Arc<Environment<S>>,
-        template_manager: Arc<TemplateManager>,
+        templates_dir: PathBuf,
         build_dir: PathBuf,
     ) -> Self {
         Self {
             environment,
-            template_manager,
+            templates_dir,
             build_dir,
         }
     }
@@ -98,7 +91,7 @@ impl<S> RenderBackupTemplatesStep<S> {
             build_dir = %self.build_dir.display()
         )
     )]
-    pub async fn execute(&self) -> Result<Option<PathBuf>, BackupProjectGeneratorError> {
+    pub async fn execute(&self) -> Result<Option<PathBuf>, BackupTemplateRenderingServiceError> {
         info!(
             step = "render_backup_templates",
             action = "render_templates",
@@ -116,9 +109,10 @@ impl<S> RenderBackupTemplatesStep<S> {
             return Ok(None);
         };
 
-        // Render the backup templates using the project generator
-        let generator =
-            BackupProjectGenerator::new(self.build_dir.clone(), Arc::clone(&self.template_manager));
+        let service = BackupTemplateRenderingService::from_paths(
+            self.templates_dir.clone(),
+            self.build_dir.clone(),
+        );
 
         let database_config = self
             .environment
@@ -127,15 +121,14 @@ impl<S> RenderBackupTemplatesStep<S> {
             .tracker()
             .core()
             .database();
-        let backup_database_config = convert_database_config_to_backup(database_config);
+        let created_at = self.environment.context().created_at();
 
-        let metadata = TemplateMetadata::new(self.environment.context().created_at());
-
-        let context = BackupContext::from_config(metadata, backup_config, backup_database_config);
-
-        let backup_dir_path = self.build_dir.join("backup/etc");
-
-        generator.render(&context, backup_config.schedule()).await?;
+        let Some(backup_dir_path) = service
+            .render(Some(backup_config), database_config, created_at)
+            .await?
+        else {
+            return Ok(None);
+        };
 
         info!(
             step = "render_backup_templates",
@@ -145,28 +138,6 @@ impl<S> RenderBackupTemplatesStep<S> {
         );
 
         Ok(Some(backup_dir_path))
-    }
-}
-
-/// Converts domain `DatabaseConfig` to template `BackupDatabaseConfig`
-///
-/// Maps the domain database configuration (used for tracker setup) to the
-/// backup-specific database configuration format (used for backup script generation).
-fn convert_database_config_to_backup(config: &DatabaseConfig) -> BackupDatabaseConfig {
-    match config {
-        DatabaseConfig::Sqlite(sqlite_config) => BackupDatabaseConfig::Sqlite {
-            path: format!(
-                "/data/storage/tracker/lib/database/{}",
-                sqlite_config.database_name()
-            ),
-        },
-        DatabaseConfig::Mysql(mysql_config) => BackupDatabaseConfig::Mysql {
-            host: mysql_config.host().to_string(),
-            port: mysql_config.port(),
-            database: mysql_config.database_name().to_string(),
-            user: mysql_config.username().to_string(),
-            password: mysql_config.password().expose_secret().to_string(),
-        },
     }
 }
 
@@ -189,11 +160,9 @@ mod tests {
             EnvironmentTestBuilder::new().build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
-
         let step = RenderBackupTemplatesStep::new(
             environment,
-            template_manager,
+            templates_dir.path().to_path_buf(),
             build_dir.path().to_path_buf(),
         );
 
@@ -219,11 +188,9 @@ mod tests {
             .build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
-
         let step = RenderBackupTemplatesStep::new(
             environment,
-            template_manager,
+            templates_dir.path().to_path_buf(),
             build_dir.path().to_path_buf(),
         );
 
@@ -250,11 +217,9 @@ mod tests {
             .build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
-
         let step = RenderBackupTemplatesStep::new(
             environment,
-            template_manager,
+            templates_dir.path().to_path_buf(),
             build_dir.path().to_path_buf(),
         );
 

@@ -15,7 +15,6 @@ use crate::application::command_handlers::release::errors::ReleaseCommandHandler
 use crate::application::steps::{DeployComposeFilesStep, RenderDockerComposeTemplatesStep};
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
-use crate::domain::template::TemplateManager;
 use crate::shared::clock::SystemClock;
 
 /// Release Docker Compose configuration
@@ -45,11 +44,10 @@ async fn render_templates(
 ) -> StepResult<PathBuf, ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::RenderDockerComposeTemplates;
 
-    let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
     let clock = Arc::new(SystemClock);
     let step = RenderDockerComposeTemplatesStep::new(
         Arc::new(environment.clone()),
-        template_manager,
+        environment.templates_dir(),
         environment.build_dir().clone(),
         clock,
     );

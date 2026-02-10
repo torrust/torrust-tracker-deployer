@@ -20,7 +20,6 @@ use crate::application::steps::application::{
 use crate::application::steps::rendering::RenderTrackerTemplatesStep;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
-use crate::domain::template::TemplateManager;
 use crate::shared::SystemClock;
 
 /// Release the Tracker service
@@ -120,11 +119,10 @@ fn render_templates(
 ) -> StepResult<PathBuf, ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::RenderTrackerTemplates;
 
-    let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
     let clock = Arc::new(SystemClock);
     let step = RenderTrackerTemplatesStep::new(
         Arc::new(environment.clone()),
-        template_manager,
+        environment.templates_dir(),
         environment.build_dir().clone(),
         clock,
     );

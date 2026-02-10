@@ -29,12 +29,9 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::application::services::rendering::CaddyTemplateRenderingService;
+use crate::application::services::rendering::CaddyTemplateRenderingServiceError;
 use crate::domain::environment::Environment;
-use crate::domain::template::TemplateManager;
-use crate::infrastructure::templating::caddy::{
-    CaddyContext, CaddyProjectGenerator, CaddyProjectGeneratorError, CaddyService,
-};
-use crate::infrastructure::templating::TemplateMetadata;
 use crate::shared::clock::Clock;
 
 /// Step that renders Caddy templates to the build directory
@@ -48,7 +45,7 @@ use crate::shared::clock::Clock;
 /// 2. At least one service has TLS configured
 pub struct RenderCaddyTemplatesStep<S> {
     environment: Arc<Environment<S>>,
-    template_manager: Arc<TemplateManager>,
+    templates_dir: PathBuf,
     build_dir: PathBuf,
     clock: Arc<dyn Clock>,
 }
@@ -59,19 +56,19 @@ impl<S> RenderCaddyTemplatesStep<S> {
     /// # Arguments
     ///
     /// * `environment` - The deployment environment
-    /// * `template_manager` - The template manager for accessing templates
+    /// * `templates_dir` - The templates directory
     /// * `build_dir` - The build directory where templates will be rendered
     /// * `clock` - Clock service for generating timestamps
     #[must_use]
     pub fn new(
         environment: Arc<Environment<S>>,
-        template_manager: Arc<TemplateManager>,
+        templates_dir: PathBuf,
         build_dir: PathBuf,
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             environment,
-            template_manager,
+            templates_dir,
             build_dir,
             clock,
         }
@@ -103,9 +100,9 @@ impl<S> RenderCaddyTemplatesStep<S> {
             build_dir = %self.build_dir.display()
         )
     )]
-    pub fn execute(&self) -> Result<Option<PathBuf>, CaddyProjectGeneratorError> {
+    pub fn execute(&self) -> Result<Option<PathBuf>, CaddyTemplateRenderingServiceError> {
         // Check if HTTPS is configured
-        let Some(https_config) = self.environment.context().user_inputs.https() else {
+        if self.environment.context().user_inputs.https().is_none() {
             info!(
                 step = "render_caddy_templates",
                 status = "skipped",
@@ -113,13 +110,23 @@ impl<S> RenderCaddyTemplatesStep<S> {
                 "Skipping Caddy template rendering - HTTPS not configured"
             );
             return Ok(None);
-        };
+        }
 
-        // Build CaddyContext from environment configuration
-        let caddy_context = self.build_caddy_context(https_config);
+        info!(
+            step = "render_caddy_templates",
+            templates_dir = %self.templates_dir.display(),
+            build_dir = %self.build_dir.display(),
+            "Rendering Caddy configuration templates"
+        );
 
-        // Check if any service has TLS configured
-        if !caddy_context.has_any_tls() {
+        let service = CaddyTemplateRenderingService::from_paths(
+            self.templates_dir.clone(),
+            self.build_dir.clone(),
+            self.clock.clone(),
+        );
+
+        let user_inputs = &self.environment.context().user_inputs;
+        let Some(caddy_build_dir) = service.render(user_inputs)? else {
             info!(
                 step = "render_caddy_templates",
                 status = "skipped",
@@ -127,22 +134,7 @@ impl<S> RenderCaddyTemplatesStep<S> {
                 "Skipping Caddy template rendering - no services have TLS configured"
             );
             return Ok(None);
-        }
-
-        info!(
-            step = "render_caddy_templates",
-            templates_dir = %self.template_manager.templates_dir().display(),
-            build_dir = %self.build_dir.display(),
-            admin_email = %https_config.admin_email(),
-            use_staging = https_config.use_staging(),
-            "Rendering Caddy configuration templates"
-        );
-
-        let generator = CaddyProjectGenerator::new(&self.build_dir, self.template_manager.clone());
-
-        generator.render(&caddy_context)?;
-
-        let caddy_build_dir = self.build_dir.join("caddy");
+        };
 
         info!(
             step = "render_caddy_templates",
@@ -152,53 +144,6 @@ impl<S> RenderCaddyTemplatesStep<S> {
         );
 
         Ok(Some(caddy_build_dir))
-    }
-
-    /// Build a `CaddyContext` from the environment configuration
-    ///
-    /// Extracts TLS-enabled services from tracker config and builds
-    /// the context with pre-extracted ports.
-    fn build_caddy_context(
-        &self,
-        https_config: &crate::domain::https::HttpsConfig,
-    ) -> CaddyContext {
-        let user_inputs = &self.environment.context().user_inputs;
-        let tracker = user_inputs.tracker();
-
-        let metadata = TemplateMetadata::new(self.clock.now());
-
-        let mut context = CaddyContext::new(
-            metadata,
-            https_config.admin_email(),
-            https_config.use_staging(),
-        );
-
-        // Add Tracker HTTP API if TLS configured
-        if let Some(tls_config) = tracker.http_api_tls_domain() {
-            let port = tracker.http_api_port();
-            context = context.with_tracker_api(CaddyService::new(tls_config, port));
-        }
-
-        // Add HTTP Trackers with TLS configured
-        for (domain, port) in tracker.http_trackers_with_tls() {
-            context = context.with_http_tracker(CaddyService::new(domain, port));
-        }
-
-        // Add Health Check API if TLS configured
-        if let Some(tls_domain) = tracker.health_check_api_tls_domain() {
-            let port = tracker.health_check_api_port();
-            context = context.with_health_check_api(CaddyService::new(tls_domain, port));
-        }
-
-        // Add Grafana if TLS configured
-        if let Some(grafana) = user_inputs.grafana() {
-            if let Some(tls_domain) = grafana.tls_domain() {
-                // Grafana default port is 3000
-                context = context.with_grafana(CaddyService::new(tls_domain, 3000));
-            }
-        }
-
-        context
     }
 }
 
@@ -219,17 +164,16 @@ mod tests {
             EnvironmentTestBuilder::new().build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
         let clock = Arc::new(SystemClock);
         let step = RenderCaddyTemplatesStep::new(
             environment.clone(),
-            template_manager.clone(),
+            templates_dir.path().to_path_buf(),
             build_dir.path().to_path_buf(),
             clock,
         );
 
         assert_eq!(step.build_dir, build_dir.path());
-        assert_eq!(step.template_manager.templates_dir(), templates_dir.path());
+        assert_eq!(step.templates_dir, templates_dir.path());
     }
 
     #[test]
@@ -242,11 +186,10 @@ mod tests {
             EnvironmentTestBuilder::new().build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
         let clock = Arc::new(SystemClock);
         let step = RenderCaddyTemplatesStep::new(
             environment,
-            template_manager,
+            templates_dir.path().to_path_buf(),
             build_dir.path().to_path_buf(),
             clock,
         );

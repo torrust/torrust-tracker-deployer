@@ -36,11 +36,9 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::application::services::rendering::TrackerTemplateRenderingService;
+use crate::application::services::rendering::TrackerTemplateRenderingServiceError;
 use crate::domain::environment::Environment;
-use crate::domain::template::TemplateManager;
-use crate::infrastructure::templating::tracker::{
-    TrackerProjectGenerator, TrackerProjectGeneratorError,
-};
 use crate::shared::Clock;
 
 /// Step that renders Tracker configuration templates to the build directory
@@ -50,7 +48,7 @@ use crate::shared::Clock;
 /// then ready to be deployed to the remote host by the `DeployTrackerConfigStep`.
 pub struct RenderTrackerTemplatesStep<S> {
     environment: Arc<Environment<S>>,
-    template_manager: Arc<TemplateManager>,
+    templates_dir: PathBuf,
     build_dir: PathBuf,
     clock: Arc<dyn Clock>,
 }
@@ -61,19 +59,19 @@ impl<S> RenderTrackerTemplatesStep<S> {
     /// # Arguments
     ///
     /// * `environment` - The deployment environment
-    /// * `template_manager` - The template manager for accessing templates
+    /// * `templates_dir` - The templates directory
     /// * `build_dir` - The build directory where templates will be rendered
     /// * `clock` - Clock service for generating timestamps
     #[must_use]
     pub fn new(
         environment: Arc<Environment<S>>,
-        template_manager: Arc<TemplateManager>,
+        templates_dir: PathBuf,
         build_dir: PathBuf,
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             environment,
-            template_manager,
+            templates_dir,
             build_dir,
             clock,
         }
@@ -102,25 +100,23 @@ impl<S> RenderTrackerTemplatesStep<S> {
             build_dir = %self.build_dir.display()
         )
     )]
-    pub fn execute(&self) -> Result<PathBuf, TrackerProjectGeneratorError> {
+    pub fn execute(&self) -> Result<PathBuf, TrackerTemplateRenderingServiceError> {
         info!(
             step = "render_tracker_templates",
-            templates_dir = %self.template_manager.templates_dir().display(),
+            templates_dir = %self.templates_dir.display(),
             build_dir = %self.build_dir.display(),
             "Rendering Tracker configuration templates"
         );
 
-        let generator = TrackerProjectGenerator::new(
-            &self.build_dir,
-            self.template_manager.clone(),
+        let service = TrackerTemplateRenderingService::from_paths(
+            self.templates_dir.clone(),
+            self.build_dir.clone(),
             self.clock.clone(),
         );
 
-        // Extract tracker config from environment (Phase 6)
+        // Extract tracker config from environment
         let tracker_config = self.environment.context().user_inputs.tracker();
-        generator.render(Some(tracker_config))?;
-
-        let tracker_build_dir = self.build_dir.join("tracker");
+        let tracker_build_dir = service.render(tracker_config)?;
 
         info!(
             step = "render_tracker_templates",
@@ -170,11 +166,9 @@ threshold = "info"
             EnvironmentTestBuilder::new().build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = TemplateManager::new(&templates_dir);
-
         let step = RenderTrackerTemplatesStep::new(
             environment,
-            Arc::new(template_manager),
+            templates_dir.clone(),
             build_dir.clone(),
             Arc::new(SystemClock),
         );
@@ -215,11 +209,9 @@ threshold = "info"
             EnvironmentTestBuilder::new().build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = TemplateManager::new(&templates_dir);
-
         let step = RenderTrackerTemplatesStep::new(
             environment,
-            Arc::new(template_manager),
+            templates_dir.clone(),
             build_dir.clone(),
             Arc::new(SystemClock),
         );
@@ -259,11 +251,9 @@ threshold = "info"
             EnvironmentTestBuilder::new().build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = TemplateManager::new(&templates_dir);
-
         let step = RenderTrackerTemplatesStep::new(
             environment,
-            Arc::new(template_manager),
+            templates_dir.clone(),
             build_dir.clone(),
             Arc::new(SystemClock),
         );

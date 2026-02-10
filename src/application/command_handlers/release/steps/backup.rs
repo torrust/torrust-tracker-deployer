@@ -16,7 +16,6 @@ use crate::application::steps::rendering::RenderBackupTemplatesStep;
 use crate::application::steps::system::InstallBackupCrontabStep;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
-use crate::domain::template::TemplateManager;
 
 /// Release backup configuration to the remote host
 ///
@@ -67,10 +66,9 @@ async fn render_templates(
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::RenderBackupTemplates;
 
-    let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
     let step = RenderBackupTemplatesStep::new(
         Arc::new(environment.clone()),
-        template_manager,
+        environment.templates_dir(),
         environment.build_dir().clone(),
     );
 
