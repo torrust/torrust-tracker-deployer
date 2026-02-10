@@ -176,7 +176,7 @@ This makes the deployer more versatile for different scenarios and more AI-agent
   - Dual input modes: `--env-name` (from Created state environment) or `--env-file` (from config file)
   - Requires `--instance-ip` parameter for Ansible inventory generation
   - Generates all 8 service artifacts: OpenTofu, Ansible, Docker Compose, Tracker, Prometheus, Grafana, Caddy, Backup
-  - Output to `build/<env-name>/` directory (reuses existing build directory structure)
+  - Output to user-specified directory via `--output-dir <PATH>` parameter (prevents conflicts with provision artifacts)
   - No remote operations - purely local artifact generation
   - Use cases: Preview before provisioning, manual deployment workflows, configuration inspection
   - User documentation: [`docs/user-guide/commands/render.md`](./user-guide/commands/render.md)
@@ -221,7 +221,7 @@ Add features and documentation that make the use of AI agents to operate the dep
   - See issue: [#274](https://github.com/torrust/torrust-tracker-deployer/issues/274)
   - See spec: [`docs/issues/274-consider-using-agentskills-io.md`](./issues/274-consider-using-agentskills-io.md)
 
-- [ ] **11.2** Add AI-discoverable documentation headers to template files
+- [x] **11.2** Add AI-discoverable documentation headers to template files ✅ Completed
   - Templates generate production config files (docker-compose, tracker.toml, Caddyfile, etc.)
   - Documentation is moving from templates to Rust wrapper types (published on docs.rs)
   - Problem: AI agents in production only see rendered output, not the source repo
