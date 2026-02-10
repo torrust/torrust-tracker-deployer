@@ -20,6 +20,9 @@
 //! - `TrackerTemplateRenderingService` - Renders Tracker configuration templates
 //! - `PrometheusTemplateRenderingService` - Renders Prometheus configuration templates
 //! - `GrafanaTemplateRenderingService` - Renders Grafana provisioning templates
+//! - `DockerComposeTemplateRenderingService` - Renders Docker Compose configuration templates
+//! - `CaddyTemplateRenderingService` - Renders Caddy TLS proxy configuration templates
+//! - `BackupTemplateRenderingService` - Renders backup configuration templates
 //!
 //! ## Design Principles
 //!
@@ -55,12 +58,20 @@
 //! ```
 
 mod ansible;
+mod backup;
+mod caddy;
+mod docker_compose;
 mod grafana;
 mod opentofu;
 mod prometheus;
 mod tracker;
 
 pub use ansible::{AnsibleTemplateRenderingService, AnsibleTemplateRenderingServiceError};
+pub use backup::{BackupTemplateRenderingService, BackupTemplateRenderingServiceError};
+pub use caddy::{CaddyTemplateRenderingService, CaddyTemplateRenderingServiceError};
+pub use docker_compose::{
+    DockerComposeTemplateRenderingService, DockerComposeTemplateRenderingServiceError,
+};
 pub use grafana::{GrafanaTemplateRenderingService, GrafanaTemplateRenderingServiceError};
 pub use opentofu::{OpenTofuTemplateRenderingService, OpenTofuTemplateRenderingServiceError};
 pub use prometheus::{PrometheusTemplateRenderingService, PrometheusTemplateRenderingServiceError};
