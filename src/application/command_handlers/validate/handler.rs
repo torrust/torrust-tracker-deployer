@@ -148,13 +148,84 @@ pub struct ValidationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
+    use std::fs;
+    use tempfile::TempDir;
 
     #[test]
     fn it_should_validate_valid_configuration_when_all_fields_are_correct() {
         let handler = ValidateCommandHandler::new();
 
-        // This uses the fixtures which have valid SSH keys
-        let result = handler.validate(Path::new("envs/lxd-local-example.json"));
+        // Create temp directory for test config
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let config_path = temp_dir.path().join("test-config.json");
+
+        // Get absolute paths to test fixtures
+        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
+        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
+
+        // Create test config with absolute paths
+        let config_json = format!(
+            r#"{{
+    "environment": {{
+        "name": "test-validation"
+    }},
+    "ssh_credentials": {{
+        "private_key_path": "{private_key_path}",
+        "public_key_path": "{public_key_path}",
+        "username": "torrust",
+        "port": 22
+    }},
+    "provider": {{
+        "provider": "lxd",
+        "profile_name": "test-profile"
+    }},
+    "tracker": {{
+        "core": {{
+            "database": {{
+                "driver": "sqlite3",
+                "database_name": "tracker.db"
+            }},
+            "private": false
+        }},
+        "udp_trackers": [
+            {{
+                "bind_address": "0.0.0.0:6969",
+                "domain": "udp.tracker.local"
+            }}
+        ],
+        "http_trackers": [
+            {{
+                "bind_address": "0.0.0.0:7070",
+                "domain": "http.tracker.local"
+            }}
+        ],
+        "http_api": {{
+            "bind_address": "0.0.0.0:1212",
+            "admin_token": "MyAccessToken",
+            "domain": "api.tracker.local"
+        }},
+        "health_check_api": {{
+            "bind_address": "0.0.0.0:1313",
+            "domain": "health.tracker.local"
+        }}
+    }},
+    "grafana": {{
+        "admin_user": "admin",
+        "admin_password": "admin-password",
+        "domain": "grafana.tracker.local"
+    }},
+    "prometheus": {{
+        "scrape_interval_in_secs": 15
+    }}
+}}"#
+        );
+
+        fs::write(&config_path, config_json).expect("Failed to write test config");
+
+        // Run validation
+        let result = handler.validate(&config_path);
 
         assert!(result.is_ok(), "Valid configuration should pass validation");
     }
