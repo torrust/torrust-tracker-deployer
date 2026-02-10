@@ -22,7 +22,7 @@ This complements the `validate` command (which validates input without generatin
 ## Goals
 
 - [ ] Generate all deployment artifacts without executing deployment commands
-- [ ] Reuse existing template rendering infrastructure from release/configure commands
+- [x] **Reuse existing template rendering infrastructure from release/configure commands** ✅ (Phase 0 complete - 8 rendering services extracted)
 - [ ] Support all artifact types: docker-compose, tracker config, Ansible playbooks, Caddy, monitoring
 - [ ] Provide clear output showing what was generated and where
 - [ ] Enable "inspect before deploy" workflow for cautious administrators
@@ -321,6 +321,37 @@ Next steps:
 **Approach**: Outside-In Development (Presentation → Application → Infrastructure)
 
 Following `.github/skills/add-new-command/skill.md` for testability at each phase.
+
+### Phase 0: Template Rendering Services Refactor (PREREQUISITE) ✅ COMPLETED
+
+**Goal**: Extract reusable template rendering services to enable clean render command implementation.
+
+**Status**: ✅ Completed - See refactor plan: `docs/refactors/plans/extract-template-rendering-services.md`
+
+**What was completed**:
+
+- [x] Created `src/application/services/rendering/` module with 8 rendering services
+- [x] Moved AnsibleTemplateService into rendering module
+- [x] Created 4 simple services: OpenTofu, Tracker, Prometheus, Grafana (Phase 1)
+- [x] Created 3 complex services: DockerCompose, Caddy, Backup (Phase 2)
+- [x] Refactored render handler to delegate to services (Phase 3)
+- [x] Refactored 6 Steps to delegate to services (Phase 4)
+- [x] Removed ~750 lines of duplicated rendering logic
+- [x] All tests passing (2190 tests)
+- [x] All linters passing
+
+**Commits**:
+
+- Phase 0: 3ecf94bc - Rendering module established
+- Phase 1: d217e149 - Simple services created
+- Phase 2: 901113e4 - Complex services created
+- Phase 3: 3e14bea6 - Handler refactored
+- Phase 4: 463e7933 - Steps refactored
+- Docs: 30b9001d - Refactor plan updated
+
+**Impact**: The render command can now cleanly reuse these services without any code duplication. Each service has a clear API accepting explicit domain types (not `Environment<S>`), making them perfect for the render command's needs.
+
+---
 
 ### Phase 1: Presentation Layer Stub (2 hours)
 
