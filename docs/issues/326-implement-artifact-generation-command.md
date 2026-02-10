@@ -427,32 +427,36 @@ cargo run -- render --env-file envs/test.json --ip 10.0.0.1
 
 **Commit**: `feat: [#326] implement template rendering orchestration`
 
-### Phase 4: Documentation and Testing (2-3 hours)
+### Phase 4: Documentation and Testing (2-3 hours) ✅ Complete
 
 **Goal**: Complete user documentation and E2E tests.
 
-- [ ] Create user guide: `docs/user-guide/commands/render.md`
-  - [ ] Overview and use cases ("preview before provision")
-  - [ ] Command syntax and options
-  - [ ] Examples for common scenarios
-  - [ ] Explanation of generated artifacts
-  - [ ] Integration with deployment workflow
-- [ ] Update `docs/console-commands.md` with render command
-- [ ] Update roadmap (`docs/roadmap.md`) - mark task 9.2 complete
-- [ ] Add E2E tests:
-  - [ ] Generate from Created environment (`--env-name` + `--ip`)
-  - [ ] Show message for Provisioned environment
-  - [ ] Generate from config file (`--env-file` + `--ip`)
-  - [ ] Verify all expected files created in `build/{env}/`
-  - [ ] Verify Ansible inventory contains correct IP address
-  - [ ] Test error conditions:
-    - [ ] Missing `--ip` flag
-    - [ ] Invalid IP format
-    - [ ] Missing environment
-    - [ ] Invalid config file
-- [ ] Run pre-commit checks: `./scripts/pre-commit.sh`
+- [x] Create user guide: `docs/user-guide/commands/render.md`
+  - [x] Overview and use cases ("preview before provision")
+  - [x] Command syntax and options
+  - [x] Examples for common scenarios
+  - [x] Explanation of generated artifacts
+  - [x] Integration with deployment workflow
+- [x] Update `docs/console-commands.md` with render command
+- [x] Update roadmap (`docs/roadmap.md`) - mark task 9.2 complete
+- [x] Add E2E tests:
+  - [x] Generate from Created environment (`--env-name` + `--ip`)
+  - [x] Show message for Provisioned environment (handled via state checking)
+  - [x] Generate from config file (`--env-file` + `--ip`)
+  - [x] Verify all expected files created in `build/{env}/`
+  - [x] Verify Ansible inventory contains correct IP address
+  - [x] Test error conditions:
+    - [x] Missing `--ip` flag (handled by clap validation)
+    - [x] Invalid IP format
+    - [x] Missing environment
+    - [x] Invalid config file
+- [x] Add manual E2E test documentation: `docs/e2e-testing/manual/render-verification.md`
+- [x] Run pre-commit checks: `./scripts/pre-commit.sh`
 
-**Commit**: `docs: [#326] add render command documentation and tests`
+**Commits**:
+
+- `test: [#326] add E2E blackbox tests and manual test documentation for render command` (37cbe240)
+- `docs: [#326] add render command user guide and update documentation` (pending)
 
 ### Phase 5: Polish and Review (1-2 hours)
 
