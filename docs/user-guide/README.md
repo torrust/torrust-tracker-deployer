@@ -66,7 +66,19 @@ Before using the Torrust Tracker Deployer, ensure you have:
 
 ### Installation Options
 
-#### Option 1: Docker (Recommended for Cloud Providers)
+#### Option 1: GitHub Codespaces (Easiest - No Installation)
+
+The fastest way to get started **without installing anything** is using GitHub Codespaces:
+
+- ✅ No local installation required
+- ✅ All dependencies pre-configured
+- ✅ Works from your browser
+- ✅ Supports all cloud providers
+- ❌ Cannot use local LXD provider (nested virtualization limitation)
+
+**[📖 Full Codespaces guide →](codespaces-deployment.md)**
+
+#### Option 2: Docker (Recommended for Cloud Providers)
 
 The easiest way to get started with **cloud provider deployments** (Hetzner) is using Docker:
 
@@ -88,7 +100,7 @@ docker run --rm \
 
 **[📖 Full Docker documentation →](../../docker/deployer/README.md)**
 
-#### Option 2: Native Installation
+#### Option 3: Native Installation
 
 Build from source for full provider support (including LXD):
 
