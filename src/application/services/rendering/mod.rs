@@ -2,7 +2,7 @@
 //!
 //! This module contains application-layer services for rendering infrastructure
 //! templates. Each service encapsulates the logic for rendering a specific type
-//! of template (Ansible, OpenTofu, Docker Compose, etc.) and is designed to be
+//! of template (Ansible, `OpenTofu`, Docker Compose, etc.) and is designed to be
 //! shared across multiple command handlers and steps.
 //!
 //! ## Architecture
@@ -16,6 +16,10 @@
 //! ## Services
 //!
 //! - `AnsibleTemplateRenderingService` - Renders Ansible inventory and playbook templates
+//! - `OpenTofuTemplateRenderingService` - Renders `OpenTofu` infrastructure templates
+//! - `TrackerTemplateRenderingService` - Renders Tracker configuration templates
+//! - `PrometheusTemplateRenderingService` - Renders Prometheus configuration templates
+//! - `GrafanaTemplateRenderingService` - Renders Grafana provisioning templates
 //!
 //! ## Design Principles
 //!
@@ -51,5 +55,13 @@
 //! ```
 
 mod ansible;
+mod grafana;
+mod opentofu;
+mod prometheus;
+mod tracker;
 
 pub use ansible::{AnsibleTemplateRenderingService, AnsibleTemplateRenderingServiceError};
+pub use grafana::{GrafanaTemplateRenderingService, GrafanaTemplateRenderingServiceError};
+pub use opentofu::{OpenTofuTemplateRenderingService, OpenTofuTemplateRenderingServiceError};
+pub use prometheus::{PrometheusTemplateRenderingService, PrometheusTemplateRenderingServiceError};
+pub use tracker::{TrackerTemplateRenderingService, TrackerTemplateRenderingServiceError};

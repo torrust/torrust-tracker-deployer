@@ -116,9 +116,7 @@ impl Traceable for RenderCommandHandlerError {
             Self::RepositoryLoad(e) => {
                 format!("RenderCommandHandlerError: Failed to load environment - {e}")
             }
-            Self::NoInputMode => {
-                "RenderCommandHandlerError: No input mode specified".to_string()
-            }
+            Self::NoInputMode => "RenderCommandHandlerError: No input mode specified".to_string(),
         }
     }
 
@@ -129,15 +127,16 @@ impl Traceable for RenderCommandHandlerError {
 
     fn error_kind(&self) -> ErrorKind {
         match self {
-            Self::EnvironmentNotFound { .. } => ErrorKind::FileSystem,
-            Self::EnvironmentAlreadyProvisioned { .. } => ErrorKind::Configuration,
-            Self::ConfigFileNotFound { .. } => ErrorKind::FileSystem,
-            Self::ConfigParsingFailed { .. } => ErrorKind::Configuration,
-            Self::DomainValidationFailed { .. } => ErrorKind::Configuration,
-            Self::InvalidIpAddress { .. } => ErrorKind::Configuration,
+            Self::EnvironmentNotFound { .. } | Self::ConfigFileNotFound { .. } => {
+                ErrorKind::FileSystem
+            }
+            Self::EnvironmentAlreadyProvisioned { .. }
+            | Self::ConfigParsingFailed { .. }
+            | Self::DomainValidationFailed { .. }
+            | Self::InvalidIpAddress { .. }
+            | Self::NoInputMode => ErrorKind::Configuration,
             Self::TemplateRenderingFailed { .. } => ErrorKind::TemplateRendering,
             Self::RepositoryLoad(_) => ErrorKind::StatePersistence,
-            Self::NoInputMode => ErrorKind::Configuration,
         }
     }
 }

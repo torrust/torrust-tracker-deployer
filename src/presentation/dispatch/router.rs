@@ -103,6 +103,7 @@ use super::ExecutionContext;
 ///     Ok(())
 /// }
 /// ```
+#[allow(clippy::too_many_lines)]
 pub async fn route_command(
     command: Commands,
     working_dir: &Path,

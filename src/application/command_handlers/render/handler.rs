@@ -119,7 +119,7 @@ impl RenderCommandHandler {
         working_dir: &Path,
     ) -> Result<RenderResult, RenderCommandHandlerError> {
         // Parse and validate target IP
-        let ip_addr = self.parse_ip_address(target_ip)?;
+        let ip_addr = Self::parse_ip_address(target_ip)?;
 
         // Load configuration based on input mode
         match input_mode {
@@ -268,7 +268,7 @@ impl RenderCommandHandler {
     /// Render all deployment templates to the build directory
     ///
     /// This method orchestrates the rendering of all templates required for
-    /// deployment: OpenTofu, Ansible, Docker Compose, Tracker, Prometheus,
+    /// deployment: `OpenTofu`, Ansible, Docker Compose, Tracker, Prometheus,
     /// Grafana, Caddy, and Backup (conditional on configuration).
     ///
     /// # Arguments
@@ -310,11 +310,11 @@ impl RenderCommandHandler {
         Ok(())
     }
 
-    /// Render OpenTofu templates for infrastructure provisioning
+    /// Render `OpenTofu` templates for infrastructure provisioning
     ///
     /// # Errors
     ///
-    /// Returns error if OpenTofu template rendering fails
+    /// Returns error if `OpenTofu` template rendering fails
     async fn render_opentofu_templates(
         &self,
         environment: &Environment<Created>,
@@ -377,7 +377,7 @@ impl RenderCommandHandler {
     /// # Errors
     ///
     /// Returns error if IP address format is invalid
-    fn parse_ip_address(&self, ip_str: &str) -> Result<IpAddr, RenderCommandHandlerError> {
+    fn parse_ip_address(ip_str: &str) -> Result<IpAddr, RenderCommandHandlerError> {
         ip_str
             .parse::<IpAddr>()
             .map_err(|_| RenderCommandHandlerError::InvalidIpAddress {
@@ -406,20 +406,14 @@ mod tests {
 
     #[test]
     fn it_should_parse_valid_ipv4_address() {
-        let repository = create_test_repository();
-        let handler = RenderCommandHandler::new(repository);
-
-        let result = handler.parse_ip_address("192.168.1.100");
+        let result = RenderCommandHandler::parse_ip_address("192.168.1.100");
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)));
     }
 
     #[test]
     fn it_should_parse_valid_ipv6_address() {
-        let repository = create_test_repository();
-        let handler = RenderCommandHandler::new(repository);
-
-        let result = handler.parse_ip_address("2001:db8::1");
+        let result = RenderCommandHandler::parse_ip_address("2001:db8::1");
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
@@ -429,10 +423,7 @@ mod tests {
 
     #[test]
     fn it_should_reject_invalid_ip_address() {
-        let repository = create_test_repository();
-        let handler = RenderCommandHandler::new(repository);
-
-        let result = handler.parse_ip_address("not-an-ip");
+        let result = RenderCommandHandler::parse_ip_address("not-an-ip");
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),

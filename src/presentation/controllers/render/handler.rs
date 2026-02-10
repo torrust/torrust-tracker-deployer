@@ -96,8 +96,8 @@ impl RenderCommandController {
     ///
     /// # Arguments
     ///
-    /// * `env_name` - Optional environment name (mutually exclusive with env_file)
-    /// * `env_file` - Optional config file path (mutually exclusive with env_name)
+    /// * `env_name` - Optional environment name (mutually exclusive with `env_file`)
+    /// * `env_file` - Optional config file path (mutually exclusive with `env_name`)
     /// * `ip` - Target instance IP address (required)
     ///
     /// # Returns
@@ -108,7 +108,7 @@ impl RenderCommandController {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - Neither env_name nor env_file is provided
+    /// - Neither `env_name` nor `env_file` is provided
     /// - IP address is invalid
     /// - Config file doesn't exist
     /// - Environment not found or wrong state
@@ -139,7 +139,7 @@ impl RenderCommandController {
                 })?;
                 (
                     RenderInputMode::EnvironmentName(env_name.clone()),
-                    format!("Environment: {}", env_name),
+                    format!("Environment: {env_name}"),
                 )
             }
             (None, Some(path)) => {
@@ -191,18 +191,13 @@ impl RenderCommandController {
             &source_desc,
             &result.target_ip.to_string(),
             &result.output_dir,
-        )?;
+        );
 
         Ok(())
     }
 
     /// Show success message to user
-    fn show_success(
-        &mut self,
-        source: &str,
-        target_ip: &str,
-        output_dir: &Path,
-    ) -> Result<(), RenderCommandError> {
+    fn show_success(&mut self, source: &str, target_ip: &str, output_dir: &Path) {
         let output = self.user_output.lock();
         let mut output_ref = output.borrow_mut();
 
@@ -217,7 +212,5 @@ impl RenderCommandController {
              - Or use artifacts manually with your deployment tools",
             output_dir.display()
         ));
-
-        Ok(())
     }
 }

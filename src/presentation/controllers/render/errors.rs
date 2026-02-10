@@ -92,13 +92,12 @@ impl RenderCommandError {
                     .to_string(),
             ),
             Self::InvalidIpAddress { ip } => Some(format!(
-                "The IP address '{}' is not a valid IPv4 address.\n\n\
+                "The IP address '{ip}' is not a valid IPv4 address.\n\n\
                 Valid format: xxx.xxx.xxx.xxx (e.g., 10.0.0.1 or 192.168.1.100)\n\n\
                 Examples:\n  \
                   torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1\n  \
                   torrust-tracker-deployer render --env-file envs/test.json --instance-ip 192.168.1.50\n\n\
-                For more information, see: docs/user-guide/commands/render.md",
-                ip
+                For more information, see: docs/user-guide/commands/render.md"
             )),
             Self::ConfigFileNotFound { path } => Some(format!(
                 "Configuration file not found at: {}\n\n\
@@ -110,20 +109,18 @@ impl RenderCommandError {
                 path.display()
             )),
             Self::InvalidEnvironmentName { value, reason } => Some(format!(
-                "Invalid environment name: {}\n\n\
-                Reason: {}\n\n\
+                "Invalid environment name: {value}\n\n\
+                Reason: {reason}\n\n\
                 Environment names must follow these rules:\n\
                 - Only lowercase alphanumeric and hyphens\n\
                 - Start and end with alphanumeric\n\
                 - Between 1 and 63 characters\n\n\
-                For more information, see: docs/user-guide/commands/render.md",
-                value, reason
+                For more information, see: docs/user-guide/commands/render.md"
             )),
             Self::WorkingDirectoryUnavailable { reason } => Some(format!(
-                "Cannot determine current working directory: {}\n\n\
+                "Cannot determine current working directory: {reason}\n\n\
                 This is unusual and may indicate filesystem or permission issues.\n\
-                Try running from a different directory or check filesystem status.",
-                reason
+                Try running from a different directory or check filesystem status."
             )),
             Self::Handler(e) => Some(e.help()),
             Self::ProgressReporter(_) => None,
