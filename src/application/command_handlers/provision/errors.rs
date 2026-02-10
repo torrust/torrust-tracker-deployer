@@ -2,7 +2,7 @@
 
 use crate::adapters::ssh::SshError;
 use crate::adapters::tofu::client::OpenTofuError;
-use crate::application::services::AnsibleTemplateServiceError;
+use crate::application::services::rendering::AnsibleTemplateRenderingServiceError;
 use crate::application::steps::RenderAnsibleTemplatesError;
 use crate::domain::environment::state::StateTypeError;
 use crate::infrastructure::templating::tofu::TofuProjectGeneratorError;
@@ -39,8 +39,8 @@ pub enum ProvisionCommandHandlerError {
     StateTransition(#[from] StateTypeError),
 }
 
-impl From<AnsibleTemplateServiceError> for ProvisionCommandHandlerError {
-    fn from(error: AnsibleTemplateServiceError) -> Self {
+impl From<AnsibleTemplateRenderingServiceError> for ProvisionCommandHandlerError {
+    fn from(error: AnsibleTemplateRenderingServiceError) -> Self {
         Self::TemplateRendering(error.to_string())
     }
 }

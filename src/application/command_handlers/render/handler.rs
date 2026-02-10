@@ -12,7 +12,7 @@ use super::errors::RenderCommandHandlerError;
 use crate::application::command_handlers::create::config::{
     CreateConfigError, EnvironmentCreationConfig,
 };
-use crate::application::services::AnsibleTemplateService;
+use crate::application::services::rendering::AnsibleTemplateRenderingService;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::{Created, Environment, EnvironmentParams};
 use crate::domain::EnvironmentName;
@@ -352,7 +352,7 @@ impl RenderCommandHandler {
         target_ip: IpAddr,
         clock: &Arc<dyn Clock>,
     ) -> Result<(), RenderCommandHandlerError> {
-        let ansible_service = AnsibleTemplateService::from_paths(
+        let ansible_service = AnsibleTemplateRenderingService::from_paths(
             environment.templates_dir(),
             environment.build_dir().clone(),
             clock.clone(),
@@ -440,18 +440,20 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn it_should_return_error_for_nonexistent_environment() {
+    #[tokio::test]
+    async fn it_should_return_error_for_nonexistent_environment() {
         let repository = create_test_repository();
         let handler = RenderCommandHandler::new(repository);
         let working_dir = PathBuf::from(".");
 
         let env_name = EnvironmentName::new("nonexistent").unwrap();
-        let result = handler.execute(
-            RenderInputMode::EnvironmentName(env_name.clone()),
-            "10.0.0.1",
-            &working_dir,
-        );
+        let result = handler
+            .execute(
+                RenderInputMode::EnvironmentName(env_name.clone()),
+                "10.0.0.1",
+                &working_dir,
+            )
+            .await;
 
         assert!(result.is_err());
         assert!(matches!(
@@ -460,18 +462,20 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn it_should_return_error_for_nonexistent_config_file() {
+    #[tokio::test]
+    async fn it_should_return_error_for_nonexistent_config_file() {
         let repository = create_test_repository();
         let handler = RenderCommandHandler::new(repository);
         let working_dir = PathBuf::from(".");
 
         let config_path = PathBuf::from("/tmp/nonexistent-config.json");
-        let result = handler.execute(
-            RenderInputMode::ConfigFile(config_path.clone()),
-            "10.0.0.1",
-            &working_dir,
-        );
+        let result = handler
+            .execute(
+                RenderInputMode::ConfigFile(config_path.clone()),
+                "10.0.0.1",
+                &working_dir,
+            )
+            .await;
 
         assert!(result.is_err());
         assert!(matches!(
@@ -480,8 +484,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn it_should_validate_ip_before_loading_environment() {
+    #[tokio::test]
+    async fn it_should_validate_ip_before_loading_environment() {
         // This test ensures fail-fast behavior: IP validation happens first
         let repository = create_test_repository();
         let handler = RenderCommandHandler::new(repository);
@@ -490,26 +494,18 @@ mod tests {
         let env_name = EnvironmentName::new("any-env").unwrap();
 
         // Even if environment exists, invalid IP should fail first
-        let result = handler.execute(
-            RenderInputMode::EnvironmentName(env_name),
-            "invalid-ip",
-            &working_dir,
-        );
+        let result = handler
+            .execute(
+                RenderInputMode::EnvironmentName(env_name),
+                "invalid-ip",
+                &working_dir,
+            )
+            .await;
 
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
             RenderCommandHandlerError::InvalidIpAddress { .. }
         ));
-    }
-
-    #[test]
-    fn it_should_accept_both_input_modes() {
-        // Verify both input modes can be constructed
-        let env_name = EnvironmentName::new("test").unwrap();
-        let _mode1 = RenderInputMode::EnvironmentName(env_name);
-
-        let config_path = PathBuf::from("test.json");
-        let _mode2 = RenderInputMode::ConfigFile(config_path);
     }
 }

@@ -7,7 +7,7 @@ use tracing::{info, instrument};
 
 use super::errors::RegisterCommandHandlerError;
 use crate::adapters::ssh::{SshClient, SshConfig};
-use crate::application::services::AnsibleTemplateService;
+use crate::application::services::rendering::AnsibleTemplateRenderingService;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{Created, Provisioned};
 use crate::domain::environment::Environment;
@@ -188,7 +188,7 @@ impl RegisterCommandHandler {
         instance_ip: IpAddr,
         ssh_port_override: Option<u16>,
     ) -> Result<(), RegisterCommandHandlerError> {
-        let ansible_template_service = AnsibleTemplateService::from_paths(
+        let ansible_template_service = AnsibleTemplateRenderingService::from_paths(
             environment.templates_dir(),
             environment.build_dir().clone(),
             self.clock.clone(),

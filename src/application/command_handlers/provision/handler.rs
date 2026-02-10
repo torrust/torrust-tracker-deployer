@@ -11,7 +11,7 @@ use crate::adapters::ssh::{SshConfig, SshCredentials};
 use crate::adapters::tofu::client::InstanceInfo;
 use crate::adapters::OpenTofuClient;
 use crate::application::command_handlers::common::StepResult;
-use crate::application::services::AnsibleTemplateService;
+use crate::application::services::rendering::AnsibleTemplateRenderingService;
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderOpenTofuTemplatesStep, ValidateInfrastructureStep,
@@ -281,7 +281,7 @@ impl ProvisionCommandHandler {
     ) -> StepResult<(), ProvisionCommandHandlerError, ProvisionStep> {
         let current_step = ProvisionStep::RenderAnsibleTemplates;
 
-        let ansible_template_service = AnsibleTemplateService::from_paths(
+        let ansible_template_service = AnsibleTemplateRenderingService::from_paths(
             environment.templates_dir(),
             environment.build_dir().clone(),
             self.clock.clone(),

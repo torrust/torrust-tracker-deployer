@@ -1,4 +1,4 @@
-//! Ansible Template Service
+//! Ansible Template Rendering Service
 //!
 //! This service is responsible for rendering Ansible templates with runtime
 //! configuration. It's used by multiple command handlers (Provision, Register)
@@ -10,13 +10,17 @@
 //! time and receives only the data needed to render templates at execution time.
 //!
 //! ```rust,ignore
-//! use torrust_tracker_deployer_lib::application::services::AnsibleTemplateService;
+//! use torrust_tracker_deployer_lib::application::services::rendering::AnsibleTemplateRenderingService;
 //!
 //! // Create service with dependencies
-//! let service = AnsibleTemplateService::new(ansible_template_renderer);
+//! let service = AnsibleTemplateRenderingService::from_paths(
+//!     templates_dir,
+//!     build_dir,
+//!     clock,
+//! );
 //!
 //! // Render templates with user inputs and instance IP
-//! service.render_templates(&user_inputs, instance_ip).await?;
+//! service.render_templates(&user_inputs, instance_ip, None).await?;
 //! ```
 
 use std::net::{IpAddr, SocketAddr};
@@ -34,7 +38,7 @@ use crate::shared::clock::Clock;
 
 /// Errors that can occur during Ansible template rendering
 #[derive(Error, Debug)]
-pub enum AnsibleTemplateServiceError {
+pub enum AnsibleTemplateRenderingServiceError {
     /// Template rendering failed
     #[error("Failed to render Ansible templates: {reason}")]
     RenderingFailed {
@@ -57,13 +61,13 @@ pub enum AnsibleTemplateServiceError {
 ///
 /// This allows the service to be configured once and reused with different
 /// runtime parameters.
-pub struct AnsibleTemplateService {
+pub struct AnsibleTemplateRenderingService {
     ansible_template_renderer: Arc<AnsibleProjectGenerator>,
     clock: Arc<dyn Clock>,
 }
 
-impl AnsibleTemplateService {
-    /// Create a new `AnsibleTemplateService`
+impl AnsibleTemplateRenderingService {
+    /// Create a new `AnsibleTemplateRenderingService`
     ///
     /// # Arguments
     ///
@@ -80,7 +84,7 @@ impl AnsibleTemplateService {
         }
     }
 
-    /// Build an `AnsibleTemplateService` from environment paths
+    /// Build an `AnsibleTemplateRenderingService` from environment paths
     ///
     /// This is a factory method that creates the service with all necessary
     /// dependencies based on the environment's template and build directories.
@@ -93,17 +97,17 @@ impl AnsibleTemplateService {
     ///
     /// # Returns
     ///
-    /// Returns a configured `AnsibleTemplateService` ready for template rendering
+    /// Returns a configured `AnsibleTemplateRenderingService` ready for template rendering
     ///
     /// # Example
     ///
     /// ```rust,ignore
     /// use std::path::PathBuf;
     /// use std::sync::Arc;
-    /// use torrust_tracker_deployer_lib::application::services::AnsibleTemplateService;
+    /// use torrust_tracker_deployer_lib::application::services::rendering::AnsibleTemplateRenderingService;
     /// use torrust_tracker_deployer_lib::shared::clock::SystemClock;
     ///
-    /// let service = AnsibleTemplateService::from_paths(
+    /// let service = AnsibleTemplateRenderingService::from_paths(
     ///     PathBuf::from("templates"),
     ///     PathBuf::from("build/my-env"),
     ///     Arc::new(SystemClock),
@@ -132,14 +136,14 @@ impl AnsibleTemplateService {
     ///
     /// # Errors
     ///
-    /// Returns `AnsibleTemplateServiceError::RenderingFailed` if template rendering fails.
+    /// Returns `AnsibleTemplateRenderingServiceError::RenderingFailed` if template rendering fails.
     ///
     /// # Example
     ///
     /// ```rust,ignore
     /// use std::net::IpAddr;
     ///
-    /// let service = AnsibleTemplateService::new(renderer);
+    /// let service = AnsibleTemplateRenderingService::from_paths(...);
     /// service.render_templates(&user_inputs, "192.168.1.100".parse().unwrap(), None).await?;
     /// ```
     pub async fn render_templates(
@@ -147,7 +151,7 @@ impl AnsibleTemplateService {
         user_inputs: &UserInputs,
         instance_ip: IpAddr,
         ssh_port_override: Option<u16>,
-    ) -> Result<(), AnsibleTemplateServiceError> {
+    ) -> Result<(), AnsibleTemplateRenderingServiceError> {
         let effective_ssh_port = ssh_port_override.unwrap_or(user_inputs.ssh_port());
 
         info!(
@@ -169,7 +173,7 @@ impl AnsibleTemplateService {
         )
         .execute()
         .await
-        .map_err(|e| AnsibleTemplateServiceError::RenderingFailed {
+        .map_err(|e| AnsibleTemplateRenderingServiceError::RenderingFailed {
             reason: e.to_string(),
         })?;
 
