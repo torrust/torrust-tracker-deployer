@@ -90,6 +90,46 @@ impl EnvironmentStateAssertions {
         );
     }
 
+    /// Assert that the build directory exists
+    ///
+    /// Verifies that the environment's build directory was created.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the build directory doesn't exist.
+    pub fn assert_build_directory_exists(&self, env_name: &str) {
+        let build_dir = self.workspace_path.join("build").join(env_name);
+        assert!(
+            build_dir.exists(),
+            "Build directory should exist at: {}",
+            build_dir.display()
+        );
+    }
+
+    /// Assert that build artifacts exist
+    ///
+    /// Verifies that required build artifacts were generated in the build directory.
+    /// Checks for presence of key subdirectories that should exist for any deployment.
+    ///
+    /// # Panics
+    ///
+    /// Panics if required artifacts are missing.
+    pub fn assert_build_artifacts_exist(&self, env_name: &str) {
+        let build_dir = self.workspace_path.join("build").join(env_name);
+
+        // Check for key subdirectories that should exist
+        let required_dirs = ["tofu"];
+
+        for dir_name in required_dirs {
+            let dir_path = build_dir.join(dir_name);
+            assert!(
+                dir_path.exists(),
+                "Build artifact directory '{dir_name}' should exist at: {}",
+                dir_path.display()
+            );
+        }
+    }
+
     /// Assert that the environment is in the expected state
     ///
     /// Verifies that the environment state matches the expected state string.

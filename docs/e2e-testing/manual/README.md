@@ -475,6 +475,17 @@ ls data/manual-test 2>/dev/null || echo "Cleaned up successfully"
 
 After deploying your environment, you may want to verify that specific services are working correctly. The following guides provide detailed verification steps for each supported service:
 
+### Render Command
+
+The render command generates deployment artifacts without provisioning infrastructure. See the [Render Verification Guide](render-verification.md) for detailed steps to:
+
+- Generate artifacts using `--env-name` mode (from existing environment)
+- Generate artifacts using `--env-file` mode (directly from config)
+- Compare rendered artifacts with provision command output
+- Verify artifact completeness (all 8 services)
+- Test idempotency and error handling
+- Understand artifact equivalence testing
+
 ### Torrust Tracker
 
 The tracker is the core service deployed by this tool. See the [Tracker Verification Guide](tracker-verification.md) for detailed steps to:

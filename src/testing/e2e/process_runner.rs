@@ -481,6 +481,123 @@ impl ProcessRunner {
     /// # Panics
     ///
     /// Panics if the working directory path contains invalid UTF-8.
+    /// Run the render command with environment name input mode
+    ///
+    /// This method runs `cargo run -- render --env-name <name> --instance-ip <ip>`
+    /// with optional working directory for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// May panic if the working directory path is not valid UTF-8.
+    pub fn run_render_command_with_env_name(
+        &self,
+        environment_name: &str,
+        instance_ip: &str,
+    ) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "render",
+                "--env-name",
+                environment_name,
+                "--instance-ip",
+                instance_ip,
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args([
+                "run",
+                "--",
+                "render",
+                "--env-name",
+                environment_name,
+                "--instance-ip",
+                instance_ip,
+            ]);
+        }
+
+        let output = cmd
+            .output()
+            .context("Failed to execute render command with env-name")?;
+
+        Ok(ProcessResult::new(output))
+    }
+
+    /// Run the render command with config file input mode
+    ///
+    /// This method runs `cargo run -- render --env-file <path> --instance-ip <ip>`
+    /// with optional working directory for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// May panic if the working directory path is not valid UTF-8.
+    pub fn run_render_command_with_config_file(
+        &self,
+        config_file: &str,
+        instance_ip: &str,
+    ) -> Result<ProcessResult> {
+        let mut cmd = Command::new("cargo");
+
+        if let Some(working_dir) = &self.working_dir {
+            // Build command with working directory
+            cmd.args([
+                "run",
+                "--",
+                "render",
+                "--env-file",
+                config_file,
+                "--instance-ip",
+                instance_ip,
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            // No working directory, use relative paths
+            cmd.args([
+                "run",
+                "--",
+                "render",
+                "--env-file",
+                config_file,
+                "--instance-ip",
+                instance_ip,
+            ]);
+        }
+
+        let output = cmd
+            .output()
+            .context("Failed to execute render command with env-file")?;
+
+        Ok(ProcessResult::new(output))
+    }
+
+    /// Run the purge command with the production binary
+    ///
+    /// This method runs `cargo run -- purge <environment_name> --force`
+    /// with optional working directory for the application itself via `--working-dir`.
+    /// The `--force` flag is always used to skip interactive prompts.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// May panic if the working directory path is not valid UTF-8.
     pub fn run_purge_command(&self, environment_name: &str) -> Result<ProcessResult> {
         let mut cmd = Command::new("cargo");
 
