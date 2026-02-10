@@ -12,12 +12,15 @@ use super::errors::RenderCommandHandlerError;
 use crate::application::command_handlers::create::config::{
     CreateConfigError, EnvironmentCreationConfig,
 };
-use crate::application::services::rendering::AnsibleTemplateRenderingService;
+use crate::application::services::rendering::{
+    AnsibleTemplateRenderingService, BackupTemplateRenderingService, CaddyTemplateRenderingService,
+    DockerComposeTemplateRenderingService, GrafanaTemplateRenderingService,
+    OpenTofuTemplateRenderingService, PrometheusTemplateRenderingService,
+    TrackerTemplateRenderingService,
+};
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::{Created, Environment, EnvironmentParams};
 use crate::domain::EnvironmentName;
-use crate::domain::TemplateManager;
-use crate::infrastructure::templating::tofu::TofuProjectGenerator;
 use crate::shared::{Clock, SystemClock};
 
 /// Input mode for render command
@@ -291,79 +294,110 @@ impl RenderCommandHandler {
         );
 
         let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+        let templates_dir = environment.templates_dir();
+        let build_dir = environment.build_dir();
+        let user_inputs = &environment.context().user_inputs;
 
         // 1. Render OpenTofu templates (infrastructure provisioning)
-        self.render_opentofu_templates(environment, &clock).await?;
-
-        // 2. Render Ansible templates (configuration management)
-        self.render_ansible_templates(environment, target_ip, &clock)
-            .await?;
-
-        // TODO: Render application templates (Docker Compose, Tracker, Prometheus, etc.)
-        // This will be completed in subsequent commits
-
-        info!(
-            environment = %environment.name(),
-            "All deployment templates rendered successfully"
-        );
-
-        Ok(())
-    }
-
-    /// Render `OpenTofu` templates for infrastructure provisioning
-    ///
-    /// # Errors
-    ///
-    /// Returns error if `OpenTofu` template rendering fails
-    async fn render_opentofu_templates(
-        &self,
-        environment: &Environment<Created>,
-        clock: &Arc<dyn Clock>,
-    ) -> Result<(), RenderCommandHandlerError> {
-        let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
-
-        let tofu_renderer = TofuProjectGenerator::new(
-            template_manager,
-            environment.build_dir(),
+        OpenTofuTemplateRenderingService::from_params(
+            templates_dir.clone(),
+            build_dir.clone(),
             environment.ssh_credentials().clone(),
             environment.ssh_port(),
             environment.instance_name().clone(),
             environment.provider_config().clone(),
             clock.clone(),
-        );
-
-        tofu_renderer.render().await.map_err(|e| {
-            RenderCommandHandlerError::TemplateRenderingFailed {
-                reason: e.to_string(),
-            }
+        )
+        .render()
+        .await
+        .map_err(|e| RenderCommandHandlerError::TemplateRenderingFailed {
+            reason: e.to_string(),
         })?;
 
-        Ok(())
-    }
-
-    /// Render Ansible templates for configuration management
-    ///
-    /// # Errors
-    ///
-    /// Returns error if Ansible template rendering fails
-    async fn render_ansible_templates(
-        &self,
-        environment: &Environment<Created>,
-        target_ip: IpAddr,
-        clock: &Arc<dyn Clock>,
-    ) -> Result<(), RenderCommandHandlerError> {
-        let ansible_service = AnsibleTemplateRenderingService::from_paths(
-            environment.templates_dir(),
-            environment.build_dir().clone(),
+        // 2. Render Ansible templates (configuration management)
+        AnsibleTemplateRenderingService::from_paths(
+            templates_dir.clone(),
+            build_dir.clone(),
             clock.clone(),
-        );
+        )
+        .render_templates(user_inputs, target_ip, None)
+        .await
+        .map_err(|e| RenderCommandHandlerError::TemplateRenderingFailed {
+            reason: e.to_string(),
+        })?;
 
-        ansible_service
-            .render_templates(&environment.context().user_inputs, target_ip, None)
+        // 3. Render Docker Compose templates (container orchestration)
+        DockerComposeTemplateRenderingService::from_paths(
+            templates_dir.clone(),
+            build_dir.clone(),
+            clock.clone(),
+        )
+        .render(user_inputs, environment.admin_token())
+        .await
+        .map_err(|e| RenderCommandHandlerError::TemplateRenderingFailed {
+            reason: e.to_string(),
+        })?;
+
+        // 4. Render Tracker configuration templates
+        TrackerTemplateRenderingService::from_paths(
+            templates_dir.clone(),
+            build_dir.clone(),
+            clock.clone(),
+        )
+        .render(user_inputs.tracker())
+        .map_err(|e| RenderCommandHandlerError::TemplateRenderingFailed {
+            reason: e.to_string(),
+        })?;
+
+        // 5. Render Prometheus configuration templates (if configured)
+        PrometheusTemplateRenderingService::from_paths(
+            templates_dir.clone(),
+            build_dir.clone(),
+            clock.clone(),
+        )
+        .render(user_inputs.prometheus(), user_inputs.tracker())
+        .map_err(|e| RenderCommandHandlerError::TemplateRenderingFailed {
+            reason: e.to_string(),
+        })?;
+
+        // 6. Render Grafana provisioning templates (if configured)
+        GrafanaTemplateRenderingService::from_paths(
+            templates_dir.clone(),
+            build_dir.clone(),
+            clock.clone(),
+        )
+        .render(user_inputs.grafana().is_some(), user_inputs.prometheus())
+        .map_err(|e| RenderCommandHandlerError::TemplateRenderingFailed {
+            reason: e.to_string(),
+        })?;
+
+        // 7. Render Caddy TLS proxy templates (if HTTPS configured)
+        CaddyTemplateRenderingService::from_paths(
+            templates_dir.clone(),
+            build_dir.clone(),
+            clock.clone(),
+        )
+        .render(user_inputs)
+        .map_err(|e| RenderCommandHandlerError::TemplateRenderingFailed {
+            reason: e.to_string(),
+        })?;
+
+        // 8. Render Backup configuration templates (if configured)
+        BackupTemplateRenderingService::from_paths(templates_dir.clone(), build_dir.clone())
+            .render(
+                user_inputs.backup(),
+                user_inputs.tracker().core().database(),
+                environment.context().created_at(),
+            )
             .await
             .map_err(|e| RenderCommandHandlerError::TemplateRenderingFailed {
                 reason: e.to_string(),
             })?;
+
+        info!(
+            environment = %environment.name(),
+            "All deployment templates rendered successfully"
+        );
 
         Ok(())
     }
