@@ -103,6 +103,7 @@ use super::ExecutionContext;
 ///     Ok(())
 /// }
 /// ```
+#[allow(clippy::too_many_lines)]
 pub async fn route_command(
     command: Commands,
     working_dir: &Path,
@@ -176,6 +177,26 @@ pub async fn route_command(
                 .container()
                 .create_release_controller()
                 .execute(&environment)
+                .await?;
+            Ok(())
+        }
+        Commands::Render {
+            env_name,
+            env_file,
+            instance_ip,
+            output_dir,
+            force,
+        } => {
+            context
+                .container()
+                .create_render_controller()
+                .execute(
+                    env_name.as_deref(),
+                    env_file.as_deref(),
+                    &instance_ip,
+                    output_dir.as_path(),
+                    force,
+                )
                 .await?;
             Ok(())
         }

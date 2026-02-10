@@ -9,6 +9,7 @@
 - **Create Template**: Generate environment configuration template (JSON)
 - **Create Environment**: Create new deployment environment from configuration file
 - **Show**: Display environment information with state-aware details
+- **Render**: Generate deployment artifacts without provisioning infrastructure
 - **Provision**: VM infrastructure provisioning with OpenTofu (LXD and Hetzner Cloud)
 - **Register**: Register existing instances as an alternative to provisioning (for pre-existing VMs, servers, or containers)
 - **Configure**: VM configuration with Docker, Docker Compose, and firewall via Ansible
@@ -128,6 +129,7 @@ torrust-tracker-deployer create environment -f <file>   # ✅ Create environment
 torrust-tracker-deployer show <env>      # ✅ Display environment information
 
 # Plumbing Commands (Low-Level)
+torrust-tracker-deployer render --env-name <env> --instance-ip <IP> --output-dir <PATH> # ✅ Generate deployment artifacts
 torrust-tracker-deployer provision <env> # ✅ Create VM infrastructure
 torrust-tracker-deployer register <env> --instance-ip <IP>  # ✅ Register existing infrastructure
 torrust-tracker-deployer configure <env> # ✅ Setup VM (Docker, Docker Compose, firewall)
@@ -450,6 +452,129 @@ torrust-tracker-deployer register my-environment --instance-ip 192.168.1.100
 **Environment Variables**:
 
 - `RUST_LOG=debug` - Detailed registration logs via tracing
+
+---
+
+### `render` - Generate Deployment Artifacts
+
+**Status**: ✅ Implemented  
+**State Transition**: None (read-only operation)  
+**Purpose**: Generate all deployment artifacts without provisioning infrastructure.
+
+```bash
+# From existing environment
+torrust-tracker-deployer render --env-name <environment> --instance-ip <IP_ADDRESS> --output-dir <OUTPUT_PATH>
+
+# From configuration file
+torrust-tracker-deployer render --env-file <config_file> --instance-ip <IP_ADDRESS> --output-dir <OUTPUT_PATH>
+
+# Overwrite existing output directory
+torrust-tracker-deployer render --env-name <environment> --instance-ip <IP_ADDRESS> --output-dir <OUTPUT_PATH> --force
+```
+
+**Current Implementation**:
+
+- Validates input parameters (environment exists or config file valid)
+- Parses environment configuration
+- Validates IP address format (IPv4/IPv6)
+- Renders all 8 service templates:
+  - OpenTofu infrastructure code
+  - Ansible playbooks and inventory
+  - Docker Compose service definitions
+  - Tracker configuration (tracker.toml)
+  - Prometheus monitoring configuration
+  - Grafana dashboard provisioning
+  - Caddy reverse proxy configuration (if HTTPS enabled)
+  - Backup scripts (if backup enabled)
+- Writes artifacts to user-specified output directory
+- Does NOT change environment state
+
+**Use Cases**:
+
+- **Preview artifacts** - Inspect what will be deployed before provisioning
+- **Manual deployment** - Generate artifacts for use with external tools
+- **Configuration validation** - Verify template rendering with actual values
+- **Artifact comparison** - Compare configurations between different setups
+
+**Input Modes**:
+
+1. **`--env-name` mode** - Uses existing environment in `Created` state
+2. **`--env-file` mode** - Generates artifacts directly from config file (no environment required)
+
+**Arguments**:
+
+- `--env-name <NAME>` - Name of existing environment (mutually exclusive with `--env-file`)
+- `--env-file <PATH>` - Path to configuration file (mutually exclusive with `--env-name`)
+- `--instance-ip <IP>` - Target instance IP address (required)
+- `--output-dir <PATH>` - Output directory for generated artifacts (required)
+- `--force` - Overwrite existing output directory (optional)
+
+**Why IP is Required**:
+
+- In `Created` state, infrastructure doesn't exist yet (no real IP)
+- With `--env-file`, no infrastructure is ever created
+- IP is needed for Ansible inventory generation
+
+**Why Output Directory is Required**:
+
+- **Prevents conflicts** with provision artifacts in `build/{env}/`
+- **Enables preview** without overwriting deployment artifacts
+- **Allows multiple renders** with different IPs or configurations
+- **Clear separation** between preview (render) and deployment (provision)
+
+**Examples**:
+
+```bash
+# Preview artifacts before provisioning
+torrust-tracker-deployer create environment -f envs/prod.json
+torrust-tracker-deployer render --env-name prod --instance-ip 203.0.113.50 --output-dir ./preview-prod
+ls -la preview-prod/  # Inspect generated artifacts
+torrust-tracker-deployer provision prod  # Proceed if satisfied (writes to build/prod/)
+
+# Generate artifacts directly from config (no environment)
+torrust-tracker-deployer render \
+  --env-file envs/staging.json \
+  --instance-ip 192.168.1.100 \
+  --output-dir /tmp/staging-artifacts
+
+# Manual deployment workflow
+torrust-tracker-deployer render --env-file envs/prod.json --instance-ip 203.0.113.50 --output-dir /tmp/manual-deploy
+cd /tmp/manual-deploy/tofu && tofu apply
+cd ../ansible && ansible-playbook -i inventory.yml deploy.yml
+```
+
+**Output Directory Structure**:
+
+```text
+<output-dir>/
+├── tofu/           # Infrastructure code (OpenTofu)
+├── ansible/        # Configuration management (playbooks + inventory with IP)
+├── docker-compose/ # Service orchestration
+├── tracker/        # Tracker configuration
+├── prometheus/     # Metrics collection
+├── grafana/        # Visualization dashboards
+├── caddy/          # Reverse proxy (if HTTPS)
+└── backup/         # Backup scripts (if enabled)
+```
+
+**Comparison with Provision**:
+
+| Aspect          | render                   | provision                  |
+| --------------- | ------------------------ | -------------------------- |
+| Infrastructure  | None created             | Creates VMs/servers        |
+| State Change    | No change                | Created → Provisioned      |
+| IP Address      | User-provided            | From actual infrastructure |
+| Output Location | User-specified directory | build/{env}/ directory     |
+| Time            | Seconds                  | Minutes                    |
+| Cost            | Free                     | Provider charges           |
+
+**Key Feature**: Render generates **identical** artifacts to provision (except IP addresses in Ansible inventory).
+
+**Environment Variables**:
+
+- `RUST_LOG=debug` - Detailed rendering logs via tracing
+
+**See Also**: [Render Command Guide](user-guide/commands/render.md), [Manual E2E Testing: Render Verification](e2e-testing/manual/render-verification.md)
 
 ---
 

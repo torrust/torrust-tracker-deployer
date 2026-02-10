@@ -231,6 +231,77 @@ pub enum Commands {
         environment: String,
     },
 
+    /// Generate deployment artifacts without executing deployment
+    ///
+    /// This command generates all deployment artifacts (docker-compose files,
+    /// tracker configuration, Ansible playbooks, etc.) to the build directory
+    /// without executing any deployment operations.
+    ///
+    /// **Important**: This command is ONLY for environments in the "Created" state.
+    /// If the environment is already provisioned, artifacts already exist in the
+    /// build directory and will not be regenerated.
+    ///
+    /// Use cases:
+    /// - Preview artifacts before provisioning infrastructure
+    /// - Generate artifacts from config file without creating environment
+    /// - Inspect what will be deployed before committing to provision
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// # Generate from existing environment
+    /// torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1 --output-dir ./preview
+    ///
+    /// # Generate from config file (no environment creation)
+    /// torrust-tracker-deployer render --env-file envs/my-config.json --instance-ip 10.0.0.1 --output-dir /tmp/artifacts
+    ///
+    /// # Overwrite existing output directory
+    /// torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1 --output-dir ./preview --force
+    /// ```
+    Render {
+        /// Name of existing environment (mutually exclusive with --env-file)
+        ///
+        /// Generate artifacts from an existing environment at any state.
+        /// This is a read-only operation that does not modify environment state.
+        #[arg(long, group = "input", conflicts_with = "env_file")]
+        env_name: Option<String>,
+
+        /// Path to environment configuration file (mutually exclusive with --env-name)
+        ///
+        /// Generate artifacts directly from a configuration file without
+        /// creating an environment.
+        #[arg(long, short = 'f', group = "input", conflicts_with = "env_name")]
+        env_file: Option<PathBuf>,
+
+        /// Target instance IP address (REQUIRED)
+        ///
+        /// IP address of the target server where artifacts will be deployed.
+        /// The IP will be used in generated Ansible inventory and configuration files.
+        ///
+        /// This allows previewing artifacts for different target IPs before
+        /// committing to infrastructure provisioning.
+        #[arg(long, value_name = "IP_ADDRESS", required = true)]
+        instance_ip: String,
+
+        /// Output directory for generated artifacts (REQUIRED)
+        ///
+        /// Directory where all deployment artifacts will be written.
+        /// Must be different from the standard build/{env}/ directory used by
+        /// provision to prevent artifact conflicts and data loss.
+        ///
+        /// The directory must not exist unless --force is provided.
+        #[arg(long, short = 'o', value_name = "PATH", required = true)]
+        output_dir: PathBuf,
+
+        /// Overwrite existing output directory
+        ///
+        /// If the output directory already exists, this flag allows overwriting
+        /// its contents. Without this flag, the command will fail if the
+        /// directory exists.
+        #[arg(long, default_value_t = false)]
+        force: bool,
+    },
+
     /// Run the application stack on a released environment
     ///
     /// This command starts the docker compose services on a released VM.

@@ -17,7 +17,6 @@ use crate::application::steps::application::DeployCaddyConfigStep;
 use crate::application::steps::rendering::RenderCaddyTemplatesStep;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
-use crate::domain::template::TemplateManager;
 use crate::shared::clock::SystemClock;
 
 /// Release the Caddy service (if HTTPS enabled)
@@ -62,11 +61,10 @@ fn render_templates(
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::RenderCaddyTemplates;
 
-    let template_manager = Arc::new(TemplateManager::new(environment.templates_dir()));
     let clock = Arc::new(SystemClock);
     let step = RenderCaddyTemplatesStep::new(
         Arc::new(environment.clone()),
-        template_manager,
+        environment.templates_dir(),
         environment.build_dir().clone(),
         clock,
     );

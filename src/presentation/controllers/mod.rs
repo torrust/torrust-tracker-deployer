@@ -259,6 +259,7 @@ pub mod provision;
 pub mod purge;
 pub mod register;
 pub mod release;
+pub mod render;
 pub mod run;
 pub mod show;
 pub mod test;

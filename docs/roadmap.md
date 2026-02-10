@@ -170,14 +170,17 @@ This makes the deployer more versatile for different scenarios and more AI-agent
 - [x] **9.1** Implement `validate` command (✅ Completed in [272847e3](https://github.com/torrust/torrust-tracker-deployer/commit/272847e3))
   - Validate deployment configuration without executing any deployment steps
   - See feature specification: [`docs/features/config-validation-command/`](./features/config-validation-command/)
-  - User documentation: [`docs/user-guide/commands/validate.md`](./user-guide/commands/validate.md)
-- [ ] **9.2** Implement artifact generation command - [Issue #326](https://github.com/torrust/torrust-tracker-deployer/issues/326)
-  - **Command name**: `render` (recommended) or `generate` (alternative)
-  - Generate all deployment artifacts (docker-compose, tracker config, Ansible playbooks, Caddy, monitoring, backup, etc.) to user-specified output directory
-  - Requires `--output-dir` (avoid conflicts with internal `build/` directory)
-  - Requires instance IP (from environment data or `--ip` flag for config-file mode)
+  - User documentation: [`docs/user-guide /commands/validate.md`](./user-guide/commands/validate.md)
+- [x] **9.2** Implement artifact generation command (✅ Completed in [37cbe240](https://github.com/torrust/torrust-tracker-deployer/commit/37cbe240)) - [Issue #326](https://github.com/torrust/torrust-tracker-deployer/issues/326)
+  - **Command name**: `render` - Generates deployment artifacts without provisioning infrastructure
+  - Dual input modes: `--env-name` (from Created state environment) or `--env-file` (from config file)
+  - Requires `--instance-ip` parameter for Ansible inventory generation
+  - Generates all 8 service artifacts: OpenTofu, Ansible, Docker Compose, Tracker, Prometheus, Grafana, Caddy, Backup
+  - Output to `build/<env-name>/` directory (reuses existing build directory structure)
   - No remote operations - purely local artifact generation
-  - Target audience: Users who want configuration files for manual deployment or inspection
+  - Use cases: Preview before provisioning, manual deployment workflows, configuration inspection
+  - User documentation: [`docs/user-guide/commands/render.md`](./user-guide/commands/render.md)
+  - Manual testing guide: [`docs/e2e-testing/manual/render-verification.md`](./e2e-testing/manual/render-verification.md)
   - All templates always rendered (no conditional logic)
   - Specification: [`docs/issues/326-implement-artifact-generation-command.md`](./issues/326-implement-artifact-generation-command.md)
 

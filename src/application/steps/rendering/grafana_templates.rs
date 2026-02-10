@@ -29,11 +29,9 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::application::services::rendering::GrafanaTemplateRenderingService;
+use crate::application::services::rendering::GrafanaTemplateRenderingServiceError;
 use crate::domain::environment::Environment;
-use crate::domain::template::TemplateManager;
-use crate::infrastructure::templating::grafana::template::renderer::{
-    GrafanaProjectGenerator, GrafanaProjectGeneratorError,
-};
 use crate::shared::clock::Clock;
 
 /// Step that renders Grafana provisioning templates to the build directory
@@ -43,7 +41,7 @@ use crate::shared::clock::Clock;
 /// then ready to be deployed to the remote host.
 pub struct RenderGrafanaTemplatesStep<S> {
     environment: Arc<Environment<S>>,
-    template_manager: Arc<TemplateManager>,
+    templates_dir: PathBuf,
     build_dir: PathBuf,
     clock: Arc<dyn Clock>,
 }
@@ -54,19 +52,19 @@ impl<S> RenderGrafanaTemplatesStep<S> {
     /// # Arguments
     ///
     /// * `environment` - The deployment environment
-    /// * `template_manager` - The template manager for accessing templates
+    /// * `templates_dir` - The templates directory
     /// * `build_dir` - The build directory where templates will be rendered
     /// * `clock` - Clock service for generating timestamps
     #[must_use]
     pub fn new(
         environment: Arc<Environment<S>>,
-        template_manager: Arc<TemplateManager>,
+        templates_dir: PathBuf,
         build_dir: PathBuf,
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             environment,
-            template_manager,
+            templates_dir,
             build_dir,
             clock,
         }
@@ -97,9 +95,12 @@ impl<S> RenderGrafanaTemplatesStep<S> {
             build_dir = %self.build_dir.display()
         )
     )]
-    pub fn execute(&self) -> Result<Option<PathBuf>, GrafanaProjectGeneratorError> {
+    pub fn execute(&self) -> Result<Option<PathBuf>, GrafanaTemplateRenderingServiceError> {
+        let grafana_configured = self.environment.context().user_inputs.grafana().is_some();
+        let prometheus_config = self.environment.context().user_inputs.prometheus();
+
         // Check if Grafana is configured
-        if self.environment.context().user_inputs.grafana().is_none() {
+        if !grafana_configured {
             info!(
                 step = "render_grafana_templates",
                 status = "skipped",
@@ -110,7 +111,7 @@ impl<S> RenderGrafanaTemplatesStep<S> {
         }
 
         // Check if Prometheus is configured (required for datasource)
-        let Some(prometheus_config) = self.environment.context().user_inputs.prometheus() else {
+        if prometheus_config.is_none() {
             info!(
                 step = "render_grafana_templates",
                 status = "skipped",
@@ -118,25 +119,25 @@ impl<S> RenderGrafanaTemplatesStep<S> {
                 "Skipping Grafana template rendering - Prometheus datasource requires Prometheus to be configured"
             );
             return Ok(None);
-        };
+        }
 
         info!(
             step = "render_grafana_templates",
-            templates_dir = %self.template_manager.templates_dir().display(),
+            templates_dir = %self.templates_dir.display(),
             build_dir = %self.build_dir.display(),
             "Rendering Grafana provisioning templates"
         );
 
-        let generator = GrafanaProjectGenerator::new(
-            &self.build_dir,
-            self.template_manager.clone(),
+        let service = GrafanaTemplateRenderingService::from_paths(
+            self.templates_dir.clone(),
+            self.build_dir.clone(),
             self.clock.clone(),
         );
 
         // Render all Grafana provisioning files (datasource + dashboards)
-        generator.render(prometheus_config)?;
-
-        let grafana_build_dir = self.build_dir.join("grafana/provisioning");
+        let Some(grafana_build_dir) = service.render(grafana_configured, prometheus_config)? else {
+            return Ok(None);
+        };
 
         info!(
             step = "render_grafana_templates",

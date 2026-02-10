@@ -29,11 +29,9 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::application::services::rendering::PrometheusTemplateRenderingService;
+use crate::application::services::rendering::PrometheusTemplateRenderingServiceError;
 use crate::domain::environment::Environment;
-use crate::domain::template::TemplateManager;
-use crate::infrastructure::templating::prometheus::{
-    PrometheusProjectGenerator, PrometheusProjectGeneratorError,
-};
 use crate::shared::clock::Clock;
 
 /// Step that renders Prometheus templates to the build directory
@@ -43,7 +41,7 @@ use crate::shared::clock::Clock;
 /// then ready to be deployed to the remote host.
 pub struct RenderPrometheusTemplatesStep<S> {
     environment: Arc<Environment<S>>,
-    template_manager: Arc<TemplateManager>,
+    templates_dir: PathBuf,
     build_dir: PathBuf,
     clock: Arc<dyn Clock>,
 }
@@ -54,19 +52,19 @@ impl<S> RenderPrometheusTemplatesStep<S> {
     /// # Arguments
     ///
     /// * `environment` - The deployment environment
-    /// * `template_manager` - The template manager for accessing templates
+    /// * `templates_dir` - The templates directory
     /// * `build_dir` - The build directory where templates will be rendered
     /// * `clock` - Clock service for generating timestamps
     #[must_use]
     pub fn new(
         environment: Arc<Environment<S>>,
-        template_manager: Arc<TemplateManager>,
+        templates_dir: PathBuf,
         build_dir: PathBuf,
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             environment,
-            template_manager,
+            templates_dir,
             build_dir,
             clock,
         }
@@ -97,7 +95,7 @@ impl<S> RenderPrometheusTemplatesStep<S> {
             build_dir = %self.build_dir.display()
         )
     )]
-    pub fn execute(&self) -> Result<Option<PathBuf>, PrometheusProjectGeneratorError> {
+    pub fn execute(&self) -> Result<Option<PathBuf>, PrometheusTemplateRenderingServiceError> {
         // Check if Prometheus is configured
         let Some(prometheus_config) = self.environment.context().user_inputs.prometheus() else {
             info!(
@@ -111,22 +109,23 @@ impl<S> RenderPrometheusTemplatesStep<S> {
 
         info!(
             step = "render_prometheus_templates",
-            templates_dir = %self.template_manager.templates_dir().display(),
+            templates_dir = %self.templates_dir.display(),
             build_dir = %self.build_dir.display(),
             "Rendering Prometheus configuration templates"
         );
 
-        let generator = PrometheusProjectGenerator::new(
-            &self.build_dir,
-            self.template_manager.clone(),
+        let service = PrometheusTemplateRenderingService::from_paths(
+            self.templates_dir.clone(),
+            self.build_dir.clone(),
             self.clock.clone(),
         );
 
         // Extract tracker config for API token and port
         let tracker_config = self.environment.context().user_inputs.tracker();
-        generator.render(prometheus_config, tracker_config)?;
-
-        let prometheus_build_dir = self.build_dir.join("storage/prometheus/etc");
+        let Some(prometheus_build_dir) = service.render(Some(prometheus_config), tracker_config)?
+        else {
+            return Ok(None);
+        };
 
         info!(
             step = "render_prometheus_templates",
@@ -165,17 +164,16 @@ mod tests {
             EnvironmentTestBuilder::new().build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
         let clock = create_test_clock();
         let step = RenderPrometheusTemplatesStep::new(
             environment.clone(),
-            template_manager.clone(),
+            templates_dir.path().to_path_buf(),
             build_dir.path().to_path_buf(),
             clock,
         );
 
         assert_eq!(step.build_dir, build_dir.path());
-        assert_eq!(step.template_manager.templates_dir(), templates_dir.path());
+        assert_eq!(step.templates_dir, templates_dir.path());
     }
 
     #[test]
@@ -189,11 +187,10 @@ mod tests {
             .build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
         let clock = create_test_clock();
         let step = RenderPrometheusTemplatesStep::new(
             environment,
-            template_manager,
+            templates_dir.path().to_path_buf(),
             build_dir.path().to_path_buf(),
             clock,
         );
@@ -222,11 +219,10 @@ mod tests {
             .build_with_custom_paths();
         let environment = Arc::new(environment);
 
-        let template_manager = Arc::new(TemplateManager::new(templates_dir.path().to_path_buf()));
         let clock = create_test_clock();
         let step = RenderPrometheusTemplatesStep::new(
             environment,
-            template_manager,
+            templates_dir.path().to_path_buf(),
             build_dir.path().to_path_buf(),
             clock,
         );

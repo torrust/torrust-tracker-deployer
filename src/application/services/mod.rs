@@ -6,8 +6,6 @@
 //!
 //! ## Services
 //!
-//! - `AnsibleTemplateService` - Renders Ansible templates with runtime configuration
+//! - `rendering` module - Template rendering services for all infrastructure components
 
-mod ansible_template_service;
-
-pub use ansible_template_service::{AnsibleTemplateService, AnsibleTemplateServiceError};
+pub mod rendering;

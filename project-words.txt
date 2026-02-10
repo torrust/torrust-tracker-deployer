@@ -426,3 +426,5 @@ zstd
 ключ
 конфиг
 файл
+blackbox
+writability

@@ -16,8 +16,7 @@
 //! - `provision` - Infrastructure provisioning using `OpenTofu`
 //! - `purge` - Remove all local environment data
 //! - `register` - Register existing instances as alternative to provisioning
-//! - `release` - Software release to target instances
-//! - `run` - Stack execution on target instances
+//! - `release` - Software release to target instances/// - `render` - Generate deployment artifacts without executing deployment//! - `run` - Stack execution on target instances
 //! - `show` - Display environment information and status (read-only)
 //! - `test` - Deployment testing and validation
 //! - `validate` - Validate environment configuration files (read-only)
@@ -34,6 +33,7 @@ pub mod provision;
 pub mod purge;
 pub mod register;
 pub mod release;
+pub mod render;
 pub mod run;
 pub mod show;
 pub mod test;
@@ -47,6 +47,7 @@ pub use provision::ProvisionCommandHandler;
 pub use purge::handler::PurgeCommandHandler;
 pub use register::RegisterCommandHandler;
 pub use release::ReleaseCommandHandler;
+pub use render::RenderCommandHandler;
 pub use run::RunCommandHandler;
 pub use show::ShowCommandHandler;
 pub use test::TestCommandHandler;

@@ -22,6 +22,7 @@ This directory contains detailed guides for all Torrust Tracker Deployer command
 
 - **[provision](provision.md)** - Provision VM infrastructure
 - **[register](register.md)** - Register existing infrastructure (alternative to provision)
+- **[render](render.md)** - Generate deployment artifacts without provisioning infrastructure
 - **[configure](configure.md)** - Configure provisioned infrastructure
 - **[test](test.md)** - Verify deployment infrastructure
 
@@ -82,19 +83,20 @@ Simplified commands that orchestrate multiple plumbing commands:
 
 ## State Transitions
 
-| Command              | State Transition         | Description                |
-| -------------------- | ------------------------ | -------------------------- |
-| `create template`    | N/A → Template           | Generate config template   |
-| `create environment` | Template → Created       | Create environment         |
-| `show`               | (read-only)              | Display environment info   |
-| `provision`          | Created → Provisioned    | Provision infrastructure   |
-| `register`           | Created → Provisioned    | Register existing infra    |
-| `configure`          | Provisioned → Configured | Install software, firewall |
-| `test`               | (validation only)        | Verify infrastructure      |
-| `release`            | Configured → Released    | Deploy application files   |
-| `run`                | Released → Running       | Tear down infrastructure   |
-| `purge`              | Any → (removed)          | Remove local data ices     |
-| `destroy`            | Any → Destroyed          | Clean up resources         |
+| Command              | State Transition         | Description                      |
+| -------------------- | ------------------------ | -------------------------------- |
+| `create template`    | N/A → Template           | Generate config template         |
+| `create environment` | Template → Created       | Create environment               |
+| `show`               | (read-only)              | Display environment info         |
+| `render`             | (no state change)        | Generate artifacts without infra |
+| `provision`          | Created → Provisioned    | Provision infrastructure         |
+| `register`           | Created → Provisioned    | Register existing infra          |
+| `configure`          | Provisioned → Configured | Install software, firewall       |
+| `test`               | (validation only)        | Verify infrastructure            |
+| `release`            | Configured → Released    | Deploy application files         |
+| `run`                | Released → Running       | Start services                   |
+| `destroy`            | Any → Destroyed          | Tear down infrastructure         |
+| `purge`              | Any → (removed)          | Remove local data                |
 
 ## Getting Started
 

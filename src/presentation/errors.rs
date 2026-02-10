@@ -24,8 +24,8 @@ use crate::presentation::controllers::{
     destroy::DestroySubcommandError, list::ListSubcommandError,
     provision::ProvisionSubcommandError, purge::PurgeSubcommandError,
     register::errors::RegisterSubcommandError, release::ReleaseSubcommandError,
-    run::RunSubcommandError, show::ShowSubcommandError, test::TestSubcommandError,
-    validate::errors::ValidateSubcommandError,
+    render::errors::RenderCommandError, run::RunSubcommandError, show::ShowSubcommandError,
+    test::TestSubcommandError, validate::errors::ValidateSubcommandError,
 };
 
 /// Errors that can occur during CLI command execution
@@ -83,6 +83,13 @@ pub enum CommandError {
     /// Use `.help()` for detailed troubleshooting steps.
     #[error("Release command failed: {0}")]
     Release(Box<ReleaseSubcommandError>),
+
+    /// Render command specific errors
+    ///
+    /// Encapsulates all errors that can occur during artifact generation.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Render command failed: {0}")]
+    Render(Box<RenderCommandError>),
 
     /// Run command specific errors
     ///
@@ -169,6 +176,12 @@ impl From<ReleaseSubcommandError> for CommandError {
     }
 }
 
+impl From<RenderCommandError> for CommandError {
+    fn from(error: RenderCommandError) -> Self {
+        Self::Render(Box::new(error))
+    }
+}
+
 impl From<RunSubcommandError> for CommandError {
     fn from(error: RunSubcommandError) -> Self {
         Self::Run(Box::new(error))
@@ -242,6 +255,9 @@ impl CommandError {
             Self::Register(e) => e.help().to_string(),
             Self::Test(e) => e.as_ref().help().to_string(),
             Self::Release(e) => e.help().to_string(),
+            Self::Render(e) => e
+                .help()
+                .unwrap_or_else(|| "No additional help available".to_string()),
             Self::Run(e) => e.help().to_string(),
             Self::Show(e) => e.help().to_string(),
             Self::List(e) => e.help().to_string(),
