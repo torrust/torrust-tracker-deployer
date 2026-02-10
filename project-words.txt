@@ -364,6 +364,7 @@ sysfs
 sysv
 tablespaces
 taiki
+tamasfe
 taskkill
 tasklist
 terraformrc
