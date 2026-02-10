@@ -467,7 +467,7 @@ The handler becomes focused on its actual responsibility (orchestration and erro
 
 #### Testing Strategy
 
-Run the existing render command manual test: `cargo run -- render --env-name lxd-local-example --instance-ip 10.0.0.1`. Verify output directory contains all expected template files. Existing unit tests for IP parsing and input modes remain unchanged.
+Run the existing render command manual test: `cargo run -- render --env-name lxd-local-example --instance-ip 10.0.0.1 --output-dir ./test-preview`. Verify output directory contains all expected template files. Existing unit tests for IP parsing and input modes remain unchanged.
 
 ---
 

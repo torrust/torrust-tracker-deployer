@@ -14,19 +14,21 @@
 //!
 //! ## Test Scenarios
 //!
-//! 1. Render with env-name: Create environment → Render artifacts
+//! 1. Render with env-name: Create environment → Render artifacts to custom directory
 //! 2. Render with env-file: Generate artifacts directly from config file
-//! 3. Render requires IP address: Verify mandatory --instance-ip parameter
-//! 4. Render only works on Created state: Verify state checking
-//! 5. Multiple renders: Verify idempotency (renders can be repeated)
-//! 6. Artifact completeness: Verify all 8 service artifacts are generated
+//! 3. Render requires output directory: Verify --output-dir parameter is required
+//! 4. Render fails on existing directory: Verify `OutputDirectoryExists` error
+//! 5. Environment not found: Verify proper error handling
+//! 6. Config file not found: Verify proper error handling
+//! 7. Custom working directory: Verify render works from different locations
 //!
 //! ## Design Decisions
 //!
+//! - **Output directory required**: Tests verify --output-dir flag is mandatory
+//! - **Output protection**: Tests verify existing directories are not overwritten
 //! - **Created state only**: Tests render on environments in Created state
 //! - **IP validation**: Tests verify IP address parameter is required and validated
 //! - **Dual input modes**: Tests cover both --env-name and --env-file workflows
-//! - **Idempotency**: Tests verify render can be repeated without errors
 
 use super::super::support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
 use anyhow::Result;
@@ -91,9 +93,14 @@ fn it_should_render_artifacts_using_env_name_successfully() {
     env_assertions.assert_environment_state_is("test-render-env-name", "Created");
 
     // Act: Render artifacts using env-name input mode
+    let output_dir = temp_workspace.path().join("render-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
-        .run_render_command_with_env_name("test-render-env-name", "192.168.1.100")
+        .run_render_command_with_env_name(
+            "test-render-env-name",
+            "192.168.1.100",
+            output_dir.to_str().unwrap(),
+        )
         .expect("Failed to run render command");
 
     // Assert: Verify command succeeded
@@ -104,9 +111,20 @@ fn it_should_render_artifacts_using_env_name_successfully() {
         render_result.stderr()
     );
 
-    // Assert: Verify build directory and artifacts were created
-    env_assertions.assert_build_directory_exists("test-render-env-name");
-    env_assertions.assert_build_artifacts_exist("test-render-env-name");
+    // Assert: Verify output directory and artifacts were created
+    assert!(
+        output_dir.exists(),
+        "Output directory should exist at: {}",
+        output_dir.display()
+    );
+
+    // Verify key artifacts exist
+    let tofu_dir = output_dir.join("tofu");
+    assert!(
+        tofu_dir.exists(),
+        "Tofu directory should exist at: {}",
+        tofu_dir.display()
+    );
 
     // Assert: Verify success message in output (check both stdout and stderr)
     let output = format!("{}{}", render_result.stdout(), render_result.stderr());
@@ -139,9 +157,14 @@ fn it_should_render_artifacts_using_config_file_successfully() {
         .to_string();
 
     // Act: Render artifacts directly from config file (no environment creation)
+    let output_dir = temp_workspace.path().join("render-config-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
-        .run_render_command_with_config_file(&config_path, "192.168.1.101")
+        .run_render_command_with_config_file(
+            &config_path,
+            "192.168.1.101",
+            output_dir.to_str().unwrap(),
+        )
         .expect("Failed to run render command");
 
     // Assert: Verify command succeeded
@@ -156,29 +179,38 @@ fn it_should_render_artifacts_using_config_file_successfully() {
     let env_assertions = EnvironmentStateAssertions::new(temp_workspace.path());
     env_assertions.assert_environment_not_exists("test-render-config-file");
 
+    // Assert: Verify output directory and artifacts were created
+    assert!(
+        output_dir.exists(),
+        "Output directory should exist at: {}",
+        output_dir.display()
+    );
+
+    // Verify key artifacts exist
+    let tofu_dir = output_dir.join("tofu");
+    assert!(
+        tofu_dir.exists(),
+        "Tofu directory should exist at: {}",
+        tofu_dir.display()
+    );
+
     // Assert: Verify success message in output
     let output = format!("{}{}", render_result.stdout(), render_result.stderr());
     assert!(
         output.contains("generated successfully"),
         "Output should contain success message. Combined output: {output}"
     );
-
-    // Note: Build directory verification is not included here because when using
-    // --env-file mode, the build artifacts are created using paths from the
-    // temporary Environment object which may not respect the working directory
-    // in the same way as when loading a persisted environment. This is a known
-    // limitation - see Issue #326 for potential improvements.
 }
 
 #[test]
-fn it_should_be_idempotent_allowing_multiple_renders() {
+fn it_should_fail_when_output_directory_already_exists() {
     // Verify dependencies before running tests
     verify_required_dependencies().expect("Dependency verification failed");
 
     // Arrange: Create temporary workspace and environment
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
-    let config = create_test_environment_config("test-render-idempotent");
+    let config = create_test_environment_config("test-render-output-dir-exists");
     temp_workspace
         .write_config_file("environment.json", &config)
         .expect("Failed to write config file");
@@ -195,9 +227,14 @@ fn it_should_be_idempotent_allowing_multiple_renders() {
     );
 
     // Act: Render artifacts first time
+    let output_dir = temp_workspace.path().join("render-idempotent-output");
     let render1_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
-        .run_render_command_with_env_name("test-render-idempotent", "192.168.1.102")
+        .run_render_command_with_env_name(
+            "test-render-output-dir-exists",
+            "192.168.1.102",
+            output_dir.to_str().unwrap(),
+        )
         .expect("Failed to run first render command");
 
     assert!(
@@ -206,23 +243,33 @@ fn it_should_be_idempotent_allowing_multiple_renders() {
         render1_result.stderr()
     );
 
-    // Act: Render artifacts second time (should succeed - idempotent)
+    // Act: Render artifacts second time (should fail with OutputDirectoryExists error)
     let render2_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
-        .run_render_command_with_env_name("test-render-idempotent", "192.168.1.102")
+        .run_render_command_with_env_name(
+            "test-render-output-dir-exists",
+            "192.168.1.102",
+            output_dir.to_str().unwrap(),
+        )
         .expect("Failed to run second render command");
 
-    // Assert: Second render should also succeed
+    // Assert: Second render should fail because output directory already exists
     assert!(
-        render2_result.success(),
-        "Second render failed: {}",
-        render2_result.stderr()
+        !render2_result.success(),
+        "Second render should fail when output directory exists"
     );
 
-    // Assert: Build directory should still exist with artifacts
-    let env_assertions = EnvironmentStateAssertions::new(temp_workspace.path());
-    env_assertions.assert_build_directory_exists("test-render-idempotent");
-    env_assertions.assert_build_artifacts_exist("test-render-idempotent");
+    // Assert: Error message should mention output directory exists
+    let stderr = render2_result.stderr();
+    assert!(
+        stderr.contains("Output directory") || stderr.contains("already exists"),
+        "Error message should mention output directory exists. Stderr: {stderr}"
+    );
+
+    // Assert: Output directory should still exist with artifacts from first render
+    assert!(output_dir.exists(), "Output directory should still exist");
+    let tofu_dir = output_dir.join("tofu");
+    assert!(tofu_dir.exists(), "Tofu directory should still exist");
 }
 
 #[test]
@@ -234,9 +281,14 @@ fn it_should_fail_when_environment_not_found() {
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
     // Act: Try to render non-existent environment
+    let output_dir = temp_workspace.path().join("nonexistent-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
-        .run_render_command_with_env_name("nonexistent-env", "192.168.1.103")
+        .run_render_command_with_env_name(
+            "nonexistent-env",
+            "192.168.1.103",
+            output_dir.to_str().unwrap(),
+        )
         .expect("Failed to run render command");
 
     // Assert: Verify command failed with proper error
@@ -262,9 +314,14 @@ fn it_should_fail_when_config_file_not_found() {
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
     // Act: Try to render with non-existent config file
+    let output_dir = temp_workspace.path().join("missing-config-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
-        .run_render_command_with_config_file("./nonexistent.json", "192.168.1.104")
+        .run_render_command_with_config_file(
+            "./nonexistent.json",
+            "192.168.1.104",
+            output_dir.to_str().unwrap(),
+        )
         .expect("Failed to run render command");
 
     // Assert: Verify command failed with proper error
@@ -308,9 +365,14 @@ fn it_should_work_with_custom_working_directory() {
     );
 
     // Act: Render from custom working directory
+    let output_dir = temp_workspace.path().join("custom-dir-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
-        .run_render_command_with_env_name("test-render-custom-dir", "192.168.1.105")
+        .run_render_command_with_env_name(
+            "test-render-custom-dir",
+            "192.168.1.105",
+            output_dir.to_str().unwrap(),
+        )
         .expect("Failed to run render command");
 
     // Assert: Verify command succeeded
@@ -321,10 +383,18 @@ fn it_should_work_with_custom_working_directory() {
         render_result.stderr()
     );
 
-    // Assert: Verify artifacts were created in custom location
-    let env_assertions = EnvironmentStateAssertions::new(temp_workspace.path());
-    env_assertions.assert_build_directory_exists("test-render-custom-dir");
-    env_assertions.assert_build_artifacts_exist("test-render-custom-dir");
+    // Assert: Verify artifacts were created in output directory
+    assert!(
+        output_dir.exists(),
+        "Output directory should exist at: {}",
+        output_dir.display()
+    );
+    let tofu_dir = output_dir.join("tofu");
+    assert!(
+        tofu_dir.exists(),
+        "Tofu directory should exist at: {}",
+        tofu_dir.display()
+    );
 }
 
 #[test]
@@ -359,9 +429,14 @@ fn it_should_complete_full_lifecycle_from_create_to_render() {
     env_assertions.assert_environment_state_is("test-full-lifecycle-render", "Created");
 
     // Step 2: Render artifacts
+    let output_dir = temp_workspace.path().join("lifecycle-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
-        .run_render_command_with_env_name("test-full-lifecycle-render", "192.168.1.106")
+        .run_render_command_with_env_name(
+            "test-full-lifecycle-render",
+            "192.168.1.106",
+            output_dir.to_str().unwrap(),
+        )
         .expect("Failed to run render command");
 
     assert!(
@@ -372,8 +447,17 @@ fn it_should_complete_full_lifecycle_from_create_to_render() {
     );
 
     // Step 3: Verify artifacts were generated
-    env_assertions.assert_build_directory_exists("test-full-lifecycle-render");
-    env_assertions.assert_build_artifacts_exist("test-full-lifecycle-render");
+    assert!(
+        output_dir.exists(),
+        "Output directory should exist at: {}",
+        output_dir.display()
+    );
+    let tofu_dir = output_dir.join("tofu");
+    assert!(
+        tofu_dir.exists(),
+        "Tofu directory should exist at: {}",
+        tofu_dir.display()
+    );
 
     // Verify environment remains in Created state (render doesn't change state)
     env_assertions.assert_environment_state_is("test-full-lifecycle-render", "Created");

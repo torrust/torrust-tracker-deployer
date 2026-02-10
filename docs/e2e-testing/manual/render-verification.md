@@ -97,8 +97,8 @@ Should show state: `Created`
 #### Step 2: Render Artifacts
 
 ```bash
-# Render artifacts with a test IP address
-cargo run -- render --env-name render-test --instance-ip 192.168.1.100
+# Render artifacts with a test IP address to a preview directory
+cargo run -- render --env-name render-test --instance-ip 192.168.1.100 --output-dir ./render-test-preview
 ```
 
 **Expected output**:
@@ -115,7 +115,7 @@ Deployment artifacts generated successfully!
 
   Source: Environment: render-test
   Target IP: 192.168.1.100
-  Output: /path/to/build/render-test
+  Output: ./render-test-preview
 
 Next steps:
   - Review artifacts in the output directory
@@ -126,14 +126,14 @@ Next steps:
 **Save the rendered artifacts location**:
 
 ```bash
-RENDER_BUILD_DIR="build/render-test"
+RENDER_PREVIEW_DIR="render-test-preview"
 ```
 
 #### Step 3: Verify Rendered Artifacts
 
 ```bash
 # List generated artifacts
-ls -la $RENDER_BUILD_DIR/
+ls -la $RENDER_PREVIEW_DIR/
 
 # Should contain:
 # - tofu/           - OpenTofu infrastructure code
@@ -149,21 +149,21 @@ ls -la $RENDER_BUILD_DIR/
 **Check OpenTofu configuration**:
 
 ```bash
-cat $RENDER_BUILD_DIR/tofu/main.tf
+cat $RENDER_PREVIEW_DIR/tofu/main.tf
 # Should contain LXD VM configuration
 ```
 
 **Check Ansible inventory**:
 
 ```bash
-cat $RENDER_BUILD_DIR/ansible/inventory.yml
+cat $RENDER_PREVIEW_DIR/ansible/inventory.yml
 # Should contain: ansible_host: 192.168.1.100
 ```
 
 **Check Docker Compose**:
 
 ```bash
-cat $RENDER_BUILD_DIR/docker-compose/docker-compose.yml
+cat $RENDER_PREVIEW_DIR/docker-compose/docker-compose.yml
 # Should contain service definitions
 ```
 
@@ -199,11 +199,10 @@ echo "Actual IP: $ACTUAL_IP"
 #### Step 5: Compare Render vs Provision Artifacts
 
 ```bash
-# Backup the render artifacts before provision overwrites them
-cp -r $RENDER_BUILD_DIR ${RENDER_BUILD_DIR}-rendered
-
-# After provision completes, compare the two builds
-diff -r ${RENDER_BUILD_DIR}-rendered $RENDER_BUILD_DIR
+# After provision completes, compare render preview with provision output
+# Preview directory: render-test-preview (from render command)
+# Provision directory: build/render-test/ (from provision command)
+diff -r $RENDER_PREVIEW_DIR build/render-test/
 ```
 
 **Expected differences**:
@@ -224,22 +223,27 @@ diff -r ${RENDER_BUILD_DIR}-rendered $RENDER_BUILD_DIR
 
 ```bash
 # Compare OpenTofu configurations (should be identical)
-diff ${RENDER_BUILD_DIR}-rendered/tofu/main.tf $RENDER_BUILD_DIR/tofu/main.tf
+diff $RENDER_PREVIEW_DIR/tofu/main.tf build/render-test/tofu/main.tf
 
 # Compare Docker Compose (should be identical)
-diff ${RENDER_BUILD_DIR}-rendered/docker-compose/docker-compose.yml \
-     $RENDER_BUILD_DIR/docker-compose/docker-compose.yml
+diff $RENDER_PREVIEW_DIR/docker-compose/docker-compose.yml \
+     build/render-test/docker-compose/docker-compose.yml
 
 # Compare Ansible inventory (only IP should differ)
-diff ${RENDER_BUILD_DIR}-rendered/ansible/inventory.yml \
-     $RENDER_BUILD_DIR/ansible/inventory.yml
+diff $RENDER_PREVIEW_DIR/ansible/inventory.yml \
+     build/render-test/ansible/inventory.yml
 ```
 
 #### Step 6: Test Idempotency
 
 ```bash
-# Render again with the same parameters
-cargo run -- render --env-name render-test --instance-ip 192.168.1.100
+# Try to render again to the same output directory (should fail without --force)
+cargo run -- render --env-name render-test --instance-ip 192.168.1.100 --output-dir ./render-test-preview
+
+# Should fail with: "Output directory already exists"
+
+# With --force flag, should succeed
+cargo run -- render --env-name render-test --instance-ip 192.168.1.100 --output-dir ./render-test-preview --force
 
 # Should succeed without errors
 # Artifacts should remain unchanged
@@ -254,8 +258,8 @@ cargo run -- destroy render-test
 # Purge the environment data
 cargo run -- purge render-test --force
 
-# Remove backup artifacts
-rm -rf ${RENDER_BUILD_DIR}-rendered
+# Remove preview artifacts
+rm -rf $RENDER_PREVIEW_DIR
 ```
 
 ---
@@ -288,7 +292,7 @@ nano envs/render-direct.json
 
 ```bash
 # Render directly from config file (no environment creation)
-cargo run -- render --env-file envs/render-direct.json --instance-ip 192.168.1.200
+cargo run -- render --env-file envs/render-direct.json --instance-ip 192.168.1.200 --output-dir ./render-direct-artifacts
 ```
 
 **Expected output**:
@@ -299,17 +303,17 @@ Deployment artifacts generated successfully!
 
   Source: Config file: envs/render-direct.json
   Target IP: 192.168.1.200
-  Output: /path/to/build/render-direct
+  Output: ./render-direct-artifacts
 ```
 
 #### Step 3: Verify Artifacts
 
 ```bash
 # Check artifacts were generated
-ls -la build/render-direct/
+ls -la render-direct-artifacts/
 
 # Verify IP in Ansible inventory
-grep "ansible_host" build/render-direct/ansible/inventory.yml
+grep "ansible_host" render-direct-artifacts/ansible/inventory.yml
 # Should show: ansible_host: 192.168.1.200
 ```
 
@@ -325,8 +329,8 @@ cargo run -- list
 #### Step 5: Cleanup
 
 ```bash
-# Remove build artifacts
-rm -rf build/render-direct
+# Remove artifacts
+rm -rf render-direct-artifacts
 ```
 
 ---
@@ -346,7 +350,7 @@ rm -rf build/render-direct
 **Test 2 (Config File Mode)**:
 
 - [x] ✅ Render from config file succeeds without creating environment
-- [x] ✅ All artifacts generated in `build/render-direct/`
+- [x] ✅ All artifacts generated in `./render-direct-artifacts/`
 - [x] ✅ IP address correctly set in Ansible inventory
 - [x] ✅ Environment NOT created in data directory
 
@@ -367,18 +371,18 @@ cargo run -- show <env-name>
 # If not in Created state, cannot render
 ```
 
-### Issue: Build directory not created
+### Issue: Output directory already exists
 
-**Cause**: Working directory or permissions issue
+**Cause**: Target output directory from previous render
 
 **Solution**:
 
 ```bash
-# Check working directory
-pwd
+# Remove old directory
+rm -rf ./my-output-dir
 
-# Ensure build/ directory is writable
-ls -ld build/
+# Or use --force to overwrite
+cargo run -- render --env-name test --instance-ip 192.168.1.100 --output-dir ./my-output-dir --force
 ```
 
 ### Issue: IP validation error
@@ -389,8 +393,8 @@ ls -ld build/
 
 ```bash
 # Use valid IPv4 or IPv6 format
-cargo run -- render --env-name test --instance-ip 192.168.1.100  # Valid
-cargo run -- render --env-name test --instance-ip invalid-ip     # Invalid
+cargo run -- render --env-name test --instance-ip 192.168.1.100 --output-dir ./test-preview  # Valid
+cargo run -- render --env-name test --instance-ip invalid-ip --output-dir ./test-preview     # Invalid
 ```
 
 ### Issue: Render shows provisioned environment message
@@ -399,7 +403,7 @@ cargo run -- render --env-name test --instance-ip invalid-ip     # Invalid
 
 **Expected behavior**: Render command should inform you where existing artifacts are located
 
-**Solution**: This is informational, not an error. The artifacts are already in `build/<env-name>/`.
+**Solution**: This is informational, not an error. The artifacts are already in `build/<env-name>/` from the provision command.
 
 ---
 
@@ -456,7 +460,7 @@ After completing both tests, verify:
   - With config file, no infrastructure is ever created
   - IP is needed for Ansible inventory generation
 
-- **Build Directory**: Artifacts are always generated in `build/<env-name>/` regardless of input mode
+- **Output Directory**: Artifacts are generated in the user-specified output directory (via `--output-dir` flag). This separates preview artifacts from deployment artifacts in `build/<env-name>/`.
 
 - **State Independence**: Render is a **read-only** operation - it never changes environment state
 

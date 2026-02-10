@@ -483,7 +483,7 @@ impl ProcessRunner {
     /// Panics if the working directory path contains invalid UTF-8.
     /// Run the render command with environment name input mode
     ///
-    /// This method runs `cargo run -- render --env-name <name> --instance-ip <ip>`
+    /// This method runs `cargo run -- render --env-name <name> --instance-ip <ip> --output-dir <dir>`
     /// with optional working directory for the application itself via `--working-dir`.
     ///
     /// # Errors
@@ -497,6 +497,7 @@ impl ProcessRunner {
         &self,
         environment_name: &str,
         instance_ip: &str,
+        output_dir: &str,
     ) -> Result<ProcessResult> {
         let mut cmd = Command::new("cargo");
 
@@ -510,6 +511,8 @@ impl ProcessRunner {
                 environment_name,
                 "--instance-ip",
                 instance_ip,
+                "--output-dir",
+                output_dir,
                 "--working-dir",
                 working_dir.to_str().unwrap(),
             ]);
@@ -523,6 +526,8 @@ impl ProcessRunner {
                 environment_name,
                 "--instance-ip",
                 instance_ip,
+                "--output-dir",
+                output_dir,
             ]);
         }
 
@@ -535,7 +540,7 @@ impl ProcessRunner {
 
     /// Run the render command with config file input mode
     ///
-    /// This method runs `cargo run -- render --env-file <path> --instance-ip <ip>`
+    /// This method runs `cargo run -- render --env-file <path> --instance-ip <ip> --output-dir <dir>`
     /// with optional working directory for the application itself via `--working-dir`.
     ///
     /// # Errors
@@ -549,6 +554,7 @@ impl ProcessRunner {
         &self,
         config_file: &str,
         instance_ip: &str,
+        output_dir: &str,
     ) -> Result<ProcessResult> {
         let mut cmd = Command::new("cargo");
 
@@ -562,6 +568,8 @@ impl ProcessRunner {
                 config_file,
                 "--instance-ip",
                 instance_ip,
+                "--output-dir",
+                output_dir,
                 "--working-dir",
                 working_dir.to_str().unwrap(),
             ]);
@@ -575,6 +583,8 @@ impl ProcessRunner {
                 config_file,
                 "--instance-ip",
                 instance_ip,
+                "--output-dir",
+                output_dir,
             ]);
         }
 

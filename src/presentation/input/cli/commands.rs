@@ -249,18 +249,20 @@ pub enum Commands {
     /// # Examples
     ///
     /// ```text
-    /// # Generate from Created environment
-    /// torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1
+    /// # Generate from existing environment
+    /// torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1 --output-dir ./preview
     ///
     /// # Generate from config file (no environment creation)
-    /// torrust-tracker-deployer render --env-file envs/my-config.json --instance-ip 10.0.0.1
+    /// torrust-tracker-deployer render --env-file envs/my-config.json --instance-ip 10.0.0.1 --output-dir /tmp/artifacts
+    ///
+    /// # Overwrite existing output directory
+    /// torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1 --output-dir ./preview --force
     /// ```
     Render {
         /// Name of existing environment (mutually exclusive with --env-file)
         ///
-        /// The environment must be in "Created" state (before provision).
-        /// If the environment is already provisioned, a message will indicate
-        /// where the artifacts are located.
+        /// Generate artifacts from an existing environment at any state.
+        /// This is a read-only operation that does not modify environment state.
         #[arg(long, group = "input", conflicts_with = "env_file")]
         env_name: Option<String>,
 
@@ -274,13 +276,30 @@ pub enum Commands {
         /// Target instance IP address (REQUIRED)
         ///
         /// IP address of the target server where artifacts will be deployed.
-        /// This is required because:
-        /// - In Created state: Environment hasn't been provisioned yet
-        /// - With config file: No infrastructure exists
-        ///
         /// The IP will be used in generated Ansible inventory and configuration files.
+        ///
+        /// This allows previewing artifacts for different target IPs before
+        /// committing to infrastructure provisioning.
         #[arg(long, value_name = "IP_ADDRESS", required = true)]
         instance_ip: String,
+
+        /// Output directory for generated artifacts (REQUIRED)
+        ///
+        /// Directory where all deployment artifacts will be written.
+        /// Must be different from the standard build/{env}/ directory used by
+        /// provision to prevent artifact conflicts and data loss.
+        ///
+        /// The directory must not exist unless --force is provided.
+        #[arg(long, short = 'o', value_name = "PATH", required = true)]
+        output_dir: PathBuf,
+
+        /// Overwrite existing output directory
+        ///
+        /// If the output directory already exists, this flag allows overwriting
+        /// its contents. Without this flag, the command will fail if the
+        /// directory exists.
+        #[arg(long, default_value_t = false)]
+        force: bool,
     },
 
     /// Run the application stack on a released environment

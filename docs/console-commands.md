@@ -129,7 +129,7 @@ torrust-tracker-deployer create environment -f <file>   # ✅ Create environment
 torrust-tracker-deployer show <env>      # ✅ Display environment information
 
 # Plumbing Commands (Low-Level)
-torrust-tracker-deployer render --env-name <env> --instance-ip <IP> # ✅ Generate deployment artifacts
+torrust-tracker-deployer render --env-name <env> --instance-ip <IP> --output-dir <PATH> # ✅ Generate deployment artifacts
 torrust-tracker-deployer provision <env> # ✅ Create VM infrastructure
 torrust-tracker-deployer register <env> --instance-ip <IP>  # ✅ Register existing infrastructure
 torrust-tracker-deployer configure <env> # ✅ Setup VM (Docker, Docker Compose, firewall)
@@ -463,10 +463,13 @@ torrust-tracker-deployer register my-environment --instance-ip 192.168.1.100
 
 ```bash
 # From existing environment
-torrust-tracker-deployer render --env-name <environment> --instance-ip <IP_ADDRESS>
+torrust-tracker-deployer render --env-name <environment> --instance-ip <IP_ADDRESS> --output-dir <OUTPUT_PATH>
 
 # From configuration file
-torrust-tracker-deployer render --env-file <config_file> --instance-ip <IP_ADDRESS>
+torrust-tracker-deployer render --env-file <config_file> --instance-ip <IP_ADDRESS> --output-dir <OUTPUT_PATH>
+
+# Overwrite existing output directory
+torrust-tracker-deployer render --env-name <environment> --instance-ip <IP_ADDRESS> --output-dir <OUTPUT_PATH> --force
 ```
 
 **Current Implementation**:
@@ -483,7 +486,7 @@ torrust-tracker-deployer render --env-file <config_file> --instance-ip <IP_ADDRE
   - Grafana dashboard provisioning
   - Caddy reverse proxy configuration (if HTTPS enabled)
   - Backup scripts (if backup enabled)
-- Writes artifacts to `build/<env-name>/`
+- Writes artifacts to user-specified output directory
 - Does NOT change environment state
 
 **Use Cases**:
@@ -503,6 +506,8 @@ torrust-tracker-deployer render --env-file <config_file> --instance-ip <IP_ADDRE
 - `--env-name <NAME>` - Name of existing environment (mutually exclusive with `--env-file`)
 - `--env-file <PATH>` - Path to configuration file (mutually exclusive with `--env-name`)
 - `--instance-ip <IP>` - Target instance IP address (required)
+- `--output-dir <PATH>` - Output directory for generated artifacts (required)
+- `--force` - Overwrite existing output directory (optional)
 
 **Why IP is Required**:
 
@@ -510,30 +515,38 @@ torrust-tracker-deployer render --env-file <config_file> --instance-ip <IP_ADDRE
 - With `--env-file`, no infrastructure is ever created
 - IP is needed for Ansible inventory generation
 
+**Why Output Directory is Required**:
+
+- **Prevents conflicts** with provision artifacts in `build/{env}/`
+- **Enables preview** without overwriting deployment artifacts
+- **Allows multiple renders** with different IPs or configurations
+- **Clear separation** between preview (render) and deployment (provision)
+
 **Examples**:
 
 ```bash
 # Preview artifacts before provisioning
 torrust-tracker-deployer create environment -f envs/prod.json
-torrust-tracker-deployer render --env-name prod --instance-ip 203.0.113.50
-ls -la build/prod/  # Inspect generated artifacts
-torrust-tracker-deployer provision prod  # Proceed if satisfied
+torrust-tracker-deployer render --env-name prod --instance-ip 203.0.113.50 --output-dir ./preview-prod
+ls -la preview-prod/  # Inspect generated artifacts
+torrust-tracker-deployer provision prod  # Proceed if satisfied (writes to build/prod/)
 
 # Generate artifacts directly from config (no environment)
 torrust-tracker-deployer render \
   --env-file envs/staging.json \
-  --instance-ip 192.168.1.100
+  --instance-ip 192.168.1.100 \
+  --output-dir /tmp/staging-artifacts
 
 # Manual deployment workflow
-torrust-tracker-deployer render --env-file envs/prod.json --instance-ip 203.0.113.50
-cd build/prod/tofu && tofu apply
+torrust-tracker-deployer render --env-file envs/prod.json --instance-ip 203.0.113.50 --output-dir /tmp/manual-deploy
+cd /tmp/manual-deploy/tofu && tofu apply
 cd ../ansible && ansible-playbook -i inventory.yml deploy.yml
 ```
 
 **Output Directory Structure**:
 
 ```text
-build/<env-name>/
+<output-dir>/
 ├── tofu/           # Infrastructure code (OpenTofu)
 ├── ansible/        # Configuration management (playbooks + inventory with IP)
 ├── docker-compose/ # Service orchestration
@@ -546,13 +559,14 @@ build/<env-name>/
 
 **Comparison with Provision**:
 
-| Aspect         | render        | provision                  |
-| -------------- | ------------- | -------------------------- |
-| Infrastructure | None created  | Creates VMs/servers        |
-| State Change   | No change     | Created → Provisioned      |
-| IP Address     | User-provided | From actual infrastructure |
-| Time           | Seconds       | Minutes                    |
-| Cost           | Free          | Provider charges           |
+| Aspect          | render                   | provision                  |
+| --------------- | ------------------------ | -------------------------- |
+| Infrastructure  | None created             | Creates VMs/servers        |
+| State Change    | No change                | Created → Provisioned      |
+| IP Address      | User-provided            | From actual infrastructure |
+| Output Location | User-specified directory | build/{env}/ directory     |
+| Time            | Seconds                  | Minutes                    |
+| Cost            | Free                     | Provider charges           |
 
 **Key Feature**: Render generates **identical** artifacts to provision (except IP addresses in Ansible inventory).
 

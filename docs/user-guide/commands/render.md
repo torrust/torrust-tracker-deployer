@@ -15,10 +15,13 @@ Creates all deployment artifacts (OpenTofu, Ansible, Docker Compose, configurati
 
 ```bash
 # From existing environment (Created state)
-torrust-tracker-deployer render --env-name <NAME> --instance-ip <IP>
+torrust-tracker-deployer render --env-name <NAME> --instance-ip <IP> --output-dir <PATH>
 
 # From configuration file (no environment creation)
-torrust-tracker-deployer render --env-file <PATH> --instance-ip <IP>
+torrust-tracker-deployer render --env-file <PATH> --instance-ip <IP> --output-dir <PATH>
+
+# Overwrite existing output directory
+torrust-tracker-deployer render --env-name <NAME> --instance-ip <IP> --output-dir <PATH> --force
 ```
 
 ## Arguments
@@ -30,15 +33,27 @@ torrust-tracker-deployer render --env-file <PATH> --instance-ip <IP>
 
 **Note**: These options are mutually exclusive - use one or the other.
 
-### Required Parameter
+### Required Parameters
 
 - `--instance-ip <IP>` (required) - Target instance IP address for deployment
+- `--output-dir <PATH>` (required) - Output directory for generated artifacts
 
 The IP address is required because:
 
 - In Created state, infrastructure doesn't exist yet (no real IP)
 - With config file, no infrastructure is ever created
 - IP is needed for Ansible inventory generation
+
+The output directory is required to:
+
+- **Prevent conflicts** with provision artifacts in `build/{env}/`
+- **Enable preview** without overwriting deployment artifacts
+- **Allow multiple renders** with different IPs or configurations
+- **Clear separation** between preview (render) and deployment (provision)
+
+### Optional Flags
+
+- `--force` - Overwrite existing output directory (without this, command fails if directory exists)
 
 ## Prerequisites
 
@@ -55,7 +70,8 @@ The IP address is required because:
 ### Common Requirements
 
 - **Templates available** - Template files in `templates/` directory
-- **Write permissions** - Ability to write to `build/` directory
+- **Write permissions** - Ability to write to output directory
+- **Output directory** - Must not exist (unless `--force` specified)
 
 ## State Transition
 
@@ -81,7 +97,7 @@ When you render artifacts:
    - **Grafana** dashboard provisioning
    - **Caddy** reverse proxy configuration (if HTTPS enabled)
    - **Backup** scripts (if backup enabled)
-5. **Writes artifacts** - Saves generated files to `build/<env-name>/`
+5. **Writes artifacts** - Saves generated files to specified output directory
 
 ## Examples
 
@@ -91,13 +107,13 @@ When you render artifacts:
 # Create environment
 torrust-tracker-deployer create environment -f envs/my-config.json
 
-# Preview artifacts with test IP
-torrust-tracker-deployer render --env-name my-env --instance-ip 192.168.1.100
+# Preview artifacts with test IP in separate directory
+torrust-tracker-deployer render --env-name my-env --instance-ip 192.168.1.100 --output-dir ./preview-my-env
 
 # Review generated artifacts
-ls -la build/my-env/
+ls -la preview-my-env/
 
-# If satisfied, provision for real
+# If satisfied, provision for real (writes to build/my-env/)
 torrust-tracker-deployer provision my-env
 ```
 
@@ -107,57 +123,57 @@ torrust-tracker-deployer provision my-env
 # Generate artifacts directly from config
 torrust-tracker-deployer render \
   --env-file envs/production.json \
-  --instance-ip 10.0.0.5
+  --instance-ip 10.0.0.5 \
+  --output-dir /tmp/production-artifacts
 
-# Artifacts in build/production/ (no environment created in data/)
+# Artifacts in /tmp/production-artifacts/ (no environment created in data/)
 ```
 
-### Multiple target IPs for different environments
+### Multiple target IPs for comparison
 
 ```bash
-# Development environment
+# Preview with different IPs
 torrust-tracker-deployer render \
-  --env-name dev \
-  --instance-ip 192.168.1.10
+  --env-name my-env \
+  --instance-ip 192.168.1.10 \
+  --output-dir ./preview-ip-10
 
-# Staging environment
 torrust-tracker-deployer render \
-  --env-name staging \
-  --instance-ip 10.0.1.20
+  --env-name my-env \
+  --instance-ip 10.0.1.20 \
+  --output-dir ./preview-ip-20
 
-# Production environment
-torrust-tracker-deployer render \
-  --env-name prod \
-  --instance-ip 203.0.113.50
+# Compare artifacts
+diff -r preview-ip-10/ preview-ip-20/
 ```
 
 ### Inspect specific artifacts
 
 ```bash
 # Render artifacts
-torrust-tracker-deployer render --env-name my-env --instance-ip 192.168.1.100
+torrust-tracker-deployer render --env-name my-env --instance-ip 192.168.1.100 --output-dir ./inspect
 
 # Check OpenTofu configuration
-cat build/my-env/tofu/main.tf
+cat inspect/tofu/main.tf
 
 # Check Ansible inventory (should show 192.168.1.100)
-cat build/my-env/ansible/inventory.yml
+cat inspect/ansible/inventory.yml
 
 # Check Docker Compose services
-cat build/my-env/docker-compose/docker-compose.yml
+cat inspect/docker-compose/docker-compose.yml
 
 # Check tracker configuration
-cat build/my-env/tracker/tracker.toml
+cat inspect/tracker/tracker.toml
 ```
 
 ## Output
 
-The render command generates artifacts in `build/<env-name>/`:
+The render command generates artifacts in the specified output directory:
 
 ### Directory Structure
 
 ```text
-build/<env-name>/
+<output-dir>/
 ├── tofu/                    # Infrastructure as code
 │   └── main.tf              # OpenTofu configuration
 ├── ansible/                 # Configuration management
@@ -195,10 +211,10 @@ build/<env-name>/
 cargo run -- create environment -f envs/staging.json
 
 # Preview what will be deployed
-cargo run -- render --env-name staging --instance-ip 203.0.113.10
+cargo run -- render --env-name staging --instance-ip 203.0.113.10 --output-dir ./preview-staging
 
-# Review artifacts in build/staging/
-# If satisfied, provision
+# Review artifacts in preview-staging/
+# If satisfied, provision (writes to build/staging/)
 cargo run -- provision staging
 ```
 
@@ -210,10 +226,11 @@ cargo run -- provision staging
 # Generate artifacts without creating environment
 cargo run -- render \
   --env-file envs/production.json \
-  --instance-ip 203.0.113.50
+  --instance-ip 203.0.113.50 \
+  --output-dir /tmp/manual-deploy
 
 # Manually deploy using generated artifacts
-cd build/production/tofu
+cd /tmp/manual-deploy/tofu
 tofu init
 tofu apply
 
@@ -229,11 +246,12 @@ ansible-playbook -i inventory.yml deploy.yml
 # Generate artifacts to validate configuration
 cargo run -- render \
   --env-file envs/test-config.json \
-  --instance-ip 192.168.1.1
+  --instance-ip 192.168.1.1 \
+  --output-dir /tmp/validate-config
 
 # Check for syntax errors in generated files
-yamllint build/test-config/docker-compose/docker-compose.yml
-tofu validate -chdir=build/test-config/tofu/
+yamllint /tmp/validate-config/docker-compose/docker-compose.yml
+tofu validate -chdir=/tmp/validate-config/tofu/
 ```
 
 **Benefit**: Catch configuration errors early.
@@ -242,28 +260,29 @@ tofu validate -chdir=build/test-config/tofu/
 
 ```bash
 # Render with SQLite
-cargo run -- render --env-file envs/sqlite.json --instance-ip 10.0.0.1
+cargo run -- render --env-file envs/sqlite.json --instance-ip 10.0.0.1 --output-dir /tmp/sqlite-artifacts
 
 # Render with MySQL
-cargo run -- render --env-file envs/mysql.json --instance-ip 10.0.0.1
+cargo run -- render --env-file envs/mysql.json --instance-ip 10.0.0.1 --output-dir /tmp/mysql-artifacts
 
 # Compare configurations
-diff -r build/sqlite/ build/mysql/
+diff -r /tmp/sqlite-artifacts/ /tmp/mysql-artifacts/
 ```
 
 **Benefit**: Understand configuration differences between setups.
 
 ## Comparison: Render vs Provision
 
-| Aspect             | render                                 | provision                     |
-| ------------------ | -------------------------------------- | ----------------------------- |
-| **Purpose**        | Generate artifacts only                | Deploy infrastructure         |
-| **Infrastructure** | None created                           | Creates VMs/servers           |
-| **State Change**   | No change                              | Created → Provisioned         |
-| **IP Address**     | User-provided (any IP)                 | From actual infrastructure    |
-| **Cost**           | Free                                   | Provider charges apply        |
-| **Time**           | Seconds                                | Minutes (depends on provider) |
-| **Use Case**       | Preview, validation, manual deployment | Actual deployment             |
+| Aspect              | render                                 | provision                     |
+| ------------------- | -------------------------------------- | ----------------------------- |
+| **Purpose**         | Generate artifacts only                | Deploy infrastructure         |
+| **Infrastructure**  | None created                           | Creates VMs/servers           |
+| **State Change**    | No change                              | Created → Provisioned         |
+| **IP Address**      | User-provided (any IP)                 | From actual infrastructure    |
+| **Output Location** | User-specified directory               | build/{env}/ directory        |
+| **Cost**            | Free                                   | Provider charges apply        |
+| **Time**            | Seconds                                | Minutes (depends on provider) |
+| **Use Case**        | Preview, validation, manual deployment | Actual deployment             |
 
 **Key Principle**: Render generates **identical** artifacts to provision (except IP addresses).
 
@@ -275,12 +294,12 @@ If you used `--env-name` mode, you can continue with normal workflow:
 
 ```bash
 # Review artifacts
-ls -la build/my-env/
+ls -la ./preview-my-env/
 
-# If satisfied, provision infrastructure
+# If satisfied, provision infrastructure (writes to build/my-env/)
 torrust-tracker-deployer provision my-env
 
-# Or continue manual deployment
+# Or continue manual deployment from preview directory
 ```
 
 ### After Rendering with `--env-file`
@@ -289,7 +308,7 @@ If you used `--env-file` mode, artifacts are ready for manual deployment:
 
 ```bash
 # Deploy infrastructure manually
-cd build/<env-name>/tofu/
+cd <output-dir>/tofu/
 tofu init && tofu apply
 
 # Configure with Ansible
@@ -325,12 +344,14 @@ torrust-tracker-deployer show <env-name>
 # Use absolute path
 torrust-tracker-deployer render \
   --env-file /absolute/path/to/config.json \
-  --instance-ip 192.168.1.100
+  --instance-ip 192.168.1.100 \
+  --output-dir /tmp/artifacts
 
 # Or relative path from working directory
 torrust-tracker-deployer render \
   --env-file ./envs/my-config.json \
-  --instance-ip 192.168.1.100
+  --instance-ip 192.168.1.100 \
+  --output-dir ./artifacts
 ```
 
 ### Invalid IP address
@@ -341,28 +362,58 @@ torrust-tracker-deployer render \
 
 ```bash
 # Valid IPv4
-torrust-tracker-deployer render --env-name test --instance-ip 192.168.1.100
+torrust-tracker-deployer render --env-name test --instance-ip 192.168.1.100 --output-dir ./test-artifacts
 
 # Valid IPv6
-torrust-tracker-deployer render --env-name test --instance-ip 2001:db8::1
+torrust-tracker-deployer render --env-name test --instance-ip 2001:db8::1 --output-dir ./test-artifacts-v6
 
 # Invalid (will fail)
-torrust-tracker-deployer render --env-name test --instance-ip invalid-ip
+torrust-tracker-deployer render --env-name test --instance-ip invalid-ip --output-dir ./test
 ```
 
 ### Environment already provisioned
 
 **Problem**: Environment is in Provisioned state (not Created)
 
-**Behavior**: Command provides informational message about existing artifacts
+**Behavior**: Command fails with an error explaining the state constraint
 
 ```text
-ℹ️  Environment 'my-env' is already provisioned.
-   Artifacts are available at: build/my-env/
-   IP Address: 10.140.190.42
+❌ Environment 'my-env' is already in 'Provisioned' state.
+   The 'render' command only works for environments in 'Created' state.
 ```
 
-**Solution**: This is not an error - artifacts already exist from provisioning.
+**Solution**:
+
+- For provisioned environments, artifacts were generated during provision and are in `build/my-env/`
+- To preview with different configuration, use `--env-file` mode instead:
+
+  ```bash
+  torrust-tracker-deployer render --env-file envs/new-config.json --instance-ip <ip> --output-dir ./preview
+  ```
+
+### Output directory already exists
+
+**Problem**: The specified output directory already exists
+
+**Behavior**: Command fails to prevent accidental overwrites
+
+```text
+❌ Output directory already exists: ./preview-artifacts
+```
+
+**Solution**: Choose one:
+
+```bash
+# Option 1: Use different directory
+torrust-tracker-deployer render ... --output-dir ./preview-artifacts-2
+
+# Option 2: Overwrite with --force (use with caution)
+torrust-tracker-deployer render ... --output-dir ./preview-artifacts --force
+
+# Option 3: Remove existing directory
+rm -rf ./preview-artifacts
+torrust-tracker-deployer render ... --output-dir ./preview-artifacts
+```
 
 ## Related Commands
 

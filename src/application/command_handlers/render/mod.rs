@@ -18,12 +18,14 @@
 //! - **Read-Only Operations**: Does not modify environment state or execute deployments
 //! - **Dual Input Modes**: Supports both existing environments and direct config files
 //! - **Explicit Errors**: All errors implement `.help()` with actionable guidance
+//! - **Output Separation**: Requires explicit output directory to prevent conflicts with provision artifacts
 //!
 //! ## State Constraints
 //!
 //! - **Created State Only**: Command only works for environments in "Created" state
-//! - **IP Always Required**: User must provide target IP via --ip flag
-//! - **Provisioned Environments**: Shows informational message about existing artifacts
+//! - **IP Always Required**: User must provide target IP via --instance-ip flag
+//! - **Output Directory Required**: User must provide output directory via --output-dir flag
+//! - **Force Flag**: Use --force to overwrite existing output directory
 //!
 //! ## Dual Input Modes
 //!

@@ -92,6 +92,8 @@ impl RenderCommandHandler {
     ///
     /// * `input_mode` - Source of configuration (env-name or env-file)
     /// * `target_ip` - Target instance IP address (always required)
+    /// * `output_dir` - Output directory for generated artifacts
+    /// * `force` - Whether to overwrite existing output directory
     /// * `working_dir` - Working directory for resolving relative paths
     ///
     /// # Returns
@@ -102,9 +104,9 @@ impl RenderCommandHandler {
     ///
     /// Returns an error if:
     /// * Environment not found (env-name mode)
-    /// * Environment already provisioned (returns informational error)
     /// * Config file not found or invalid (env-file mode)
     /// * IP address parsing fails
+    /// * Output directory exists and force is false
     /// * Template rendering fails
     #[instrument(
         name = "render_command",
@@ -112,13 +114,16 @@ impl RenderCommandHandler {
         fields(
             command_type = "render",
             input_mode = ?input_mode,
-            target_ip = %target_ip
+            target_ip = %target_ip,
+            output_dir = %output_dir.display()
         )
     )]
     pub async fn execute(
         &self,
         input_mode: RenderInputMode,
         target_ip: &str,
+        output_dir: &Path,
+        force: bool,
         working_dir: &Path,
     ) -> Result<RenderResult, RenderCommandHandlerError> {
         // Parse and validate target IP
@@ -127,11 +132,17 @@ impl RenderCommandHandler {
         // Load configuration based on input mode
         match input_mode {
             RenderInputMode::EnvironmentName(ref env_name) => {
-                self.render_from_environment(env_name, ip_addr, working_dir)
+                // Validate output directory after environment check (fail-fast: file check before directory creation)
+                Self::validate_output_directory(output_dir, force)?;
+
+                self.render_from_environment(env_name, ip_addr, output_dir, working_dir)
                     .await
             }
             RenderInputMode::ConfigFile(ref config_path) => {
-                self.render_from_config_file(config_path, ip_addr, working_dir)
+                // Validate output directory after config file check (fail-fast: file check before directory creation)
+                Self::validate_output_directory(output_dir, force)?;
+
+                self.render_from_config_file(config_path, ip_addr, output_dir, working_dir)
                     .await
             }
         }
@@ -139,27 +150,29 @@ impl RenderCommandHandler {
 
     /// Render artifacts from existing environment
     ///
-    /// This mode loads an existing environment from the repository and validates
-    /// that it's in the Created state (not yet provisioned).
+    /// This mode loads an existing environment from the repository.
     ///
     /// # Arguments
     ///
     /// * `env_name` - Name of the environment to render from
     /// * `ip_addr` - Target instance IP address
+    /// * `output_dir` - Output directory for generated artifacts
     /// * `working_dir` - Working directory for path resolution
     ///
     /// # Errors
     ///
-    /// Returns error if environment not found, wrong state, or rendering fails
+    /// Returns error if environment not found or rendering fails
     async fn render_from_environment(
         &self,
         env_name: &EnvironmentName,
         ip_addr: IpAddr,
-        working_dir: &Path,
+        output_dir: &Path,
+        _working_dir: &Path,
     ) -> Result<RenderResult, RenderCommandHandlerError> {
         info!(
             environment = %env_name,
             target_ip = %ip_addr,
+            output_dir = %output_dir.display(),
             "Rendering artifacts from existing environment"
         );
 
@@ -171,26 +184,23 @@ impl RenderCommandHandler {
         })?;
 
         // Try to convert to Created state
-        // If it fails, environment is in a different state (already provisioned)
+        // Render command works for Created state (before provision)
         let current_state = environment.state_name().to_string();
         let created_env: Environment<Created> = environment.try_into_created().map_err(|_| {
-            let artifacts_path = working_dir.join("build").join(env_name.as_str());
             RenderCommandHandlerError::EnvironmentAlreadyProvisioned {
                 name: env_name.clone(),
                 current_state,
-                artifacts_path,
             }
         })?;
 
         // Render all templates
-        self.render_all_templates(&created_env, ip_addr).await?;
-
-        let output_dir = working_dir.join("build").join(env_name.as_str());
+        self.render_all_templates(&created_env, ip_addr, output_dir)
+            .await?;
 
         Ok(RenderResult {
             environment_name: created_env.name().to_string(),
             target_ip: ip_addr,
-            output_dir,
+            output_dir: output_dir.to_path_buf(),
             config_source: format!("Environment: {}", created_env.name()),
         })
     }
@@ -204,6 +214,7 @@ impl RenderCommandHandler {
     ///
     /// * `config_path` - Path to the configuration file
     /// * `ip_addr` - Target instance IP address
+    /// * `output_dir` - Output directory for generated artifacts
     /// * `working_dir` - Working directory for path resolution
     ///
     /// # Errors
@@ -213,11 +224,13 @@ impl RenderCommandHandler {
         &self,
         config_path: &Path,
         ip_addr: IpAddr,
-        working_dir: &Path,
+        output_dir: &Path,
+        _working_dir: &Path,
     ) -> Result<RenderResult, RenderCommandHandlerError> {
         info!(
             config_file = %config_path.display(),
             target_ip = %ip_addr,
+            output_dir = %output_dir.display(),
             "Rendering artifacts from configuration file"
         );
 
@@ -256,19 +269,18 @@ impl RenderCommandHandler {
         );
 
         // Render all templates
-        self.render_all_templates(&created_env, ip_addr).await?;
-
-        let output_dir = working_dir.join("build").join(env_name.as_str());
+        self.render_all_templates(&created_env, ip_addr, output_dir)
+            .await?;
 
         Ok(RenderResult {
             environment_name: env_name.to_string(),
             target_ip: ip_addr,
-            output_dir,
+            output_dir: output_dir.to_path_buf(),
             config_source: format!("Config file: {}", config_path.display()),
         })
     }
 
-    /// Render all deployment templates to the build directory
+    /// Render all deployment templates to the specified output directory
     ///
     /// This method orchestrates the rendering of all templates required for
     /// deployment: `OpenTofu`, Ansible, Docker Compose, Tracker, Prometheus,
@@ -278,6 +290,7 @@ impl RenderCommandHandler {
     ///
     /// * `environment` - The environment in Created state
     /// * `target_ip` - Target instance IP address
+    /// * `output_dir` - Output directory for generated artifacts
     ///
     /// # Errors
     ///
@@ -286,16 +299,18 @@ impl RenderCommandHandler {
         &self,
         environment: &Environment<Created>,
         target_ip: IpAddr,
+        output_dir: &Path,
     ) -> Result<(), RenderCommandHandlerError> {
         info!(
             environment = %environment.name(),
             target_ip = %target_ip,
+            output_dir = %output_dir.display(),
             "Rendering all deployment templates"
         );
 
         let clock: Arc<dyn Clock> = Arc::new(SystemClock);
         let templates_dir = environment.templates_dir();
-        let build_dir = environment.build_dir();
+        let build_dir = output_dir.to_path_buf();
         let user_inputs = &environment.context().user_inputs;
 
         // 1. Render OpenTofu templates (infrastructure provisioning)
@@ -418,6 +433,51 @@ impl RenderCommandHandler {
                 value: ip_str.to_string(),
             })
     }
+
+    /// Validate output directory
+    ///
+    /// Checks if output directory exists and handles --force flag behavior.
+    ///
+    /// # Arguments
+    ///
+    /// * `output_dir` - Path to output directory
+    /// * `force` - Whether to allow overwriting existing directory
+    ///
+    /// # Errors
+    ///
+    /// Returns error if:
+    /// - Directory exists and force is false
+    /// - Directory creation fails
+    fn validate_output_directory(
+        output_dir: &Path,
+        force: bool,
+    ) -> Result<(), RenderCommandHandlerError> {
+        if output_dir.exists() {
+            if !force {
+                return Err(RenderCommandHandlerError::OutputDirectoryExists {
+                    path: output_dir.to_path_buf(),
+                });
+            }
+            // With force flag, we allow overwriting
+            info!(
+                output_dir = %output_dir.display(),
+                "Output directory exists, overwriting with --force"
+            );
+        } else {
+            // Create output directory if it doesn't exist
+            fs::create_dir_all(output_dir).map_err(|e| {
+                RenderCommandHandlerError::OutputDirectoryCreationFailed {
+                    path: output_dir.to_path_buf(),
+                    reason: e.to_string(),
+                }
+            })?;
+            info!(
+                output_dir = %output_dir.display(),
+                "Created output directory"
+            );
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -471,11 +531,17 @@ mod tests {
         let handler = RenderCommandHandler::new(repository);
         let working_dir = PathBuf::from(".");
 
+        // Use a non-existent path for output directory (don't create it)
+        let temp_dir = tempfile::tempdir().unwrap();
+        let output_dir = temp_dir.path().join("nonexistent-output");
+
         let env_name = EnvironmentName::new("nonexistent").unwrap();
         let result = handler
             .execute(
                 RenderInputMode::EnvironmentName(env_name.clone()),
                 "10.0.0.1",
+                output_dir.as_path(),
+                false,
                 &working_dir,
             )
             .await;
@@ -493,11 +559,17 @@ mod tests {
         let handler = RenderCommandHandler::new(repository);
         let working_dir = PathBuf::from(".");
 
+        // Use a non-existent path for output directory (don't create it)
+        let temp_dir = tempfile::tempdir().unwrap();
+        let output_dir = temp_dir.path().join("test-output");
+
         let config_path = PathBuf::from("/tmp/nonexistent-config.json");
         let result = handler
             .execute(
                 RenderInputMode::ConfigFile(config_path.clone()),
                 "10.0.0.1",
+                output_dir.as_path(),
+                false,
                 &working_dir,
             )
             .await;
@@ -516,6 +588,10 @@ mod tests {
         let handler = RenderCommandHandler::new(repository);
         let working_dir = PathBuf::from(".");
 
+        // Use a non-existent path for output directory (don't create it)
+        let temp_dir = tempfile::tempdir().unwrap();
+        let output_dir = temp_dir.path().join("test-output");
+
         let env_name = EnvironmentName::new("any-env").unwrap();
 
         // Even if environment exists, invalid IP should fail first
@@ -523,6 +599,8 @@ mod tests {
             .execute(
                 RenderInputMode::EnvironmentName(env_name),
                 "invalid-ip",
+                output_dir.as_path(),
+                false,
                 &working_dir,
             )
             .await;

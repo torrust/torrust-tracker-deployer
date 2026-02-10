@@ -97,6 +97,7 @@ impl EnvironmentStateAssertions {
     /// # Panics
     ///
     /// Panics if the build directory doesn't exist.
+    #[allow(dead_code)]
     pub fn assert_build_directory_exists(&self, env_name: &str) {
         let build_dir = self.workspace_path.join("build").join(env_name);
         assert!(
@@ -114,6 +115,7 @@ impl EnvironmentStateAssertions {
     /// # Panics
     ///
     /// Panics if required artifacts are missing.
+    #[allow(dead_code)]
     pub fn assert_build_artifacts_exist(&self, env_name: &str) {
         let build_dir = self.workspace_path.join("build").join(env_name);
 

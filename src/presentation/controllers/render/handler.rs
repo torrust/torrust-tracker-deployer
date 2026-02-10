@@ -99,6 +99,8 @@ impl RenderCommandController {
     /// * `env_name` - Optional environment name (mutually exclusive with `env_file`)
     /// * `env_file` - Optional config file path (mutually exclusive with `env_name`)
     /// * `ip` - Target instance IP address (required)
+    /// * `output_dir` - Output directory for generated artifacts (required)
+    /// * `force` - Whether to overwrite existing output directory
     ///
     /// # Returns
     ///
@@ -110,14 +112,17 @@ impl RenderCommandController {
     /// Returns an error if:
     /// - Neither `env_name` nor `env_file` is provided
     /// - IP address is invalid
+    /// - Output directory exists and force is false
     /// - Config file doesn't exist
-    /// - Environment not found or wrong state
+    /// - Environment not found
     /// - Template rendering fails
     pub async fn execute(
         &mut self,
         env_name: Option<&str>,
         env_file: Option<&Path>,
         ip: &str,
+        output_dir: &Path,
+        force: bool,
     ) -> Result<(), RenderCommandError> {
         // Step 1: Validate input
         self.progress
@@ -180,7 +185,7 @@ impl RenderCommandController {
         // Call application handler
         let result = self
             .handler
-            .execute(input_mode, ip, &working_dir)
+            .execute(input_mode, ip, output_dir, force, &working_dir)
             .await
             .map_err(RenderCommandError::from)?;
 

@@ -18,15 +18,13 @@ pub enum RenderCommandHandlerError {
 
     /// Environment is not in Created state (already provisioned)
     ///
-    /// This is not a hard error - artifacts already exist in build directory
+    /// Render command only works for Created environments (before provision)
     #[error("Environment '{name}' is already in '{current_state}' state")]
     EnvironmentAlreadyProvisioned {
         /// The name of the environment
         name: EnvironmentName,
         /// The actual state of the environment
         current_state: String,
-        /// Path to existing artifacts
-        artifacts_path: PathBuf,
     },
 
     /// Configuration file not found (env-file mode)
@@ -60,6 +58,22 @@ pub enum RenderCommandHandlerError {
         value: String,
     },
 
+    /// Output directory already exists and force flag not provided
+    #[error("Output directory already exists: {path}")]
+    OutputDirectoryExists {
+        /// Path to the existing output directory
+        path: PathBuf,
+    },
+
+    /// Failed to create output directory
+    #[error("Failed to create output directory: {path}")]
+    OutputDirectoryCreationFailed {
+        /// Path to the output directory
+        path: PathBuf,
+        /// Reason for failure
+        reason: String,
+    },
+
     /// Failed to render templates
     #[error("Template rendering failed: {reason}")]
     TemplateRenderingFailed {
@@ -85,11 +99,9 @@ impl Traceable for RenderCommandHandlerError {
             Self::EnvironmentAlreadyProvisioned {
                 name,
                 current_state,
-                artifacts_path,
             } => {
                 format!(
-                    "RenderCommandHandlerError: Environment '{name}' is in '{current_state}' state - artifacts at {}",
-                    artifacts_path.display()
+                    "RenderCommandHandlerError: Environment '{name}' is in '{current_state}' state"
                 )
             }
             Self::ConfigFileNotFound { path } => {
@@ -109,6 +121,18 @@ impl Traceable for RenderCommandHandlerError {
             }
             Self::InvalidIpAddress { value } => {
                 format!("RenderCommandHandlerError: Invalid IP address: {value}")
+            }
+            Self::OutputDirectoryExists { path } => {
+                format!(
+                    "RenderCommandHandlerError: Output directory already exists: {}",
+                    path.display()
+                )
+            }
+            Self::OutputDirectoryCreationFailed { path, reason } => {
+                format!(
+                    "RenderCommandHandlerError: Failed to create output directory {}: {reason}",
+                    path.display()
+                )
             }
             Self::TemplateRenderingFailed { reason } => {
                 format!("RenderCommandHandlerError: Template rendering failed - {reason}")
@@ -134,6 +158,8 @@ impl Traceable for RenderCommandHandlerError {
             | Self::ConfigParsingFailed { .. }
             | Self::DomainValidationFailed { .. }
             | Self::InvalidIpAddress { .. }
+            | Self::OutputDirectoryExists { .. }
+            | Self::OutputDirectoryCreationFailed { .. }
             | Self::NoInputMode => ErrorKind::Configuration,
             Self::TemplateRenderingFailed { .. } => ErrorKind::TemplateRendering,
             Self::RepositoryLoad(_) => ErrorKind::StatePersistence,
@@ -147,6 +173,7 @@ impl RenderCommandHandlerError {
     /// Each error variant includes actionable guidance on how to resolve
     /// the issue or what the user should do next.
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn help(&self) -> String {
         match self {
             Self::EnvironmentNotFound { name } => {
@@ -161,20 +188,17 @@ impl RenderCommandHandlerError {
             Self::EnvironmentAlreadyProvisioned {
                 name,
                 current_state,
-                artifacts_path,
             } => {
                 format!(
                     "Environment '{name}' is in '{current_state}' state.\n\n\
-                     Deployment artifacts have already been generated during provisioning.\n\
-                     You can find them at:\n  {}\n\n\
-                     The 'render' command is only for environments in 'Created' state\n\
+                     The 'render' command only works for environments in 'Created' state\n\
                      (before provisioning infrastructure).\n\n\
-                     If you need to regenerate artifacts, you can:\n\
-                     1. Destroy the environment: torrust-tracker-deployer destroy {name}\n\
-                     2. Purge local data: torrust-tracker-deployer purge {name}\n\
-                     3. Create a new environment: torrust-tracker-deployer create environment --env-file <path>\n\
-                     4. Generate artifacts: torrust-tracker-deployer render --env-name {name} --instance-ip <ip>",
-                    artifacts_path.display()
+                     For already provisioned environments, artifacts were generated during\n\
+                     the provision command and are available at: build/{name}/\n\n\
+                     If you need to regenerate artifacts with a different configuration:\n\
+                     1. Create a new configuration file with your changes\n\
+                     2. Use render in config-file mode:\n  \
+                     torrust-tracker-deployer render --env-file <path> --instance-ip <ip> --output-dir <dir>"
                 )
             }
             Self::ConfigFileNotFound { path } => {
@@ -212,6 +236,37 @@ impl RenderCommandHandlerError {
                      Examples:\n  \
                      IPv4: 10.0.0.1, 192.168.1.100\n  \
                      IPv6: 2001:db8::1, ::1"
+                )
+            }
+            Self::OutputDirectoryExists { path } => {
+                format!(
+                    "Output directory already exists: {}\n\n\
+                     The output directory must not exist unless --force flag is provided.\n\n\
+                     Options:\n\
+                     1. Use a different output directory:\n  \
+                     torrust-tracker-deployer render ... --output-dir /path/to/new/directory\n\n\
+                     2. Overwrite the existing directory (use with caution):\n  \
+                     torrust-tracker-deployer render ... --output-dir {} --force\n\n\
+                     3. Remove the existing directory manually:\n  \
+                     rm -rf {}",
+                    path.display(),
+                    path.display(),
+                    path.display()
+                )
+            }
+            Self::OutputDirectoryCreationFailed { path, reason } => {
+                format!(
+                    "Failed to create output directory: {}\n\n\
+                     Error: {reason}\n\n\
+                     This may be due to:\n\
+                     - Insufficient permissions\
+                     - Invalid path\n\
+                     - Filesystem errors\n\n\
+                     Check that:\n\
+                     - The parent directory exists and is writable\n\
+                     - The path is valid for your operating system\n\
+                     - You have the necessary permissions",
+                    path.display()
                 )
             }
             Self::TemplateRenderingFailed { reason } => {
@@ -264,13 +319,19 @@ mod tests {
             RenderCommandHandlerError::EnvironmentAlreadyProvisioned {
                 name: EnvironmentName::new("test").unwrap(),
                 current_state: "Provisioned".to_string(),
-                artifacts_path: PathBuf::from("build/test"),
             },
             RenderCommandHandlerError::ConfigFileNotFound {
                 path: PathBuf::from("test.json"),
             },
             RenderCommandHandlerError::InvalidIpAddress {
                 value: "not-an-ip".to_string(),
+            },
+            RenderCommandHandlerError::OutputDirectoryExists {
+                path: PathBuf::from("/tmp/output"),
+            },
+            RenderCommandHandlerError::OutputDirectoryCreationFailed {
+                path: PathBuf::from("/tmp/output"),
+                reason: "Permission denied".to_string(),
             },
             RenderCommandHandlerError::NoInputMode,
         ];
