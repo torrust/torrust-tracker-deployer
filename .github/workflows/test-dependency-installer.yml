@@ -1,0 +1,86 @@
+---
+name: Test Dependency Installer
+
+# This workflow tests the dependency-installer package in isolation to ensure
+# it correctly detects and installs all required development dependencies.
+# Testing the installer directly provides faster feedback than waiting for
+# failures in other workflows that depend on it.
+#
+# References:
+# - Package: packages/dependency-installer/
+
+on:
+  push:
+    paths:
+      - .github/workflows/test-dependency-installer.yml
+      - packages/dependency-installer/**
+      - Cargo.toml
+      - Cargo.lock
+  pull_request:
+    paths:
+      - .github/workflows/test-dependency-installer.yml
+      - packages/dependency-installer/**
+      - Cargo.toml
+      - Cargo.lock
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  test-dependency-installer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      # Minimal permissions needed to checkout and test
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build dependency-installer binary
+        run: |
+          echo "🔨 Building dependency-installer binary..."
+          cargo build --release -p torrust-dependency-installer --bin dependency-installer
+          echo "✅ Binary built successfully"
+
+      - name: Install all development dependencies
+        run: |
+          echo "📦 Installing development dependencies..."
+          # Use the binary we just built to install all dependencies
+          # Note: The binary handles sudo internally for dependencies that need it
+          target/release/dependency-installer install
+          echo "✅ Installation completed"
+        env:
+          # Ensure non-interactive installation
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: Verify installations with check command
+        run: |
+          echo "🔍 Verifying all dependencies are installed..."
+          # Verify all tools are installed correctly
+          target/release/dependency-installer check
+          echo "✅ All dependencies verified"
+
+      - name: List all dependencies with status
+        run: |
+          echo "📋 Listing all dependencies..."
+          target/release/dependency-installer list
+          echo "✅ Dependency list displayed"
+
+      - name: Display tool versions
+        run: |
+          echo "=== Installed Tool Versions ==="
+          echo "OpenTofu: $(tofu version | head -n1)"
+          echo "Ansible: $(ansible --version | head -n1)"
+          echo "LXD: $(lxc version)"
+          echo "cargo-machete: $(cargo machete --version)"
+          echo "Rust: $(rustc --version)"
+          echo "Cargo: $(cargo --version)"
