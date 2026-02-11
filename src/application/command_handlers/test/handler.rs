@@ -202,7 +202,7 @@ impl TestCommandHandler {
     /// - Local `.local` domains use `/etc/hosts` which may not be configured
     /// - Users may intentionally test without DNS
     fn check_dns_resolution(any_env: &AnyEnvironmentState, instance_ip: IpAddr) -> Vec<DnsWarning> {
-        let domains_to_check = Self::collect_tls_domains(any_env);
+        let domains_to_check = any_env.collect_tls_domains();
 
         if domains_to_check.is_empty() {
             return Vec::new();
@@ -214,45 +214,6 @@ impl TestCommandHandler {
             .iter()
             .filter_map(|domain| Self::check_single_domain(resolver, domain, instance_ip))
             .collect()
-    }
-
-    /// Collect all TLS-enabled domains from the environment configuration
-    ///
-    /// Gathers domains from all services that have TLS enabled:
-    /// HTTP API, HTTP trackers, health check API, and Grafana.
-    fn collect_tls_domains(any_env: &AnyEnvironmentState) -> Vec<DomainName> {
-        let tracker_config = any_env.tracker_config();
-        let mut domains = Vec::new();
-
-        // HTTP API domain
-        if let Some(domain) = tracker_config.http_api().tls_domain() {
-            domains.push(domain.clone());
-        }
-
-        // HTTP tracker domains
-        for http_tracker in tracker_config.http_trackers() {
-            if let Some(domain) = http_tracker.tls_domain() {
-                domains.push(domain.clone());
-            }
-        }
-
-        // Health check API domain (returns &str, needs conversion)
-        if let Some(domain_str) = tracker_config.health_check_api().tls_domain() {
-            if let Ok(domain_name) = DomainName::new(domain_str) {
-                domains.push(domain_name);
-            }
-        }
-
-        // Grafana domain (returns &str, needs conversion)
-        if let Some(grafana_config) = any_env.grafana_config() {
-            if let Some(domain_str) = grafana_config.tls_domain() {
-                if let Ok(domain_name) = DomainName::new(domain_str) {
-                    domains.push(domain_name);
-                }
-            }
-        }
-
-        domains
     }
 
     /// Check a single domain and return a warning if resolution fails or mismatches
