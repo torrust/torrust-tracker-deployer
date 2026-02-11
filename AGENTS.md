@@ -219,8 +219,10 @@ Available skills:
 | --------------------------- | -------------------------------------------------- |
 | Adding commands             | `.github/skills/add-new-command/skill.md`          |
 | Committing changes          | `.github/skills/commit-changes/skill.md`           |
+| Completing refactor plans   | `.github/skills/complete-refactor-plan/skill.md`   |
 | Creating issues             | `.github/skills/create-issue/skill.md`             |
 | Creating new skills         | `.github/skills/add-new-skill/skill.md`            |
+| Creating refactor plans     | `.github/skills/create-refactor-plan/skill.md`     |
 | Rendering tracker artifacts | `.github/skills/render-tracker-artifacts/skill.md` |
 | Running linters             | `.github/skills/run-linters/skill.md`              |
 
