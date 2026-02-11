@@ -238,7 +238,8 @@ Add features and documentation that make the use of AI agents to operate the dep
   - Covers: provider selection, database type, tracker protocols, HTTPS, monitoring, etc.
   - Benefits: few-shot learning for agents, reduced hallucination, training/RAG dataset
   - Can integrate with `create-environment-config` skill from task 11.1
-  - See draft: [`docs/issues/drafts/provide-config-examples-and-questionnaire-for-ai-agents.md`](./issues/drafts/provide-config-examples-and-questionnaire-for-ai-agents.md)
+  - See specification: [Issue #339](https://github.com/torrust/torrust-tracker-deployer/issues/339), [`docs/issues/339-provide-config-examples-and-questionnaire-for-ai-agents.md`](./issues/339-provide-config-examples-and-questionnaire-for-ai-agents.md)
+  - See spec: [`docs/issues/provide-config-examples-and-questionnaire-for-ai-agents.md`](./issues/provide-config-examples-and-questionnaire-for-ai-agents.md)
 
 - [ ] **11.4** Add dry-run mode for all commands
   - Allow AI agents (and users) to preview what will happen before executing operations
