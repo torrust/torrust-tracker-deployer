@@ -6,4 +6,5 @@
 
 pub mod list;
 pub mod provision;
+pub mod shared;
 pub mod show;
