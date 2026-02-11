@@ -53,7 +53,7 @@ use crate::domain::environment::repository::{EnvironmentRepository, TypedEnviron
 use crate::domain::environment::state::AnyEnvironmentState;
 use crate::domain::tracker::config::{HttpApiConfig, HttpTrackerConfig};
 use crate::domain::EnvironmentName;
-use crate::infrastructure::dns::DnsResolver;
+use crate::infrastructure::dns::{DnsResolutionError, DnsResolver};
 use crate::infrastructure::external_validators::{RunningServicesValidator, ServiceEndpoint};
 use crate::infrastructure::remote_actions::RemoteAction;
 use crate::shared::domain_name::DomainName;
@@ -202,75 +202,80 @@ impl TestCommandHandler {
     /// - Local `.local` domains use `/etc/hosts` which may not be configured
     /// - Users may intentionally test without DNS
     fn check_dns_resolution(any_env: &AnyEnvironmentState, instance_ip: IpAddr) -> Vec<DnsWarning> {
-        let tracker_config = any_env.tracker_config();
-        let mut domains_to_check: Vec<DomainName> = Vec::new();
-
-        // API domain (if TLS is enabled)
-        if let Some(domain) = tracker_config.http_api().tls_domain() {
-            domains_to_check.push(domain.clone());
-        }
-
-        // HTTP tracker domains (if TLS is enabled)
-        for http_tracker in tracker_config.http_trackers() {
-            if let Some(domain) = http_tracker.tls_domain() {
-                domains_to_check.push(domain.clone());
-            }
-        }
-
-        // Health check API domain (if TLS is enabled)
-        if let Some(domain_str) = tracker_config.health_check_api().tls_domain() {
-            if let Ok(domain_name) = DomainName::new(domain_str) {
-                domains_to_check.push(domain_name);
-            }
-        }
-
-        // Grafana domain (if TLS is enabled)
-        if let Some(grafana_config) = any_env.grafana_config() {
-            if let Some(domain_str) = grafana_config.tls_domain() {
-                if let Ok(domain_name) = DomainName::new(domain_str) {
-                    domains_to_check.push(domain_name);
-                }
-            }
-        }
+        let domains_to_check = Self::collect_tls_domains(any_env);
 
         if domains_to_check.is_empty() {
             return Vec::new();
         }
 
         let resolver = DnsResolver::new();
-        let mut warnings = Vec::new();
 
-        for domain in &domains_to_check {
-            match resolver.resolve_and_verify(domain, instance_ip) {
-                Ok(()) => {
-                    // Domain resolves correctly — no warning needed
-                }
-                Err(crate::infrastructure::dns::DnsResolutionError::ResolutionFailed {
-                    source,
-                    ..
-                }) => {
-                    warnings.push(DnsWarning {
-                        domain: domain.clone(),
-                        expected_ip: instance_ip,
-                        issue: DnsIssue::ResolutionFailed(source.to_string()),
-                    });
-                }
-                Err(crate::infrastructure::dns::DnsResolutionError::IpMismatch {
-                    resolved_ip,
-                    ..
-                }) => {
-                    warnings.push(DnsWarning {
-                        domain: domain.clone(),
-                        expected_ip: instance_ip,
-                        issue: DnsIssue::IpMismatch {
-                            resolved_ips: vec![resolved_ip],
-                        },
-                    });
+        domains_to_check
+            .iter()
+            .filter_map(|domain| Self::check_single_domain(resolver, domain, instance_ip))
+            .collect()
+    }
+
+    /// Collect all TLS-enabled domains from the environment configuration
+    ///
+    /// Gathers domains from all services that have TLS enabled:
+    /// HTTP API, HTTP trackers, health check API, and Grafana.
+    fn collect_tls_domains(any_env: &AnyEnvironmentState) -> Vec<DomainName> {
+        let tracker_config = any_env.tracker_config();
+        let mut domains = Vec::new();
+
+        // HTTP API domain
+        if let Some(domain) = tracker_config.http_api().tls_domain() {
+            domains.push(domain.clone());
+        }
+
+        // HTTP tracker domains
+        for http_tracker in tracker_config.http_trackers() {
+            if let Some(domain) = http_tracker.tls_domain() {
+                domains.push(domain.clone());
+            }
+        }
+
+        // Health check API domain (returns &str, needs conversion)
+        if let Some(domain_str) = tracker_config.health_check_api().tls_domain() {
+            if let Ok(domain_name) = DomainName::new(domain_str) {
+                domains.push(domain_name);
+            }
+        }
+
+        // Grafana domain (returns &str, needs conversion)
+        if let Some(grafana_config) = any_env.grafana_config() {
+            if let Some(domain_str) = grafana_config.tls_domain() {
+                if let Ok(domain_name) = DomainName::new(domain_str) {
+                    domains.push(domain_name);
                 }
             }
         }
 
-        warnings
+        domains
+    }
+
+    /// Check a single domain and return a warning if resolution fails or mismatches
+    fn check_single_domain(
+        resolver: DnsResolver,
+        domain: &DomainName,
+        expected_ip: IpAddr,
+    ) -> Option<DnsWarning> {
+        match resolver.resolve_and_verify(domain, expected_ip) {
+            Ok(()) => None,
+            Err(DnsResolutionError::ResolutionFailed { source, .. }) => Some(DnsWarning {
+                domain: domain.clone(),
+                expected_ip,
+                issue: DnsIssue::ResolutionFailed(source.to_string()),
+            }),
+            Err(DnsResolutionError::IpMismatch { resolved_ip, .. }) => Some(DnsWarning {
+                domain: domain.clone(),
+                expected_ip,
+                issue: DnsIssue::IpMismatch {
+                    resolved_ips: vec![resolved_ip],
+                },
+            }),
+        }
     }
 
     /// Build a `ServiceEndpoint` from the HTTP API configuration
