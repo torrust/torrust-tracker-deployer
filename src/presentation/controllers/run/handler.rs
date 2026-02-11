@@ -9,8 +9,13 @@ use std::sync::Arc;
 use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::run::RunCommandHandler;
+use crate::application::command_handlers::show::info::{GrafanaInfo, ServiceInfo};
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::state::AnyEnvironmentState;
+use crate::presentation::views::commands::shared::service_urls::{
+    CompactServiceUrlsView, DnsHintView,
+};
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -170,13 +175,100 @@ impl RunCommandController {
         Ok(())
     }
 
-    /// Complete the workflow with success message
+    /// Complete the workflow with success message and service URLs
     ///
-    /// Shows final success message to the user with workflow summary.
+    /// Loads environment info and displays:
+    /// 1. Service URLs (excluding localhost-only services)
+    /// 2. DNS hint for HTTPS/TLS services
+    /// 3. Tip to use `show` command for full details
+    ///
+    /// Follows the same pattern as the show command for loading environment
+    /// and extracting service information.
     #[allow(clippy::result_large_err)]
     fn complete_workflow(&mut self, name: &str) -> Result<(), RunSubcommandError> {
+        // Load environment to get service information
+        let env_name = EnvironmentName::new(name.to_string()).map_err(|source| {
+            RunSubcommandError::InvalidEnvironmentName {
+                name: name.to_string(),
+                source,
+            }
+        })?;
+
+        let any_env = self.load_environment(&env_name)?;
+
+        // Display success message
         self.progress
             .complete(&format!("Run command completed for '{name}'"))?;
+
+        // Display service URLs and hints
+        self.display_service_urls(&any_env)?;
+
+        Ok(())
+    }
+
+    /// Load environment from repository
+    ///
+    /// Reuses the same loading logic as the show command.
+    #[allow(clippy::result_large_err)]
+    fn load_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<AnyEnvironmentState, RunSubcommandError> {
+        if !self.repository.exists(env_name)? {
+            return Err(RunSubcommandError::EnvironmentNotAccessible {
+                name: env_name.to_string(),
+                data_dir: "data".to_string(),
+            });
+        }
+
+        self.repository.load(env_name)?.ok_or_else(|| {
+            RunSubcommandError::EnvironmentNotAccessible {
+                name: env_name.to_string(),
+                data_dir: "data".to_string(),
+            }
+        })
+    }
+
+    /// Display service URLs and DNS hints
+    ///
+    /// Renders service URLs using the shared views:
+    /// - `CompactServiceUrlsView` - Only shows publicly accessible services
+    /// - `DnsHintView` - Shows DNS configuration hint for HTTPS services
+    ///
+    /// Also displays a tip about using the `show` command for full details.
+    #[allow(clippy::result_large_err)]
+    fn display_service_urls(
+        &mut self,
+        any_env: &AnyEnvironmentState,
+    ) -> Result<(), RunSubcommandError> {
+        if let Some(instance_ip) = any_env.instance_ip() {
+            let tracker_config = any_env.tracker_config();
+            let grafana_config = any_env.grafana_config();
+
+            let services =
+                ServiceInfo::from_tracker_config(tracker_config, instance_ip, grafana_config);
+
+            let grafana =
+                grafana_config.map(|config| GrafanaInfo::from_config(config, instance_ip));
+
+            // Render service URLs (only public services)
+            let service_urls_output = CompactServiceUrlsView::render(&services, grafana.as_ref());
+            if !service_urls_output.is_empty() {
+                self.progress.result(&format!("\n{service_urls_output}"))?;
+            }
+
+            // Show DNS hint if HTTPS services are configured
+            if let Some(dns_hint) = DnsHintView::render(&services) {
+                self.progress.result(&format!("\n{dns_hint}"))?;
+            }
+
+            // Show tip about show command
+            self.progress.result(&format!(
+                "\nTip: Run 'torrust-tracker-deployer show {}' for full details\n",
+                any_env.name()
+            ))?;
+        }
+
         Ok(())
     }
 }
