@@ -26,10 +26,7 @@
 //! ## Available Validators
 //!
 //! - `running_services` - Validates Docker Compose services via external HTTP/HTTPS health checks
-//! - `service_endpoint` - Types for representing service endpoints (HTTP or HTTPS)
 
 pub mod running_services;
-pub mod service_endpoint;
 
 pub use running_services::RunningServicesValidator;
-pub use service_endpoint::ServiceEndpoint;

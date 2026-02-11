@@ -50,8 +50,8 @@ use std::time::Duration;
 use reqwest::ClientBuilder;
 use tracing::{info, instrument, warn};
 
-use super::service_endpoint::ServiceEndpoint;
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
+use crate::shared::ServiceEndpoint;
 
 /// Default deployment directory for Docker Compose files
 const DEFAULT_DEPLOY_DIR: &str = "/opt/torrust";

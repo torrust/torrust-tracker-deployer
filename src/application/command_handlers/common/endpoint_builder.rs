@@ -17,7 +17,7 @@
 use std::net::{IpAddr, SocketAddr};
 
 use crate::domain::tracker::config::{HttpApiConfig, HttpTrackerConfig, TrackerConfig};
-use crate::infrastructure::external_validators::ServiceEndpoint;
+use crate::shared::ServiceEndpoint;
 
 /// Build a `ServiceEndpoint` for the HTTP API from configuration and instance IP
 ///

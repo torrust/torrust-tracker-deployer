@@ -62,8 +62,7 @@ use tracing::{error, info};
 
 use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};
-use torrust_tracker_deployer_lib::infrastructure::external_validators::ServiceEndpoint;
-use torrust_tracker_deployer_lib::shared::Username;
+use torrust_tracker_deployer_lib::shared::{ServiceEndpoint, Username};
 use torrust_tracker_deployer_lib::testing::e2e::containers::actions::{
     SshKeySetupAction, SshWaitAction,
 };

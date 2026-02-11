@@ -58,9 +58,10 @@ use tracing::info;
 
 use crate::adapters::ssh::SshConfig;
 use crate::adapters::ssh::SshCredentials;
-use crate::infrastructure::external_validators::{RunningServicesValidator, ServiceEndpoint};
+use crate::infrastructure::external_validators::RunningServicesValidator;
 use crate::infrastructure::remote_actions::validators::{GrafanaValidator, PrometheusValidator};
 use crate::infrastructure::remote_actions::{RemoteAction, RemoteActionError};
+use crate::shared::ServiceEndpoint;
 
 /// Service validation configuration
 ///
