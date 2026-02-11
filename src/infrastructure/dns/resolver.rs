@@ -40,8 +40,8 @@ pub enum DnsResolutionError {
 ///
 /// ```no_run
 /// use std::net::IpAddr;
-/// use torrust_tracker_deployer::infrastructure::dns::DnsResolver;
-/// use torrust_tracker_deployer::shared::domain_name::DomainName;
+/// use torrust_tracker_deployer_lib::infrastructure::dns::DnsResolver;
+/// use torrust_tracker_deployer_lib::shared::domain_name::DomainName;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let resolver = DnsResolver::new();
