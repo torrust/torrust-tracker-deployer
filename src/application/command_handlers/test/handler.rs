@@ -208,20 +208,16 @@ impl TestCommandHandler {
             return Vec::new();
         }
 
-        let resolver = DnsResolver::new();
-
         domains_to_check
             .iter()
-            .filter_map(|domain| Self::check_single_domain(resolver, domain, instance_ip))
+            .filter_map(|domain| Self::check_single_domain(domain, instance_ip))
             .collect()
     }
 
     /// Check a single domain and return a warning if resolution fails or mismatches
-    fn check_single_domain(
-        resolver: DnsResolver,
-        domain: &DomainName,
-        expected_ip: IpAddr,
-    ) -> Option<DnsWarning> {
+    fn check_single_domain(domain: &DomainName, expected_ip: IpAddr) -> Option<DnsWarning> {
+        let resolver = DnsResolver::new();
+
         match resolver.resolve_and_verify(domain, expected_ip) {
             Ok(()) => None,
             Err(DnsResolutionError::ResolutionFailed { source, .. }) => Some(DnsWarning {
