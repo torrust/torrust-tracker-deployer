@@ -193,8 +193,8 @@ impl TestCommandHandler {
     /// Perform advisory DNS checks for configured domains
     ///
     /// Checks DNS resolution for all configured service domains (API, HTTP
-    /// trackers, health check API) and returns structured warnings for any
-    /// domains that don't resolve or resolve to unexpected IPs.
+    /// trackers, health check API, Grafana) and returns structured warnings
+    /// for any domains that don't resolve or resolve to unexpected IPs.
     ///
     /// **Advisory Only**: DNS check failures are returned as warnings and
     /// do NOT affect the test result. This is because:
@@ -221,6 +221,15 @@ impl TestCommandHandler {
         if let Some(domain_str) = tracker_config.health_check_api().tls_domain() {
             if let Ok(domain_name) = DomainName::new(domain_str) {
                 domains_to_check.push(domain_name);
+            }
+        }
+
+        // Grafana domain (if TLS is enabled)
+        if let Some(grafana_config) = any_env.grafana_config() {
+            if let Some(domain_str) = grafana_config.tls_domain() {
+                if let Ok(domain_name) = DomainName::new(domain_str) {
+                    domains_to_check.push(domain_name);
+                }
             }
         }
 
