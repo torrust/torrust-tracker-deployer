@@ -16,7 +16,9 @@
 //! - `persistence` - Persistence infrastructure (repositories, file locking, storage)
 //! - `trace` - Trace file generation for error analysis
 //! - `schema` - JSON Schema generation from Rust types
+//! - `dns` - DNS resolution for domain validation
 
+pub mod dns;
 pub mod external_validators;
 pub mod persistence;
 pub mod remote_actions;

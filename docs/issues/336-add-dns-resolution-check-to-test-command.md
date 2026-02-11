@@ -25,20 +25,24 @@ Add an optional DNS resolution check to the `test` command that verifies configu
 ### Module Structure Requirements
 
 - [ ] Follow DDD layer separation (see [docs/codebase-architecture.md](../docs/codebase-architecture.md))
-- [ ] DNS resolution logic in infrastructure layer
-- [ ] DNS check orchestration in application layer (as part of test steps)
+- [ ] DNS resolution logic in infrastructure layer (`src/infrastructure/dns/`)
+- [ ] DNS check orchestration and result types in application layer (`src/application/command_handlers/test/`)
+- [ ] DNS warning rendering in presentation layer (`src/presentation/controllers/test/`)
 - [ ] Use appropriate module organization (see [docs/contributing/module-organization.md](../docs/contributing/module-organization.md))
 
 ### Architectural Constraints
 
 - [ ] DNS resolution belongs in infrastructure layer (external system interaction)
-- [ ] Test command steps orchestrate DNS checks (application layer)
+- [ ] Test command handler returns structured `TestResult` with DNS warnings (application layer)
+- [ ] `TestCommandHandler` must NOT use `UserOutput` — return data, let presentation display it
+- [ ] Presentation controller renders DNS warnings from `TestResult` (follows `ListCommandHandler` → `EnvironmentList` pattern)
 - [ ] Error handling follows project conventions (see [docs/contributing/error-handling.md](../docs/contributing/error-handling.md))
-- [ ] Output uses `UserOutput` methods (see [docs/contributing/output-handling.md](../docs/contributing/output-handling.md))
+- [ ] Output uses `UserOutput` methods only in presentation layer (see [docs/contributing/output-handling.md](../docs/contributing/output-handling.md))
 
 ### Anti-Patterns to Avoid
 
-- ❌ Using `println!` or direct stdout/stderr access (use `UserOutput`)
+- ❌ Using `println!` or direct stdout/stderr access (use `UserOutput` in presentation layer)
+- ❌ Passing `UserOutput` to command handlers in the application layer
 - ❌ Making DNS checks required/strict (should be advisory warnings)
 - ❌ Mixing DNS resolution logic in application layer
 - ❌ Failing infrastructure tests due to DNS issues
@@ -96,6 +100,53 @@ When DNS is correctly configured:
 
 3. **Only when domains configured** - Skip the check entirely if no domains are defined
 
+4. **Return structured result, don't use `UserOutput` in the application layer** - The
+   `TestCommandHandler` must return a structured `TestResult` type containing DNS warnings,
+   following the same pattern as `ListCommandHandler` which returns `EnvironmentList`. The
+   presentation layer is responsible for rendering the warnings to the user.
+
+   **Rationale**: In this project, "command handlers" handle user commands (not strictly CQRS
+   commands). Some are pure commands that modify state (`create`, `provision`), while others
+   are read-only queries (`list`, `show`, `test`). The `ListCommandHandler` already returns
+   a structured DTO (`EnvironmentList`) that the presentation layer renders — the test command
+   should follow this established pattern.
+
+   **Why not pass `UserOutput` to the handler?**
+   - `UserOutput` is a presentation concern — no other command handler uses it
+   - Passing it to the application layer breaks DDD layer separation
+   - It makes the handler harder to test (needs to mock output instead of asserting on return values)
+   - The handler should produce data; the controller should display it
+
+   **Implementation pattern** (consistent with `ListCommandHandler` → `EnvironmentList`):
+
+   ```rust
+   // Application layer: returns structured data
+   pub async fn execute(&self, env_name: &EnvironmentName)
+       -> Result<TestResult, TestCommandHandlerError>
+
+   // TestResult contains advisory DNS warnings
+   pub struct TestResult {
+       pub dns_warnings: Vec<DnsWarning>,
+   }
+
+   pub struct DnsWarning {
+       pub domain: DomainName,
+       pub expected_ip: IpAddr,
+       pub issue: DnsIssue,
+   }
+
+   pub enum DnsIssue {
+       ResolutionFailed(String),
+       IpMismatch { resolved_ips: Vec<IpAddr> },
+   }
+
+   // Presentation layer: renders the warnings
+   let result = handler.execute(&env_name).await?;
+   for warning in &result.dns_warnings {
+       self.progress.output().lock().borrow_mut().warn(&format!("DNS check: {warning}"));
+   }
+   ```
+
 ### Implementation Details
 
 - Use system DNS resolution (not internal resolution)
@@ -119,13 +170,14 @@ When DNS is correctly configured:
 - [ ] Add error types for DNS resolution failures
 - [ ] Add unit tests for DNS resolver
 
-### Phase 2: Add DNS Check Step (2-3 hours)
+### Phase 2: Add DNS Check to Test Command Handler (2-3 hours)
 
-- [ ] Add DNS check logic to test command steps in `src/application/steps/test/`
-- [ ] Extract domain names from environment configuration (trackers, API, Grafana, etc.)
-- [ ] Compare resolved IPs with expected instance IP
-- [ ] Format output using `UserOutput` (warnings, not errors)
-- [ ] Handle cases where no domains are configured (skip check)
+- [ ] Add `TestResult`, `DnsWarning`, `DnsIssue` types to `src/application/command_handlers/test/`
+- [ ] Change `TestCommandHandler.execute()` return type from `Result<(), ...>` to `Result<TestResult, ...>`
+- [ ] Add DNS check logic in handler: extract domains from tracker config, use `DnsResolver`, collect warnings
+- [ ] Handle cases where no domains are configured (return empty warnings)
+- [ ] Update presentation controller to render DNS warnings from `TestResult`
+- [ ] Remove any `UserOutput` parameter from `TestCommandHandler.execute()`
 
 ### Phase 3: Integration and Testing (1-2 hours)
 

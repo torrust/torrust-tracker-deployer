@@ -158,7 +158,14 @@ pub async fn run_test_command(test_context: &TestContext) -> Result<(), TestTask
         .execute(test_context.environment.name())
         .await;
 
-    result.map_err(|source| TestTaskError::ValidationFailed { source })?;
+    let test_result = result.map_err(|source| TestTaskError::ValidationFailed { source })?;
+
+    if test_result.has_dns_warnings() {
+        info!(
+            dns_warnings = test_result.dns_warnings.len(),
+            "DNS warnings detected (advisory only)"
+        );
+    }
 
     info!(status = "success", "All deployment validations passed");
     Ok(())

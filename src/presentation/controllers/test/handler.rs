@@ -168,10 +168,8 @@ impl TestCommandController {
     /// Step 3: Execute infrastructure validation tests
     ///
     /// Delegates all validation logic to the application layer `TestCommandHandler`.
-    /// The handler performs:
-    /// - Cloud-init completion check
-    /// - Docker installation verification
-    /// - Docker Compose installation verification
+    /// The handler returns a structured `TestResult` containing DNS warnings
+    /// which are rendered here in the presentation layer.
     ///
     /// # Errors
     ///
@@ -184,15 +182,29 @@ impl TestCommandController {
         self.progress
             .start_step(TestStep::TestInfrastructure.description())?;
 
-        handler.execute(env_name).await.map_err(|source| {
+        let result = handler.execute(env_name).await.map_err(|source| {
             TestSubcommandError::ValidationFailed {
                 name: env_name.to_string(),
                 source: Box::new(source),
             }
         })?;
 
-        self.progress
-            .complete_step(Some("Infrastructure tests passed"))?;
+        // Render advisory DNS warnings from the test result
+        for warning in &result.dns_warnings {
+            self.progress
+                .output()
+                .lock()
+                .borrow_mut()
+                .warn(&format!("DNS check: {warning}"));
+        }
+
+        let step_message = if result.has_dns_warnings() {
+            "Infrastructure tests passed (with DNS warnings)"
+        } else {
+            "Infrastructure tests passed"
+        };
+
+        self.progress.complete_step(Some(step_message))?;
 
         Ok(())
     }

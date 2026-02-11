@@ -44,6 +44,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::domain::environment::runtime_outputs::{ProvisionMethod, ServiceEndpoints};
+use crate::shared::domain_name::DomainName;
 
 // State modules
 mod common;
@@ -609,6 +610,55 @@ impl AnyEnvironmentState {
     #[must_use]
     pub fn is_registered(&self) -> bool {
         matches!(self.provision_method(), Some(ProvisionMethod::Registered))
+    }
+
+    /// Collect all TLS-enabled domains from the environment configuration
+    ///
+    /// Gathers domains from all services that have TLS enabled:
+    /// HTTP API, HTTP trackers, health check API, and Grafana.
+    ///
+    /// This method is useful for operations that need to work with all
+    /// configured domains, such as DNS resolution checks, certificate
+    /// management, or reporting.
+    ///
+    /// # Returns
+    ///
+    /// A vector of all TLS domains configured in the environment.
+    /// Returns an empty vector if no TLS domains are configured.
+    #[must_use]
+    pub fn collect_tls_domains(&self) -> Vec<DomainName> {
+        let tracker_config = self.tracker_config();
+        let mut domains = Vec::new();
+
+        // HTTP API domain
+        if let Some(domain) = tracker_config.http_api().tls_domain() {
+            domains.push(domain.clone());
+        }
+
+        // HTTP tracker domains
+        for http_tracker in tracker_config.http_trackers() {
+            if let Some(domain) = http_tracker.tls_domain() {
+                domains.push(domain.clone());
+            }
+        }
+
+        // Health check API domain (returns &str, needs conversion)
+        if let Some(domain_str) = tracker_config.health_check_api().tls_domain() {
+            if let Ok(domain_name) = DomainName::new(domain_str) {
+                domains.push(domain_name);
+            }
+        }
+
+        // Grafana domain (returns &str, needs conversion)
+        if let Some(grafana_config) = self.grafana_config() {
+            if let Some(domain_str) = grafana_config.tls_domain() {
+                if let Ok(domain_name) = DomainName::new(domain_str) {
+                    domains.push(domain_name);
+                }
+            }
+        }
+
+        domains
     }
 
     /// Destroy the environment, transitioning it to the Destroyed state

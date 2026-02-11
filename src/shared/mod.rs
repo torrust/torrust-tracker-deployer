@@ -10,6 +10,7 @@ pub mod domain_name;
 pub mod email;
 pub mod error;
 pub mod secrets;
+pub mod service_endpoint;
 pub mod username;
 
 // Re-export commonly used types for convenience
@@ -19,4 +20,5 @@ pub use domain_name::{DomainName, DomainNameError};
 pub use email::{Email, EmailError};
 pub use error::{ErrorKind, Traceable};
 pub use secrets::{ApiToken, ExposeSecret, Password, PlainApiToken, PlainPassword};
+pub use service_endpoint::{InvalidServiceEndpointUrl, ServiceEndpoint};
 pub use username::{Username, UsernameError};

@@ -34,6 +34,7 @@
 
 pub mod errors;
 pub mod handler;
+pub mod result;
 
 #[cfg(test)]
 mod tests;
@@ -41,3 +42,4 @@ mod tests;
 // Re-export main types for convenience
 pub use errors::TestCommandHandlerError;
 pub use handler::TestCommandHandler;
+pub use result::TestResult;

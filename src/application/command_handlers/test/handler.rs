@@ -42,16 +42,21 @@
 //! For rationale and alternatives, see:
 //! - `docs/decisions/test-command-as-smoke-test.md` - Architectural decision record
 
+use std::net::IpAddr;
 use std::sync::Arc;
 
 use tracing::{info, instrument};
 
 use super::errors::TestCommandHandlerError;
+use super::result::{DnsIssue, DnsWarning, TestResult};
+use crate::application::command_handlers::common::endpoint_builder;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
-use crate::domain::tracker::config::{HttpApiConfig, HttpTrackerConfig};
+use crate::domain::environment::state::AnyEnvironmentState;
 use crate::domain::EnvironmentName;
-use crate::infrastructure::external_validators::{RunningServicesValidator, ServiceEndpoint};
+use crate::infrastructure::dns::{DnsResolutionError, DnsResolver};
+use crate::infrastructure::external_validators::RunningServicesValidator;
 use crate::infrastructure::remote_actions::RemoteAction;
+use crate::shared::domain_name::DomainName;
 
 /// `TestCommandHandler` orchestrates smoke testing for running Torrust Tracker services
 ///
@@ -98,11 +103,19 @@ impl TestCommandHandler {
     /// Execute the complete testing and validation workflow
     ///
     /// Validates that the Torrust Tracker services are running and accessible by
-    /// performing external health checks on the deployed services.
+    /// performing external health checks on the deployed services. Also performs
+    /// advisory DNS resolution checks for configured domains.
+    ///
+    /// Returns a structured `TestResult` containing any DNS warnings found.
+    /// The presentation layer is responsible for rendering these warnings.
     ///
     /// # Arguments
     ///
     /// * `env_name` - The name of the environment to test
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(TestResult)` - Test passed, may contain advisory DNS warnings
     ///
     /// # Errors
     ///
@@ -122,7 +135,10 @@ impl TestCommandHandler {
             environment = %env_name
         )
     )]
-    pub async fn execute(&self, env_name: &EnvironmentName) -> Result<(), TestCommandHandlerError> {
+    pub async fn execute(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<TestResult, TestCommandHandlerError> {
         let any_env = self.load_environment(env_name)?;
 
         let instance_ip =
@@ -136,12 +152,8 @@ impl TestCommandHandler {
         let tracker_config = any_env.tracker_config();
 
         // Build service endpoints from configuration (with server IP)
-        let tracker_api_endpoint = Self::build_api_endpoint(instance_ip, tracker_config.http_api());
-        let http_tracker_endpoints: Vec<ServiceEndpoint> = tracker_config
-            .http_trackers()
-            .iter()
-            .map(|config| Self::build_http_tracker_endpoint(instance_ip, config))
-            .collect();
+        let (tracker_api_endpoint, http_tracker_endpoints) =
+            endpoint_builder::build_all_tracker_endpoints(instance_ip, tracker_config);
 
         // Log endpoint information
         info!(
@@ -160,46 +172,62 @@ impl TestCommandHandler {
 
         services_validator.execute(&instance_ip).await?;
 
+        // Perform advisory DNS checks
+        let dns_warnings = Self::check_dns_resolution(&any_env, instance_ip);
+
         info!(
             command = "test",
             environment = %env_name,
             instance_ip = ?instance_ip,
+            dns_warnings = dns_warnings.len(),
             "Service testing workflow completed successfully"
         );
 
-        Ok(())
+        Ok(TestResult::with_dns_warnings(dns_warnings))
     }
 
-    /// Build a `ServiceEndpoint` from the HTTP API configuration
-    fn build_api_endpoint(server_ip: std::net::IpAddr, config: &HttpApiConfig) -> ServiceEndpoint {
-        let port = config.bind_address().port();
-        let path = "/api/health_check";
-        let socket_addr = std::net::SocketAddr::new(server_ip, port);
+    /// Perform advisory DNS checks for configured domains
+    ///
+    /// Checks DNS resolution for all configured service domains (API, HTTP
+    /// trackers, health check API, Grafana) and returns structured warnings
+    /// for any domains that don't resolve or resolve to unexpected IPs.
+    ///
+    /// **Advisory Only**: DNS check failures are returned as warnings and
+    /// do NOT affect the test result. This is because:
+    /// - DNS propagation can take time
+    /// - Local `.local` domains use `/etc/hosts` which may not be configured
+    /// - Users may intentionally test without DNS
+    fn check_dns_resolution(any_env: &AnyEnvironmentState, instance_ip: IpAddr) -> Vec<DnsWarning> {
+        let domains_to_check = any_env.collect_tls_domains();
 
-        if let Some(domain) = config.tls_domain() {
-            ServiceEndpoint::https(domain, path, server_ip)
-                .expect("Valid TLS domain should produce valid HTTPS URL")
-        } else {
-            ServiceEndpoint::http(socket_addr, path)
-                .expect("Valid socket address should produce valid HTTP URL")
+        if domains_to_check.is_empty() {
+            return Vec::new();
         }
+
+        domains_to_check
+            .iter()
+            .filter_map(|domain| Self::check_single_domain(domain, instance_ip))
+            .collect()
     }
 
-    /// Build a `ServiceEndpoint` from the HTTP Tracker configuration
-    fn build_http_tracker_endpoint(
-        server_ip: std::net::IpAddr,
-        config: &HttpTrackerConfig,
-    ) -> ServiceEndpoint {
-        let port = config.bind_address().port();
-        let path = "/health_check";
-        let socket_addr = std::net::SocketAddr::new(server_ip, port);
+    /// Check a single domain and return a warning if resolution fails or mismatches
+    fn check_single_domain(domain: &DomainName, expected_ip: IpAddr) -> Option<DnsWarning> {
+        let resolver = DnsResolver::new();
 
-        if let Some(domain) = config.tls_domain() {
-            ServiceEndpoint::https(domain, path, server_ip)
-                .expect("Valid TLS domain should produce valid HTTPS URL")
-        } else {
-            ServiceEndpoint::http(socket_addr, path)
-                .expect("Valid socket address should produce valid HTTP URL")
+        match resolver.resolve_and_verify(domain, expected_ip) {
+            Ok(()) => None,
+            Err(DnsResolutionError::ResolutionFailed { source, .. }) => Some(DnsWarning {
+                domain: domain.clone(),
+                expected_ip,
+                issue: DnsIssue::ResolutionFailed(source.to_string()),
+            }),
+            Err(DnsResolutionError::IpMismatch { resolved_ip, .. }) => Some(DnsWarning {
+                domain: domain.clone(),
+                expected_ip,
+                issue: DnsIssue::IpMismatch {
+                    resolved_ips: vec![resolved_ip],
+                },
+            }),
         }
     }
 
@@ -213,8 +241,7 @@ impl TestCommandHandler {
     fn load_environment(
         &self,
         env_name: &EnvironmentName,
-    ) -> Result<crate::domain::environment::state::AnyEnvironmentState, TestCommandHandlerError>
-    {
+    ) -> Result<AnyEnvironmentState, TestCommandHandlerError> {
         let any_env = self
             .repository
             .inner()
