@@ -192,10 +192,11 @@ Minor changes to improve the output of some commands and overall user experience
   - Display reminder when any service has a domain configured
   - Issue: [#332](https://github.com/torrust/torrust-tracker-deployer/issues/332)
   - Implemented in [PR #333](https://github.com/torrust/torrust-tracker-deployer/pull/333)
-- [ ] **10.2** Improve `run` command output with service URLs
+- [x] **10.2** Improve `run` command output with service URLs ✅ Completed
   - Show service URLs immediately after services start
   - Include hint about `show` command for full details
-  - See draft: [`docs/issues/drafts/improve-run-command-output-with-service-urls.md`](./issues/drafts/improve-run-command-output-with-service-urls.md)
+  - Issue: [#334](https://github.com/torrust/torrust-tracker-deployer/issues/334)
+  - Implemented in [PR #337](https://github.com/torrust/torrust-tracker-deployer/pull/337)
 - [ ] **10.3** Add DNS resolution check to `test` command - [Issue #336](https://github.com/torrust/torrust-tracker-deployer/issues/336)
   - Verify configured domains resolve to the expected instance IP
   - Advisory warning only (doesn't fail tests) - DNS is decoupled from service tests
