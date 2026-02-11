@@ -3,6 +3,7 @@
 //! This module provides shared functionality used across multiple command handlers
 //! to reduce code duplication and improve maintainability.
 
+pub mod endpoint_builder;
 pub mod failure_context;
 
 /// Result type for step execution in command handlers
