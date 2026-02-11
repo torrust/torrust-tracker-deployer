@@ -241,8 +241,7 @@ impl TestCommandHandler {
     fn load_environment(
         &self,
         env_name: &EnvironmentName,
-    ) -> Result<crate::domain::environment::state::AnyEnvironmentState, TestCommandHandlerError>
-    {
+    ) -> Result<AnyEnvironmentState, TestCommandHandlerError> {
         let any_env = self
             .repository
             .inner()
