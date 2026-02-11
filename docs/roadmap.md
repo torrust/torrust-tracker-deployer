@@ -188,10 +188,10 @@ This makes the deployer more versatile for different scenarios and more AI-agent
 
 Minor changes to improve the output of some commands and overall user experience.
 
-- [ ] **10.1** Add DNS setup reminder in `provision` command output
+- [x] **10.1** Add DNS setup reminder in `provision` command output ✅ Completed
   - Display reminder when any service has a domain configured
   - Issue: [#332](https://github.com/torrust/torrust-tracker-deployer/issues/332)
-  - Specification: [`docs/issues/332-dns-setup-reminder-in-provision-command.md`](./issues/332-dns-setup-reminder-in-provision-command.md)
+  - Implemented in [PR #333](https://github.com/torrust/torrust-tracker-deployer/pull/333)
 - [ ] **10.2** Improve `run` command output with service URLs
   - Show service URLs immediately after services start
   - Include hint about `show` command for full details
