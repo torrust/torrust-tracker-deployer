@@ -72,6 +72,47 @@ The tracker container provides:
 
 All services run inside a single `torrust/tracker:develop` Docker container.
 
+## Command Output
+
+When the run command completes successfully, it displays service URLs for easy access:
+
+```text
+✓ Run command completed for 'my-environment'
+
+Service URLs:
+  API:             http://192.168.1.100:1212
+  HTTP Tracker:    http://192.168.1.100:7070
+  Health Check:    http://192.168.1.100:1212/api/health_check
+
+Tip: Run 'torrust-tracker-deployer show my-environment' for full details
+```
+
+**Notes**:
+
+- Only publicly accessible services are shown (localhost-only services are excluded)
+- UDP trackers are not shown (no web-accessible endpoint)
+- Prometheus is internal-only and not displayed
+- For HTTPS/TLS environments, you'll also see a DNS configuration hint
+
+### HTTPS/TLS Environment Output
+
+For environments with TLS configured, you'll see additional DNS configuration guidance:
+
+```text
+✓ Run command completed for 'my-tls-env'
+
+Service URLs:
+  API:             https://tracker.example.com:1212
+  HTTP Tracker:    https://tracker.example.com:7070
+  Health Check:    https://tracker.example.com:1212/api/health_check
+
+⚠️  DNS Configuration Required:
+    Configure these domains to point to 192.168.1.100:
+    - tracker.example.com
+
+Tip: Run 'torrust-tracker-deployer show my-tls-env' for full details
+```
+
 ## Example Usage
 
 ### Basic Run

@@ -840,10 +840,16 @@ torrust-tracker-deployer run <environment>
 torrust-tracker-deployer run my-environment
 
 # Output:
-# ✓ Starting Docker Compose services...
-# ✓ Validating services are running...
-# ✓ Checking tracker API accessibility...
-# ✓ Tracker services running and accessible
+# ✓ Validating environment name...
+# ✓ Running application services...
+# ✓ Run command completed for 'my-environment'
+#
+# Service URLs:
+#   API:             http://192.168.1.100:1212
+#   HTTP Tracker:    http://192.168.1.100:7070
+#   Health Check:    http://192.168.1.100:1212/api/health_check
+#
+# Tip: Run 'torrust-tracker-deployer show my-environment' for full details
 ```
 
 **Verification**:
