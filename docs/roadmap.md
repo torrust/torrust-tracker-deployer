@@ -197,9 +197,10 @@ Minor changes to improve the output of some commands and overall user experience
   - Include hint about `show` command for full details
   - Issue: [#334](https://github.com/torrust/torrust-tracker-deployer/issues/334)
   - Implemented in [PR #337](https://github.com/torrust/torrust-tracker-deployer/pull/337)
-- [ ] **10.3** Add DNS resolution check to `test` command - [Issue #336](https://github.com/torrust/torrust-tracker-deployer/issues/336)
+- [x] **10.3** Add DNS resolution check to `test` command ✅ Completed
   - Verify configured domains resolve to the expected instance IP
   - Advisory warning only (doesn't fail tests) - DNS is decoupled from service tests
+  - Issue: [#336](https://github.com/torrust/torrust-tracker-deployer/issues/336)
   - See spec: [`docs/issues/336-add-dns-resolution-check-to-test-command.md`](./issues/336-add-dns-resolution-check-to-test-command.md)
 - [x] **10.4** Add `purge` command to remove local environment data - [Issue #322](https://github.com/torrust/torrust-tracker-deployer/issues/322) ✅ Completed
   - Removes `data/{env}/` and `build/{env}/` for destroyed environments
