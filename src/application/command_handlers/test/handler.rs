@@ -54,7 +54,7 @@ use crate::domain::environment::repository::{EnvironmentRepository, TypedEnviron
 use crate::domain::environment::state::AnyEnvironmentState;
 use crate::domain::EnvironmentName;
 use crate::infrastructure::dns::{DnsResolutionError, DnsResolver};
-use crate::infrastructure::external_validators::{RunningServicesValidator, ServiceEndpoint};
+use crate::infrastructure::external_validators::RunningServicesValidator;
 use crate::infrastructure::remote_actions::RemoteAction;
 use crate::shared::domain_name::DomainName;
 
@@ -152,13 +152,8 @@ impl TestCommandHandler {
         let tracker_config = any_env.tracker_config();
 
         // Build service endpoints from configuration (with server IP)
-        let tracker_api_endpoint =
-            endpoint_builder::build_api_endpoint(instance_ip, tracker_config.http_api());
-        let http_tracker_endpoints: Vec<ServiceEndpoint> = tracker_config
-            .http_trackers()
-            .iter()
-            .map(|config| endpoint_builder::build_http_tracker_endpoint(instance_ip, config))
-            .collect();
+        let (tracker_api_endpoint, http_tracker_endpoints) =
+            endpoint_builder::build_all_tracker_endpoints(instance_ip, tracker_config);
 
         // Log endpoint information
         info!(

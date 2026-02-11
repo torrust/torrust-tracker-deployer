@@ -16,7 +16,7 @@
 
 use std::net::{IpAddr, SocketAddr};
 
-use crate::domain::tracker::config::{HttpApiConfig, HttpTrackerConfig};
+use crate::domain::tracker::config::{HttpApiConfig, HttpTrackerConfig, TrackerConfig};
 use crate::infrastructure::external_validators::ServiceEndpoint;
 
 /// Build a `ServiceEndpoint` for the HTTP API from configuration and instance IP
@@ -88,4 +88,41 @@ pub fn build_http_tracker_endpoint(
         ServiceEndpoint::http(socket_addr, path)
             .expect("Valid socket address should produce valid HTTP URL")
     }
+}
+
+/// Build all tracker service endpoints from configuration and instance IP
+///
+/// This is a convenience function that builds both the HTTP API endpoint and
+/// all HTTP Tracker endpoints in a single call. It's the recommended way to
+/// construct endpoints when you need all tracker services.
+///
+/// # Arguments
+///
+/// * `instance_ip` - The IP address of the deployed instance
+/// * `tracker_config` - The complete tracker configuration
+///
+/// # Returns
+///
+/// A tuple containing:
+/// - The HTTP API `ServiceEndpoint`
+/// - A vector of HTTP Tracker `ServiceEndpoint`s (one per configured tracker)
+///
+/// # Panics
+///
+/// Panics if any configuration produces an invalid URL (this should never happen
+/// with valid configuration types from the domain layer).
+#[must_use]
+pub fn build_all_tracker_endpoints(
+    instance_ip: IpAddr,
+    tracker_config: &TrackerConfig,
+) -> (ServiceEndpoint, Vec<ServiceEndpoint>) {
+    let api_endpoint = build_api_endpoint(instance_ip, tracker_config.http_api());
+
+    let http_tracker_endpoints = tracker_config
+        .http_trackers()
+        .iter()
+        .map(|config| build_http_tracker_endpoint(instance_ip, config))
+        .collect();
+
+    (api_endpoint, http_tracker_endpoints)
 }
