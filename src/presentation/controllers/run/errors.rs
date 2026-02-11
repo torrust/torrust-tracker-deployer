@@ -8,6 +8,7 @@ use thiserror::Error;
 
 use crate::application::command_handlers::run::RunCommandHandlerError;
 use crate::domain::environment::name::EnvironmentNameError;
+use crate::domain::environment::repository::RepositoryError;
 use crate::presentation::views::progress::ProgressReporterError;
 
 /// Run command specific errors
@@ -94,6 +95,25 @@ Tip: This is a critical bug - please report it with full logs using --log-output
 impl From<ProgressReporterError> for RunSubcommandError {
     fn from(source: ProgressReporterError) -> Self {
         Self::ProgressReportingFailed { source }
+    }
+}
+
+impl From<RepositoryError> for RunSubcommandError {
+    fn from(error: RepositoryError) -> Self {
+        match error {
+            RepositoryError::NotFound => Self::EnvironmentNotAccessible {
+                name: "environment".to_string(),
+                data_dir: "data".to_string(),
+            },
+            RepositoryError::Conflict => Self::RunOperationFailed {
+                name: "environment".to_string(),
+                reason: "Another process is accessing this environment".to_string(),
+            },
+            RepositoryError::Internal(err) => Self::RunOperationFailed {
+                name: "environment".to_string(),
+                reason: format!("Repository error: {err}"),
+            },
+        }
     }
 }
 
