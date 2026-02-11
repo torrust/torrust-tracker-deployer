@@ -36,17 +36,17 @@
         path: "{{ remote_deploy_dir }}"
         state: directory
         mode: "0755"
-        owner: root
-        group: root
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
 
     - name: Copy Docker Compose files to remote host
       ansible.builtin.copy:
         src: "{{ local_compose_dir }}/"
         dest: "{{ remote_deploy_dir }}/"
-        mode: "0644"
+        mode: "0640"
         directory_mode: "0755"
-        owner: root
-        group: root
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
 
     - name: Verify docker-compose.yml exists on remote
       ansible.builtin.stat:
