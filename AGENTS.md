@@ -218,6 +218,7 @@ Available skills:
 | Task                        | Skill to Load                                      |
 | --------------------------- | -------------------------------------------------- |
 | Adding commands             | `.github/skills/add-new-command/skill.md`          |
+| Committing changes          | `.github/skills/commit-changes/skill.md`           |
 | Creating issues             | `.github/skills/create-issue/skill.md`             |
 | Creating new skills         | `.github/skills/add-new-skill/skill.md`            |
 | Rendering tracker artifacts | `.github/skills/render-tracker-artifacts/skill.md` |
