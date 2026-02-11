@@ -196,10 +196,10 @@ Minor changes to improve the output of some commands and overall user experience
   - Show service URLs immediately after services start
   - Include hint about `show` command for full details
   - See draft: [`docs/issues/drafts/improve-run-command-output-with-service-urls.md`](./issues/drafts/improve-run-command-output-with-service-urls.md)
-- [ ] **10.3** Add DNS resolution check to `test` command
+- [ ] **10.3** Add DNS resolution check to `test` command - [Issue #336](https://github.com/torrust/torrust-tracker-deployer/issues/336)
   - Verify configured domains resolve to the expected instance IP
   - Advisory warning only (doesn't fail tests) - DNS is decoupled from service tests
-  - See draft: [`docs/issues/drafts/add-dns-resolution-check-to-test-command.md`](./issues/drafts/add-dns-resolution-check-to-test-command.md)
+  - See spec: [`docs/issues/336-add-dns-resolution-check-to-test-command.md`](./issues/336-add-dns-resolution-check-to-test-command.md)
 - [x] **10.4** Add `purge` command to remove local environment data - [Issue #322](https://github.com/torrust/torrust-tracker-deployer/issues/322) ✅ Completed
   - Removes `data/{env}/` and `build/{env}/` for destroyed environments
   - Allows reusing environment names after destruction
