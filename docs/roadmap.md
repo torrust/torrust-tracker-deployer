@@ -232,7 +232,7 @@ Add features and documentation that make the use of AI agents to operate the dep
   - Enables AI agents to find documentation even when working with deployed configs
   - See draft: [`docs/issues/drafts/add-ai-discoverable-documentation-headers-to-templates.md`](./issues/drafts/add-ai-discoverable-documentation-headers-to-templates.md)
 
-- [ ] **11.3** Provide configuration examples and questionnaire for AI agent guidance
+- [x] **11.3** Provide configuration examples and questionnaire for AI agent guidance ✅ Completed
   - Problem: AI agents struggle with the many valid configuration combinations
   - Questionnaire template: structured decision tree to gather all required user information
   - Example dataset: real-world scenarios mapping requirements to validated configs
@@ -240,7 +240,8 @@ Add features and documentation that make the use of AI agents to operate the dep
   - Benefits: few-shot learning for agents, reduced hallucination, training/RAG dataset
   - Can integrate with `create-environment-config` skill from task 11.1
   - See specification: [Issue #339](https://github.com/torrust/torrust-tracker-deployer/issues/339), [`docs/issues/339-provide-config-examples-and-questionnaire-for-ai-agents.md`](./issues/339-provide-config-examples-and-questionnaire-for-ai-agents.md)
-  - See spec: [`docs/issues/provide-config-examples-and-questionnaire-for-ai-agents.md`](./issues/provide-config-examples-and-questionnaire-for-ai-agents.md)
+  - **Deliverables**: Questionnaire template (494 lines), 15 validated example configs, comprehensive README (469 lines), integration test suite
+  - **Components**: `docs/ai-training/questionnaire.md`, `docs/ai-training/examples/*.json`, `docs/ai-training/README.md`, `tests/validate_ai_training_examples.rs`
 
 - [ ] **11.4** Add dry-run mode for all commands
   - Allow AI agents (and users) to preview what will happen before executing operations
