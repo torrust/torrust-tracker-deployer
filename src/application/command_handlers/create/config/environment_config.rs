@@ -164,6 +164,25 @@ pub struct EnvironmentSection {
     /// - Cannot start with numbers
     pub name: String,
 
+    /// Optional description of the environment
+    ///
+    /// Free-text field (2-3 sentences recommended) describing:
+    /// - Use case: What this environment is designed for
+    /// - Key decisions: Why certain values were chosen
+    /// - Context: When this environment is appropriate
+    ///
+    /// This field is primarily used for documentation and AI agent training
+    /// to provide context about environment intent and design decisions.
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// "Minimal development setup with SQLite and UDP/HTTP trackers.
+    ///  No HTTPS or monitoring. Ideal for local testing."
+    /// ```
+    #[serde(default)]
+    pub description: Option<String>,
+
     /// Optional custom instance name for the VM/container
     ///
     /// If not provided, auto-generated as `torrust-tracker-vm-{env_name}`.
@@ -191,6 +210,7 @@ impl EnvironmentCreationConfig {
     /// let config = EnvironmentCreationConfig::new(
     ///     EnvironmentSection {
     ///         name: "dev".to_string(),
+    ///         description: None,
     ///         instance_name: None,
     ///     },
     ///     SshCredentialsConfig::new(
@@ -311,6 +331,7 @@ impl EnvironmentCreationConfig {
         Self {
             environment: EnvironmentSection {
                 name: "REPLACE_WITH_ENVIRONMENT_NAME".to_string(),
+                description: None,
                 instance_name: None, // Auto-generated if not provided
             },
             ssh_credentials: SshCredentialsConfig {
@@ -442,6 +463,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(
@@ -593,6 +615,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "staging".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(
@@ -626,6 +649,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None, // Auto-generate
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -660,6 +684,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "prod".to_string(),
+                description: None,
                 instance_name: Some("my-custom-instance".to_string()),
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -691,6 +716,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "Invalid_Name".to_string(), // uppercase - invalid
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -724,6 +750,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: Some("invalid-".to_string()), // ends with dash - invalid
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -758,6 +785,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -793,6 +821,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(
@@ -832,6 +861,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(
@@ -871,6 +901,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(
@@ -911,6 +942,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "test-env".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -940,6 +972,7 @@ mod tests {
         let original = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: Some("my-vm".to_string()),
             },
             SshCredentialsConfig::new(
@@ -1032,6 +1065,7 @@ mod tests {
         let regular_config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "test".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(
@@ -1185,6 +1219,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(
@@ -1239,6 +1274,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(
@@ -1269,6 +1305,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -1304,6 +1341,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -1337,6 +1375,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -1400,6 +1439,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "dev".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),

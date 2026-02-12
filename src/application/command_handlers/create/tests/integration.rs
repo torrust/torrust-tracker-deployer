@@ -129,6 +129,7 @@ fn it_should_fail_with_invalid_environment_name() {
     let config = EnvironmentCreationConfig::new(
         EnvironmentSection {
             name: "Invalid_Name".to_string(), // Invalid: contains uppercase
+            description: None,
             instance_name: None,
         },
         SshCredentialsConfig::new(
@@ -180,6 +181,7 @@ fn it_should_fail_when_ssh_private_key_not_found() {
     let config = EnvironmentCreationConfig::new(
         EnvironmentSection {
             name: "test-env".to_string(),
+            description: None,
             instance_name: None,
         },
         SshCredentialsConfig::new(

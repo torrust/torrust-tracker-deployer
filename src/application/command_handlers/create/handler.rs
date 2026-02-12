@@ -63,6 +63,7 @@ use super::errors::CreateCommandHandlerError;
 /// let config = EnvironmentCreationConfig::new(
 ///     EnvironmentSection {
 ///         name: "dev".to_string(),
+///         description: None,
 ///         instance_name: None, // Auto-generate from environment name
 ///     },
 ///     SshCredentialsConfig::new(
@@ -181,6 +182,7 @@ impl CreateCommandHandler {
     /// let config = EnvironmentCreationConfig::new(
     ///     EnvironmentSection {
     ///         name: "staging".to_string(),
+    ///         description: None,
     ///         instance_name: None, // Auto-generate from environment name
     ///     },
     ///     SshCredentialsConfig::new(

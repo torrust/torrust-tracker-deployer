@@ -45,6 +45,7 @@
 //! let config = EnvironmentCreationConfig::new(
 //!     EnvironmentSection {
 //!         name: "production".to_string(),
+//!         description: None,
 //!         instance_name: None, // Auto-generate from environment name
 //!     },
 //!     SshCredentialsConfig::new(

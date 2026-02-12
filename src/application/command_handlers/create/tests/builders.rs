@@ -265,6 +265,7 @@ pub fn create_valid_test_config(temp_dir: &TempDir, env_name: &str) -> Environme
     EnvironmentCreationConfig::new(
         EnvironmentSection {
             name: env_name.to_string(),
+            description: None,
             instance_name: None, // Auto-generate from environment name
         },
         SshCredentialsConfig::new(
