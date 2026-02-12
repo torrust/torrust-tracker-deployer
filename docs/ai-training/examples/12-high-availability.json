@@ -1,0 +1,62 @@
+{
+  "environment": {
+    "name": "high-availability",
+    "description": "High-availability production setup on Hetzner Cloud with MySQL, HTTPS, monitoring, and automated daily backups. Optimized scrape intervals and production-grade security. Includes comprehensive observability and disaster recovery capabilities. Ready for mission-critical tracker deployments."
+  },
+  "ssh_credentials": {
+    "private_key_path": "/home/torrust/.ssh/id_rsa",
+    "public_key_path": "/home/torrust/.ssh/id_rsa.pub"
+  },
+  "provider": {
+    "provider": "hetzner",
+    "api_token": "$HETZNER_API_TOKEN",
+    "server_type": "cx21",
+    "location": "nbg1",
+    "image": "ubuntu-24.04"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "mysql",
+        "host": "mysql",
+        "port": 3306,
+        "database_name": "tracker",
+        "username": "tracker_user",
+        "password": "HighAvailabilityPassword123!"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "HighAvailabilityToken!"
+    },
+    "health_check_api": {
+      "bind_address": "127.0.0.1:1313"
+    }
+  },
+  "caddy": {
+    "domain": "ha-tracker.example.com",
+    "email": "ops@example.com"
+  },
+  "prometheus": {
+    "scrape_interval_in_secs": 30
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "HAGrafanaPassword123!"
+  },
+  "backup": {
+    "schedule": "0 2 * * *",
+    "retention_days": 7
+  }
+}

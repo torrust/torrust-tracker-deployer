@@ -1,0 +1,55 @@
+{
+  "environment": {
+    "name": "private-tracker",
+    "description": "Private tracker deployment requiring user whitelisting with MySQL for user management. Includes both UDP and HTTP trackers with HTTPS via Caddy, plus monitoring stack. Only whitelisted users can announce and scrape torrents. Suitable for closed communities or testing private tracker behavior."
+  },
+  "ssh_credentials": {
+    "private_key_path": "/home/torrust/.ssh/id_rsa",
+    "public_key_path": "/home/torrust/.ssh/id_rsa.pub"
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "torrust-profile-private"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "mysql",
+        "host": "mysql",
+        "port": 3306,
+        "database_name": "tracker",
+        "username": "tracker_user",
+        "password": "PrivateTrackerPassword123!"
+      },
+      "private": true
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "PrivateAdminToken!"
+    },
+    "health_check_api": {
+      "bind_address": "127.0.0.1:1313"
+    }
+  },
+  "caddy": {
+    "domain": "private.tracker.example.com",
+    "email": "admin@example.com"
+  },
+  "prometheus": {
+    "scrape_interval_in_secs": 30
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "PrivateGrafana123!"
+  }
+}

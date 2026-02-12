@@ -1,0 +1,56 @@
+{
+  "environment": {
+    "name": "multi-domain",
+    "description": "Production deployment with multiple domain configurations for different endpoints. Tracker and Grafana served on separate subdomains with automatic HTTPS certificates. Uses MySQL for reliability and includes comprehensive monitoring. Demonstrates proper multi-service domain architecture."
+  },
+  "ssh_credentials": {
+    "private_key_path": "/home/torrust/.ssh/id_rsa",
+    "public_key_path": "/home/torrust/.ssh/id_rsa.pub"
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "torrust-profile-multi-domain"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "mysql",
+        "host": "mysql",
+        "port": 3306,
+        "database_name": "tracker",
+        "username": "tracker_user",
+        "password": "multi_domain_password"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "MultiDomainToken"
+    },
+    "health_check_api": {
+      "bind_address": "127.0.0.1:1313"
+    }
+  },
+  "caddy": {
+    "domain": "tracker.example.com",
+    "email": "admin@example.com",
+    "grafana_domain": "grafana.example.com"
+  },
+  "prometheus": {
+    "scrape_interval_in_secs": 30
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "GrafanaMultiDomain123!"
+  }
+}
