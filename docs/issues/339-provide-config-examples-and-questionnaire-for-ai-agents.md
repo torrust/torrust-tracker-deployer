@@ -13,11 +13,11 @@ AI agents currently have tools (`create template`, `validate`, JSON schema, docu
 
 ## Goals
 
-- [ ] Provide structured questionnaire to gather all configuration requirements systematically
-- [ ] Create curated example dataset mapping user requirements to validated JSON configs
-- [ ] Reduce AI agent hallucination and trial-and-error through real validated examples
-- [ ] Serve as user-facing documentation and configuration templates
-- [ ] Enable machine-readable format for potential training/RAG use cases
+- [x] Provide structured questionnaire to gather all configuration requirements systematically
+- [x] Create curated example dataset mapping user requirements to validated JSON configs
+- [x] Reduce AI agent hallucination and trial-and-error through real validated examples
+- [x] Serve as user-facing documentation and configuration templates
+- [x] Enable machine-readable format for potential training/RAG use cases
 
 ## 🏗️ Architecture Requirements
 
@@ -27,19 +27,19 @@ AI agents currently have tools (`create template`, `validate`, JSON schema, docu
 
 ### Module Structure Requirements
 
-- [ ] Add optional `description` field to environment configuration schema
-- [ ] Update JSON schema at `schemas/environment-config.json`
-- [ ] Update Rust DTO at `src/application/command_handlers/create/config/dto.rs`
-- [ ] Examples validated with `cargo run -- validate --env-file`
-- [ ] All examples are JSON files (no separate markdown documentation)
+- [x] Add optional `description` field to environment configuration schema
+- [x] Update JSON schema at `schemas/environment-config.json`
+- [x] Update Rust DTO at `src/application/command_handlers/create/config/environment_config.rs`
+- [x] Examples validated with `cargo run -- validate --env-file`
+- [x] All examples are JSON files (no separate markdown documentation)
 
 ### Architectural Constraints
 
-- [ ] `description` field must be optional (not required for existing configs)
-- [ ] Description should be free-text string, 2-3 sentences recommended
-- [ ] All example configs must be validated against the updated schema
-- [ ] Questionnaire must align with validation rules in `src/application/command_handlers/create/config/`
-- [ ] Examples must not include sensitive data (use fixture keys only)
+- [x] `description` field must be optional (not required for existing configs)
+- [x] Description should be free-text string, 2-3 sentences recommended
+- [x] All example configs must be validated against the updated schema
+- [x] Questionnaire must align with validation rules in `src/application/command_handlers/create/config/`
+- [x] Examples must not include sensitive data (use fixture keys only)
 
 ### Anti-Patterns to Avoid
 
@@ -406,50 +406,58 @@ This configuration exercises every deployment feature and serves as a comprehens
 
 ## Implementation Plan
 
-### Phase 1: Add Description Field to Schema (1 hour)
+### Phase 1: Add Description Field to Schema (1 hour) ✅
 
-- [ ] Add optional `description` field to `schemas/environment-config.json`
-- [ ] Update Rust DTO in `src/application/command_handlers/create/config/dto.rs`
-- [ ] Field type: `Option<String>`, free-text, no length constraints at schema level
-- [ ] Update validation tests to accept configs with description field
-- [ ] Run tests to ensure backward compatibility (existing configs without description still work)
+- [x] Add optional `description` field to `schemas/environment-config.json`
+- [x] Update Rust DTO in `src/application/command_handlers/create/config/environment_config.rs`
+- [x] Field type: `Option<String>`, free-text, no length constraints at schema level
+- [x] Update validation tests to accept configs with description field
+- [x] Run tests to ensure backward compatibility (existing configs without description still work)
 
-### Phase 2: Questionnaire Template (1 hour)
+### Phase 2: Questionnaire Template (1 hour) ✅
 
-- [ ] Create `docs/ai-training/questionnaire.md` with full decision tree
-- [ ] Include validation rules and constraints for each question
-- [ ] Add conditional logic notes (if X then ask Y)
+- [x] Create `docs/ai-training/questionnaire.md` with full decision tree
+- [x] Include validation rules and constraints for each question
+- [x] Add conditional logic notes (if X then ask Y)
 
-### Phase 3: Core Example Configurations (2-3 hours)
+### Phase 3: Core Example Configurations (2-3 hours) ✅
 
-- [ ] Create 6 core scenario JSON files with description field
-- [ ] Scenarios: 01-minimal LXD, 02-full-stack LXD (staging), 03-minimal Hetzner, 04-full-stack Hetzner (production), 05-MySQL development, 09-monitoring stack
-- [ ] Each description includes use case + key decisions (2-3 sentences)
-- [ ] Validate each config with `cargo run -- validate --env-file`
-- [ ] Use fixture keys only (no real credentials)
+- [x] Create 6 core scenario JSON files with description field
+- [x] Scenarios: 01-minimal LXD, 02-full-stack LXD (staging), 03-minimal Hetzner, 04-full-stack Hetzner (production), 05-MySQL development, 09-monitoring stack
+- [x] Each description includes use case + key decisions (2-3 sentences)
+- [x] Validate each config with `cargo run -- validate --env-file`
+- [x] Use fixture keys only (no real credentials)
 
-### Phase 4: Extended Example Configurations (2-3 hours)
+### Phase 4: Extended Example Configurations (2-3 hours) ✅
 
-- [ ] Add 9 more scenario JSON files covering specific use cases
-- [ ] Cover: 06-production HTTPS (staging), 07-UDP-only, 08-HTTP-only HTTPS (staging), 10-multi-domain (staging), 11-private tracker, 12-high-availability (staging), 13-backup-focused (staging), 14-lightweight production (staging), 15-sqlite-monitoring
-- [ ] Validate all configs
-- [ ] Document common mistakes in README
+- [x] Add 9 more scenario JSON files covering specific use cases
+- [x] Cover: 06-production HTTPS (staging), 07-UDP-only, 08-HTTP-only HTTPS (staging), 10-multi-domain (staging), 11-private tracker, 12-high-availability (staging), 13-backup-focused (staging), 14-lightweight production (staging), 15-sqlite-monitoring
+- [x] Validate all configs
+- [x] Document common mistakes in README
 
-### Phase 5: Documentation and Index (1 hour)
+### Phase 5: Documentation and Index (1 hour) ✅
 
-- [ ] Create `docs/ai-training/README.md` with overview and scenarios table
-- [ ] Include usage instructions for AI agents and human users
-- [ ] Add table mapping scenario IDs to files (like "Proposed Example Scenarios" in spec)
-- [ ] Include guidance on when to use each scenario type
+- [x] Create `docs/ai-training/README.md` with overview and scenarios table
+- [x] Include usage instructions for AI agents and human users
+- [x] Add table mapping scenario IDs to files (like "Proposed Example Scenarios" in spec)
+- [x] Include guidance on when to use each scenario type
 
-### Phase 6: Integration Test for Examples (30 minutes)
+### Phase 6: Integration Test for Examples (30 minutes) ✅
 
-- [ ] Create integration test at `tests/validate_examples.rs`
-- [ ] Test iterates over all JSON files in `docs/ai-training/examples/`
-- [ ] For each example: run `validate` command and assert success
-- [ ] Similar to `tests/e2e/validate_command.rs` but for multiple files
-- [ ] Test ensures examples remain valid as schema evolves
-- [ ] Run test as part of CI to catch regressions early
+- [x] Create integration test at `tests/validate_ai_training_examples.rs`
+- [x] Test iterates over all JSON files in `docs/ai-training/examples/`
+- [x] For each example: run `validate` command and assert success
+- [x] Added 4 comprehensive test functions validating all aspects
+- [x] Test ensures examples remain valid as schema evolves
+- [x] Run test as part of CI to catch regressions early
+- [x] Added regex dependency for pattern matching
+
+**Completed**: Integration test created with 4 test functions:
+
+- `it_should_validate_all_ai_training_example_configurations()` - Validates all 15 examples
+- `it_should_verify_expected_number_of_examples()` - Ensures exactly 15 files exist
+- `it_should_verify_example_naming_convention()` - Checks NN-descriptive-name.json pattern
+- `it_should_verify_all_examples_have_descriptions()` - Verifies environment.description field
 
 ## Acceptance Criteria
 
@@ -457,32 +465,32 @@ This configuration exercises every deployment feature and serves as a comprehens
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
-- [ ] All linters pass (markdown, cspell)
-- [ ] All example JSON configurations validated with `cargo run -- validate --env-file`
-- [ ] Integration test passes: `cargo test validate_examples` (validates all examples automatically)
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] All linters pass (markdown, cspell)
+- [x] All example JSON configurations validated with `cargo run -- validate --env-file`
+- [x] Integration test passes: `cargo test validate_ai_training_examples` (validates all examples automatically)
 
 **Task-Specific Criteria**:
 
-- [ ] Optional `description` field added to schema and validated
-- [ ] Backward compatibility maintained (configs without description still work)
-- [ ] Questionnaire template created at `docs/ai-training/questionnaire.md`
-- [ ] All 15 example JSON configurations created with description field
-- [ ] Each example validated with `cargo run -- validate --env-file`
-- [ ] All descriptions are 2-3 sentences covering use case + key decisions
-- [ ] Example configurations use fixture keys only (e.g., `fixtures/testing_rsa`)
-- [ ] README created with scenarios table, usage instructions, and guidance
-- [ ] Directory structure matches specification (JSON files only, no markdown per scenario)
-- [ ] Full-stack scenarios (02 and 04) include all features: MySQL, Prometheus, Grafana, backup, domains
-- [ ] Scenarios 01-02 (LXD minimal and full-stack) and 03-04 (Hetzner minimal and full-stack) demonstrate the complete spectrum
-- [ ] All scenarios except 03-04 use LXD for local testing consistency
-- [ ] All LXD scenarios with HTTPS (02, 06, 08, 10, 12, 13, 14) use staging certificates (`use_staging: true`)
-- [ ] Hetzner production scenario (04) uses production certificates (no `use_staging` or `use_staging: false`)
-- [ ] Scenario 13 demonstrates backup without monitoring overhead
-- [ ] Scenario 14 demonstrates lightweight production (SQLite + HTTPS + backup)
-- [ ] Scenario 15 demonstrates monitoring stack with SQLite simplicity
-- [ ] Integration test `tests/validate_examples.rs` created and passing
-- [ ] All examples validated automatically by integration test (prevents regressions)
+- [x] Optional `description` field added to schema and validated
+- [x] Backward compatibility maintained (configs without description still work)
+- [x] Questionnaire template created at `docs/ai-training/questionnaire.md`
+- [x] All 15 example JSON configurations created with description field
+- [x] Each example validated with `cargo run -- validate --env-file`
+- [x] All descriptions are 2-3 sentences covering use case + key decisions
+- [x] Example configurations use fixture keys only (e.g., `fixtures/testing_rsa`)
+- [x] README created with scenarios table, usage instructions, and guidance
+- [x] Directory structure matches specification (JSON files only, no markdown per scenario)
+- [x] Full-stack scenarios (02 and 04) include all features: MySQL, Prometheus, Grafana, backup, domains
+- [x] Scenarios 01-02 (LXD minimal and full-stack) and 03-04 (Hetzner minimal and full-stack) demonstrate the complete spectrum
+- [x] All scenarios except 03-04 use LXD for local testing consistency
+- [x] All LXD scenarios with HTTPS (02, 06, 08, 10, 12, 13, 14) use staging certificates (`use_staging: true`)
+- [x] Hetzner production scenario (04) uses production certificates (no `use_staging` or `use_staging: false`)
+- [x] Scenario 13 demonstrates backup without monitoring overhead
+- [x] Scenario 14 demonstrates lightweight production (SQLite + HTTPS + backup)
+- [x] Scenario 15 demonstrates monitoring stack with SQLite simplicity
+- [x] Integration test `tests/validate_ai_training_examples.rs` created and passing
+- [x] All examples validated automatically by integration test (prevents regressions)
 
 ## Related Documentation
 
