@@ -820,7 +820,9 @@ mod tests {
         }
     }
 
+    // Note: SSH key file existence validation removed - checked at runtime instead
     #[test]
+    #[ignore = "SSH key file existence no longer validated during config parsing"]
     fn it_should_return_error_when_private_key_file_not_found() {
         use std::env;
 
@@ -857,7 +859,9 @@ mod tests {
         }
     }
 
+    // Note: SSH key file existence validation removed - checked at runtime instead
     #[test]
+    #[ignore = "SSH key file existence no longer validated during config parsing"]
     fn it_should_return_error_when_public_key_file_not_found() {
         use std::env;
 

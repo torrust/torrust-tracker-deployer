@@ -92,7 +92,7 @@ impl ValidateCommandHandler {
 
         // Step 3: Convert to domain types (validates all constraints)
         // This includes:
-        // - SSH key files must exist
+        // - SSH key paths must be absolute (file existence checked at runtime)
         // - Port numbers must be valid
         // - Domain names must be well-formed
         // - All business rules must pass

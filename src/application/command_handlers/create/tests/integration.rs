@@ -163,7 +163,9 @@ fn it_should_fail_with_invalid_environment_name() {
     }
 }
 
+// Note: SSH key file existence validation removed - checked at runtime instead
 #[test]
+#[ignore = "SSH key file existence no longer validated during config parsing"]
 fn it_should_fail_when_ssh_private_key_not_found() {
     use crate::application::command_handlers::create::config::tracker::TrackerSection;
     use crate::application::command_handlers::create::config::{
