@@ -52,6 +52,10 @@ impl ImageBuilder {
     /// This method first checks if the image exists. If it does, it skips the build.
     /// If it doesn't exist, it builds the image using docker build.
     ///
+    /// In CI environments, Docker `BuildKit` may have stale tags or cache conflicts.
+    /// To handle this, we force remove any existing image before building to ensure
+    /// a clean build state.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -71,9 +75,20 @@ impl ImageBuilder {
 
         info!(image = full_image_name, "Building Docker image...");
 
-        // Build the image
+        // Remove any stale/corrupt image that might exist but wasn't detected
+        // This fixes CI issues where Docker BuildKit reports "already exists" during export
+        drop(
+            Command::new("docker")
+                .arg("rmi")
+                .arg("-f")
+                .arg(&full_image_name)
+                .output(), // Ignore errors - image might not exist
+        );
+
+        // Build the image with --force-rm to clean up intermediate containers
         let output = Command::new("docker")
             .arg("build")
+            .arg("--force-rm") // Remove intermediate containers after build
             .arg("-f")
             .arg(&self.dockerfile_path)
             .arg("-t")
