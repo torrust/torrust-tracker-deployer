@@ -105,7 +105,9 @@ async fn it_should_reject_invalid_environment_name() {
     }
 }
 
+// Note: SSH key file existence validation removed - checked at runtime instead
 #[tokio::test]
+#[ignore = "SSH key file existence no longer validated during config parsing"]
 async fn it_should_reject_missing_ssh_keys() {
     let context = TestContext::new();
     let config_path = create_config_with_missing_keys(context.working_dir());

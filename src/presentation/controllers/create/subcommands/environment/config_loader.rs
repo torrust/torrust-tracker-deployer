@@ -288,7 +288,9 @@ mod tests {
         }
     }
 
+    // Note: SSH key file existence validation removed - checked at runtime instead
     #[test]
+    #[ignore = "SSH key file existence no longer validated during config parsing"]
     fn it_should_return_error_for_missing_ssh_keys() {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("missing_keys.json");

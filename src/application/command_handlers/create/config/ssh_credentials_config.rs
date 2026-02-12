@@ -120,18 +120,10 @@ impl TryFrom<SshCredentialsConfig> for SshCredentials {
             });
         }
 
-        // Validate SSH key files exist
-        if !private_key_path.exists() {
-            return Err(CreateConfigError::PrivateKeyNotFound {
-                path: private_key_path,
-            });
-        }
-
-        if !public_key_path.exists() {
-            return Err(CreateConfigError::PublicKeyNotFound {
-                path: public_key_path,
-            });
-        }
+        // Note: File existence is NOT validated here.
+        // SSH keys are external resources that may not exist at config parsing time.
+        // They will be validated at runtime when SSH connections are actually attempted.
+        // This allows configs to be validated and stored even if keys are on different machines.
 
         // Create domain credentials object
         Ok(SshCredentials::new(
@@ -275,55 +267,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn it_should_return_error_when_private_key_file_not_found() {
-        use std::env;
-
-        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-        let public_key_path = format!("{project_root}/fixtures/testing_rsa.pub");
-
-        let config = SshCredentialsConfig::new(
-            "/nonexistent/private_key".to_string(),
-            public_key_path,
-            "torrust".to_string(),
-            22,
-        );
-
-        let result: Result<SshCredentials, CreateConfigError> = config.try_into();
-        assert!(result.is_err());
-
-        match result.unwrap_err() {
-            CreateConfigError::PrivateKeyNotFound { .. } => {
-                // Expected error
-            }
-            other => panic!("Expected PrivateKeyNotFound error, got: {other:?}"),
-        }
-    }
-
-    #[test]
-    fn it_should_return_error_when_public_key_file_not_found() {
-        use std::env;
-
-        let project_root = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-        let private_key_path = format!("{project_root}/fixtures/testing_rsa");
-
-        let config = SshCredentialsConfig::new(
-            private_key_path,
-            "/nonexistent/public_key.pub".to_string(),
-            "torrust".to_string(),
-            22,
-        );
-
-        let result: Result<SshCredentials, CreateConfigError> = config.try_into();
-        assert!(result.is_err());
-
-        match result.unwrap_err() {
-            CreateConfigError::PublicKeyNotFound { path } => {
-                assert_eq!(path, PathBuf::from("/nonexistent/public_key.pub"));
-            }
-            other => panic!("Expected PublicKeyNotFound error, got: {other:?}"),
-        }
-    }
+    // Note: Tests for file existence removed - file existence is now validated
+    // at runtime when SSH connections are attempted, not during config parsing.
 
     #[test]
     fn it_should_provide_correct_default_values_when_using_default_functions() {

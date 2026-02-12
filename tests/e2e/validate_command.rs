@@ -121,86 +121,10 @@ fn it_should_report_invalid_json_when_configuration_file_has_malformed_json() {
     );
 }
 
-#[test]
-fn it_should_report_missing_ssh_keys_when_key_files_do_not_exist() {
-    // Verify dependencies before running tests
-    verify_required_dependencies().expect("Dependency verification failed");
-
-    // Arrange: Create temporary workspace
-    let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
-
-    // Create config with non-existent SSH keys
-    let config_json = r#"{
-  "environment": {
-    "name": "test-missing-keys"
-  },
-  "ssh_credentials": {
-    "private_key_path": "/tmp/nonexistent-private.key",
-    "public_key_path": "/tmp/nonexistent-public.pub",
-    "username": "torrust",
-    "port": 22
-  },
-  "provider": {
-    "provider": "lxd",
-    "profile_name": "default"
-  },
-  "tracker": {
-    "core": {
-      "database": {
-        "driver": "sqlite3",
-        "database_name": "tracker.db"
-      },
-      "private": false
-    },
-    "udp_trackers": [
-      {
-        "bind_address": "0.0.0.0:6969"
-      }
-    ],
-    "http_trackers": [
-      {
-        "bind_address": "0.0.0.0:7070"
-      }
-    ],
-    "http_api": {
-      "bind_address": "0.0.0.0:1212",
-      "admin_token": "test"
-    },
-    "health_check_api": {
-      "bind_address": "127.0.0.1:1313"
-    }
-  }
-}"#;
-
-    let config_path = temp_workspace.path().join("invalid-ssh.json");
-    fs::write(&config_path, config_json).expect("Failed to write config");
-
-    // Act: Run validate command
-    let result = ProcessRunner::new()
-        .working_dir(temp_workspace.path())
-        .run_validate_command(config_path.to_str().unwrap())
-        .expect("Failed to run validate command");
-
-    // Assert: Command should fail
-    assert!(
-        !result.success(),
-        "Validate command should fail for missing SSH keys"
-    );
-
-    // Assert: Error message should mention SSH keys
-    let stderr = result.stderr();
-    assert!(
-        stderr.contains("SSH")
-            && (stderr.contains("not found") || stderr.contains("does not exist")),
-        "Expected error about missing SSH keys, got: {stderr}"
-    );
-
-    // Assert: Help text should provide guidance
-    assert!(
-        stderr.contains("domain constraints") || stderr.contains("Common issues"),
-        "Expected helpful troubleshooting tips, got: {stderr}"
-    );
-}
+// Note: Test for missing SSH key files removed.
+// File existence is no longer validated during config validation.
+// SSH key files are external resources checked at runtime (provision/configure commands).
+// This allows configs to be validated even when SSH keys don't exist yet or are on different machines.
 
 #[test]
 fn it_should_succeed_when_configuration_file_is_valid() {

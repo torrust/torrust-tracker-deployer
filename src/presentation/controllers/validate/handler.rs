@@ -161,7 +161,7 @@ impl ValidateCommandController {
     ) -> Result<(), ValidateSubcommandError> {
         self.progress.blank_line()?;
         self.progress.complete(&format!(
-            "✅ Configuration file '{}' is valid\n\n\
+            "Configuration file '{}' is valid\n\n\
             Environment Details:\n\
               • Name: {}\n\
               • Provider: {}\n\
