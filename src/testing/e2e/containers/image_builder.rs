@@ -303,6 +303,10 @@ impl ContainerImageBuilder {
         let dockerfile_path_str = dockerfile_path.display().to_string();
         let context_path_str = self.context_path.display().to_string();
 
+        // When parallel tests build the same image concurrently, the second build
+        // may fail with "already exists" at the tagging step — this is handled
+        // gracefully below by treating it as success.
+
         info!(
             image_name = %image_name,
             tag = %self.tag,
@@ -320,6 +324,7 @@ impl ContainerImageBuilder {
                 &image_tag,
                 "-f",
                 &dockerfile_path_str,
+                "--force-rm", // Cleanup intermediate containers even on build failure
                 &context_path_str,
             ])
             .output()
@@ -337,6 +342,21 @@ impl ContainerImageBuilder {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
+
+            // When multiple tests run in parallel, they may all attempt to build the
+            // same image simultaneously. The first build succeeds and tags the image.
+            // Subsequent builds complete all steps successfully but fail at the final
+            // export/tagging step with "already exists" because the tag was claimed
+            // by the first build. This is not a real failure — the image is available.
+            if stderr.contains("already exists") {
+                info!(
+                    image_name = %image_name,
+                    tag = %self.tag,
+                    "Docker image was built by a concurrent process, treating as success"
+                );
+                return Ok(());
+            }
+
             return Err(Box::new(ContainerBuildError::ContainerBuildFailed {
                 image_name: image_name.clone(),
                 tag: self.tag.clone(),

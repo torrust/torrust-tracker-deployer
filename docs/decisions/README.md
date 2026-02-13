@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                                  | Summary                                                                                    |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ✅ Accepted   | 2026-02-13 | [Concurrent Docker Image Builds in Tests](./concurrent-docker-image-builds-in-tests.md)                   | Treat "already exists" tagging error as success when parallel tests build same image       |
 | ✅ Accepted   | 2026-02-06 | [Agent Skills Content Strategy](./skill-content-strategy-duplication-vs-linking.md)                       | Three-tier content strategy: self-contained workflows, progressive disclosure, linked docs |
 | ✅ Accepted   | 2026-01-27 | [Atomic Ansible Playbooks](./atomic-ansible-playbooks.md)                                                 | Require one-responsibility playbooks with Rust-side gating and registered static templates |
 | ✅ Accepted   | 2026-01-24 | [Bind Mount Standardization](./bind-mount-standardization.md)                                             | Use bind mounts exclusively for all Docker Compose volumes for observability and backup    |

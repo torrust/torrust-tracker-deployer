@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-use tracing::info;
+use tracing::{error, info};
 
 /// Error types for container image building
 #[derive(Debug, thiserror::Error)]
@@ -52,6 +52,10 @@ impl ImageBuilder {
     /// This method first checks if the image exists. If it does, it skips the build.
     /// If it doesn't exist, it builds the image using docker build.
     ///
+    /// When multiple tests run in parallel, concurrent builds may race to tag the
+    /// same image. If a build fails with "already exists", it means another test
+    /// already built the image, so this is treated as success.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -71,9 +75,13 @@ impl ImageBuilder {
 
         info!(image = full_image_name, "Building Docker image...");
 
-        // Build the image
+        // Build the image with --force-rm to clean up intermediate containers.
+        // When parallel tests build the same image concurrently, the second build
+        // may fail with "already exists" at the tagging step — this is handled
+        // gracefully below by treating it as success.
         let output = Command::new("docker")
             .arg("build")
+            .arg("--force-rm") // Remove intermediate containers after build
             .arg("-f")
             .arg(&self.dockerfile_path)
             .arg("-t")
@@ -82,8 +90,33 @@ impl ImageBuilder {
             .output()?;
 
         if !output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(ImageBuildError::BuildFailed(stderr.to_string()));
+
+            // When multiple tests run in parallel, they may all call build_if_missing()
+            // simultaneously. Both check image_exists() → false, both start building.
+            // The first build succeeds and tags the image. The second build completes
+            // all steps successfully but fails at the final export/tagging step with
+            // "already exists" because the tag was claimed by the first build.
+            // This is not a real failure — the image is available for use.
+            if stderr.contains("already exists") || stdout.contains("already exists") {
+                info!(
+                    image = full_image_name,
+                    "Docker image was built by a concurrent process, treating as success"
+                );
+                return Ok(());
+            }
+
+            error!(
+                image = full_image_name,
+                exit_code = output.status.code(),
+                stdout_len = stdout.len(),
+                stderr_len = stderr.len(),
+                "Docker build failed"
+            );
+            // Include both stdout and stderr for better debugging
+            let combined_output = format!("{stdout}\n{stderr}");
+            return Err(ImageBuildError::BuildFailed(combined_output));
         }
 
         info!(image = full_image_name, "Successfully built Docker image");

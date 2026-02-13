@@ -220,6 +220,7 @@ Available skills:
 | Adding commands             | `.github/skills/add-new-command/skill.md`          |
 | Committing changes          | `.github/skills/commit-changes/skill.md`           |
 | Completing refactor plans   | `.github/skills/complete-refactor-plan/skill.md`   |
+| Creating ADRs               | `.github/skills/create-adr/skill.md`               |
 | Creating issues             | `.github/skills/create-issue/skill.md`             |
 | Creating new skills         | `.github/skills/add-new-skill/skill.md`            |
 | Creating refactor plans     | `.github/skills/create-refactor-plan/skill.md`     |
