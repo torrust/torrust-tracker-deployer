@@ -106,6 +106,10 @@ jobs:
         name: Enable Workflow Cache
         uses: Swatinem/rust-cache@v2
 
+      - id: fetch
+        name: Download Dependencies
+        run: cargo fetch --verbose
+
       - id: build
         name: Build Project
         run: cargo build --verbose --workspace --all-features
