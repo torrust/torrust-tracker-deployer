@@ -303,6 +303,14 @@ impl ContainerImageBuilder {
         let dockerfile_path_str = dockerfile_path.display().to_string();
         let context_path_str = self.context_path.display().to_string();
 
+        // In CI environments, Docker `BuildKit` may have stale tags or cache conflicts.
+        // Force remove any existing image before building to ensure a clean build state.
+        drop(
+            Command::new("docker")
+                .args(["rmi", "-f", &image_tag])
+                .output(),
+        );
+
         info!(
             image_name = %image_name,
             tag = %self.tag,
@@ -320,6 +328,7 @@ impl ContainerImageBuilder {
                 &image_tag,
                 "-f",
                 &dockerfile_path_str,
+                "--force-rm", // Cleanup intermediate containers even on build failure
                 &context_path_str,
             ])
             .output()
