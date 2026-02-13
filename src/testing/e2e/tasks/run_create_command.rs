@@ -88,6 +88,7 @@ pub fn run_create_command(
     let config = EnvironmentCreationConfig::new(
         EnvironmentSection {
             name: environment_name.to_string(),
+            description: None,
             instance_name: None, // Auto-generate from environment name
         },
         SshCredentialsConfig::new(

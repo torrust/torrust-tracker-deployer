@@ -197,9 +197,10 @@ Minor changes to improve the output of some commands and overall user experience
   - Include hint about `show` command for full details
   - Issue: [#334](https://github.com/torrust/torrust-tracker-deployer/issues/334)
   - Implemented in [PR #337](https://github.com/torrust/torrust-tracker-deployer/pull/337)
-- [ ] **10.3** Add DNS resolution check to `test` command - [Issue #336](https://github.com/torrust/torrust-tracker-deployer/issues/336)
+- [x] **10.3** Add DNS resolution check to `test` command ✅ Completed
   - Verify configured domains resolve to the expected instance IP
   - Advisory warning only (doesn't fail tests) - DNS is decoupled from service tests
+  - Issue: [#336](https://github.com/torrust/torrust-tracker-deployer/issues/336)
   - See spec: [`docs/issues/336-add-dns-resolution-check-to-test-command.md`](./issues/336-add-dns-resolution-check-to-test-command.md)
 - [x] **10.4** Add `purge` command to remove local environment data - [Issue #322](https://github.com/torrust/torrust-tracker-deployer/issues/322) ✅ Completed
   - Removes `data/{env}/` and `build/{env}/` for destroyed environments
@@ -231,7 +232,7 @@ Add features and documentation that make the use of AI agents to operate the dep
   - Enables AI agents to find documentation even when working with deployed configs
   - See draft: [`docs/issues/drafts/add-ai-discoverable-documentation-headers-to-templates.md`](./issues/drafts/add-ai-discoverable-documentation-headers-to-templates.md)
 
-- [ ] **11.3** Provide configuration examples and questionnaire for AI agent guidance
+- [x] **11.3** Provide configuration examples and questionnaire for AI agent guidance ✅ Completed
   - Problem: AI agents struggle with the many valid configuration combinations
   - Questionnaire template: structured decision tree to gather all required user information
   - Example dataset: real-world scenarios mapping requirements to validated configs
@@ -239,7 +240,8 @@ Add features and documentation that make the use of AI agents to operate the dep
   - Benefits: few-shot learning for agents, reduced hallucination, training/RAG dataset
   - Can integrate with `create-environment-config` skill from task 11.1
   - See specification: [Issue #339](https://github.com/torrust/torrust-tracker-deployer/issues/339), [`docs/issues/339-provide-config-examples-and-questionnaire-for-ai-agents.md`](./issues/339-provide-config-examples-and-questionnaire-for-ai-agents.md)
-  - See spec: [`docs/issues/provide-config-examples-and-questionnaire-for-ai-agents.md`](./issues/provide-config-examples-and-questionnaire-for-ai-agents.md)
+  - **Deliverables**: Questionnaire template (494 lines), 15 validated example configs, comprehensive README (469 lines), integration test suite
+  - **Components**: `docs/ai-training/questionnaire.md`, `docs/ai-training/dataset/environment-configs/*.json`, `docs/ai-training/README.md`, `tests/validate_ai_training_examples.rs`
 
 - [ ] **11.4** Add dry-run mode for all commands
   - Allow AI agents (and users) to preview what will happen before executing operations

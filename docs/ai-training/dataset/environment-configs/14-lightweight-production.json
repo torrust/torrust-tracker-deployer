@@ -1,0 +1,47 @@
+{
+  "environment": {
+    "name": "lightweight-production",
+    "description": "Cost-effective production deployment on Hetzner's smallest server with SQLite database and HTTPS. Minimal resource footprint while maintaining essential production features like TLS and health checks. No monitoring or backups to reduce overhead. Ideal for personal projects or low-traffic trackers with budget constraints."
+  },
+  "ssh_credentials": {
+    "private_key_path": "/home/torrust/.ssh/id_rsa",
+    "public_key_path": "/home/torrust/.ssh/id_rsa.pub"
+  },
+  "provider": {
+    "provider": "hetzner",
+    "api_token": "$HETZNER_API_TOKEN",
+    "server_type": "cx11",
+    "location": "nbg1",
+    "image": "ubuntu-24.04"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "sqlite3",
+        "database_name": "tracker.db"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "LightweightToken"
+    },
+    "health_check_api": {
+      "bind_address": "127.0.0.1:1313"
+    }
+  },
+  "caddy": {
+    "domain": "lightweight.tracker.example.com",
+    "email": "admin@example.com"
+  }
+}

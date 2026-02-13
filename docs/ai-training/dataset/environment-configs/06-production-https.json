@@ -1,0 +1,55 @@
+{
+  "environment": {
+    "name": "production-https",
+    "description": "Production-ready LXD deployment with HTTPS/TLS via Caddy reverse proxy, MySQL database, and full monitoring stack. Includes automatic certificate management and secure HTTP API access. Ideal for real-world deployments requiring encrypted communications."
+  },
+  "ssh_credentials": {
+    "private_key_path": "/home/torrust/.ssh/id_rsa",
+    "public_key_path": "/home/torrust/.ssh/id_rsa.pub"
+  },
+  "provider": {
+    "provider": "lxd",
+    "profile_name": "torrust-profile-production-https"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "mysql",
+        "host": "mysql",
+        "port": 3306,
+        "database_name": "tracker",
+        "username": "tracker_user",
+        "password": "SecureProductionPassword123!"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070"
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "ProductionSecureToken!"
+    },
+    "health_check_api": {
+      "bind_address": "127.0.0.1:1313"
+    }
+  },
+  "caddy": {
+    "domain": "tracker.example.com",
+    "email": "admin@example.com"
+  },
+  "prometheus": {
+    "scrape_interval_in_secs": 30
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "GrafanaSecurePassword123!"
+  }
+}

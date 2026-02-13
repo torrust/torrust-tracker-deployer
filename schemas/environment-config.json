@@ -162,6 +162,14 @@
       "description": "Environment-specific configuration section\n\nContains configuration specific to the environment being created.",
       "type": "object",
       "properties": {
+        "description": {
+          "description": "Optional description of the environment\n\nFree-text field (2-3 sentences recommended) describing:\n- Use case: What this environment is designed for\n- Key decisions: Why certain values were chosen\n- Context: When this environment is appropriate\n\nThis field is primarily used for documentation and AI agent training\nto provide context about environment intent and design decisions.\n\n# Examples\n\n```text\n\"Minimal development setup with SQLite and UDP/HTTP trackers.\n No HTTPS or monitoring. Ideal for local testing.\"\n```",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
         "instance_name": {
           "description": "Optional custom instance name for the VM/container\n\nIf not provided, auto-generated as `torrust-tracker-vm-{env_name}`.\nWhen provided, must follow instance naming rules:\n- 1-63 characters\n- ASCII letters, numbers, and dashes only\n- Cannot start with digit or dash\n- Cannot end with dash",
           "type": [

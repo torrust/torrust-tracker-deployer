@@ -1,0 +1,77 @@
+{
+  "environment": {
+    "name": "full-stack-hetzner",
+    "description": "Production-ready deployment on Hetzner cloud with all enterprise features. Includes MySQL for scalability, multiple HTTPS-enabled endpoints with production certificates, comprehensive monitoring (Prometheus + Grafana), and automated daily backups. Designed for high-traffic public trackers requiring professional infrastructure."
+  },
+  "ssh_credentials": {
+    "private_key_path": "/home/torrust/.ssh/testing_rsa",
+    "public_key_path": "/home/torrust/.ssh/testing_rsa.pub"
+  },
+  "provider": {
+    "provider": "hetzner",
+    "api_token": "REPLACE_WITH_HETZNER_API_TOKEN",
+    "server_type": "cx22",
+    "location": "nbg1",
+    "image": "ubuntu-24.04"
+  },
+  "tracker": {
+    "core": {
+      "database": {
+        "driver": "mysql",
+        "host": "mysql",
+        "port": 3306,
+        "database_name": "tracker",
+        "username": "tracker_user",
+        "password": "secure_production_password"
+      },
+      "private": false
+    },
+    "udp_trackers": [
+      {
+        "bind_address": "0.0.0.0:6969"
+      },
+      {
+        "bind_address": "0.0.0.0:6970"
+      }
+    ],
+    "http_trackers": [
+      {
+        "bind_address": "0.0.0.0:7070",
+        "domain": "tracker1.yourdomain.com",
+        "use_tls_proxy": true
+      },
+      {
+        "bind_address": "0.0.0.0:7071",
+        "domain": "tracker2.yourdomain.com",
+        "use_tls_proxy": true
+      }
+    ],
+    "http_api": {
+      "bind_address": "0.0.0.0:1212",
+      "admin_token": "REPLACE_WITH_STRONG_TOKEN",
+      "domain": "api.yourdomain.com",
+      "use_tls_proxy": true
+    },
+    "health_check_api": {
+      "bind_address": "0.0.0.0:1313",
+      "domain": "health.yourdomain.com",
+      "use_tls_proxy": true
+    }
+  },
+  "https": {
+    "admin_email": "admin@yourdomain.com"
+  },
+  "prometheus": {
+    "scrape_interval_in_secs": 15
+  },
+  "grafana": {
+    "admin_user": "admin",
+    "admin_password": "REPLACE_WITH_STRONG_PASSWORD",
+    "domain": "grafana.yourdomain.com",
+    "use_tls_proxy": true
+  },
+  "backup": {
+    "schedule": "0 2 * * *",
+    "retention_days": 7
+  }
+}

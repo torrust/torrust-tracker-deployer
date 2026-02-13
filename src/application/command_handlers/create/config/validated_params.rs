@@ -161,6 +161,7 @@ mod tests {
         EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "test-env".to_string(),
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -196,6 +197,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "my-env".to_string(),
+                description: None,
                 instance_name: Some("custom-vm-name".to_string()),
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
@@ -222,6 +224,7 @@ mod tests {
         let config = EnvironmentCreationConfig::new(
             EnvironmentSection {
                 name: "INVALID_NAME".to_string(), // uppercase not allowed
+                description: None,
                 instance_name: None,
             },
             SshCredentialsConfig::new(private_key_path, public_key_path, "torrust".to_string(), 22),
