@@ -429,3 +429,4 @@ zstd
 файл
 blackbox
 writability
+tokei
