@@ -5,8 +5,8 @@ This directory contains resources to help AI agents guide users through creating
 ## Contents
 
 - **[questionnaire.md](questionnaire.md)** - Structured decision tree for gathering user requirements
-- **[examples/](examples/)** - 15 pre-configured environment examples demonstrating common deployment scenarios
-- **[outputs/](outputs/)** - Rendered deployment artifacts for all examples (complete input/output pairs)
+- **[dataset/environment-configs/](dataset/environment-configs/)** - 15 pre-configured environment examples demonstrating common deployment scenarios
+- **[dataset/rendered-templates/](dataset/rendered-templates/)** - Rendered deployment artifacts for all examples (complete input/output pairs)
 
 ## Purpose
 
@@ -23,13 +23,13 @@ This directory contains a **complete AI training dataset** with both inputs and 
 
 ### Input: Environment Configurations
 
-- Location: [`examples/`](examples/)
+- Location: [`dataset/environment-configs/`](dataset/environment-configs/)
 - Format: JSON configuration files
 - Content: High-level deployment requirements (provider, database, domains, etc.)
 
 ### Output: Rendered Deployment Artifacts
 
-- Location: [`outputs/`](outputs/)
+- Location: [`dataset/rendered-templates/`](dataset/rendered-templates/)
 - Format: Rendered templates (Ansible, Docker Compose, configuration files)
 - Content: Concrete artifacts ready for deployment
 
@@ -47,10 +47,10 @@ The deployer transforms:
 
 ### Example Mapping
 
-| Input (Config)                                                 | Output (Artifacts)                                    |
-| -------------------------------------------------------------- | ----------------------------------------------------- |
-| [`examples/01-minimal-lxd.json`](examples/01-minimal-lxd.json) | [`outputs/01-minimal-lxd/`](outputs/01-minimal-lxd/)  |
-| SQLite + UDP + HTTP + LXD                                      | Ansible playbooks, tracker.toml, docker-compose, etc. |
+| Input (Config)                                                                                       | Output (Artifacts)                                                                         |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [`dataset/environment-configs/01-minimal-lxd.json`](dataset/environment-configs/01-minimal-lxd.json) | [`dataset/rendered-templates/01-minimal-lxd/`](dataset/rendered-templates/01-minimal-lxd/) |
+| SQLite + UDP + HTTP + LXD                                                                            | Ansible playbooks, tracker.toml, docker-compose, etc.                                      |
 
 **Benefits for AI Agents:**
 
@@ -104,30 +104,30 @@ graph TD
 
 Fundamental deployment patterns demonstrating basic configurations:
 
-| Example | Name                                                      | Provider | Database | HTTPS | Monitoring | Backups | Use Case                                   |
-| ------- | --------------------------------------------------------- | -------- | -------- | ----- | ---------- | ------- | ------------------------------------------ |
-| 01      | [minimal-lxd](examples/01-minimal-lxd.json)               | LXD      | SQLite3  | ✗     | ✗          | ✗       | Quick local testing, learning basics       |
-| 02      | [full-stack-lxd](examples/02-full-stack-lxd.json)         | LXD      | MySQL    | ✓     | ✓          | ✓       | Complete local setup, testing all features |
-| 03      | [minimal-hetzner](examples/03-minimal-hetzner.json)       | Hetzner  | SQLite3  | ✗     | ✗          | ✗       | Simple cloud deployment, proof of concept  |
-| 04      | [full-stack-hetzner](examples/04-full-stack-hetzner.json) | Hetzner  | MySQL    | ✓     | ✓          | ✓       | Production-ready cloud deployment          |
-| 05      | [mysql-development](examples/05-mysql-development.json)   | LXD      | MySQL    | ✗     | ✗          | ✗       | Database-focused development               |
+| Example | Name                                                                         | Provider | Database | HTTPS | Monitoring | Backups | Use Case                                   |
+| ------- | ---------------------------------------------------------------------------- | -------- | -------- | ----- | ---------- | ------- | ------------------------------------------ |
+| 01      | [minimal-lxd](dataset/environment-configs/01-minimal-lxd.json)               | LXD      | SQLite3  | ✗     | ✗          | ✗       | Quick local testing, learning basics       |
+| 02      | [full-stack-lxd](dataset/environment-configs/02-full-stack-lxd.json)         | LXD      | MySQL    | ✓     | ✓          | ✓       | Complete local setup, testing all features |
+| 03      | [minimal-hetzner](dataset/environment-configs/03-minimal-hetzner.json)       | Hetzner  | SQLite3  | ✗     | ✗          | ✗       | Simple cloud deployment, proof of concept  |
+| 04      | [full-stack-hetzner](dataset/environment-configs/04-full-stack-hetzner.json) | Hetzner  | MySQL    | ✓     | ✓          | ✓       | Production-ready cloud deployment          |
+| 05      | [mysql-development](dataset/environment-configs/05-mysql-development.json)   | LXD      | MySQL    | ✗     | ✗          | ✗       | Database-focused development               |
 
 ### Extended Examples (06-15)
 
 Specialized configurations for specific requirements:
 
-| Example | Name                                                              | Provider | Database | HTTPS | Monitoring | Backups | Use Case                                    |
-| ------- | ----------------------------------------------------------------- | -------- | -------- | ----- | ---------- | ------- | ------------------------------------------- |
-| 06      | [production-https](examples/06-production-https.json)             | LXD      | MySQL    | ✓     | ✓          | ✗       | Secure production without backup complexity |
-| 07      | [udp-only](examples/07-udp-only.json)                             | LXD      | SQLite3  | ✗     | ✗          | ✗       | UDP tracker testing, minimal footprint      |
-| 08      | [http-only-https](examples/08-http-only-https.json)               | LXD      | MySQL    | ✓     | ✓          | ✗       | HTTP API-focused, secure web interface      |
-| 09      | [monitoring-stack](examples/09-monitoring-stack.json)             | LXD      | MySQL    | ✗     | ✓          | ✗       | Monitoring development, dashboard testing   |
-| 10      | [multi-domain](examples/10-multi-domain.json)                     | LXD      | MySQL    | ✓     | ✓          | ✗       | Multiple domain architecture                |
-| 11      | [private-tracker](examples/11-private-tracker.json)               | LXD      | MySQL    | ✓     | ✓          | ✗       | Private tracker with user whitelisting      |
-| 12      | [high-availability](examples/12-high-availability.json)           | Hetzner  | MySQL    | ✓     | ✓          | ✓       | Mission-critical production                 |
-| 13      | [backup-focused](examples/13-backup-focused.json)                 | LXD      | MySQL    | ✗     | ✓          | ✓       | Data protection priority (4hr backups)      |
-| 14      | [lightweight-production](examples/14-lightweight-production.json) | Hetzner  | SQLite3  | ✓     | ✗          | ✗       | Cost-effective production                   |
-| 15      | [sqlite-monitoring](examples/15-sqlite-monitoring.json)           | LXD      | SQLite3  | ✗     | ✓          | ✗       | Simple database + full monitoring           |
+| Example | Name                                                                                 | Provider | Database | HTTPS | Monitoring | Backups | Use Case                                    |
+| ------- | ------------------------------------------------------------------------------------ | -------- | -------- | ----- | ---------- | ------- | ------------------------------------------- |
+| 06      | [production-https](dataset/environment-configs/06-production-https.json)             | LXD      | MySQL    | ✓     | ✓          | ✗       | Secure production without backup complexity |
+| 07      | [udp-only](dataset/environment-configs/07-udp-only.json)                             | LXD      | SQLite3  | ✗     | ✗          | ✗       | UDP tracker testing, minimal footprint      |
+| 08      | [http-only-https](dataset/environment-configs/08-http-only-https.json)               | LXD      | MySQL    | ✓     | ✓          | ✗       | HTTP API-focused, secure web interface      |
+| 09      | [monitoring-stack](dataset/environment-configs/09-monitoring-stack.json)             | LXD      | MySQL    | ✗     | ✓          | ✗       | Monitoring development, dashboard testing   |
+| 10      | [multi-domain](dataset/environment-configs/10-multi-domain.json)                     | LXD      | MySQL    | ✓     | ✓          | ✗       | Multiple domain architecture                |
+| 11      | [private-tracker](dataset/environment-configs/11-private-tracker.json)               | LXD      | MySQL    | ✓     | ✓          | ✗       | Private tracker with user whitelisting      |
+| 12      | [high-availability](dataset/environment-configs/12-high-availability.json)           | Hetzner  | MySQL    | ✓     | ✓          | ✓       | Mission-critical production                 |
+| 13      | [backup-focused](dataset/environment-configs/13-backup-focused.json)                 | LXD      | MySQL    | ✗     | ✓          | ✓       | Data protection priority (4hr backups)      |
+| 14      | [lightweight-production](dataset/environment-configs/14-lightweight-production.json) | Hetzner  | SQLite3  | ✓     | ✗          | ✗       | Cost-effective production                   |
+| 15      | [sqlite-monitoring](dataset/environment-configs/15-sqlite-monitoring.json)           | LXD      | SQLite3  | ✗     | ✓          | ✗       | Simple database + full monitoring           |
 
 ## Scenario-to-Example Mapping
 
@@ -359,13 +359,13 @@ After selecting an example, guide users through common customizations:
 All examples have been validated with the `validate` command:
 
 ```bash
-cargo run -- validate --env-file docs/ai-training/examples/01-minimal-lxd.json
+cargo run -- validate --env-file docs/ai-training/dataset/environment-configs/01-minimal-lxd.json
 ```
 
 Expected output:
 
 ```text
-✅ Configuration file 'docs/ai-training/examples/01-minimal-lxd.json' is valid
+✅ Configuration file 'docs/ai-training/dataset/environment-configs/01-minimal-lxd.json' is valid
 ```
 
 ## Creating Custom Configurations

@@ -6,7 +6,7 @@ This directory contains the **rendered deployment artifacts** for all AI trainin
 
 These outputs complete the AI training dataset with **input/output pairs**:
 
-- **Input**: Environment configuration JSON files in [`../examples/`](../examples/)
+- **Input**: Environment configuration JSON files in [`../environment-configs/`](../environment-configs/)
 - **Output**: Rendered deployment templates (this directory)
 
 This mapping demonstrates how the deployer transforms high-level configuration into concrete deployment artifacts.
@@ -17,9 +17,9 @@ Each subdirectory corresponds to an example configuration:
 
 ```text
 outputs/
-├── 01-minimal-lxd/          # Outputs for examples/01-minimal-lxd.json
-├── 02-full-stack-lxd/       # Outputs for examples/02-full-stack-lxd.json
-├── 03-minimal-hetzner/      # Outputs for examples/03-minimal-hetzner.json
+├── 01-minimal-lxd/          # Outputs for environment-configs/01-minimal-lxd.json
+├── 02-full-stack-lxd/       # Outputs for environment-configs/02-full-stack-lxd.json
+├── 03-minimal-hetzner/      # Outputs for environment-configs/03-minimal-hetzner.json
 └── ...                       # (15 total)
 ```
 
@@ -73,7 +73,7 @@ These outputs are generated automatically using:
 
 The script:
 
-1. Reads each example from `docs/ai-training/examples/`
+1. Reads each example from `docs/ai-training/dataset/environment-configs/`
 2. Replaces generic SSH paths with project fixture paths
 3. Calls `render` command with placeholder IP `203.0.113.1` (RFC 5737 TEST-NET-1)
 4. Outputs artifacts to corresponding subdirectory here

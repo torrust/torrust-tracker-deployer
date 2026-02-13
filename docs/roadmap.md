@@ -241,7 +241,7 @@ Add features and documentation that make the use of AI agents to operate the dep
   - Can integrate with `create-environment-config` skill from task 11.1
   - See specification: [Issue #339](https://github.com/torrust/torrust-tracker-deployer/issues/339), [`docs/issues/339-provide-config-examples-and-questionnaire-for-ai-agents.md`](./issues/339-provide-config-examples-and-questionnaire-for-ai-agents.md)
   - **Deliverables**: Questionnaire template (494 lines), 15 validated example configs, comprehensive README (469 lines), integration test suite
-  - **Components**: `docs/ai-training/questionnaire.md`, `docs/ai-training/examples/*.json`, `docs/ai-training/README.md`, `tests/validate_ai_training_examples.rs`
+  - **Components**: `docs/ai-training/questionnaire.md`, `docs/ai-training/dataset/environment-configs/*.json`, `docs/ai-training/README.md`, `tests/validate_ai_training_examples.rs`
 
 - [ ] **11.4** Add dry-run mode for all commands
   - Allow AI agents (and users) to preview what will happen before executing operations

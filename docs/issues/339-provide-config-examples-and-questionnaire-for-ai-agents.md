@@ -229,7 +229,7 @@ Each JSON file contains a complete, validated environment configuration with a `
 **Validation**:
 
 ```bash
-cargo run -- validate --env-file docs/ai-training/examples/01-minimal-sqlite-lxd.json
+cargo run -- validate --env-file docs/ai-training/dataset/environment-configs/01-minimal-lxd.json
 ```
 
 **Automated Testing**:
@@ -238,7 +238,7 @@ To ensure all examples remain valid as the schema evolves, an integration test w
 
 ```rust
 // tests/validate_examples.rs
-// Iterates over docs/ai-training/examples/*.json
+// Iterates over docs/ai-training/dataset/environment-configs/*.json
 // Runs validate command on each file
 // Fails if any example is invalid
 ```
@@ -445,7 +445,7 @@ This configuration exercises every deployment feature and serves as a comprehens
 ### Phase 6: Integration Test for Examples (30 minutes) ✅
 
 - [x] Create integration test at `tests/validate_ai_training_examples.rs`
-- [x] Test iterates over all JSON files in `docs/ai-training/examples/`
+- [x] Test iterates over all JSON files in `docs/ai-training/dataset/environment-configs/`
 - [x] For each example: run `validate` command and assert success
 - [x] Added 4 comprehensive test functions validating all aspects
 - [x] Test ensures examples remain valid as schema evolves
@@ -519,7 +519,7 @@ description: |
 ## Before generating a config
 
 1. Read the questionnaire: `docs/ai-training/questionnaire.md`
-2. Find a similar example: `docs/ai-training/examples/`
+2. Find a similar example: `docs/ai-training/dataset/environment-configs/`
 3. Use `cargo run -- create template` to generate base
 4. Customize based on user requirements
 5. Validate with `cargo run -- validate --env-file`

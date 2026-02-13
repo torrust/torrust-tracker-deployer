@@ -1,6 +1,6 @@
 #!/bin/bash
 # Generate rendered template outputs for AI training example configurations
-# This script processes all example configs in docs/ai-training/examples/ and
+# This script processes all example configs in docs/ai-training/dataset/environment-configs/ and
 # generates the corresponding deployment artifacts using the 'render' command.
 #
 # Purpose: Complete the AI training dataset with input/output pairs:
@@ -10,14 +10,14 @@
 # The script:
 #   1. Replaces generic SSH paths with actual fixture paths
 #   2. Calls 'render' command with placeholder IP address
-#   3. Outputs artifacts to docs/ai-training/outputs/<example-name>/
+#   3. Outputs artifacts to docs/ai-training/dataset/rendered-templates/<example-name>/
 #   4. Reports success/failure for each example
 
 set -euo pipefail
 
 # Configuration
-EXAMPLES_DIR="docs/ai-training/examples"
-OUTPUTS_DIR="docs/ai-training/outputs"
+EXAMPLES_DIR="docs/ai-training/dataset/environment-configs"
+OUTPUTS_DIR="docs/ai-training/dataset/rendered-templates"
 PLACEHOLDER_IP="203.0.113.1"  # TEST-NET-1 (RFC 5737) - documentation IP range
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FIXTURE_PRIVATE_KEY="${PROJECT_ROOT}/fixtures/testing_rsa"
