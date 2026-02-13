@@ -249,17 +249,46 @@ Add features and documentation that make the use of AI agents to operate the dep
   - Flag: `--dry-run` shows planned actions without executing
   - Reduces risk when AI agents operate autonomously
 
+### 12. Add JSON output format support
+
+Add machine-readable JSON output format (`--json` flag) for selected commands to improve automation and AI agent integration. Initial phase focuses on commands where structured output provides the most value.
+
+**Context**: JSON output enables programmatic parsing, making it easier for scripts and AI agents to extract specific information (like IP addresses, service URLs, environment names) without parsing human-readable text.
+
+**Phase 1 - High-Value Commands:**
+
+- [ ] **12.1** Add JSON output to `create` command
+  - Rationale: Contains info about where to find more detailed information (paths, configuration references)
+  - Structured output helps automation track environment artifacts
+
+- [ ] **12.2** Add JSON output to `provision` command
+  - Rationale: Contains the provisioned instance IP address - critical for automation workflows
+  - Easier to parse and extract IP than regex matching console output
+
+- [ ] **12.3** Add JSON output to `show` command
+  - Rationale: Contains the instance IP and comprehensive environment state
+  - Structured format makes it simple to query specific fields programmatically
+
+- [ ] **12.4** Add JSON output to `run` command
+  - Rationale: Contains the list of enabled services and their URLs
+  - Allows automation to verify which services are running and how to access them
+
+- [ ] **12.5** Add JSON output to `list` command
+  - Rationale: Shows full environment names without truncation, enabling unambiguous identification
+  - Table format truncates long names - JSON provides complete information
+
+**Future Enhancement:** JSON output can be extended to all commands (`configure`, `release`, `test`, `destroy`, `validate`, `render`, `purge`) based on user demand and use cases.
+
 ---
 
 ## Deferred Features
 
 Features considered valuable but **out of scope for v1**. We want to release the first version and wait for user acceptance before investing more time. These can be revisited based on user feedback.
 
-| Feature                                      | Rationale                                                  | Notes                                                     |
-| -------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
-| Machine-readable JSON output (`--json` flag) | Easy to add thanks to MVC pattern, but not critical for v1 | Structured output helps AI agents parse results reliably  |
-| MCP (Model Context Protocol) server          | Native AI integration without shell commands               | Would let AI agents call deployer as MCP tools directly   |
-| Structured error format for AI agents        | Already improving errors in section 10                     | Could formalize with error codes, fix suggestions in JSON |
+| Feature                               | Rationale                                    | Notes                                                     |
+| ------------------------------------- | -------------------------------------------- | --------------------------------------------------------- |
+| MCP (Model Context Protocol) server   | Native AI integration without shell commands | Would let AI agents call deployer as MCP tools directly   |
+| Structured error format for AI agents | Already improving errors in section 10       | Could formalize with error codes, fix suggestions in JSON |
 
 ---
 
