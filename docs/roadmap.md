@@ -251,6 +251,8 @@ Add features and documentation that make the use of AI agents to operate the dep
 
 ### 12. Add JSON output format support
 
+**Epic Issue**: [#348 - Add JSON output format support](https://github.com/torrust/torrust-tracker-deployer/issues/348)
+
 Add machine-readable JSON output format (`--json` flag) for selected commands to improve automation and AI agent integration. Initial phase focuses on commands where structured output provides the most value.
 
 **Context**: JSON output enables programmatic parsing, making it easier for scripts and AI agents to extract specific information (like IP addresses, service URLs, environment names) without parsing human-readable text.
