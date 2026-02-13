@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-use tracing::info;
+use tracing::{error, info};
 
 /// Error types for container image building
 #[derive(Debug, thiserror::Error)]
@@ -106,8 +106,18 @@ impl ImageBuilder {
             .output()?;
 
         if !output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(ImageBuildError::BuildFailed(stderr.to_string()));
+            error!(
+                image = full_image_name,
+                exit_code = output.status.code(),
+                stdout_len = stdout.len(),
+                stderr_len = stderr.len(),
+                "Docker build failed"
+            );
+            // Include both stdout and stderr for better debugging
+            let combined_output = format!("{stdout}\n{stderr}");
+            return Err(ImageBuildError::BuildFailed(combined_output));
         }
 
         info!(image = full_image_name, "Successfully built Docker image");
