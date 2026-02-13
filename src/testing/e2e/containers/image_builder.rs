@@ -303,20 +303,9 @@ impl ContainerImageBuilder {
         let dockerfile_path_str = dockerfile_path.display().to_string();
         let context_path_str = self.context_path.display().to_string();
 
-        // In CI environments, Docker `BuildKit` may have stale tags or cache conflicts.
-        // Force remove any existing image before building to ensure a clean build state.
-        // We remove both the short name and the fully-qualified name that BuildKit uses.
-        drop(
-            Command::new("docker")
-                .args(["rmi", "-f", &image_tag])
-                .output(),
-        );
-        let fq_image_tag = format!("docker.io/library/{image_tag}");
-        drop(
-            Command::new("docker")
-                .args(["rmi", "-f", &fq_image_tag])
-                .output(),
-        );
+        // Docker BuildKit handles concurrent builds to the same tag atomically.
+        // We don't need to manually remove existing images - this would create race
+        // conditions when multiple tests build the same image in parallel.
 
         info!(
             image_name = %image_name,
