@@ -6,6 +6,7 @@ This directory contains resources to help AI agents guide users through creating
 
 - **[questionnaire.md](questionnaire.md)** - Structured decision tree for gathering user requirements
 - **[examples/](examples/)** - 15 pre-configured environment examples demonstrating common deployment scenarios
+- **[outputs/](outputs/)** - Rendered deployment artifacts for all examples (complete input/output pairs)
 
 ## Purpose
 
@@ -15,6 +16,50 @@ These materials enable AI agents to:
 2. **Recommend appropriate starting configurations** based on user requirements
 3. **Explain configuration tradeoffs** between different deployment options
 4. **Help users customize** example configurations for their specific needs
+
+## Dataset Structure: Input/Output Pairs
+
+This directory contains a **complete AI training dataset** with both inputs and outputs:
+
+### Input: Environment Configurations
+
+- Location: [`examples/`](examples/)
+- Format: JSON configuration files
+- Content: High-level deployment requirements (provider, database, domains, etc.)
+
+### Output: Rendered Deployment Artifacts
+
+- Location: [`outputs/`](outputs/)
+- Format: Rendered templates (Ansible, Docker Compose, configuration files)
+- Content: Concrete artifacts ready for deployment
+
+### The Deployer as a Function
+
+```text
+config.json → [Deployer] → Rendered Templates
+   (IN)                         (OUT)
+```
+
+The deployer transforms:
+
+- **FROM**: Desired infrastructure state in custom domain language
+- **TO**: Executable deployment artifacts
+
+### Example Mapping
+
+| Input (Config)                                                 | Output (Artifacts)                                    |
+| -------------------------------------------------------------- | ----------------------------------------------------- |
+| [`examples/01-minimal-lxd.json`](examples/01-minimal-lxd.json) | [`outputs/01-minimal-lxd/`](outputs/01-minimal-lxd/)  |
+| SQLite + UDP + HTTP + LXD                                      | Ansible playbooks, tracker.toml, docker-compose, etc. |
+
+**Benefits for AI Agents:**
+
+- **Few-shot learning**: Full input/output examples show transformation patterns
+- **Pattern recognition**: See how config changes affect rendered templates
+- **Diff analysis**: Compare outputs to understand configuration impact
+- **Template understanding**: Learn the structure of deployment artifacts
+
+**Regenerating Outputs**: Run `./scripts/generate-ai-training-outputs.sh` to update artifacts when templates change.
 
 ## Using the Questionnaire
 
