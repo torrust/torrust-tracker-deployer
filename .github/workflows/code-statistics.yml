@@ -1,0 +1,22 @@
+name: Code Statistics
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  code-statistics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install tokei
+        run: cargo install tokei
+
+      - name: Run code statistics
+        run: git ls-files | xargs tokei
