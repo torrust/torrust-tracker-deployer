@@ -14,6 +14,9 @@ use crate::application::command_handlers::CreateCommandHandler;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Created;
 use crate::domain::Environment;
+use crate::presentation::views::commands::create::{
+    EnvironmentDetailsData, EnvironmentDetailsView,
+};
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -265,7 +268,10 @@ impl CreateEnvironmentCommandController {
     ///
     /// This step outputs:
     /// - Final completion message with environment name
-    /// - Instance details (name, data directory, build directory)
+    /// - Environment details (name, instance name, data directory, build directory)
+    ///
+    /// The output formatting is delegated to the view layer (`EnvironmentDetailsView`)
+    /// following the MVC pattern. This separates presentation concerns from controller logic.
     ///
     /// # Arguments
     ///
@@ -290,15 +296,14 @@ impl CreateEnvironmentCommandController {
 
         self.progress.blank_line()?;
 
-        self.progress.steps(
-            "Environment Details:",
-            &[
-                &format!("Environment name: {}", environment.name().as_str()),
-                &format!("Instance name: {}", environment.instance_name().as_str()),
-                &format!("Data directory: {}", environment.data_dir().display()),
-                &format!("Build directory: {}", environment.build_dir().display()),
-            ],
-        )?;
+        // Convert domain model to presentation DTO
+        let details = EnvironmentDetailsData::from(environment);
+
+        // Render using view layer
+        let output = EnvironmentDetailsView::render_human_readable(&details);
+
+        // Output the rendered result
+        self.progress.result(&output)?;
 
         Ok(())
     }
