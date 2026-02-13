@@ -75,13 +75,22 @@ impl ImageBuilder {
 
         info!(image = full_image_name, "Building Docker image...");
 
-        // Remove any stale/corrupt image that might exist but wasn't detected
-        // This fixes CI issues where Docker BuildKit reports "already exists" during export
+        // Remove any stale/corrupt image that might exist but wasn't detected.
+        // This fixes CI issues where Docker BuildKit reports "already exists" during export.
+        // We remove both the short name and the fully-qualified name that BuildKit uses.
         drop(
             Command::new("docker")
                 .arg("rmi")
                 .arg("-f")
                 .arg(&full_image_name)
+                .output(), // Ignore errors - image might not exist
+        );
+        let fq_image_name = format!("docker.io/library/{full_image_name}");
+        drop(
+            Command::new("docker")
+                .arg("rmi")
+                .arg("-f")
+                .arg(&fq_image_name)
                 .output(), // Ignore errors - image might not exist
         );
 
