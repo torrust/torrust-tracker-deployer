@@ -10,6 +10,8 @@
 //! - `TempWorkspace` - Local to `tests/` (only used by integration tests)
 //! - `EnvironmentStateAssertions` - Local to `tests/` (only used by integration tests)
 
+#![allow(dead_code, unused_imports)]
+
 mod assertions;
 mod temp_workspace;
 
