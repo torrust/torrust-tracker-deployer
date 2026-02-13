@@ -53,6 +53,9 @@ Thanks to the MVC pattern already in place (presentation layer separation), addi
 
 ### 12.1 Add JSON output to `create` command
 
+**Issue**: #349
+**Specification**: [docs/issues/349-add-json-output-to-create-command.md](./349-add-json-output-to-create-command.md)
+
 **Rationale**: Contains info about where to find more detailed information (paths, configuration references). Structured output helps automation track environment artifacts.
 
 **Key fields**:

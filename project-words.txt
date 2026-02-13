@@ -99,6 +99,7 @@ backlinks
 bencoded
 binstall
 bitrot
+blackbox
 bootcmd
 browsable
 btrfs
@@ -175,8 +176,8 @@ fswc
 getent
 getopt
 gobinary
-gpgv
 gosu
+gpgv
 handleable
 hashset
 healthcheck
@@ -273,13 +274,14 @@ ooxml
 overpromise
 pacman
 parameterizing
+parsability
 parseable
 passwordless
 pathbuf
-peerslee
 pdfminer
 pdfplumber
 pdfs
+peerslee
 pgzip
 pidfile
 pids
@@ -303,8 +305,8 @@ publicsuffix
 pullable
 purgeable
 pypdf
-pytest
 pytesseract
+pytest
 rclone
 readlink
 realpath
@@ -386,6 +388,7 @@ tmpelq
 tmpfiles
 tmpfs
 tmptu
+tokei
 torrust
 transactionally
 trixie
@@ -414,6 +417,7 @@ venvs
 viewmodel
 vulns
 webservers
+writability
 writeln
 wrongpassword
 xtrabackup
@@ -427,6 +431,3 @@ zstd
 ключ
 конфиг
 файл
-blackbox
-writability
-tokei
