@@ -223,6 +223,7 @@ Available skills:
 | Completing refactor plans    | `.github/skills/complete-refactor-plan/skill.md`    |
 | Creating ADRs                | `.github/skills/create-adr/skill.md`                |
 | Creating environment configs | `.github/skills/create-environment-config/skill.md` |
+| Creating feature branches    | `.github/skills/create-feature-branch/skill.md`     |
 | Creating issues              | `.github/skills/create-issue/skill.md`              |
 | Creating new skills          | `.github/skills/add-new-skill/skill.md`             |
 | Creating refactor plans      | `.github/skills/create-refactor-plan/skill.md`      |
