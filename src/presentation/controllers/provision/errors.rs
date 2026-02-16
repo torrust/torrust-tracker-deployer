@@ -89,6 +89,16 @@ Tip: This is a critical bug - please report it with full logs using --log-output
         #[source]
         source: ProgressReporterError,
     },
+
+    /// Output formatting failed
+    ///
+    /// Failed to format provision output (JSON serialization error).
+    /// This indicates an internal error in data serialization.
+    #[error(
+        "Failed to format provision output: {reason}
+Tip: This is a critical bug - please report it with full logs using --log-output file-and-stderr"
+    )]
+    OutputFormatting { reason: String },
 }
 
 // ============================================================================
@@ -327,6 +337,30 @@ This is a critical internal error that should not occur during normal operation.
    - Check for system resource issues (memory, file descriptors)
 
 This error indicates a bug in the progress reporting system.
+Please report it so we can fix it."
+            }
+
+            Self::OutputFormatting { .. } => {
+                "Output Formatting Failed - Critical Internal Error:
+
+This is a critical internal error that should not occur during normal operation.
+
+1. Immediate actions:
+   - Save full error output
+   - Copy log files from data/logs/
+   - Note the exact command and output format that was being used
+
+2. Report the issue:
+   - Create GitHub issue with full details
+   - Include: command, output format (--output-format), error output, logs
+   - Describe steps to reproduce
+
+3. Temporary workarounds:
+   - Try using different output format (text vs json)
+   - Try running command again
+   - Check for system resource issues (memory, file descriptors)
+
+This error indicates a bug in the output formatting system.
 Please report it so we can fix it."
             }
         }

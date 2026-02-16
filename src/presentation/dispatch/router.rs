@@ -131,10 +131,11 @@ pub async fn route_command(
             Ok(())
         }
         Commands::Provision { environment } => {
+            let output_format = context.output_format();
             context
                 .container()
                 .create_provision_controller()
-                .execute(&environment)
+                .execute(&environment, output_format)
                 .await?;
             Ok(())
         }
