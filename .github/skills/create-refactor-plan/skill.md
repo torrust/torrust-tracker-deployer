@@ -230,6 +230,48 @@ Edit `docs/refactors/active-refactorings.md`:
 | [Your Refactoring Title](plans/your-file-name.md) | 📋 Planning | TBD   | Brief target area | YYYY-MM-DD |
 ```
 
+### Step 9: Verify Plan Quality
+
+Run linters to ensure the plan document meets quality standards:
+
+```bash
+cargo run --bin linter all
+```
+
+Fix any issues found:
+
+- **Markdown formatting** - Follow markdownlint rules
+- **Spelling** - Add project-specific terms to `project-words.txt`
+- **YAML/TOML** - Ensure proper formatting
+- **Code examples** - Verify Rust code compiles (if applicable)
+
+### Step 10: Commit the Plan
+
+Commit both the plan document and the updated index:
+
+```bash
+git add docs/refactors/plans/{your-plan}.md docs/refactors/active-refactorings.md
+git commit -m "docs: add refactor plan for {short-description}"
+```
+
+**Commit message format**: `docs: add refactor plan for {brief-description}`
+
+Examples:
+
+- `docs: add refactor plan for separating view data from views`
+- `docs: add refactor plan for simplifying error handling`
+
+### Step 11: Push for Review (Optional)
+
+If working collaboratively:
+
+```bash
+git push origin main
+# Or create a PR if that's the team's workflow
+```
+
+The plan is now committed and ready for team review.
+
 ## Status Legend
 
 - 📋 **Planning** - Document created, awaiting review and approval
@@ -291,11 +333,13 @@ Good refactoring plans:
 
 1. **Create** - Copy template, fill in details, organize by impact/effort
 2. **Register** - Add entry to `active-refactorings.md` with status 📋 Planning
-3. **Review** - Get team approval on the plan
-4. **Update Status** - Change to 🚧 In Progress when starting
-5. **Implement** - Follow proposals in priority order
-6. **Track Progress** - Update plan after each proposal
-7. **Complete** - See "complete-refactor-plan" skill for cleanup steps
+3. **Lint** - Run `cargo run --bin linter all` and fix any issues
+4. **Commit** - Commit plan and index to git
+5. **Review** - Get team approval on the committed plan
+6. **Update Status** - Change to 🚧 In Progress when starting
+7. **Implement** - Follow proposals in priority order
+8. **Track Progress** - Update plan after each proposal
+9. **Complete** - See "complete-refactor-plan" skill for cleanup steps
 
 ## Example Proposals
 
@@ -392,6 +436,8 @@ timeout(config.connection_timeout, operation);
 1. **Always use the template** - Ensures consistency and completeness
 2. **Prioritize by impact/effort** - P0 (quick wins) first
 3. **Include code examples** - Makes problems and solutions concrete
-4. **Get approval before implementing** - Plan must be reviewed
-5. **Update progress regularly** - Keep metrics current
-6. **Add to active-refactorings.md** - Register the plan in the index
+4. **Run linters before committing** - Ensure plan quality
+5. **Commit plan to git** - Required before team review
+6. **Get approval before implementing** - Plan must be reviewed
+7. **Update progress regularly** - Keep metrics current
+8. **Add to active-refactorings.md** - Register the plan in the index
