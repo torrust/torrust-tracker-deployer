@@ -68,7 +68,7 @@ impl From<&Environment<Provisioned>> for ConnectionDetailsData {
 /// use std::net::{IpAddr, Ipv4Addr};
 /// use std::path::PathBuf;
 /// use torrust_tracker_deployer_lib::presentation::views::commands::provision::ConnectionDetailsView;
-/// use torrust_tracker_deployer_lib::presentation::views::commands::provision::connection_details::ConnectionDetailsData;
+/// use torrust_tracker_deployer_lib::presentation::views::commands::provision::view_data::connection_details::ConnectionDetailsData;
 ///
 /// let data = ConnectionDetailsData {
 ///     instance_ip: Some(IpAddr::V4(Ipv4Addr::new(10, 140, 190, 171))),
@@ -120,7 +120,7 @@ impl ConnectionDetailsView {
     /// use std::net::{IpAddr, Ipv4Addr};
     /// use std::path::PathBuf;
     /// use torrust_tracker_deployer_lib::presentation::views::commands::provision::ConnectionDetailsView;
-    /// use torrust_tracker_deployer_lib::presentation::views::commands::provision::connection_details::ConnectionDetailsData;
+    /// use torrust_tracker_deployer_lib::presentation::views::commands::provision::view_data::connection_details::ConnectionDetailsData;
     ///
     /// let data = ConnectionDetailsData {
     ///     instance_ip: Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100))),

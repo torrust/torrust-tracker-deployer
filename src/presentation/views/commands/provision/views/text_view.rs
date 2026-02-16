@@ -4,7 +4,7 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (human-readable text) for provision details.
 
-use super::provision_details::ProvisionDetailsData;
+use super::super::ProvisionDetailsData;
 
 /// Text view for rendering provision details
 ///
