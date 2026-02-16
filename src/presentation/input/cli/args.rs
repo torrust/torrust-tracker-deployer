@@ -97,7 +97,7 @@ pub struct GlobalArgs {
     /// - -vvv: Maximum detail for troubleshooting
     ///
     /// Note: This controls user-facing messages only. For internal
-    /// logging verbosity, use the RUST_LOG environment variable.
+    /// logging verbosity, use the `RUST_LOG` environment variable.
     ///
     /// Examples:
     ///   provision my-env        # Normal verbosity
@@ -155,13 +155,13 @@ impl GlobalArgs {
         )
     }
 
-    /// Convert CLI verbosity count to VerbosityLevel
+    /// Convert CLI verbosity count to `VerbosityLevel`
     ///
     /// Maps the number of `-v` flags provided by the user to the appropriate
     /// `VerbosityLevel` enum variant:
     /// - 0 flags (default) → Normal
     /// - 1 flag (-v) → Verbose
-    /// - 2 flags (-vv) → VeryVerbose
+    /// - 2 flags (-vv) → `VeryVerbose`
     /// - 3+ flags (-vvv or more) → Debug
     ///
     /// # Examples

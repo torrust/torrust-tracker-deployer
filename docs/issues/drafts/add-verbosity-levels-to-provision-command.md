@@ -2,7 +2,13 @@
 
 **Issue**: TBD (Draft)
 **Parent Epic**: TBD - Add levels of verbosity (Roadmap Section 8)
-**Related**: [Roadmap Section 8](../../roadmap.md#8-add-levels-of-verbosity), [UX Research - Console Output & Logging Strategy](../../research/UX/console-output-logging-strategy.md), [UX Research - User Output vs Logging Separation](../../research/UX/user-output-vs-logging-separation.md)
+**Related**:
+
+- [Roadmap Section 8](../../roadmap.md#8-add-levels-of-verbosity)
+- [UX Research - Console Output & Logging Strategy](../../research/UX/console-output-logging-strategy.md)
+- [UX Research - User Output vs Logging Separation](../../research/UX/user-output-vs-logging-separation.md)
+- [Generic Command Progress Listener for Verbosity](generic-command-progress-listener-for-verbosity.md) — architectural design for the `CommandProgressListener` trait that enables application-layer progress reporting
+- [Progress Reporting in Application Layer](../../features/progress-reporting-in-application-layer/README.md) — feature doc describing the broader problem of reporting progress from inside command handlers
 
 **Status**: 🚧 **DRAFT** - Exploration phase, no issue opened yet
 
@@ -409,27 +415,66 @@ let user_output = Arc::new(ReentrantMutex::new(RefCell::new(
 )));
 ```
 
-#### Phase 2: Add Progressive Detail to Provision Workflow
+#### Phase 2: Add Progressive Detail Using `CommandProgressListener`
 
-Update `ProvisionCommandController` to emit detail messages at appropriate verbosity levels:
+> **Architecture Decision**: Progress from inside the application layer is reported via a generic `CommandProgressListener` trait (defined in Application, implemented in Presentation). This follows the Dependency Inversion Principle and avoids violating DDD layer rules. See [Generic Command Progress Listener for Verbosity](generic-command-progress-listener-for-verbosity.md) for the full architectural design.
+
+This phase has 4 sub-phases:
+
+#### Phase 2.0: Build the listener infrastructure
+
+Create the trait, message types, and wiring before adding any progress calls.
+
+#### Phase 2A: Verbose level (`-v`)
+
+Add `on_step_started()` calls in the provision command handler for the 9 steps.
+
+#### Phase 2B: VeryVerbose level (`-vv`)
+
+Pass the listener to Steps and add `on_detail()` calls with context (file paths, results, retry counts).
+
+#### Phase 2C: Debug level (`-vvv`)
+
+Add `on_debug()` calls with technical details (commands, exit codes, raw output).
+
+Example of how the handler reports progress:
+
+```rust
+// src/application/command_handlers/provision/handler.rs
+
+async fn provision_infrastructure(
+    &self,
+    environment: &Environment<Provisioning>,
+    listener: Option<&dyn CommandProgressListener>,
+) -> StepResult<IpAddr, ProvisionCommandHandlerError, ProvisionStep> {
+    let total_steps = 9;
+
+    // Phase 2A: Step-level progress (Verbose / -v)
+    let current_step = ProvisionStep::RenderOpenTofuTemplates;
+    if let Some(l) = listener {
+        l.on_step_started(1, total_steps, "Rendering OpenTofu templates");
+    }
+    self.render_opentofu_templates(&tofu_template_renderer).await
+        .map_err(|e| (e, current_step))?;
+
+    // Phase 2B/2C: Steps receive listener for detail/debug
+    let current_step = ProvisionStep::OpenTofuApply;
+    if let Some(l) = listener {
+        l.on_step_started(5, total_steps, "Applying infrastructure changes");
+    }
+    ApplyInfrastructureStep::new(Arc::clone(&opentofu_client))
+        .execute(listener)?;
+    // ...
+}
+```
+
+Example of how the controller creates and passes the listener:
 
 ```rust
 // src/presentation/controllers/provision/handler.rs
 
-// In the validation step:
-user_output.detail("Checking environment name format...");
-// validation logic
-user_output.detail(&format!("Environment name '{}' is valid", env_name));
-
-// In the handler creation step:
-user_output.detail("Initializing provision command handler...");
-user_output.debug(&format!("Parameters: env_name={}, clock={:?}", env_name, clock));
-
-// In the provisioning step:
-user_output.detail("Rendering OpenTofu templates...");
-user_output.debug(&format!("Template source: {}", template_source));
-user_output.detail("Applying infrastructure changes...");
-user_output.debug(&format!("Command: {}", tofu_command));
+let listener = VerboseProgressListener::new(self.progress.user_output_ref());
+let provisioned = handler.execute(env_name, Some(&listener)).await?;
 ```
 
 #### Phase 3: Test and Refine
@@ -443,19 +488,97 @@ user_output.debug(&format!("Command: {}", tofu_command));
 
 ### Phase 1: CLI Flags and Wiring (2-3 hours)
 
-- [ ] Task 1.1: Add `verbosity` field to `GlobalArgs` with `ArgAction::Count`
-- [ ] Task 1.2: Add `verbosity_level()` method to convert count to enum
-- [ ] Task 1.3: Add verbosity field to `ExecutionContext`
-- [ ] Task 1.4: Wire CLI args → ExecutionContext → UserOutput construction
-- [ ] Task 1.5: Write unit tests for verbosity level conversion
+- [x] Task 1.1: Add `verbosity` field to `GlobalArgs` with `ArgAction::Count`
+- [x] Task 1.2: Add `verbosity_level()` method to convert count to enum
+- [x] Task 1.3: Wire CLI args → ExecutionContext → UserOutput construction
+- [x] Task 1.4: Write unit tests for verbosity level conversion
+- [x] Task 1.5: Update doc examples to include verbosity field
 
-### Phase 2: Provision Command Detail Messages (3-4 hours)
+**Status**: ✅ **COMPLETED** - Commit `cde6050e`
 
-- [ ] Task 2.1: Add `.detail()` messages for Verbose level (validation step)
-- [ ] Task 2.2: Add `.detail()` messages for Verbose level (handler creation step)
-- [ ] Task 2.3: Add `.detail()` messages for Verbose level (provisioning step)
-- [ ] Task 2.4: Add `.debug()` messages for Debug level (technical details)
-- [ ] Task 2.5: Review message wording for clarity and consistency
+### Phase 2: Provision Command Detail Messages (5-7 hours)
+
+> **Architecture**: Uses the `CommandProgressListener` trait pattern. See [Generic Command Progress Listener for Verbosity](generic-command-progress-listener-for-verbosity.md) for the full design, including nesting analysis and DDD layer compliance.
+
+**Incremental implementation in 4 sub-phases**:
+
+#### Phase 2.0: Listener Infrastructure (1.5-2 hours)
+
+**Goal**: Build the `CommandProgressListener` trait, new message types, and presentation-layer listener implementation
+
+- [ ] Task 2.0.1: Create `CommandProgressListener` trait in `src/application/ports/progress.rs` with methods: `on_step_started()`, `on_step_completed()`, `on_detail()`, `on_debug()`
+- [ ] Task 2.0.2: Create `NullProgressListener` (no-op) in the same module for tests and backward compatibility
+- [ ] Task 2.0.3: Create `DetailMessage` in `src/presentation/views/messages/detail.rs` (VerbosityLevel::Verbose, 📋 symbol)
+- [ ] Task 2.0.4: Create `DebugDetailMessage` in `src/presentation/views/messages/debug_detail.rs` (VerbosityLevel::Debug, 🔍 symbol)
+- [ ] Task 2.0.5: Add `.detail()` and `.debug_detail()` methods to `UserOutput`
+- [ ] Task 2.0.6: Create `VerboseProgressListener` in `src/presentation/views/progress/verbose_listener.rs` implementing `CommandProgressListener` using `UserOutput`
+- [ ] Task 2.0.7: Add `listener` parameter to `ProvisionCommandHandler.execute()` (optional, backward compatible)
+- [ ] Task 2.0.8: Wire controller to create `VerboseProgressListener` and pass to handler
+- [ ] Task 2.0.9: Write unit tests (trait implementation, message types, null listener)
+- [ ] Task 2.0.10: Commit Phase 2.0 changes
+
+**Rationale**: Builds the complete infrastructure before adding any progress calls. All existing behavior remains unchanged because no `on_*()` calls are emitted yet.
+
+#### Phase 2A: Verbose Level (`-v`) - Core Step Messages (1-1.5 hours)
+
+**Goal**: Show the 9 ProvisionStep values as progress messages via `on_step_started()`
+
+- [ ] Task 2A.1: Add `listener.on_step_started()` calls at the start of each of the 9 steps in `ProvisionCommandHandler`:
+  - [ ] Step 1/9: Rendering OpenTofu templates
+  - [ ] Step 2/9: Initializing OpenTofu
+  - [ ] Step 3/9: Validating infrastructure configuration
+  - [ ] Step 4/9: Planning infrastructure changes
+  - [ ] Step 5/9: Applying infrastructure changes
+  - [ ] Step 6/9: Retrieving instance information
+  - [ ] Step 7/9: Rendering Ansible templates
+  - [ ] Step 8/9: Waiting for SSH connectivity
+  - [ ] Step 9/9: Waiting for cloud-init completion
+- [ ] Task 2A.2: Create `RecordingProgressListener` for test assertions
+- [ ] Task 2A.3: Write unit tests verifying the handler emits correct step events
+- [ ] Task 2A.4: Manual test with `-v` flag to verify output
+- [ ] Task 2A.5: Commit Phase 2A changes
+
+**Rationale**: Minimum useful enhancement. Users with `-v` see what the command is doing step-by-step. Tests verify event emission without presentation dependencies.
+
+#### Phase 2B: VeryVerbose Level (`-vv`) - Add Context (1-1.5 hours)
+
+**Goal**: Pass listener to Steps and add `on_detail()` calls with context (file paths, results, counts)
+
+- [ ] Task 2B.1: Add `listener` parameter to Step `execute()` methods (optional, backward compatible)
+- [ ] Task 2B.2: Pass listener from handler to each Step
+- [ ] Task 2B.3: Add `listener.on_detail()` calls within each step:
+  - [ ] Step 1: Template directory path, generated file names
+  - [ ] Step 2: OpenTofu backend initialization status
+  - [ ] Step 3: Configuration validation result
+  - [ ] Step 4: Resource change counts (add/change/destroy)
+  - [ ] Step 5: Resource creation/modification details
+  - [ ] Step 6: Retrieved instance IP address
+  - [ ] Step 7: Ansible template directory, generated files
+  - [ ] Step 8: Retry attempt numbers, connection status
+  - [ ] Step 9: Cloud-init status checks
+- [ ] Task 2B.4: Manual test with `-vv` flag to verify output
+- [ ] Task 2B.5: Commit Phase 2B changes
+
+**Rationale**: Steps wrap Infrastructure calls and report using input parameters and return values. No DDD boundary violations — both handler and Steps are in the Application layer.
+
+#### Phase 2C: Debug Level (`-vvv`) - Technical Details (1-1.5 hours)
+
+**Goal**: Add `on_debug()` calls with technical details (commands, exit codes, raw output)
+
+- [ ] Task 2C.1: Add `listener.on_debug()` calls in Steps with technical details:
+  - [ ] Commands executed (full command strings)
+  - [ ] Exit codes from external tools
+  - [ ] Raw output from tools (relevant excerpts)
+  - [ ] Template source/destination paths
+  - [ ] Runtime parameters injected
+  - [ ] Timeout values and retry configurations
+- [ ] Task 2C.2: Manual test with `-vvv` flag to verify output
+- [ ] Task 2C.3: Review for information overload (ensure readability)
+- [ ] Task 2C.4: Commit Phase 2C changes
+
+**Rationale**: Steps report around Infrastructure calls using return values. Infrastructure layer stays opaque (it cannot receive the listener due to DDD dependency rules). For retry loops inside Infrastructure (e.g., SSH connectivity), the pragmatic approach is to report before/after the call; moving the loop into the Step is a future improvement.
+
+**Note**: See the [Nested Progress Reporting Analysis](generic-command-progress-listener-for-verbosity.md#nested-progress-reporting-analysis) for details on how the listener flows through layers and the Infrastructure boundary edge case.
 
 ### Phase 3: Testing and Documentation (2-3 hours)
 
@@ -465,7 +588,7 @@ user_output.debug(&format!("Command: {}", tofu_command));
 - [ ] Task 3.4: Add examples to `--help` output
 - [ ] Task 3.5: Consider extending to other commands (future work)
 
-**Total Estimated Time**: 7-10 hours for provision command exploration
+**Total Estimated Time**: 10-14 hours for provision command exploration
 
 ## Acceptance Criteria
 
