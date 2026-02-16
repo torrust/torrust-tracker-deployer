@@ -232,8 +232,7 @@ Created → Provisioned → Configured → Released → Running → Destroyed
 
 The create and destroy commands support these common options:
 
-- `--help` - Display command help
-- `--log-output <OUTPUT>` - Logging destination (`file-only` or `file-and-stderr`)
+- `--help` - Display command help- `--output-format <FORMAT>`, `-o` - Output format for command results (`text` or `json`, default: `text`)- `--log-output <OUTPUT>` - Logging destination (`file-only` or `file-and-stderr`)
 - `--log-file-format <FORMAT>` - File log format (`pretty`, `json`, or `compact`)
 - `--log-stderr-format <FORMAT>` - Stderr log format (`pretty`, `json`, or `compact`)
 - `--log-dir <DIR>` - Log directory (default: `./data/logs`)

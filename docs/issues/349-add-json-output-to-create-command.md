@@ -11,10 +11,10 @@ Add machine-readable JSON output format (`--output-format json`) to the `create`
 ## Goals
 
 - [x] Add `--output-format` global CLI argument
-- [ ] Implement JSON output format containing environment metadata
-- [ ] Preserve existing human-readable output as default
+- [x] Implement JSON output format containing environment metadata
+- [x] Preserve existing human-readable output as default
 - [ ] Document JSON schema and usage examples
-- [ ] Enable automation to track artifact locations
+- [x] Enable automation to track artifact locations
 
 ## Rationale
 
@@ -294,26 +294,22 @@ torrust-tracker-deployer create environment --env-file envs/my-env.json
 ```json
 {
   "environment_name": "my-env",
-  "state": "Created",
-  "data_dir": "data/my-env",
-  "build_dir": "build/my-env",
-  "config_file": "envs/my-env.json",
-  "state_file": "data/my-env/environment.json",
-  "created_at": "2026-02-13T13:00:00Z"
+  "instance_name": "torrust-tracker-vm-my-env",
+  "data_dir": "./data/my-env",
+  "build_dir": "./build/my-env",
+  "created_at": "2026-02-16T13:38:02.446056727Z"
 }
 ```
 
 ### Field Descriptions
 
-| Field              | Type   | Description                                        |
-| ------------------ | ------ | -------------------------------------------------- |
-| `environment_name` | string | Name of the created environment                    |
-| `state`            | string | Current state (always "Created" for this command)  |
-| `data_dir`         | string | Path to environment data directory                 |
-| `build_dir`        | string | Path where build artifacts will be generated       |
-| `config_file`      | string | Path to configuration file (if using `--env-file`) |
-| `state_file`       | string | Path to environment state JSON file                |
-| `created_at`       | string | ISO 8601 timestamp of creation                     |
+| Field              | Type   | Description                                  |
+| ------------------ | ------ | -------------------------------------------- |
+| `environment_name` | string | Name of the created environment              |
+| `instance_name`    | string | Full VM instance name                        |
+| `data_dir`         | string | Path to environment data directory           |
+| `build_dir`        | string | Path where build artifacts will be generated |
+| `created_at`       | string | ISO 8601 timestamp of creation               |
 
 ### Human-Readable Output (Unchanged)
 
@@ -559,13 +555,13 @@ impl EnvironmentDetailsView {
 }
 ```
 
-### Phase 3: Implement Format Switching in Controller
+### Phase 3: Implement Format Switching in Controller ✅
 
-- [ ] Pass `output_format` from router to controller
-- [ ] Add conditional logic based on `OutputFormat` in controller
-- [ ] Call `EnvironmentDetailsView::render_json()` when `OutputFormat::Json`
-- [ ] Call `EnvironmentDetailsView::render_human_readable()` when `OutputFormat::Text` (default)
-- [ ] Handle JSON serialization errors appropriately
+- [x] Pass `output_format` from router to controller
+- [x] Add conditional logic based on `OutputFormat` in controller
+- [x] Call `EnvironmentDetailsView::render_json()` when `OutputFormat::Json`
+- [x] Call `EnvironmentDetailsView::render_human_readable()` when `OutputFormat::Text` (default)
+- [x] Handle JSON serialization errors appropriately
 
 **Pattern:**
 
@@ -621,11 +617,11 @@ fn display_creation_results(
 - `src/presentation/controllers/create/subcommands/environment/handler.rs` (add parameter and format switching)
 - `src/presentation/controllers/create/errors.rs` (add JSON serialization error variant)
 
-### Phase 4: Documentation
+### Phase 4: Documentation ✅
 
-- [ ] Update user guide with JSON output examples
-- [ ] Document JSON schema
-- [ ] Add usage examples for automation
+- [x] Update user guide with JSON output examples
+- [x] Document JSON schema
+- [x] Add usage examples for automation
 
 **Files to create/modify:**
 
@@ -648,38 +644,38 @@ fn display_creation_results(
 - [x] View module structure matches `provision`, `list`, `show` commands
 - [x] Golden test passes after refactoring (output unchanged)
 - [x] Commit 1: Refactoring (behavior preserved)
-- [ ] Commit 2: JSON support (new feature)
+- [x] Commit 2: JSON support (new feature) - commit 03e7bf7c
 
 ### Functionality
 
 - [x] `--output-format` global argument is accepted
-- [ ] With `--output-format json`, command outputs valid JSON to stdout
-- [ ] JSON contains all specified fields with correct values
-- [ ] JSON is parsable by standard tools (`jq`, `serde_json`, etc.)
-- [ ] Without flag (or with `--output-format text`), output is unchanged (human-readable format)
-- [ ] Errors are still output to stderr (not to stdout)
+- [x] With `--output-format json`, command outputs valid JSON to stdout
+- [x] JSON contains all specified fields with correct values
+- [x] JSON is parsable by standard tools (`jq`, `serde_json`, etc.)
+- [x] Without flag (or with `--output-format text`), output is unchanged (human-readable format)
+- [x] Errors are still output to stderr (not to stdout)
 
 ### Code Quality
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
-- [ ] All linters pass (clippy, rustfmt)
-- [ ] No unused dependencies added
-- [ ] Code follows existing patterns in presentation layer
-- [ ] No changes to application or domain layers
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] All linters pass (clippy, rustfmt)
+- [x] No unused dependencies added
+- [x] Code follows existing patterns in presentation layer
+- [x] No changes to application or domain layers
 
 ### Documentation
 
-- [ ] User guide updated with JSON output section
-- [ ] JSON schema documented with field descriptions
-- [ ] At least one usage example provided
-- [ ] Automation use case documented
+- [x] User guide updated with JSON output section
+- [x] JSON schema documented with field descriptions
+- [x] At least one usage example provided
+- [x] Automation use case documented
 
 ### User Experience
 
-- [ ] Default behavior (no flag) is identical to before
-- [ ] JSON output is pretty-printed for readability
-- [ ] Timestamps use ISO 8601 format
-- [ ] Paths use forward slashes (cross-platform)
+- [x] Default behavior (no flag) is identical to before
+- [x] JSON output is pretty-printed for readability
+- [x] Timestamps use ISO 8601 format
+- [x] Paths use forward slashes (cross-platform)
 
 ## Testing
 
