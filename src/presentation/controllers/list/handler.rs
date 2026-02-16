@@ -12,7 +12,7 @@ use parking_lot::ReentrantMutex;
 use crate::application::command_handlers::list::info::EnvironmentList;
 use crate::application::command_handlers::list::{ListCommandHandler, ListCommandHandlerError};
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::views::commands::list::EnvironmentListView;
+use crate::presentation::views::commands::list::TextView;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 
@@ -144,8 +144,7 @@ impl ListCommandController {
             .start_step(ListStep::DisplayResults.description())?;
 
         // Pipeline: EnvironmentList → render → output to stdout
-        self.progress
-            .result(&EnvironmentListView::render(env_list))?;
+        self.progress.result(&TextView::render(env_list))?;
 
         self.progress.complete_step(Some("Results displayed"))?;
 
