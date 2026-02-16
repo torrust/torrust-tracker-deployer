@@ -1,7 +1,8 @@
-//! Environment Information View for Show Command
+//! Text View for Environment Information (Show Command)
 //!
-//! This module provides a view for rendering environment information
-//! with state-aware details.
+//! This module provides text-based rendering for environment information.
+//! It follows the Strategy Pattern, providing one specific rendering strategy
+//! (human-readable text) for environment details.
 //!
 //! # Module Structure
 //!
@@ -49,7 +50,7 @@ use crate::application::command_handlers::show::info::EnvironmentInfo;
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::application::command_handlers::show::info::EnvironmentInfo;
-/// use torrust_tracker_deployer_lib::presentation::views::commands::show::EnvironmentInfoView;
+/// use torrust_tracker_deployer_lib::presentation::views::commands::show::TextView;
 /// use chrono::{TimeZone, Utc};
 ///
 /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
@@ -61,13 +62,13 @@ use crate::application::command_handlers::show::info::EnvironmentInfo;
 ///     "created".to_string(),
 /// );
 ///
-/// let output = EnvironmentInfoView::render(&info);
+/// let output = TextView::render(&info);
 /// assert!(output.contains("Environment: my-env"));
 /// assert!(output.contains("State: Created"));
 /// ```
-pub struct EnvironmentInfoView;
+pub struct TextView;
 
-impl EnvironmentInfoView {
+impl TextView {
     /// Render environment information as a formatted string
     ///
     /// Takes environment info and produces a human-readable output suitable
@@ -92,7 +93,7 @@ impl EnvironmentInfoView {
     /// use torrust_tracker_deployer_lib::application::command_handlers::show::info::{
     ///     EnvironmentInfo, InfrastructureInfo,
     /// };
-    /// use torrust_tracker_deployer_lib::presentation::views::commands::show::EnvironmentInfoView;
+    /// use torrust_tracker_deployer_lib::presentation::views::commands::show::TextView;
     /// use std::net::{IpAddr, Ipv4Addr};
     /// use chrono::Utc;
     ///
@@ -109,7 +110,7 @@ impl EnvironmentInfoView {
     ///     "~/.ssh/id_rsa".to_string(),
     /// ));
     ///
-    /// let output = EnvironmentInfoView::render(&info);
+    /// let output = TextView::render(&info);
     /// assert!(output.contains("10.140.190.171"));
     /// assert!(output.contains("ssh -i"));
     /// ```
@@ -184,7 +185,7 @@ mod tests {
             "created".to_string(),
         );
 
-        let output = EnvironmentInfoView::render(&info);
+        let output = TextView::render(&info);
 
         assert!(output.contains("Environment: test-env"));
         assert!(output.contains("State: Created"));
@@ -209,7 +210,7 @@ mod tests {
             "~/.ssh/id_rsa".to_string(),
         ));
 
-        let output = EnvironmentInfoView::render(&info);
+        let output = TextView::render(&info);
 
         assert!(output.contains("Infrastructure:"));
         assert!(output.contains("Instance IP: 10.140.190.171"));
@@ -243,7 +244,7 @@ mod tests {
             vec![],                                            // No TLS domains
         ));
 
-        let output = EnvironmentInfoView::render(&info);
+        let output = TextView::render(&info);
 
         assert!(output.contains("Tracker Services:"));
         assert!(output.contains("UDP Trackers:"));
@@ -285,7 +286,7 @@ mod tests {
             vec![],
         ));
 
-        let output = EnvironmentInfoView::render(&info);
+        let output = TextView::render(&info);
 
         // Should have all sections
         assert!(output.contains("Environment: full-env"));
@@ -334,7 +335,7 @@ mod tests {
             ],
         ));
 
-        let output = EnvironmentInfoView::render(&info);
+        let output = TextView::render(&info);
 
         // Check HTTPS trackers section
         assert!(output.contains("HTTP Trackers (HTTPS via Caddy):"));
@@ -378,7 +379,7 @@ mod tests {
             "/key".to_string(),
         ));
 
-        let output = EnvironmentInfoView::render(&info);
+        let output = TextView::render(&info);
 
         assert!(output.contains("-p 2222"));
     }

@@ -12,7 +12,7 @@ use crate::application::command_handlers::show::info::EnvironmentInfo;
 use crate::application::command_handlers::show::{ShowCommandHandler, ShowCommandHandlerError};
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::presentation::views::commands::show::EnvironmentInfoView;
+use crate::presentation::views::commands::show::TextView;
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 
@@ -185,7 +185,7 @@ impl ShowCommandController {
     ///
     /// Following the MVC pattern with functional composition:
     /// - Model: `EnvironmentInfo` (application layer DTO)
-    /// - View: `EnvironmentInfoView::render()` (formatting)
+    /// - View: `TextView::render()` (formatting)
     /// - Controller (this method): Orchestrates the pipeline
     /// - Output: `ProgressReporter::result()` (routing to stdout)
     fn display_information(
@@ -196,8 +196,7 @@ impl ShowCommandController {
             .start_step(ShowStep::DisplayInformation.description())?;
 
         // Pipeline: EnvironmentInfo → render → output to stdout
-        self.progress
-            .result(&EnvironmentInfoView::render(env_info))?;
+        self.progress.result(&TextView::render(env_info))?;
 
         self.progress.complete_step(Some("Information displayed"))?;
 
