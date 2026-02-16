@@ -25,13 +25,13 @@ Establish clear separation between view data structures (DTOs) and view renderin
 **Total Active Proposals**: 5
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 0
+**Completed**: 1
 **In Progress**: 0
-**Not Started**: 5
+**Not Started**: 4
 
 ### Phase Summary
 
-- **Phase 0 - Foundation Commands**: ⏳ 0/2 completed (0%)
+- **Phase 0 - Foundation Commands**: 🔄 1/2 completed (50%)
 - **Phase 1 - Mixed Commands**: ⏳ 0/2 completed (0%)
 - **Phase 2 - Documentation**: ⏳ 0/1 completed (0%)
 
@@ -79,13 +79,13 @@ These commands already follow the DTO + Views pattern and just need reorganizati
 
 ### Proposal #0: Refactor Create Command Structure
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵 Low
 **Priority**: P0
 **Depends On**: None
-**Completed**: -
-**Commit**: -
+**Completed**: 2026-02-16
+**Commit**: TBD (will be added after commit)
 
 #### Problem
 
@@ -144,14 +144,14 @@ pub mod views {
 
 #### Implementation Checklist
 
-- [ ] Create `view_data/` and `views/` subdirectories
-- [ ] Move `environment_details.rs` → `view_data/`
-- [ ] Move `text_view.rs` and `json_view.rs` → `views/`
-- [ ] Update `mod.rs` with new module structure
-- [ ] Update imports in controller (`src/presentation/controllers/create/handler.rs`)
-- [ ] Update imports in tests
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Create `view_data/` and `views/` subdirectories
+- [x] Move `environment_details.rs` → `view_data/`
+- [x] Move `text_view.rs` and `json_view.rs` → `views/`
+- [x] Update `mod.rs` with new module structure
+- [x] Update imports in controller (`src/presentation/controllers/create/handler.rs`)
+- [x] Update imports in tests
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
 
 #### Testing Strategy
 

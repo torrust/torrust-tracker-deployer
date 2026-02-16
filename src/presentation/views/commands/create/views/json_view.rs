@@ -4,7 +4,7 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (machine-readable JSON) for environment details.
 
-use super::environment_details::EnvironmentDetailsData;
+use super::super::EnvironmentDetailsData;
 
 /// JSON view for rendering environment creation details
 ///
