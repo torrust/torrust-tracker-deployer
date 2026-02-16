@@ -74,6 +74,9 @@ Thanks to the MVC pattern already in place (presentation layer separation), addi
 
 ### 12.2 Add JSON output to `provision` command
 
+**Issue**: [#352](https://github.com/torrust/torrust-tracker-deployer/issues/352)
+**Specification**: [docs/issues/352-add-json-output-to-provision-command.md](./352-add-json-output-to-provision-command.md)
+
 **Rationale**: Contains the provisioned instance IP address - critical for automation workflows. Easier to parse and extract IP than regex matching console output.
 
 **Key fields** (CRITICAL):

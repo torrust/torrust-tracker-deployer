@@ -319,6 +319,7 @@ reprovisioning
 reqwest
 resolv
 restic
+returncode
 rgba
 rootpass
 rpcinterface

@@ -263,7 +263,7 @@ Add machine-readable JSON output format (`--json` flag) for selected commands to
   - Rationale: Contains info about where to find more detailed information (paths, configuration references)
   - Structured output helps automation track environment artifacts
 
-- [ ] **12.2** Add JSON output to `provision` command
+- [ ] **12.2** Add JSON output to `provision` command - [Issue #352](https://github.com/torrust/torrust-tracker-deployer/issues/352)
   - Rationale: Contains the provisioned instance IP address - critical for automation workflows
   - Easier to parse and extract IP than regex matching console output
 
