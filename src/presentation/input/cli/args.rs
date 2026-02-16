@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use crate::bootstrap::logging::{LogFormat, LogOutput, LoggingConfig};
 use crate::presentation::input::cli::OutputFormat;
+use crate::presentation::views::VerbosityLevel;
 
 /// Global CLI arguments for logging and output configuration
 ///
@@ -86,6 +87,30 @@ pub struct GlobalArgs {
     /// - CI/CD: JSON piped to jq for field extraction
     #[arg(long, value_enum, default_value = "text", global = true)]
     pub output_format: OutputFormat,
+
+    /// Increase verbosity of user-facing output
+    ///
+    /// Controls the amount of detail shown during operations:
+    /// - Default: Essential progress and results
+    /// - -v: Detailed progress including intermediate steps
+    /// - -vv: Very detailed including decisions and retries
+    /// - -vvv: Maximum detail for troubleshooting
+    ///
+    /// Note: This controls user-facing messages only. For internal
+    /// logging verbosity, use the RUST_LOG environment variable.
+    ///
+    /// Examples:
+    ///   provision my-env        # Normal verbosity
+    ///   provision my-env -v     # Verbose
+    ///   provision my-env -vv    # Very verbose
+    ///   provision my-env -vvv   # Debug
+    #[arg(
+        short = 'v',
+        long = "verbose",
+        action = clap::ArgAction::Count,
+        global = true
+    )]
+    pub verbosity: u8,
 }
 
 impl GlobalArgs {
@@ -115,6 +140,7 @@ impl GlobalArgs {
     ///     log_dir: PathBuf::from("/tmp/logs"),
     ///     working_dir: PathBuf::from("."),
     ///     output_format: OutputFormat::Text,
+    ///     verbosity: 0,
     /// };
     /// let config = args.logging_config();
     /// // config will have specified log formats and directory
@@ -127,5 +153,93 @@ impl GlobalArgs {
             self.log_stderr_format.clone(),
             self.log_output,
         )
+    }
+
+    /// Convert CLI verbosity count to VerbosityLevel
+    ///
+    /// Maps the number of `-v` flags provided by the user to the appropriate
+    /// `VerbosityLevel` enum variant:
+    /// - 0 flags (default) → Normal
+    /// - 1 flag (-v) → Verbose
+    /// - 2 flags (-vv) → VeryVerbose
+    /// - 3+ flags (-vvv or more) → Debug
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use torrust_tracker_deployer_lib::presentation::input::cli::args::GlobalArgs;
+    /// # use torrust_tracker_deployer_lib::presentation::input::cli::OutputFormat;
+    /// # use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput};
+    /// # use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+    /// # use std::path::PathBuf;
+    /// let args = GlobalArgs {
+    ///     log_file_format: LogFormat::Compact,
+    ///     log_stderr_format: LogFormat::Pretty,
+    ///     log_output: LogOutput::FileOnly,
+    ///     log_dir: PathBuf::from("./data/logs"),
+    ///     working_dir: PathBuf::from("."),
+    ///     output_format: OutputFormat::Text,
+    ///     verbosity: 2,  // -vv
+    /// };
+    /// assert_eq!(args.verbosity_level(), VerbosityLevel::VeryVerbose);
+    /// ```
+    #[must_use]
+    pub fn verbosity_level(&self) -> VerbosityLevel {
+        match self.verbosity {
+            0 => VerbosityLevel::Normal,      // Default
+            1 => VerbosityLevel::Verbose,     // -v
+            2 => VerbosityLevel::VeryVerbose, // -vv
+            _ => VerbosityLevel::Debug,       // -vvv or more
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_args(verbosity: u8) -> GlobalArgs {
+        GlobalArgs {
+            log_file_format: LogFormat::Compact,
+            log_stderr_format: LogFormat::Pretty,
+            log_output: LogOutput::FileOnly,
+            log_dir: PathBuf::from("./data/logs"),
+            working_dir: PathBuf::from("."),
+            output_format: OutputFormat::Text,
+            verbosity,
+        }
+    }
+
+    #[test]
+    fn it_should_return_normal_verbosity_when_no_flags_provided() {
+        let args = create_test_args(0);
+        assert_eq!(args.verbosity_level(), VerbosityLevel::Normal);
+    }
+
+    #[test]
+    fn it_should_return_verbose_level_when_single_v_flag_provided() {
+        let args = create_test_args(1);
+        assert_eq!(args.verbosity_level(), VerbosityLevel::Verbose);
+    }
+
+    #[test]
+    fn it_should_return_very_verbose_level_when_double_v_flag_provided() {
+        let args = create_test_args(2);
+        assert_eq!(args.verbosity_level(), VerbosityLevel::VeryVerbose);
+    }
+
+    #[test]
+    fn it_should_return_debug_level_when_triple_v_flag_provided() {
+        let args = create_test_args(3);
+        assert_eq!(args.verbosity_level(), VerbosityLevel::Debug);
+    }
+
+    #[test]
+    fn it_should_cap_at_debug_level_when_more_than_three_v_flags_provided() {
+        let args = create_test_args(4);
+        assert_eq!(args.verbosity_level(), VerbosityLevel::Debug);
+
+        let args = create_test_args(10);
+        assert_eq!(args.verbosity_level(), VerbosityLevel::Debug);
     }
 }

@@ -113,6 +113,7 @@ impl ExecutionContext {
     ///     log_dir: PathBuf::from("./data/logs"),
     ///     working_dir: PathBuf::from("."),
     ///     output_format: OutputFormat::Text,
+    ///     verbosity: 0,
     /// };
     /// let context = ExecutionContext::new(Arc::new(container), global_args);
     /// # Ok(())
@@ -295,6 +296,7 @@ impl ExecutionContext {
     ///     log_dir: PathBuf::from("./data/logs"),
     ///     working_dir: PathBuf::from("."),
     ///     output_format: OutputFormat::Json,
+    ///     verbosity: 0,
     /// };
     /// let context = ExecutionContext::new(Arc::new(container), global_args);
     ///
