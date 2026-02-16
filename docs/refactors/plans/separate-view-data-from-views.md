@@ -85,7 +85,7 @@ These commands already follow the DTO + Views pattern and just need reorganizati
 **Priority**: P0
 **Depends On**: None
 **Completed**: 2026-02-16
-**Commit**: TBD (will be added after commit)
+**Commit**: 9a52ddc2
 
 #### Problem
 
