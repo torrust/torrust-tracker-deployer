@@ -39,6 +39,8 @@ pub struct Theme {
     success_symbol: String,
     warning_symbol: String,
     error_symbol: String,
+    detail_symbol: String,
+    debug_symbol: String,
 }
 
 impl Theme {
@@ -65,6 +67,8 @@ impl Theme {
             success_symbol: "✅".to_string(),
             warning_symbol: "⚠️".to_string(),
             error_symbol: "❌".to_string(),
+            detail_symbol: "📋".to_string(),
+            debug_symbol: "🔍".to_string(),
         }
     }
 
@@ -92,6 +96,8 @@ impl Theme {
             success_symbol: "[OK]".to_string(),
             warning_symbol: "[WARN]".to_string(),
             error_symbol: "[ERROR]".to_string(),
+            detail_symbol: "[DETAIL]".to_string(),
+            debug_symbol: "[DEBUG]".to_string(),
         }
     }
 
@@ -119,6 +125,8 @@ impl Theme {
             success_symbol: "[+]".to_string(),
             warning_symbol: "[!]".to_string(),
             error_symbol: "[x]".to_string(),
+            detail_symbol: "[~]".to_string(),
+            debug_symbol: "[?]".to_string(),
         }
     }
 
@@ -144,6 +152,18 @@ impl Theme {
     #[must_use]
     pub fn error_symbol(&self) -> &str {
         &self.error_symbol
+    }
+
+    /// Get the detail symbol for this theme (verbose progress)
+    #[must_use]
+    pub fn detail_symbol(&self) -> &str {
+        &self.detail_symbol
+    }
+
+    /// Get the debug symbol for this theme (debug-level details)
+    #[must_use]
+    pub fn debug_symbol(&self) -> &str {
+        &self.debug_symbol
     }
 }
 

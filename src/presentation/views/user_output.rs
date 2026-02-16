@@ -13,8 +13,8 @@ use std::io::Write;
 
 // Internal crate imports
 use super::messages::{
-    BlankLineMessage, ErrorMessage, InfoBlockMessage, ProgressMessage, ResultMessage, StepsMessage,
-    SuccessMessage, WarningMessage,
+    BlankLineMessage, DebugDetailMessage, DetailMessage, ErrorMessage, InfoBlockMessage,
+    ProgressMessage, ResultMessage, StepsMessage, SuccessMessage, WarningMessage,
 };
 use super::sinks::StandardSink;
 use super::verbosity::VerbosityFilter;
@@ -201,6 +201,46 @@ impl UserOutput {
     /// ```
     pub fn error(&mut self, message: &str) {
         self.write(&ErrorMessage {
+            text: message.to_string(),
+        });
+    }
+
+    /// Display a detail message to stderr (Verbose level and above)
+    ///
+    /// Detail messages provide step-level progress information during command
+    /// execution. They are shown when the user requests verbose output (`-v`).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
+    ///
+    /// let mut output = UserOutput::new(VerbosityLevel::Verbose);
+    /// output.detail("  [Step 1/9] Rendering OpenTofu templates...");
+    /// // Output to stderr: 📋   [Step 1/9] Rendering OpenTofu templates...
+    /// ```
+    pub fn detail(&mut self, message: &str) {
+        self.write(&DetailMessage {
+            text: message.to_string(),
+        });
+    }
+
+    /// Display a debug detail message to stderr (Debug level and above)
+    ///
+    /// Debug detail messages provide technical implementation details during command
+    /// execution. They are shown when the user requests maximum verbosity (`-vvv`).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
+    ///
+    /// let mut output = UserOutput::new(VerbosityLevel::Debug);
+    /// output.debug_detail("     → Command: tofu init");
+    /// // Output to stderr: 🔍      → Command: tofu init
+    /// ```
+    pub fn debug_detail(&mut self, message: &str) {
+        self.write(&DebugDetailMessage {
             text: message.to_string(),
         });
     }

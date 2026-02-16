@@ -10,16 +10,19 @@
 //! - `fixtures` - Reusable test fixtures
 //! - `mock_clock` - Mock clock implementation for deterministic time testing
 //! - `network` - Network testing utilities (port checking, connectivity testing)
+//! - `recording_progress_listener` - Records progress events for test assertions
 
 pub mod e2e;
 pub mod fixtures;
 pub mod integration;
 pub mod mock_clock;
 pub mod network;
+pub mod recording_progress_listener;
 
 // Re-export commonly used testing types
 pub use mock_clock::MockClock;
 pub use network::{PortChecker, PortCheckerError, PortUsageChecker, PortUsageError};
+pub use recording_progress_listener::{ProgressEvent, RecordingProgressListener};
 
 // Re-export E2E types for convenience
 pub use e2e::{

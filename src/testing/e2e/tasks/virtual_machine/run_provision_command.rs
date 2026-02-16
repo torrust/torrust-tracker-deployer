@@ -157,7 +157,7 @@ pub async fn run_provision_command(
     // Execute provisioning - application layer handles state validation
     let env_name = test_context.environment.name();
     let provisioned_env = provision_command_handler
-        .execute(env_name)
+        .execute(env_name, None)
         .await
         .map_err(|source| ProvisionTaskError::ProvisioningFailed { source })?;
 
