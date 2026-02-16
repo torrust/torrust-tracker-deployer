@@ -10,7 +10,7 @@ Add machine-readable JSON output format (`--output-format json`) to the `create`
 
 ## Goals
 
-- [ ] Add `--output-format` global CLI argument
+- [x] Add `--output-format` global CLI argument
 - [ ] Implement JSON output format containing environment metadata
 - [ ] Preserve existing human-readable output as default
 - [ ] Document JSON schema and usage examples
@@ -400,17 +400,17 @@ Environment Details:
 
 ## Implementation Plan
 
-### Phase 0: Refactor - Extract View Layer (Prerequisite)
+### Phase 0: Refactor - Extract View Layer (Prerequisite) ✅
 
 **Purpose**: Separate output formatting from controller logic to enable clean format switching.
 
-- [ ] Create view module structure: `src/presentation/views/commands/create/`
-- [ ] Create `EnvironmentDetailsData` struct (presentation DTO)
-- [ ] Implement `From<&Environment<Created>>` for data conversion
-- [ ] Create `EnvironmentDetailsView` with `render_human_readable()` method
-- [ ] Update controller to use view instead of direct formatting
-- [ ] Run golden test to verify output unchanged
-- [ ] Commit refactoring (preserving behavior)
+- [x] Create view module structure: `src/presentation/views/commands/create/`
+- [x] Create `EnvironmentDetailsData` struct (presentation DTO)
+- [x] Implement `From<&Environment<Created>>` for data conversion
+- [x] Create `EnvironmentDetailsView` with `render_human_readable()` method
+- [x] Update controller to use view instead of direct formatting
+- [x] Run golden test to verify output unchanged
+- [x] Commit refactoring (preserving behavior)
 
 **Files to create:**
 
@@ -451,16 +451,16 @@ torrust-tracker-deployer create environment --env-file envs/golden-test-json-cre
 # All 4 lines should match exactly
 ```
 
-### Phase 1: Add Global OutputFormat Argument
+### Phase 1: Add Global OutputFormat Argument ✅
 
 **Purpose**: Add `OutputFormat` enum and global `--output-format` CLI argument.
 
-- [ ] Create `OutputFormat` enum in `src/presentation/input/cli/output_format.rs`
-- [ ] Add `#[derive(Clone, Copy, Debug, Default, clap::ValueEnum)]`
-- [ ] Add variants: `Text` (default) and `Json`
-- [ ] Add `output_format: OutputFormat` field to `GlobalArgs`
-- [ ] Add CLI documentation for the flag
-- [ ] No business logic changes yet
+- [x] Create `OutputFormat` enum in `src/presentation/input/cli/output_format.rs`
+- [x] Add `#[derive(Clone, Copy, Debug, Default, clap::ValueEnum)]`
+- [x] Add variants: `Text` (default) and `Json`
+- [x] Add `output_format: OutputFormat` field to `GlobalArgs`
+- [x] Add CLI documentation for the flag
+- [x] No business logic changes yet
 
 **Files to create:**
 
@@ -518,12 +518,12 @@ pub struct GlobalArgs {
 }
 ```
 
-### Phase 2: Add JSON Output Method to View
+### Phase 2: Add JSON Output Method to View ✅
 
-- [ ] Add `render_json()` method to `EnvironmentDetailsView`
-- [ ] Implement JSON serialization using `serde_json`
-- [ ] Use existing `EnvironmentDetailsData` struct (add `Serialize` derive)
-- [ ] Include timestamp field (`created_at`) in JSON output
+- [x] Add `render_json()` method to `EnvironmentDetailsView`
+- [x] Implement JSON serialization using `serde_json`
+- [x] Use existing `EnvironmentDetailsData` struct (add `Serialize` derive)
+- [x] Include timestamp field (`created_at`) in JSON output
 
 **Files to modify:**
 
@@ -643,16 +643,16 @@ fn display_creation_results(
 
 ### Architecture
 
-- [ ] View layer extracted for create command (Phase 0 complete)
-- [ ] Controller delegates output formatting to view
-- [ ] View module structure matches `provision`, `list`, `show` commands
-- [ ] Golden test passes after refactoring (output unchanged)
-- [ ] Commit 1: Refactoring (behavior preserved)
+- [x] View layer extracted for create command (Phase 0 complete)
+- [x] Controller delegates output formatting to view
+- [x] View module structure matches `provision`, `list`, `show` commands
+- [x] Golden test passes after refactoring (output unchanged)
+- [x] Commit 1: Refactoring (behavior preserved)
 - [ ] Commit 2: JSON support (new feature)
 
 ### Functionality
 
-- [ ] `--output-format` global argument is accepted
+- [x] `--output-format` global argument is accepted
 - [ ] With `--output-format json`, command outputs valid JSON to stdout
 - [ ] JSON contains all specified fields with correct values
 - [ ] JSON is parsable by standard tools (`jq`, `serde_json`, etc.)
