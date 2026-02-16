@@ -25,14 +25,14 @@ Establish clear separation between view data structures (DTOs) and view renderin
 **Total Active Proposals**: 5
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 3
+**Completed**: 4
 **In Progress**: 0
-**Not Started**: 2
+**Not Started**: 1
 
 ### Phase Summary
 
 - **Phase 0 - Foundation Commands**: ✅ 2/2 completed (100%)
-- **Phase 1 - Mixed Commands**: 🔄 1/2 completed (50%)
+- **Phase 1 - Mixed Commands**: ✅ 2/2 completed (100%)
 - **Phase 2 - Documentation**: ⏳ 0/1 completed (0%)
 
 ### Discarded Proposals
@@ -354,11 +354,13 @@ cargo test && cargo run --bin linter all
 
 ### Proposal #3: Refactor Show Command Structure
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢 Medium
 **Effort**: 🔵🔵 Medium
 **Priority**: P1
 **Depends On**: Proposals #0, #1
+**Completed**: 2026-02-16
+**Commit**: 68676e16
 
 #### Problem
 
@@ -420,15 +422,15 @@ Show command will need JSON output (task 12.3), requiring DTO + Views pattern.
 
 #### Implementation Checklist
 
-- [ ] Analyze controller for rendering logic
-- [ ] Create `view_data/` and `views/` subdirectories
-- [ ] Move `environment_info/` → `view_data/environment_info/`
-- [ ] Extract rendering logic → `views/text_view.rs`
-- [ ] Update `mod.rs` with new module structure
-- [ ] Update imports in controller
-- [ ] Update imports in tests
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Analyze controller for rendering logic (views already separated)
+- [x] Create `view_data/` and `views/` subdirectories (only views/ needed)
+- [x] Move `environment_info/` → `views/` (renamed directory with existing structure)
+- [x] Rename `EnvironmentInfoView` to `TextView`
+- [x] Update `mod.rs` with new module structure
+- [x] Update imports in controller
+- [x] Update imports in tests
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
 
 #### Testing Strategy
 
