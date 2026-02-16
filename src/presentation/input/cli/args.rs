@@ -7,13 +7,14 @@
 use std::path::PathBuf;
 
 use crate::bootstrap::logging::{LogFormat, LogOutput, LoggingConfig};
+use crate::presentation::input::cli::OutputFormat;
 
-/// Global CLI arguments for logging configuration
+/// Global CLI arguments for logging and output configuration
 ///
 /// These arguments are available for all commands and control how logging
 /// is handled throughout the application. They provide fine-grained control
 /// over log output, formatting, and destinations.
-#[derive(clap::Args, Debug)]
+#[derive(clap::Args, Debug, Clone)]
 pub struct GlobalArgs {
     /// Format for file logging (default: compact, without ANSI codes)
     ///
@@ -69,6 +70,22 @@ pub struct GlobalArgs {
     /// - Production: '/var/lib/torrust-deployer' (system location)
     #[arg(long, default_value = ".", global = true)]
     pub working_dir: PathBuf,
+
+    /// Output format for command results (default: text)
+    ///
+    /// Controls the format of user-facing output (stdout channel).
+    /// - text: Human-readable formatted output with tables and sections (default)
+    /// - json: Machine-readable JSON for automation, scripts, and AI agents
+    ///
+    /// This is independent of logging format (--log-file-format, --log-stderr-format)
+    /// which controls stderr/file output.
+    ///
+    /// Examples:
+    /// - Default: Text format for human consumption
+    /// - Automation: JSON format for programmatic parsing
+    /// - CI/CD: JSON piped to jq for field extraction
+    #[arg(long, value_enum, default_value = "text", global = true)]
+    pub output_format: OutputFormat,
 }
 
 impl GlobalArgs {
@@ -87,6 +104,7 @@ impl GlobalArgs {
     ///
     /// ```rust
     /// # use torrust_tracker_deployer_lib::presentation::input::cli::args::GlobalArgs;
+    /// # use torrust_tracker_deployer_lib::presentation::input::cli::OutputFormat;
     /// # use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingConfig};
     /// # use std::path::PathBuf;
     /// // Create args with log configuration
@@ -96,6 +114,7 @@ impl GlobalArgs {
     ///     log_output: LogOutput::FileAndStderr,
     ///     log_dir: PathBuf::from("/tmp/logs"),
     ///     working_dir: PathBuf::from("."),
+    ///     output_format: OutputFormat::Text,
     /// };
     /// let config = args.logging_config();
     /// // config will have specified log formats and directory

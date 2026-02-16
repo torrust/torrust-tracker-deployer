@@ -62,7 +62,7 @@ pub async fn run() {
         crate::presentation::controllers::constants::DEFAULT_VERBOSITY,
         &cli.global.working_dir,
     ));
-    let context = presentation::dispatch::ExecutionContext::new(container);
+    let context = presentation::dispatch::ExecutionContext::new(container, cli.global.clone());
 
     match cli.command {
         Some(command) => {

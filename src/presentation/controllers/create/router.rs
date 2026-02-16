@@ -34,13 +34,16 @@ pub async fn route_command(
     context: &ExecutionContext,
 ) -> Result<(), CreateCommandError> {
     match action {
-        CreateAction::Environment { env_file } => context
-            .container()
-            .create_environment_controller()
-            .execute(&env_file, working_dir)
-            .await
-            .map(|_| ()) // Convert Environment<Created> to ()
-            .map_err(CreateCommandError::Environment),
+        CreateAction::Environment { env_file } => {
+            let output_format = context.output_format();
+            context
+                .container()
+                .create_environment_controller()
+                .execute(&env_file, working_dir, output_format)
+                .await
+                .map(|_| ()) // Convert Environment<Created> to ()
+                .map_err(CreateCommandError::Environment)
+        }
         CreateAction::Template {
             output_path,
             provider,

@@ -227,6 +227,330 @@ EOF
 torrust-tracker-deployer create environment --env-file test-config.json
 ```
 
+## Output Formats
+
+The `create environment` command supports two output formats for command results:
+
+- **Text** (default) - Human-readable formatted output
+- **JSON** - Machine-readable JSON for automation
+
+Use the global `--output-format` flag to control the format.
+
+### Text Output (Default)
+
+The default output format provides human-readable information with visual formatting:
+
+```bash
+torrust-tracker-deployer create environment --env-file config.json
+```
+
+**Output**:
+
+```text
+⏳ [1/3] Loading configuration...
+⏳     → Loading configuration from 'config.json'...
+⏳   ✓ Configuration loaded: my-env (took 2ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Creating environment...
+⏳     → Creating environment 'my-env'...
+⏳     → Validating configuration and creating environment...
+⏳   ✓ Environment created: my-env (took 15ms)
+✅ Environment 'my-env' created successfully
+
+Environment Details:
+1. Environment name: my-env
+2. Instance name: torrust-tracker-vm-my-env
+3. Data directory: ./data/my-env
+4. Build directory: ./build/my-env
+```
+
+**Features**:
+
+- Progress indicators (⏳, ✅)
+- Timing information
+- Numbered list format
+- Color-coded status messages
+
+### JSON Output
+
+Use `--output-format json` for machine-readable output ideal for automation, scripts, and programmatic processing:
+
+```bash
+torrust-tracker-deployer create environment --env-file config.json --output-format json
+```
+
+**Output**:
+
+```json
+{
+  "environment_name": "my-env",
+  "instance_name": "torrust-tracker-vm-my-env",
+  "data_dir": "./data/my-env",
+  "build_dir": "./build/my-env",
+  "created_at": "2026-02-16T13:38:02.446056727Z"
+}
+```
+
+**Features**:
+
+- Valid, parseable JSON
+- Pretty-printed for readability
+- ISO 8601 timestamps
+- Consistent field ordering
+- Cross-platform paths (forward slashes)
+
+#### JSON Schema
+
+| Field              | Type   | Description                                  | Example                            |
+| ------------------ | ------ | -------------------------------------------- | ---------------------------------- |
+| `environment_name` | string | Name of the created environment              | `"production"`                     |
+| `instance_name`    | string | Full VM instance name                        | `"torrust-tracker-vm-production"`  |
+| `data_dir`         | string | Path to environment data directory           | `"./data/production"`              |
+| `build_dir`        | string | Path where build artifacts will be generated | `"./build/production"`             |
+| `created_at`       | string | ISO 8601 timestamp of creation               | `"2026-02-16T13:38:02.446056727Z"` |
+
+#### Short Form
+
+Use the `-o` alias for shorter commands:
+
+```bash
+torrust-tracker-deployer create environment --env-file config.json -o json
+```
+
+### Automation Examples
+
+#### Extract Environment Paths in Shell Scripts
+
+```bash
+#!/bin/bash
+
+# Create environment and capture JSON output
+JSON_OUTPUT=$(torrust-tracker-deployer create environment \
+  --env-file production.json \
+  --output-format json \
+  --log-output file-only)
+
+# Extract specific fields using jq
+DATA_DIR=$(echo "$JSON_OUTPUT" | jq -r '.data_dir')
+BUILD_DIR=$(echo "$JSON_OUTPUT" | jq -r '.build_dir')
+INSTANCE_NAME=$(echo "$JSON_OUTPUT" | jq -r '.instance_name')
+
+echo "Environment created:"
+echo "  Data: $DATA_DIR"
+echo "  Build: $BUILD_DIR"
+echo "  Instance: $INSTANCE_NAME"
+
+# Use extracted values in subsequent commands
+cd "$DATA_DIR"
+./configure.sh
+```
+
+#### CI/CD Pipeline Integration
+
+```yaml
+# GitHub Actions example
+- name: Create deployment environment
+  id: create
+  run: |
+    OUTPUT=$(torrust-tracker-deployer create environment \
+      --env-file .github/ci-config.json \
+      --output-format json \
+      --log-output file-only)
+
+    # Export as output variables
+    echo "data_dir=$(echo $OUTPUT | jq -r '.data_dir')" >> $GITHUB_OUTPUT
+    echo "build_dir=$(echo $OUTPUT | jq -r '.build_dir')" >> $GITHUB_OUTPUT
+    echo "instance=$(echo $OUTPUT | jq -r '.instance_name')" >> $GITHUB_OUTPUT
+
+- name: Use environment details
+  run: |
+    echo "Deploying to ${{ steps.create.outputs.instance }}"
+    echo "Data stored in ${{ steps.create.outputs.data_dir }}"
+```
+
+#### Multi-Environment Management Script
+
+```bash
+#!/bin/bash
+# Create multiple environments and track them
+
+ENVIRONMENTS=("dev" "staging" "production")
+MANIFEST="environments.json"
+
+# Initialize manifest
+echo "[]" > "$MANIFEST"
+
+for ENV in "${ENVIRONMENTS[@]}"; do
+  echo "Creating $ENV environment..."
+
+  # Create environment with JSON output
+  RESULT=$(torrust-tracker-deployer create environment \
+    --env-file "configs/${ENV}.json" \
+    --output-format json \
+    --log-output file-only)
+
+  # Append to manifest
+  jq ". += [$RESULT]" "$MANIFEST" > temp.json && mv temp.json "$MANIFEST"
+
+  echo "✓ ${ENV} created"
+done
+
+echo "All environments created. Manifest:"
+cat "$MANIFEST"
+```
+
+#### Python Integration
+
+```python
+#!/usr/bin/env python3
+import json
+import subprocess
+
+def create_environment(config_file):
+    """Create environment and return parsed JSON output."""
+    result = subprocess.run(
+        [
+            "torrust-tracker-deployer",
+            "create", "environment",
+            "--env-file", config_file,
+            "--output-format", "json",
+            "--log-output", "file-only"
+        ],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    return json.loads(result.stdout)
+
+# Create environment
+env = create_environment("production.json")
+
+# Access fields
+print(f"Environment: {env['environment_name']}")
+print(f"Instance: {env['instance_name']}")
+print(f"Data directory: {env['data_dir']}")
+print(f"Created at: {env['created_at']}")
+
+# Use in further automation
+data_path = env['data_dir']
+subprocess.run(["./backup.sh", data_path])
+```
+
+### Output Channel Separation
+
+The JSON output and progress logs use separate channels:
+
+- **stdout** - Command results (JSON or text output)
+- **stderr** - Progress logs and diagnostic messages
+
+This separation enables clean piping and redirection:
+
+```bash
+# Pipe JSON to jq without interference from logs
+torrust-tracker-deployer create environment \
+  --env-file config.json \
+  --output-format json \
+  --log-output file-and-stderr | jq .
+
+# Separate output and logs
+torrust-tracker-deployer create environment \
+  --env-file config.json \
+  --output-format json \
+  > result.json \
+  2> logs.txt
+```
+
+#### Production: Clean JSON Output
+
+For production automation, use `--log-output file-only` to send logs only to file:
+
+```bash
+# Only JSON to stdout, logs go to file
+torrust-tracker-deployer create environment \
+  --env-file production.json \
+  --output-format json \
+  --log-output file-only | jq .
+```
+
+**Result**: Clean JSON output with no log noise.
+
+#### Development: JSON + Visible Progress
+
+For development, use `--log-output file-and-stderr` to see progress while capturing JSON:
+
+```bash
+# JSON to stdout, logs to both file and stderr
+torrust-tracker-deployer create environment \
+  --env-file dev.json \
+  --output-format json \
+  --log-output file-and-stderr
+```
+
+**Result**: See progress on terminal, capture JSON separately.
+
+### Validation and Debugging
+
+#### Validate JSON Output
+
+```bash
+# Validate with jq
+torrust-tracker-deployer create environment \
+  --env-file config.json \
+  -o json \
+  --log-output file-only | jq empty
+
+# If valid, jq returns exit code 0
+echo "Valid JSON: $?"
+```
+
+#### Pretty-Print JSON
+
+```bash
+# The output is already pretty-printed, but you can customize with jq
+torrust-tracker-deployer create environment \
+  --env-file config.json \
+  -o json \
+  --log-output file-only | jq --indent 4 .
+```
+
+#### Extract and Format Specific Fields
+
+```bash
+# Get only environment name and creation time
+torrust-tracker-deployer create environment \
+  --env-file config.json \
+  -o json \
+  --log-output file-only | jq '{name: .environment_name, created: .created_at}'
+```
+
+Output:
+
+```json
+{
+  "name": "my-env",
+  "created": "2026-02-16T13:38:02.446056727Z"
+}
+```
+
+### When to Use Each Format
+
+**Use Text Format (default) when**:
+
+- Running commands interactively
+- Viewing output in terminal
+- Debugging and development
+- Human needs to read the output
+
+**Use JSON Format when**:
+
+- Building automation scripts
+- CI/CD pipelines
+- Integrating with other tools
+- Need to extract specific fields programmatically
+- Logging structured data
+- Machine processing required
+
 ## Common Use Cases
 
 ### Development Environment

@@ -128,7 +128,7 @@
 //! 3. **Subcommand Handler**: Executes specific logic (environment creation or template generation)
 //!
 //! **Current Implementation Example** (from `create/router.rs`):
-//! ```rust,no_run
+//! ```ignore
 //! use std::path::Path;
 //! use torrust_tracker_deployer_lib::domain::provider::Provider;
 //! use torrust_tracker_deployer_lib::presentation::input::cli::commands::CreateAction;

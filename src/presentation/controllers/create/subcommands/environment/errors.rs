@@ -128,6 +128,20 @@ Tip: This is a critical bug - please report it with full logs using --log-output
         #[source]
         source: ProgressReporterError,
     },
+
+    // ===== Output Formatting Errors =====
+    /// Output formatting failed
+    ///
+    /// Failed to format output in the requested format (e.g., JSON serialization failure).
+    /// This indicates an internal error in the view layer.
+    #[error(
+        "Failed to format output: {reason}
+Tip: This is likely a bug - please report it with full logs using --log-output file-and-stderr"
+    )]
+    OutputFormatting {
+        /// Reason for the formatting failure
+        reason: String,
+    },
 }
 
 // ============================================================================
@@ -162,6 +176,7 @@ impl CreateEnvironmentCommandError {
     /// assert!(help.contains("Check that the file path"));
     /// ```
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn help(&self) -> &'static str {
         match self {
             Self::ConfigFileNotFound { .. } => {
@@ -269,6 +284,34 @@ Workaround:
 
 This error means the operation may have PARTIALLY completed or FAILED.
 Verify the state of your environment before retrying."
+            }
+            Self::OutputFormatting { .. } => {
+                "Output Formatting Failed - Internal Error:
+
+This error indicates that the system failed to format the output in the requested
+format (e.g., JSON serialization). This is a BUG in the application and should
+NOT occur under normal circumstances.
+
+Immediate Actions:
+1. Save any logs using: --log-output file-and-stderr
+2. Note the output format that was requested (--output-format)
+3. Record the command that was being executed
+4. Document the full error message
+
+Report the Issue:
+1. Include the full error message and stack trace
+2. Specify which output format was requested
+3. Provide the command that triggered the error
+4. Note your operating system and version
+5. Report to: https://github.com/torrust/torrust-tracker-deployer/issues
+
+Workaround:
+1. Try using a different output format (e.g., use --output-format text instead of json)
+2. Retry the operation with --verbose for more detailed logging
+3. Check if the underlying operation actually succeeded despite the formatting error
+
+Note: The core operation may have completed successfully even though the output
+formatting failed. Check the state of your environment manually before retrying."
             }
         }
     }

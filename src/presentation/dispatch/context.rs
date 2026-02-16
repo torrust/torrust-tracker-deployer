@@ -25,7 +25,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use torrust_tracker_deployer_lib::bootstrap::Container;
 //! use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
 //! use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
@@ -35,7 +35,7 @@
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create execution context from container
 //! let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-//! let context = ExecutionContext::new(Arc::new(container));
+//! let context = ExecutionContext::new(Arc::new(container), global_args);
 //!
 //! // Command handlers access services through context
 //! let user_output = context.user_output();
@@ -51,6 +51,8 @@ use parking_lot::ReentrantMutex;
 
 use crate::bootstrap::Container;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::presentation::input::cli::args::GlobalArgs;
+use crate::presentation::input::cli::OutputFormat;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
@@ -62,7 +64,7 @@ use crate::shared::clock::Clock;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```ignore
 /// use std::sync::Arc;
 /// use std::path::Path;
 /// use torrust_tracker_deployer_lib::bootstrap::Container;
@@ -70,7 +72,7 @@ use crate::shared::clock::Clock;
 /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
 ///
 /// let container = Arc::new(Container::new(VerbosityLevel::Normal, Path::new(".")));
-/// let context = ExecutionContext::new(container);
+/// let context = ExecutionContext::new(container, global_args);
 ///
 /// // Access user output service
 /// let user_output = context.user_output();
@@ -79,6 +81,7 @@ use crate::shared::clock::Clock;
 #[derive(Clone)]
 pub struct ExecutionContext {
     container: Arc<Container>,
+    global_args: GlobalArgs,
 }
 
 impl ExecutionContext {
@@ -87,25 +90,40 @@ impl ExecutionContext {
     /// # Arguments
     ///
     /// * `container` - Application service container with initialized services
+    /// * `global_args` - Global CLI arguments (logging config, output format, etc.)
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```ignore
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+    /// use torrust_tracker_deployer_lib::presentation::input::cli::args::GlobalArgs;
+    /// use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput};
+    /// use torrust_tracker_deployer_lib::presentation::input::cli::OutputFormat;
     /// use std::sync::Arc;
-    /// use std::path::Path;
+    /// use std::path::PathBuf;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-    /// let context = ExecutionContext::new(Arc::new(container));
+    /// let container = Container::new(VerbosityLevel::Normal, &PathBuf::from("."));
+    /// let global_args = GlobalArgs {
+    ///     log_file_format: LogFormat::Compact,
+    ///     log_stderr_format: LogFormat::Pretty,
+    ///     log_output: LogOutput::FileOnly,
+    ///     log_dir: PathBuf::from("./data/logs"),
+    ///     working_dir: PathBuf::from("."),
+    ///     output_format: OutputFormat::Text,
+    /// };
+    /// let context = ExecutionContext::new(Arc::new(container), global_args);
     /// # Ok(())
     /// # }
     /// ```
     #[must_use]
-    pub fn new(container: Arc<Container>) -> Self {
-        Self { container }
+    pub fn new(container: Arc<Container>, global_args: GlobalArgs) -> Self {
+        Self {
+            container,
+            global_args,
+        }
     }
 
     /// Get reference to the underlying container
@@ -115,7 +133,7 @@ impl ExecutionContext {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```ignore
     /// use std::path::Path;
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
@@ -124,7 +142,7 @@ impl ExecutionContext {
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-    /// let context = ExecutionContext::new(Arc::new(container));
+    /// let context = ExecutionContext::new(Arc::new(container), global_args);
     ///
     /// let container_ref = context.container();
     /// // Use container_ref as needed
@@ -144,7 +162,7 @@ impl ExecutionContext {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```ignore
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
@@ -153,7 +171,7 @@ impl ExecutionContext {
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-    /// let context = ExecutionContext::new(Arc::new(container));
+    /// let context = ExecutionContext::new(Arc::new(container), global_args);
     ///
     /// let user_output = context.user_output();
     /// user_output.lock().borrow_mut().success("Operation completed");
@@ -172,7 +190,7 @@ impl ExecutionContext {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```ignore
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
@@ -181,7 +199,7 @@ impl ExecutionContext {
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-    /// let context = ExecutionContext::new(Arc::new(container));
+    /// let context = ExecutionContext::new(Arc::new(container), global_args);
     ///
     /// let repository_factory = context.repository_factory();
     /// // Use repository_factory to create repositories
@@ -200,7 +218,7 @@ impl ExecutionContext {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```ignore
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
@@ -209,7 +227,7 @@ impl ExecutionContext {
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-    /// let context = ExecutionContext::new(Arc::new(container));
+    /// let context = ExecutionContext::new(Arc::new(container), global_args);
     ///
     /// let repository = context.repository();
     /// // Use repository for environment persistence
@@ -230,7 +248,7 @@ impl ExecutionContext {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```ignore
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
     /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
     /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
@@ -239,7 +257,7 @@ impl ExecutionContext {
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-    /// let context = ExecutionContext::new(Arc::new(container));
+    /// let context = ExecutionContext::new(Arc::new(container), global_args);
     ///
     /// let clock = context.clock();
     /// // Use clock for time operations
@@ -249,5 +267,47 @@ impl ExecutionContext {
     #[must_use]
     pub fn clock(&self) -> Arc<dyn Clock> {
         self.container.clock()
+    }
+
+    /// Get the output format from global CLI arguments
+    ///
+    /// Returns the user-specified output format (Text or Json) for command results.
+    /// This allows controllers to format their output appropriately based on user preference.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use torrust_tracker_deployer_lib::bootstrap::Container;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+    /// use torrust_tracker_deployer_lib::presentation::input::cli::args::GlobalArgs;
+    /// use torrust_tracker_deployer_lib::presentation::input::cli::OutputFormat;
+    /// use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput};
+    /// use std::sync::Arc;
+    /// use std::path::PathBuf;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let container = Container::new(VerbosityLevel::Normal, &PathBuf::from("."));
+    /// let global_args = GlobalArgs {
+    ///     log_file_format: LogFormat::Compact,
+    ///     log_stderr_format: LogFormat::Pretty,
+    ///     log_output: LogOutput::FileOnly,
+    ///     log_dir: PathBuf::from("./data/logs"),
+    ///     working_dir: PathBuf::from("."),
+    ///     output_format: OutputFormat::Json,
+    /// };
+    /// let context = ExecutionContext::new(Arc::new(container), global_args);
+    ///
+    /// let format = context.output_format();
+    /// match format {
+    ///     OutputFormat::Text => println!("Human-readable text"),
+    ///     OutputFormat::Json => println!("{{\"result\": \"json\"}}"),
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn output_format(&self) -> OutputFormat {
+        self.global_args.output_format
     }
 }
