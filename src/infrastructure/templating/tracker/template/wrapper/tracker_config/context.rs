@@ -65,8 +65,8 @@ pub struct TrackerContext {
     #[serde(flatten)]
     pub metadata: TemplateMetadata,
 
-    /// Database driver: "sqlite3" or "mysql"
-    pub database_driver: String,
+    /// Database driver type
+    pub database_driver: DatabaseDriver,
 
     /// SQLite-specific configuration
     ///
@@ -108,6 +108,19 @@ pub struct TrackerContext {
 
     /// Health check API bind address
     pub health_check_api_bind_address: String,
+}
+
+/// Database driver type for tracker configuration
+///
+/// Represents the database backend used by the tracker.
+/// Serializes to lowercase string values for template compatibility.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DatabaseDriver {
+    /// `SQLite3` database driver
+    Sqlite3,
+    /// `MySQL` database driver
+    Mysql,
 }
 
 /// SQLite-specific configuration for template rendering
@@ -184,9 +197,14 @@ impl TrackerContext {
             ),
         };
 
+        let database_driver = match config.core().database() {
+            DatabaseConfig::Mysql(..) => DatabaseDriver::Mysql,
+            DatabaseConfig::Sqlite(..) => DatabaseDriver::Sqlite3,
+        };
+
         Self {
             metadata,
-            database_driver: config.core().database().driver_name().to_string(),
+            database_driver,
             sqlite,
             mysql,
             tracker_core_private: config.core().private(),
@@ -226,7 +244,7 @@ impl TrackerContext {
     pub fn default_config(metadata: TemplateMetadata) -> Self {
         Self {
             metadata,
-            database_driver: "sqlite3".to_string(),
+            database_driver: DatabaseDriver::Sqlite3,
             sqlite: Some(SqliteTemplateConfig {
                 tracker_database_name: "sqlite3.db".to_string(),
             }),
@@ -299,7 +317,7 @@ mod tests {
         let metadata = create_test_metadata();
         let context = TrackerContext::from_config(metadata, &config);
 
-        assert_eq!(context.database_driver, "sqlite3");
+        assert_eq!(context.database_driver, DatabaseDriver::Sqlite3);
 
         let sqlite = context
             .sqlite
@@ -354,7 +372,7 @@ mod tests {
         let metadata = create_test_metadata();
         let context = TrackerContext::from_config(metadata, &config);
 
-        assert_eq!(context.database_driver, "mysql");
+        assert_eq!(context.database_driver, DatabaseDriver::Mysql);
 
         assert!(context.sqlite.is_none());
 
@@ -376,7 +394,7 @@ mod tests {
         let metadata = create_test_metadata();
         let context = TrackerContext::default_config(metadata);
 
-        assert_eq!(context.database_driver, "sqlite3");
+        assert_eq!(context.database_driver, DatabaseDriver::Sqlite3);
 
         let sqlite = context
             .sqlite
