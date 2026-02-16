@@ -8,18 +8,13 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
-use crate::application::command_handlers::show::info::ServiceInfo;
 use crate::application::command_handlers::ProvisionCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Provisioned;
 use crate::domain::environment::Environment;
-use crate::presentation::views::commands::provision::connection_details::{
-    ConnectionDetailsData, ConnectionDetailsView,
-};
-use crate::presentation::views::commands::provision::dns_reminder::{
-    DnsReminderData, DnsReminderView,
-};
+use crate::presentation::input::cli::OutputFormat;
+use crate::presentation::views::commands::provision::{JsonView, ProvisionDetailsData, TextView};
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -108,12 +103,12 @@ impl ProvisionCommandController {
     /// 3. Create command handler
     /// 4. Provision infrastructure
     /// 5. Complete with success message
-    /// 6. Display connection details
-    /// 7. Display DNS setup reminder (if domains are configured)
+    /// 6. Display provision results (connection details + DNS reminder)
     ///
     /// # Arguments
     ///
     /// * `environment_name` - The name of the environment to provision
+    /// * `output_format` - Output format for results (Text or Json)
     ///
     /// # Errors
     ///
@@ -131,6 +126,7 @@ impl ProvisionCommandController {
     pub async fn execute(
         &mut self,
         environment_name: &str,
+        output_format: OutputFormat,
     ) -> Result<Environment<Provisioned>, ProvisionSubcommandError> {
         let env_name = self.validate_environment_name(environment_name)?;
 
@@ -140,9 +136,7 @@ impl ProvisionCommandController {
 
         self.complete_workflow(environment_name)?;
 
-        self.display_connection_details(&provisioned)?;
-
-        self.display_dns_reminder(&provisioned)?;
+        self.display_provision_results(&provisioned, output_format)?;
 
         Ok(provisioned)
     }
@@ -229,113 +223,52 @@ impl ProvisionCommandController {
         Ok(())
     }
 
-    /// Display connection details after successful provisioning
+    /// Display the results of successful provisioning
     ///
-    /// Orchestrates a functional pipeline to display SSH connection information:
-    /// `Environment<Provisioned>` → `ConnectionDetailsData` → `String` → stdout
+    /// This method outputs:
+    /// - Final completion message with environment name
+    /// - Provision details (IP address, SSH credentials, domains, etc.)
     ///
-    /// The output is written to stdout (not stderr) as it represents the final
-    /// command result rather than progress information.
-    ///
-    /// # MVC Architecture
-    ///
-    /// Following the MVC pattern with functional composition:
-    /// - Model: `Environment<Provisioned>` (domain model)
-    /// - DTO: `ConnectionDetailsData::from()` (data transformation)
-    /// - View: `ConnectionDetailsView::render()` (formatting)
-    /// - Controller (this method): Orchestrates the pipeline
-    /// - Output: `ProgressReporter::result()` (routing to stdout)
+    /// The output formatting is delegated to the view layer (`TextView` or `JsonView`)
+    /// following the MVC pattern and Strategy Pattern. This separates presentation
+    /// concerns from controller logic and allows easy addition of new formats.
     ///
     /// # Arguments
     ///
-    /// * `provisioned` - The provisioned environment containing connection details
+    /// * `provisioned` - The successfully provisioned environment
+    /// * `output_format` - The format to use for rendering output (Text or Json)
     ///
-    /// # Missing IP Handling
+    /// # Returns
     ///
-    /// If the instance IP is missing (which should not happen after successful
-    /// provisioning), the view displays a warning but does not cause an error.
-    /// This is intentional - the controller's responsibility is to display
-    /// information, not to validate state (that's the domain/application layer's job).
+    /// Returns `Ok(())` on success, or `ProvisionSubcommandError` if progress reporting fails.
     ///
     /// # Errors
     ///
-    /// Returns `ProvisionSubcommandError` if the `ProgressReporter` encounters
-    /// a mutex error while writing to stdout.
+    /// This function will return an error if progress reporting encounters issues,
+    /// which indicates the environment was provisioned but we couldn't display results.
     #[allow(clippy::result_large_err)]
-    fn display_connection_details(
+    fn display_provision_results(
         &mut self,
         provisioned: &Environment<Provisioned>,
+        output_format: OutputFormat,
     ) -> Result<(), ProvisionSubcommandError> {
-        // Pipeline: Environment<Provisioned> → DTO → render → output to stdout
-        self.progress.result(&ConnectionDetailsView::render(
-            &ConnectionDetailsData::from(provisioned),
-        ))?;
+        self.progress.blank_line()?;
 
-        Ok(())
-    }
+        // Convert domain model to presentation DTO
+        let details = ProvisionDetailsData::from(provisioned);
 
-    /// Display DNS setup reminder after successful provisioning
-    ///
-    /// Orchestrates a functional pipeline to display DNS configuration reminder:
-    /// `Environment<Provisioned>` → extract domains → `DnsReminderData` → `String` → stdout
-    ///
-    /// Only displays the reminder if domains are actually configured in the environment.
-    /// The output is written to stdout (not stderr) as it represents the final
-    /// command result rather than progress information.
-    ///
-    /// # MVC Architecture
-    ///
-    /// Following the MVC pattern with functional composition:
-    /// - Model: `Environment<Provisioned>` (domain model)
-    /// - Extract: Domain information from `ServiceInfo`
-    /// - DTO: `DnsReminderData` (data transformation)
-    /// - View: `DnsReminderView::render()` (formatting)
-    /// - Controller (this method): Orchestrates the pipeline
-    /// - Output: `ProgressReporter::result()` (routing to stdout)
-    ///
-    /// # Arguments
-    ///
-    /// * `provisioned` - The provisioned environment containing service configuration
-    ///
-    /// # Errors
-    ///
-    /// Returns `ProvisionSubcommandError` if:
-    /// - Instance IP is not available (required for DNS reminder)
-    /// - The `ProgressReporter` encounters a mutex error while writing to stdout
-    #[allow(clippy::result_large_err)]
-    fn display_dns_reminder(
-        &mut self,
-        provisioned: &Environment<Provisioned>,
-    ) -> Result<(), ProvisionSubcommandError> {
-        // Extract service information from the provisioned environment
-        let instance_ip = provisioned.instance_ip();
-        let tracker_config = provisioned.tracker_config();
-        let grafana_config = provisioned.grafana_config();
-
-        // Early return if no IP is available (shouldn't happen after provisioning)
-        let Some(ip) = instance_ip else {
-            return Ok(());
+        // Render using appropriate view based on output format (Strategy Pattern)
+        let output = match output_format {
+            OutputFormat::Text => TextView::render(&details),
+            OutputFormat::Json => JsonView::render(&details).map_err(|e| {
+                ProvisionSubcommandError::OutputFormatting {
+                    reason: format!("Failed to serialize provision details as JSON: {e}"),
+                }
+            })?,
         };
 
-        // Build service info to extract domains
-        let services = ServiceInfo::from_tracker_config(tracker_config, ip, grafana_config);
-
-        // Extract all domains from service configuration
-        let domains = DnsReminderView::extract_all_domains(&services);
-
-        // Only display reminder if domains are configured
-        if domains.is_empty() {
-            return Ok(());
-        }
-
-        // Pipeline: domains → DnsReminderData → render → output to stdout
-        let reminder_data = DnsReminderData {
-            instance_ip: ip,
-            domains,
-        };
-
-        self.progress
-            .result(&DnsReminderView::render(&reminder_data))?;
+        // Output the rendered result
+        self.progress.result(&output)?;
 
         Ok(())
     }
@@ -384,7 +317,7 @@ mod tests {
 
         // Test with invalid environment name (contains underscore)
         let result = ProvisionCommandController::new(repository, clock, user_output.clone())
-            .execute("invalid_name")
+            .execute("invalid_name", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
@@ -405,7 +338,7 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = ProvisionCommandController::new(repository, clock, user_output.clone())
-            .execute("")
+            .execute("", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
@@ -427,7 +360,7 @@ mod tests {
 
         // Test environment that doesn't exist yet
         let result = ProvisionCommandController::new(repository, clock, user_output.clone())
-            .execute("non-existent-env")
+            .execute("non-existent-env", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
@@ -457,7 +390,7 @@ mod tests {
         // Valid environment name should pass validation, but will fail
         // at provision operation since we don't have a real environment setup
         let result = ProvisionCommandController::new(repository, clock, user_output.clone())
-            .execute("test-env")
+            .execute("test-env", OutputFormat::Text)
             .await;
 
         // Should fail at operation, not at name validation
