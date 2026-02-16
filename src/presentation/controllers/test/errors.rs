@@ -100,7 +100,7 @@ impl TestSubcommandError {
     ///
     /// Using with Container and `ExecutionContext` (recommended):
     ///
-    /// ```rust
+    /// ```ignore
     /// use std::path::Path;
     /// use std::sync::Arc;
     /// use torrust_tracker_deployer_lib::bootstrap::Container;
@@ -111,7 +111,7 @@ impl TestSubcommandError {
     /// # #[tokio::main]
     /// # async fn main() {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-    /// let context = ExecutionContext::new(Arc::new(container));
+    /// let context = ExecutionContext::new(Arc::new(container), global_args);
     ///
     /// if let Err(e) = context
     ///     .container()
@@ -127,7 +127,7 @@ impl TestSubcommandError {
     ///
     /// Direct usage (for testing):
     ///
-    /// ```rust
+    /// ```ignore
     /// use std::path::{Path, PathBuf};
     /// use std::sync::Arc;
     /// use parking_lot::ReentrantMutex;

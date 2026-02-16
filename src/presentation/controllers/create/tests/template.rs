@@ -6,7 +6,7 @@
 use crate::bootstrap::Container;
 use crate::domain::provider::Provider;
 use crate::presentation::controllers::create;
-use crate::presentation::controllers::tests::TestContext;
+use crate::presentation::controllers::tests::{default_global_args, TestContext};
 use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::CreateAction;
 use crate::presentation::views::VerbosityLevel;
@@ -24,7 +24,8 @@ async fn it_should_generate_template_with_default_path() {
         provider: Provider::Lxd,
     };
     let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
-    let context = ExecutionContext::new(std::sync::Arc::new(container));
+    let global_args = default_global_args(test_context.working_dir());
+    let context = ExecutionContext::new(std::sync::Arc::new(container), global_args);
 
     let result = create::route_command(action, test_context.working_dir(), &context).await;
 
@@ -70,7 +71,8 @@ async fn it_should_generate_template_with_custom_path() {
         provider: Provider::Lxd,
     };
     let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
-    let context = ExecutionContext::new(std::sync::Arc::new(container));
+    let global_args = default_global_args(test_context.working_dir());
+    let context = ExecutionContext::new(std::sync::Arc::new(container), global_args);
 
     let result = create::route_command(action, test_context.working_dir(), &context).await;
 
@@ -97,7 +99,8 @@ async fn it_should_generate_valid_json_template() {
         provider: Provider::Lxd,
     };
     let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
-    let context = ExecutionContext::new(std::sync::Arc::new(container));
+    let global_args = default_global_args(test_context.working_dir());
+    let context = ExecutionContext::new(std::sync::Arc::new(container), global_args);
 
     create::route_command(action, test_context.working_dir(), &context)
         .await
@@ -146,7 +149,8 @@ async fn it_should_create_parent_directories() {
         provider: Provider::Lxd,
     };
     let container = Container::new(VerbosityLevel::Silent, test_context.working_dir());
-    let context = ExecutionContext::new(std::sync::Arc::new(container));
+    let global_args = default_global_args(test_context.working_dir());
+    let context = ExecutionContext::new(std::sync::Arc::new(container), global_args);
 
     let result = create::route_command(action, test_context.working_dir(), &context).await;
 

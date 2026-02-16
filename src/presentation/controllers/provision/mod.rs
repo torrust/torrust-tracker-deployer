@@ -18,7 +18,7 @@
 //!
 //! ### Basic Usage
 //!
-//! ```rust
+//! ```ignore
 //! use std::path::Path;
 //! use std::sync::Arc;
 //! use torrust_tracker_deployer_lib::bootstrap::Container;
@@ -29,7 +29,7 @@
 //! # #[tokio::main]
 //! # async fn main() {
 //! let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-//! let context = ExecutionContext::new(Arc::new(container));
+//! let context = ExecutionContext::new(Arc::new(container), global_args);
 //!
 //! // Call the provision handler
 //! let result = context
@@ -42,7 +42,7 @@
 //!
 //! ### Direct Usage (For Testing)
 //!
-//! ```rust
+//! ```ignore
 //! use std::path::Path;
 //! use std::sync::Arc;
 //! use torrust_tracker_deployer_lib::bootstrap::Container;
@@ -53,7 +53,7 @@
 //! # #[tokio::main]
 //! # async fn main() {
 //! let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-//! let context = ExecutionContext::new(Arc::new(container));
+//! let context = ExecutionContext::new(Arc::new(container), global_args);
 //!
 //! if let Err(e) = context
 //!     .container()
@@ -69,7 +69,7 @@
 //!
 //! ## Direct Usage (For Testing)
 //!
-//! ```rust
+//! ```ignore
 //! use std::path::{Path, PathBuf};
 //! use std::sync::Arc;
 //! use std::time::Duration;

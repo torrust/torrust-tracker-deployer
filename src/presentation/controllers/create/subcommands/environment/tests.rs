@@ -12,11 +12,13 @@ use tempfile::TempDir;
 use super::errors::CreateEnvironmentCommandError;
 use crate::bootstrap::Container;
 use crate::presentation::dispatch::ExecutionContext;
+use crate::presentation::input::cli::OutputFormat;
 use crate::presentation::views::VerbosityLevel;
 
 fn create_test_context(working_dir: &Path) -> ExecutionContext {
     let container = Container::new(VerbosityLevel::Silent, working_dir);
-    ExecutionContext::new(Arc::new(container))
+    let global_args = crate::presentation::controllers::tests::default_global_args(working_dir);
+    ExecutionContext::new(Arc::new(container), global_args)
 }
 
 #[tokio::test]
@@ -78,7 +80,7 @@ async fn it_should_create_environment_from_valid_config() {
     let result = context
         .container()
         .create_environment_controller()
-        .execute(&config_path, working_dir)
+        .execute(&config_path, working_dir, OutputFormat::Text)
         .await;
 
     assert!(
@@ -107,7 +109,7 @@ async fn it_should_return_error_for_missing_config_file() {
     let result = context
         .container()
         .create_environment_controller()
-        .execute(&config_path, working_dir)
+        .execute(&config_path, working_dir, OutputFormat::Text)
         .await;
 
     assert!(result.is_err());
@@ -132,7 +134,7 @@ async fn it_should_return_error_for_invalid_json() {
     let result = context
         .container()
         .create_environment_controller()
-        .execute(&config_path, working_dir)
+        .execute(&config_path, working_dir, OutputFormat::Text)
         .await;
 
     assert!(result.is_err());
@@ -204,7 +206,7 @@ async fn it_should_return_error_for_duplicate_environment() {
     let result1 = context
         .container()
         .create_environment_controller()
-        .execute(&config_path, working_dir)
+        .execute(&config_path, working_dir, OutputFormat::Text)
         .await;
     assert!(result1.is_ok(), "First create should succeed");
 
@@ -213,7 +215,7 @@ async fn it_should_return_error_for_duplicate_environment() {
     let result2 = context2
         .container()
         .create_environment_controller()
-        .execute(&config_path, working_dir)
+        .execute(&config_path, working_dir, OutputFormat::Text)
         .await;
     assert!(result2.is_err(), "Second create should fail");
 
@@ -285,7 +287,7 @@ async fn it_should_create_environment_in_custom_working_dir() {
     let result = context
         .container()
         .create_environment_controller()
-        .execute(&config_path, &custom_working_dir)
+        .execute(&config_path, &custom_working_dir, OutputFormat::Text)
         .await;
 
     assert!(result.is_ok(), "Should create in custom working dir");

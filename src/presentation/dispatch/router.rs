@@ -41,7 +41,7 @@
 //!
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let container = Container::new(VerbosityLevel::Normal);
-//! let context = ExecutionContext::new(Arc::new(container));
+//! let context = ExecutionContext::new(Arc::new(container), global_args);
 //! let working_dir = Path::new(".");
 //!
 //! // Route command to appropriate handler
@@ -95,7 +95,7 @@ use super::ExecutionContext;
 ///
 /// async fn example() -> Result<(), Box<dyn std::error::Error>> {
 ///     let container = Container::new(VerbosityLevel::Normal);
-///     let context = ExecutionContext::new(Arc::new(container));
+///     let context = ExecutionContext::new(Arc::new(container), global_args);
 ///     let working_dir = Path::new(".");
 ///
 ///     // Route command to appropriate handler - requires proper Commands construction

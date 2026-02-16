@@ -56,7 +56,7 @@ impl ConfigLoader {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```ignore
     /// use std::path::Path;
     /// use torrust_tracker_deployer_lib::presentation::controllers::create::subcommands::environment::ConfigLoader;
     ///

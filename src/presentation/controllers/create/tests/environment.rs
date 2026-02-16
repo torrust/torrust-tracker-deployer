@@ -7,7 +7,7 @@ use crate::bootstrap::Container;
 use crate::presentation::controllers::create;
 use crate::presentation::controllers::tests::{
     create_config_with_invalid_name, create_config_with_missing_keys, create_invalid_json_config,
-    create_valid_config, TestContext,
+    create_valid_config, default_global_args, TestContext,
 };
 use crate::presentation::dispatch::ExecutionContext;
 use crate::presentation::input::cli::CreateAction;
@@ -22,7 +22,8 @@ async fn handle_environment_creation(
         env_file: config_path.to_path_buf(),
     };
     let container = Container::new(VerbosityLevel::Silent, working_dir);
-    let context = ExecutionContext::new(std::sync::Arc::new(container));
+    let global_args = default_global_args(working_dir);
+    let context = ExecutionContext::new(std::sync::Arc::new(container), global_args);
     create::route_command(action, working_dir, &context).await
 }
 

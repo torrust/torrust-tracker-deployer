@@ -14,7 +14,7 @@ use crate::presentation::input::cli::OutputFormat;
 /// These arguments are available for all commands and control how logging
 /// is handled throughout the application. They provide fine-grained control
 /// over log output, formatting, and destinations.
-#[derive(clap::Args, Debug)]
+#[derive(clap::Args, Debug, Clone)]
 pub struct GlobalArgs {
     /// Format for file logging (default: compact, without ANSI codes)
     ///

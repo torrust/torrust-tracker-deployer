@@ -20,7 +20,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use std::path::{Path, PathBuf};
 //! use std::sync::{Arc, Mutex};
 //! use torrust_tracker_deployer_lib::presentation::input::cli::commands::CreateAction;

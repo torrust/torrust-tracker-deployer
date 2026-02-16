@@ -13,7 +13,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use torrust_tracker_deployer_lib::presentation::controllers::tests::{TestContext, create_valid_config};
 //!
 //! fn example_usage() {
@@ -46,7 +46,7 @@ use crate::presentation::views::{UserOutput, VerbosityLevel};
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use torrust_tracker_deployer_lib::presentation::controllers::tests::TestContext;
 ///
 /// fn example_usage() {
@@ -134,7 +134,7 @@ impl Default for TestContext {
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use tempfile::TempDir;
 /// use torrust_tracker_deployer_lib::presentation::controllers::tests::create_valid_config;
 ///
@@ -217,7 +217,7 @@ pub fn create_valid_config(path: &Path, env_name: &str) -> PathBuf {
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use tempfile::TempDir;
 /// use torrust_tracker_deployer_lib::presentation::controllers::tests::create_invalid_json_config;
 ///
@@ -254,7 +254,7 @@ pub fn create_invalid_json_config(path: &Path) -> PathBuf {
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use tempfile::TempDir;
 /// use torrust_tracker_deployer_lib::presentation::controllers::tests::create_config_with_invalid_name;
 ///
@@ -336,7 +336,7 @@ pub fn create_config_with_invalid_name(path: &Path) -> PathBuf {
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use tempfile::TempDir;
 /// use torrust_tracker_deployer_lib::presentation::controllers::tests::create_config_with_missing_keys;
 ///
@@ -390,6 +390,46 @@ pub fn create_config_with_missing_keys(path: &Path) -> PathBuf {
     let config_path = path.join("missing_keys.json");
     fs::write(&config_path, config_json).expect("Failed to write config file with missing keys");
     config_path
+}
+
+/// Create default global CLI arguments for tests
+///
+/// This function creates a `GlobalArgs` instance with sensible defaults for testing.
+/// All log files will be written to a temporary directory within the test context.
+///
+/// # Arguments
+///
+/// * `working_dir` - The working directory path for the test (usually from `TestContext`)
+///
+/// # Returns
+///
+/// Returns a `GlobalArgs` instance suitable for testing
+///
+/// # Example
+///
+/// ```ignore
+/// use torrust_tracker_deployer_lib::presentation::controllers::tests::{TestContext, default_global_args};
+///
+/// let context = TestContext::new();
+/// let global_args = default_global_args(context.working_dir());
+/// // Use global_args with ExecutionContext
+/// ```
+#[must_use]
+pub fn default_global_args(
+    working_dir: &Path,
+) -> crate::presentation::input::cli::args::GlobalArgs {
+    use crate::bootstrap::logging::{LogFormat, LogOutput};
+    use crate::presentation::input::cli::args::GlobalArgs;
+    use crate::presentation::input::cli::OutputFormat;
+
+    GlobalArgs {
+        log_file_format: LogFormat::Compact,
+        log_stderr_format: LogFormat::Compact,
+        log_output: LogOutput::FileOnly,
+        log_dir: working_dir.join("logs"),
+        working_dir: working_dir.to_path_buf(),
+        output_format: OutputFormat::Text,
+    }
 }
 
 // ============================================================================

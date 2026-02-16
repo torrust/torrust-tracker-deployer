@@ -1,13 +1,13 @@
 //! Environment Details Data Transfer Object
 //!
 //! This module contains the presentation DTO for environment creation details.
-//! It serves as the data structure passed to view renderers (TextView, JsonView, etc.).
+//! It serves as the data structure passed to view renderers (`TextView`, `JsonView`, etc.).
 //!
 //! # Architecture
 //!
 //! This follows the Strategy Pattern where:
 //! - This DTO is the data passed to all rendering strategies
-//! - Different views (TextView, JsonView) consume this data
+//! - Different views (`TextView`, `JsonView`) consume this data
 //! - Adding new formats doesn't modify this DTO or existing views
 //!
 //! # SOLID Principles
@@ -27,7 +27,7 @@ use crate::domain::environment::Environment;
 ///
 /// This struct holds all the data needed to render environment creation
 /// information for display to the user. It is consumed by view renderers
-/// (TextView, JsonView) which format it according to their specific output format.
+/// (`TextView`, `JsonView`) which format it according to their specific output format.
 ///
 /// # Design
 ///

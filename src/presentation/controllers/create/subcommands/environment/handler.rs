@@ -14,7 +14,8 @@ use crate::application::command_handlers::CreateCommandHandler;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Created;
 use crate::domain::Environment;
-use crate::presentation::views::commands::create::{EnvironmentDetailsData, TextView};
+use crate::presentation::input::cli::OutputFormat;
+use crate::presentation::views::commands::create::{EnvironmentDetailsData, JsonView, TextView};
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -109,6 +110,7 @@ impl CreateEnvironmentCommandController {
     ///
     /// * `env_file` - Path to the environment configuration file
     /// * `working_dir` - Working directory path for environment storage
+    /// * `output_format` - Output format for results (Text or Json)
     ///
     /// # Errors
     ///
@@ -126,6 +128,7 @@ impl CreateEnvironmentCommandController {
         &mut self,
         env_file: &Path,
         working_dir: &Path,
+        output_format: OutputFormat,
     ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
         let config = self.load_configuration(env_file)?;
 
@@ -133,7 +136,7 @@ impl CreateEnvironmentCommandController {
 
         let environment = self.execute_create_command(&command_handler, config, working_dir)?;
 
-        self.display_creation_results(&environment)?;
+        self.display_creation_results(&environment, output_format)?;
 
         Ok(environment)
     }
@@ -268,13 +271,14 @@ impl CreateEnvironmentCommandController {
     /// - Final completion message with environment name
     /// - Environment details (name, instance name, data directory, build directory)
     ///
-    /// The output formatting is delegated to the view layer (`TextView`)
+    /// The output formatting is delegated to the view layer (`TextView` or `JsonView`)
     /// following the MVC pattern and Strategy Pattern. This separates presentation
     /// concerns from controller logic and allows easy addition of new formats.
     ///
     /// # Arguments
     ///
     /// * `environment` - The successfully created environment
+    /// * `output_format` - The format to use for rendering output (Text or Json)
     ///
     /// # Returns
     ///
@@ -287,6 +291,7 @@ impl CreateEnvironmentCommandController {
     fn display_creation_results(
         &mut self,
         environment: &Environment<Created>,
+        output_format: OutputFormat,
     ) -> Result<(), CreateEnvironmentCommandError> {
         self.progress.complete(&format!(
             "Environment '{}' created successfully",
@@ -298,8 +303,15 @@ impl CreateEnvironmentCommandController {
         // Convert domain model to presentation DTO
         let details = EnvironmentDetailsData::from(environment);
 
-        // Render using text view (Strategy Pattern)
-        let output = TextView::render(&details);
+        // Render using appropriate view based on output format (Strategy Pattern)
+        let output = match output_format {
+            OutputFormat::Text => TextView::render(&details),
+            OutputFormat::Json => JsonView::render(&details).map_err(|e| {
+                CreateEnvironmentCommandError::OutputFormatting {
+                    reason: format!("Failed to serialize environment details as JSON: {e}"),
+                }
+            })?,
+        };
 
         // Output the rendered result
         self.progress.result(&output)?;
