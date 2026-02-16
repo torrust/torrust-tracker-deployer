@@ -2,12 +2,14 @@
 //!
 //! This module contains DTOs for the Prometheus service.
 
+use serde::Serialize;
+
 /// Prometheus metrics service information for display purposes
 ///
 /// This information shows the status of the Prometheus service when configured.
 /// Prometheus collects and stores metrics from the tracker service.
 /// It can be used independently or as a data source for Grafana.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PrometheusInfo {
     /// Description of how to access Prometheus (internal only)
     pub access_note: String,

@@ -4,6 +4,8 @@
 
 use std::net::IpAddr;
 
+use serde::Serialize;
+
 use crate::domain::grafana::GrafanaConfig;
 use crate::domain::tracker::config::is_localhost;
 use crate::domain::tracker::TrackerConfig;
@@ -12,7 +14,7 @@ use crate::domain::tracker::TrackerConfig;
 ///
 /// This information is available for Released and Running states and shows
 /// the tracker services configured for the environment.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct ServiceInfo {
     /// UDP tracker URLs (e.g., `udp://10.0.0.1:6969/announce`)
@@ -50,7 +52,7 @@ pub struct ServiceInfo {
 }
 
 /// Information about a localhost-only service (for SSH tunnel hint)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct LocalhostServiceInfo {
     /// The service name (e.g., `http_tracker_1`)
     pub service_name: String,
@@ -59,7 +61,7 @@ pub struct LocalhostServiceInfo {
 }
 
 /// Information about a TLS-enabled domain for /etc/hosts hint
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TlsDomainInfo {
     /// The domain name
     pub domain: String,

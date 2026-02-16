@@ -4,6 +4,7 @@
 
 use std::net::IpAddr;
 
+use serde::Serialize;
 use url::Url;
 
 use crate::domain::grafana::GrafanaConfig;
@@ -13,7 +14,7 @@ use crate::domain::grafana::GrafanaConfig;
 /// This information shows the status of the Grafana service when configured.
 /// Grafana provides dashboards for visualizing tracker metrics.
 /// Note: Grafana requires Prometheus to be configured.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GrafanaInfo {
     /// Grafana dashboard URL
     pub url: Url,
