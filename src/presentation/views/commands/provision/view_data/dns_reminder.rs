@@ -37,7 +37,7 @@ pub struct DnsReminderData {
 ///
 /// ```rust
 /// use std::net::{IpAddr, Ipv4Addr};
-/// use torrust_tracker_deployer_lib::presentation::views::commands::provision::dns_reminder::DnsReminderData;
+/// use torrust_tracker_deployer_lib::presentation::views::commands::provision::view_data::dns_reminder::DnsReminderData;
 /// use torrust_tracker_deployer_lib::presentation::views::commands::provision::DnsReminderView;
 ///
 /// let data = DnsReminderData {
@@ -77,7 +77,7 @@ impl DnsReminderView {
     ///
     /// ```rust
     /// use std::net::{IpAddr, Ipv4Addr};
-    /// use torrust_tracker_deployer_lib::presentation::views::commands::provision::dns_reminder::DnsReminderData;
+    /// use torrust_tracker_deployer_lib::presentation::views::commands::provision::view_data::dns_reminder::DnsReminderData;
     /// use torrust_tracker_deployer_lib::presentation::views::commands::provision::DnsReminderView;
     ///
     /// let data = DnsReminderData {

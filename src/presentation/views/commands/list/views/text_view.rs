@@ -1,22 +1,22 @@
-//! Environment List View for List Command
+//! Text View for Environment List
 //!
-//! This module provides a view for rendering the environment list
-//! as a formatted table for terminal display.
+//! This module provides text-based rendering for the environment list command.
+//! It follows the Strategy Pattern, providing one specific rendering strategy
+//! (human-readable text table) for environment lists.
 
 use crate::application::command_handlers::list::info::EnvironmentList;
 
-/// View for rendering environment list
+/// Text view for rendering environment list
 ///
 /// This view is responsible for formatting and rendering the list of
 /// environments that users see when running the `list` command.
 ///
 /// # Design
 ///
-/// Following MVC pattern, this view:
-/// - Receives data from the controller via the `EnvironmentList` DTO
-/// - Formats the output as a table for display
-/// - Handles edge cases (empty list, partial failures)
-/// - Returns a string ready for output to stdout
+/// This view is part of a Strategy Pattern implementation where:
+/// - Each format (Text, JSON, XML, etc.) has its own dedicated view
+/// - Adding new formats requires creating new view files, not modifying existing ones
+/// - Follows Open/Closed Principle from SOLID
 ///
 /// # Examples
 ///
@@ -24,7 +24,7 @@ use crate::application::command_handlers::list::info::EnvironmentList;
 /// use torrust_tracker_deployer_lib::application::command_handlers::list::info::{
 ///     EnvironmentList, EnvironmentSummary,
 /// };
-/// use torrust_tracker_deployer_lib::presentation::views::commands::list::EnvironmentListView;
+/// use torrust_tracker_deployer_lib::presentation::views::commands::list::TextView;
 ///
 /// let summaries = vec![
 ///     EnvironmentSummary::new(
@@ -36,13 +36,13 @@ use crate::application::command_handlers::list::info::EnvironmentList;
 /// ];
 ///
 /// let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
-/// let output = EnvironmentListView::render(&list);
+/// let output = TextView::render(&list);
 /// assert!(output.contains("my-production"));
 /// assert!(output.contains("Running"));
 /// ```
-pub struct EnvironmentListView;
+pub struct TextView;
 
-impl EnvironmentListView {
+impl TextView {
     /// Render environment list as a formatted string
     ///
     /// Takes the environment list and produces a human-readable table output
@@ -165,7 +165,7 @@ mod tests {
     fn it_should_render_empty_workspace() {
         let list = EnvironmentList::new(vec![], vec![], "/path/to/data".to_string());
 
-        let output = EnvironmentListView::render(&list);
+        let output = TextView::render(&list);
 
         assert!(output.contains("No environments found in: /path/to/data"));
         assert!(output.contains("create environment --env-file"));
@@ -182,7 +182,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
 
-        let output = EnvironmentListView::render(&list);
+        let output = TextView::render(&list);
 
         assert!(output.contains("Environments (1 found):"));
         assert!(output.contains("Name"));
@@ -212,7 +212,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
 
-        let output = EnvironmentListView::render(&list);
+        let output = TextView::render(&list);
 
         assert!(output.contains("production"));
         assert!(output.contains("Running"));
@@ -240,7 +240,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, failures, "/path/to/data".to_string());
 
-        let output = EnvironmentListView::render(&list);
+        let output = TextView::render(&list);
 
         assert!(output.contains("Warning: Failed to load the following environments:"));
         assert!(output.contains("broken-env: Invalid JSON"));
@@ -260,7 +260,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
 
-        let output = EnvironmentListView::render(&list);
+        let output = TextView::render(&list);
 
         // Should truncate the long name
         assert!(output.contains("very-long-environ..."));
@@ -293,7 +293,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
 
-        let output = EnvironmentListView::render(&list);
+        let output = TextView::render(&list);
 
         assert!(output.contains("Environments (3 found):"));
         assert!(output.contains("env1"));

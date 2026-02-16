@@ -1,7 +1,19 @@
 //! Views for Show Command
 //!
 //! This module contains view components for rendering show command output.
+//!
+//! # Architecture
+//!
+//! This module follows the Strategy Pattern for rendering:
+//! - `TextView`: Renders human-readable text output with environment details
+//!
+//! # Structure
+//!
+//! - `views/`: View rendering implementations
+//!   - `mod.rs`: Main `TextView` with composition of helper views
+//!   - Helper views: basic, infrastructure, `tracker_services`, prometheus, grafana, `https_hint`, `next_step`
 
-pub mod environment_info;
+pub mod views;
 
-pub use environment_info::EnvironmentInfoView;
+// Re-export main types for convenience
+pub use views::TextView;
