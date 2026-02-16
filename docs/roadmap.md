@@ -259,7 +259,7 @@ Add machine-readable JSON output format (`--json` flag) for selected commands to
 
 **Phase 1 - High-Value Commands:**
 
-- [ ] **12.1** Add JSON output to `create` command
+- [x] **12.1** Add JSON output to `create` command ✅ Completed - [Issue #349](https://github.com/torrust/torrust-tracker-deployer/issues/349), [PR #351](https://github.com/torrust/torrust-tracker-deployer/pull/351)
   - Rationale: Contains info about where to find more detailed information (paths, configuration references)
   - Structured output helps automation track environment artifacts
 
