@@ -25,13 +25,13 @@ Establish clear separation between view data structures (DTOs) and view renderin
 **Total Active Proposals**: 5
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 1
+**Completed**: 2
 **In Progress**: 0
-**Not Started**: 4
+**Not Started**: 3
 
 ### Phase Summary
 
-- **Phase 0 - Foundation Commands**: 🔄 1/2 completed (50%)
+- **Phase 0 - Foundation Commands**: ✅ 2/2 completed (100%)
 - **Phase 1 - Mixed Commands**: ⏳ 0/2 completed (0%)
 - **Phase 2 - Documentation**: ⏳ 0/1 completed (0%)
 
@@ -170,11 +170,13 @@ cargo run --bin linter all
 
 ### Proposal #1: Refactor Provision Command Structure
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵 Low
 **Priority**: P0
 **Depends On**: None
+**Completed**: 2026-02-16
+**Commit**: 6539e787
 
 #### Problem
 
@@ -226,14 +228,14 @@ Same rationale as Proposal #0 - establish consistent pattern.
 
 #### Implementation Checklist
 
-- [ ] Create `view_data/` and `views/` subdirectories
-- [ ] Move `provision_details.rs`, `connection_details.rs`, `dns_reminder.rs` → `view_data/`
-- [ ] Move `text_view.rs` and `json_view.rs` → `views/`
-- [ ] Update `mod.rs` with new module structure
-- [ ] Update imports in controller (`src/presentation/controllers/provision/handler.rs`)
-- [ ] Update imports in tests
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Create `view_data/` and `views/` subdirectories
+- [x] Move `provision_details.rs`, `connection_details.rs`, `dns_reminder.rs` → `view_data/`
+- [x] Move `text_view.rs` and `json_view.rs` → `views/`
+- [x] Update `mod.rs` with new module structure
+- [x] Update imports in controller (`src/presentation/controllers/provision/handler.rs`)
+- [x] Update imports in tests
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
 
 #### Testing Strategy
 
