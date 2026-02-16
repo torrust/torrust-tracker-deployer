@@ -65,31 +65,24 @@ pub struct TrackerContext {
     #[serde(flatten)]
     pub metadata: TemplateMetadata,
 
-    /// Database driver: "sqlite3" or "mysql"
-    pub database_driver: String,
+    /// Database driver type
+    pub database_driver: DatabaseDriver,
 
-    /// Database file name (e.g., "tracker.db", "sqlite3.db") - used for `SQLite`
-    pub tracker_database_name: String,
-
-    /// `MySQL` host (e.g., "mysql", "localhost") - only used when driver is "mysql"
+    /// SQLite-specific configuration
+    ///
+    /// When `Some`, flattens `SQLite` fields at top level for template compatibility.
+    /// When `None`, tracker uses `MySQL` database.
+    #[serde(flatten)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mysql_host: Option<String>,
+    pub sqlite: Option<SqliteTemplateConfig>,
 
-    /// `MySQL` port (typically 3306) - only used when driver is "mysql"
+    /// MySQL-specific configuration
+    ///
+    /// When `Some`, flattens `MySQL` fields at top level for template compatibility.
+    /// When `None`, tracker uses `SQLite` database.
+    #[serde(flatten)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mysql_port: Option<u16>,
-
-    /// `MySQL` database name - only used when driver is "mysql"
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mysql_database: Option<String>,
-
-    /// `MySQL` username - only used when driver is "mysql"
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mysql_user: Option<String>,
-
-    /// `MySQL` password - only used when driver is "mysql"
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mysql_password: Option<String>,
+    pub mysql: Option<MysqlTemplateConfig>,
 
     /// Whether tracker is in private mode
     pub tracker_core_private: bool,
@@ -117,6 +110,51 @@ pub struct TrackerContext {
     pub health_check_api_bind_address: String,
 }
 
+/// Database driver type for tracker configuration
+///
+/// Represents the database backend used by the tracker.
+/// Serializes to lowercase string values for template compatibility.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DatabaseDriver {
+    /// `SQLite3` database driver
+    Sqlite3,
+    /// `MySQL` database driver
+    Mysql,
+}
+
+/// SQLite-specific configuration for template rendering
+///
+/// Contains `SQLite` database parameters. When present in `TrackerContext`,
+/// these fields are flattened into the parent struct for template compatibility.
+#[derive(Debug, Clone, Serialize)]
+pub struct SqliteTemplateConfig {
+    /// Database file name (e.g., "tracker.db", "sqlite3.db")
+    pub tracker_database_name: String,
+}
+
+/// MySQL-specific configuration for template rendering
+///
+/// Contains all `MySQL` connection parameters. When present in `TrackerContext`,
+/// these fields are flattened into the parent struct for template compatibility.
+#[derive(Debug, Clone, Serialize)]
+pub struct MysqlTemplateConfig {
+    /// `MySQL` host (e.g., "mysql", "localhost")
+    pub mysql_host: String,
+
+    /// `MySQL` port (typically 3306)
+    pub mysql_port: u16,
+
+    /// `MySQL` database name
+    pub mysql_database: String,
+
+    /// `MySQL` username
+    pub mysql_user: String,
+
+    /// `MySQL` password
+    pub mysql_password: String,
+}
+
 /// UDP tracker entry for template rendering
 #[derive(Debug, Clone, Serialize)]
 pub struct UdpTrackerEntry {
@@ -140,27 +178,35 @@ impl TrackerContext {
     pub fn from_config(metadata: TemplateMetadata, config: &TrackerConfig) -> Self {
         use crate::domain::tracker::DatabaseConfig;
 
-        let (mysql_host, mysql_port, mysql_database, mysql_user, mysql_password) =
-            match config.core().database() {
-                DatabaseConfig::Mysql(mysql_config) => (
-                    Some(mysql_config.host().to_string()),
-                    Some(mysql_config.port()),
-                    Some(mysql_config.database_name().to_string()),
-                    Some(mysql_config.username().to_string()),
-                    Some(mysql_config.password().expose_secret().to_string()),
-                ),
-                DatabaseConfig::Sqlite(..) => (None, None, None, None, None),
-            };
+        let (sqlite, mysql) = match config.core().database() {
+            DatabaseConfig::Mysql(mysql_config) => (
+                None,
+                Some(MysqlTemplateConfig {
+                    mysql_host: mysql_config.host().to_string(),
+                    mysql_port: mysql_config.port(),
+                    mysql_database: mysql_config.database_name().to_string(),
+                    mysql_user: mysql_config.username().to_string(),
+                    mysql_password: mysql_config.password().expose_secret().to_string(),
+                }),
+            ),
+            DatabaseConfig::Sqlite(sqlite_config) => (
+                Some(SqliteTemplateConfig {
+                    tracker_database_name: sqlite_config.database_name().to_string(),
+                }),
+                None,
+            ),
+        };
+
+        let database_driver = match config.core().database() {
+            DatabaseConfig::Mysql(..) => DatabaseDriver::Mysql,
+            DatabaseConfig::Sqlite(..) => DatabaseDriver::Sqlite3,
+        };
 
         Self {
             metadata,
-            database_driver: config.core().database().driver_name().to_string(),
-            tracker_database_name: config.core().database().database_name().to_string(),
-            mysql_host,
-            mysql_port,
-            mysql_database,
-            mysql_user,
-            mysql_password,
+            database_driver,
+            sqlite,
+            mysql,
             tracker_core_private: config.core().private(),
             on_reverse_proxy: config.any_http_tracker_uses_tls_proxy(),
             udp_trackers: config
@@ -198,13 +244,11 @@ impl TrackerContext {
     pub fn default_config(metadata: TemplateMetadata) -> Self {
         Self {
             metadata,
-            database_driver: "sqlite3".to_string(),
-            tracker_database_name: "sqlite3.db".to_string(),
-            mysql_host: None,
-            mysql_port: None,
-            mysql_database: None,
-            mysql_user: None,
-            mysql_password: None,
+            database_driver: DatabaseDriver::Sqlite3,
+            sqlite: Some(SqliteTemplateConfig {
+                tracker_database_name: "sqlite3.db".to_string(),
+            }),
+            mysql: None,
             tracker_core_private: false,
             on_reverse_proxy: false, // Default: no HTTP trackers use TLS proxy
             udp_trackers: vec![
@@ -273,13 +317,15 @@ mod tests {
         let metadata = create_test_metadata();
         let context = TrackerContext::from_config(metadata, &config);
 
-        assert_eq!(context.database_driver, "sqlite3");
-        assert_eq!(context.tracker_database_name, "test_tracker.db");
-        assert!(context.mysql_host.is_none());
-        assert!(context.mysql_port.is_none());
-        assert!(context.mysql_database.is_none());
-        assert!(context.mysql_user.is_none());
-        assert!(context.mysql_password.is_none());
+        assert_eq!(context.database_driver, DatabaseDriver::Sqlite3);
+
+        let sqlite = context
+            .sqlite
+            .as_ref()
+            .expect("SQLite config should be present");
+        assert_eq!(sqlite.tracker_database_name, "test_tracker.db");
+
+        assert!(context.mysql.is_none());
         assert!(context.tracker_core_private);
         assert_eq!(context.udp_trackers.len(), 2);
         assert_eq!(context.udp_trackers[0].bind_address, "0.0.0.0:6868");
@@ -326,13 +372,20 @@ mod tests {
         let metadata = create_test_metadata();
         let context = TrackerContext::from_config(metadata, &config);
 
-        assert_eq!(context.database_driver, "mysql");
-        assert_eq!(context.tracker_database_name, "tracker_db");
-        assert_eq!(context.mysql_host, Some("mysql".to_string()));
-        assert_eq!(context.mysql_port, Some(3306));
-        assert_eq!(context.mysql_database, Some("tracker_db".to_string()));
-        assert_eq!(context.mysql_user, Some("tracker_user".to_string()));
-        assert_eq!(context.mysql_password, Some("secure_pass".to_string()));
+        assert_eq!(context.database_driver, DatabaseDriver::Mysql);
+
+        assert!(context.sqlite.is_none());
+
+        let mysql = context
+            .mysql
+            .as_ref()
+            .expect("MySQL config should be present");
+        assert_eq!(mysql.mysql_host, "mysql");
+        assert_eq!(mysql.mysql_port, 3306);
+        assert_eq!(mysql.mysql_database, "tracker_db");
+        assert_eq!(mysql.mysql_user, "tracker_user");
+        assert_eq!(mysql.mysql_password, "secure_pass");
+
         assert!(!context.tracker_core_private);
     }
 
@@ -341,13 +394,15 @@ mod tests {
         let metadata = create_test_metadata();
         let context = TrackerContext::default_config(metadata);
 
-        assert_eq!(context.database_driver, "sqlite3");
-        assert_eq!(context.tracker_database_name, "sqlite3.db");
-        assert!(context.mysql_host.is_none());
-        assert!(context.mysql_port.is_none());
-        assert!(context.mysql_database.is_none());
-        assert!(context.mysql_user.is_none());
-        assert!(context.mysql_password.is_none());
+        assert_eq!(context.database_driver, DatabaseDriver::Sqlite3);
+
+        let sqlite = context
+            .sqlite
+            .as_ref()
+            .expect("SQLite config should be present");
+        assert_eq!(sqlite.tracker_database_name, "sqlite3.db");
+
+        assert!(context.mysql.is_none());
         assert!(!context.tracker_core_private);
         assert_eq!(context.udp_trackers.len(), 2);
         assert_eq!(context.http_trackers.len(), 1);
@@ -370,7 +425,7 @@ mod tests {
         let context = TrackerContext::from_config(metadata, &config);
         let cloned = context.clone();
 
-        assert_eq!(context.tracker_database_name, cloned.tracker_database_name);
+        assert_eq!(context.database_driver, cloned.database_driver);
         assert_eq!(context.tracker_core_private, cloned.tracker_core_private);
         assert_eq!(context.udp_trackers.len(), cloned.udp_trackers.len());
         assert_eq!(context.http_trackers.len(), cloned.http_trackers.len());
@@ -383,6 +438,6 @@ mod tests {
         let debug_output = format!("{context:?}");
 
         assert!(debug_output.contains("TrackerContext"));
-        assert!(debug_output.contains("tracker_database_name"));
+        assert!(debug_output.contains("database_driver"));
     }
 }
