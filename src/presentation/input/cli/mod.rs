@@ -9,9 +9,11 @@ use clap::Parser;
 // Re-export submodules for convenient access
 pub mod args;
 pub mod commands;
+pub mod output_format;
 
 pub use args::GlobalArgs;
 pub use commands::{Commands, CreateAction};
+pub use output_format::OutputFormat;
 
 /// Command-line interface for Torrust Tracker Deployer
 ///

@@ -6,11 +6,11 @@
 
 ## Overview
 
-Add machine-readable JSON output format (`--json` flag) to the `create` command. This enables automation workflows to programmatically extract environment creation details like paths, configuration references, and initial state.
+Add machine-readable JSON output format (`--output-format json`) to the `create` command. This enables automation workflows to programmatically extract environment creation details like paths, configuration references, and initial state.
 
 ## Goals
 
-- [ ] Add `--json` flag to `create` command CLI interface
+- [ ] Add `--output-format` global CLI argument
 - [ ] Implement JSON output format containing environment metadata
 - [ ] Preserve existing human-readable output as default
 - [ ] Document JSON schema and usage examples
@@ -83,23 +83,48 @@ The application currently has these output-related global arguments in [`src/pre
 
 **Implementation Decision:**
 
-For this task, we have two architectural choices:
+We will implement a **global `--output-format` argument** (similar to `--log-file-format` and `--log-stderr-format`) that applies to all commands:
 
-1. **Command-specific flag** (recommended for Phase 1): Add `--json` flag to individual commands like `create`, `provision`, etc. This keeps the change localized and follows patterns from tools like `docker`, `kubectl`, and `npm`.
+- Add `OutputFormat` enum in `src/presentation/input/cli/output_format.rs`
+- Add `output_format: OutputFormat` field to `GlobalArgs`
+- Commands read this flag and format output accordingly
+- Consistent with existing `LogFormat` pattern
 
-2. **Global output format flag** (future consideration): Add a global `--output-format` argument (similar to `--log-stderr-format`) that applies to all commands. This would require:
-   - Adding `output_format: OutputFormat` to `GlobalArgs`
-   - Passing this through execution context to `UserOutput`
-   - Applying `FormatterOverride` based on the global flag
+**Rationale for global approach:**
 
-**Rationale for command-specific approach:**
+- **Consistency**: Matches the pattern of `LogFormat` already in the codebase
+- **Extensibility**: Easy to add more formats (XML, YAML, CSV) by adding enum variants
+- **Type-safe**: Only valid formats can be selected (compile-time verification)
+- **Future-proof**: All commands in epic #348 (12.1-12.5) will use the same mechanism
+- **Industry standard**: Similar to `kubectl -o json`, `docker --format json`
+- **Reusability**: Once implemented, any command can adopt JSON output easily
 
-- **Incremental adoption**: Not all commands produce structured output suitable for JSON
-- **Simpler implementation**: No need to modify global argument handling or execution context
-- **Clear opt-in**: Users explicitly request JSON where it makes sense
-- **Industry pattern**: Common in CLI tools (`docker inspect --format=json`, `kubectl get pods -o json`)
+**OutputFormat enum:**
 
-**Note**: If multiple commands adopt JSON output (tasks 12.1-12.5), we may want to refactor to a global flag in a future iteration to reduce duplication.
+```rust
+/// Output format for command results
+#[derive(Clone, Copy, Debug, Default, clap::ValueEnum)]
+pub enum OutputFormat {
+    /// Human-readable text output (default)
+    #[default]
+    Text,
+    /// JSON output for automation and programmatic parsing
+    Json,
+}
+```
+
+**CLI usage:**
+
+```bash
+# Human-readable (default)
+torrust-tracker-deployer create environment --env-file envs/my.json
+
+# JSON output
+torrust-tracker-deployer create environment --env-file envs/my.json --output-format json
+
+# Short form (with alias)
+torrust-tracker-deployer create environment --env-file envs/my.json -o json
+```
 
 ### Architecture Gap: Missing View Layer
 
@@ -209,7 +234,7 @@ This refactoring should be done in **two separate commits**:
    - Verify output unchanged (run golden test)
 
 2. **Commit 2**: Add JSON format support
-   - Add `--json` CLI flag
+   - Add `--output-format` global CLI argument
    - Add `render_json()` method to view
    - Add format switching in controller
    - Update tests and documentation
@@ -223,33 +248,36 @@ This refactoring should be done in **two separate commits**:
 torrust-tracker-deployer create environment --env-file envs/my-env.json
 
 # JSON output (new)
-torrust-tracker-deployer create environment --env-file envs/my-env.json --json
+torrust-tracker-deployer create environment --env-file envs/my-env.json --output-format json
+
+# Short form with alias
+torrust-tracker-deployer create environment --env-file envs/my-env.json -o json
 ```
 
 ### Interaction with Existing `--log-output` Flag
 
-The `--json` flag controls **user-facing output format**, while `--log-output` controls **logging destination**. These are independent concerns that work together:
+The `--output-format` flag controls **user-facing output format**, while `--log-output` controls **logging destination**. These are independent concerns that work together:
 
-| Flag           | Purpose                                            | Output Channel |
-| -------------- | -------------------------------------------------- | -------------- |
-| `--json`       | User output format (JSON vs human-readable)        | stdout         |
-| `--log-output` | Logging destination (file-only vs file-and-stderr) | stderr or file |
+| Flag              | Purpose                                            | Output Channel |
+| ----------------- | -------------------------------------------------- | -------------- |
+| `--output-format` | User output format (text vs JSON)                  | stdout         |
+| `--log-output`    | Logging destination (file-only vs file-and-stderr) | stderr or file |
 
 **Key points:**
 
 - **Logs** (tracing data with progress indicators like `⏳`, `✓`, `❌`) go to stderr or file based on `--log-output`
 - **User output** (success message and environment details) goes to stdout
-- When `--json` is used, the JSON goes to stdout, logs continue to stderr/file
+- When `--output-format json` is used, the JSON goes to stdout, logs continue to stderr/file
 - These flags do not conflict - they can be used together
 
 **Examples:**
 
 ```bash
 # Production: JSON output to stdout, logs to file only
-torrust-tracker-deployer create environment --env-file envs/my-env.json --json --log-output file-only
+torrust-tracker-deployer create environment --env-file envs/my-env.json --output-format json --log-output file-only
 
 # Development: JSON output to stdout, logs to both file and stderr
-torrust-tracker-deployer create environment --env-file envs/my-env.json --json --log-output file-and-stderr
+torrust-tracker-deployer create environment --env-file envs/my-env.json -o json --log-output file-and-stderr
 
 # Default: Human-readable output, logs to file only
 torrust-tracker-deployer create environment --env-file envs/my-env.json
@@ -257,8 +285,8 @@ torrust-tracker-deployer create environment --env-file envs/my-env.json
 
 **Rationale:** Separating user output (stdout) from logs (stderr) is a Unix best practice that enables:
 
-- Clean piping: `create --json | jq .data_dir` extracts only the JSON, no log noise
-- Proper redirection: `create --json > output.json 2> logs.txt` separates concerns
+- Clean piping: `create -o json | jq .data_dir` extracts only the JSON, no log noise
+- Proper redirection: `create --output-format json > output.json 2> logs.txt` separates concerns
 - Tool integration: JSON parsers don't see log messages
 
 ### JSON Output Schema
@@ -423,15 +451,72 @@ torrust-tracker-deployer create environment --env-file envs/golden-test-json-cre
 # All 4 lines should match exactly
 ```
 
-### Phase 1: Add CLI Flag
+### Phase 1: Add Global OutputFormat Argument
 
-- [ ] Add `--json` flag to `create` subcommand argument parser
-- [ ] Pass format flag through to presentation layer
-- [ ] No business logic changes
+**Purpose**: Add `OutputFormat` enum and global `--output-format` CLI argument.
+
+- [ ] Create `OutputFormat` enum in `src/presentation/input/cli/output_format.rs`
+- [ ] Add `#[derive(Clone, Copy, Debug, Default, clap::ValueEnum)]`
+- [ ] Add variants: `Text` (default) and `Json`
+- [ ] Add `output_format: OutputFormat` field to `GlobalArgs`
+- [ ] Add CLI documentation for the flag
+- [ ] No business logic changes yet
+
+**Files to create:**
+
+- `src/presentation/input/cli/output_format.rs`
 
 **Files to modify:**
 
-- `src/presentation/console/subcommands/create/mod.rs` or wherever CLI args are defined
+- `src/presentation/input/cli/args.rs` (add `output_format` field to `GlobalArgs`)
+- `src/presentation/input/cli/mod.rs` (export `OutputFormat`)
+
+**OutputFormat enum:**
+
+```rust
+//! Output format for command results
+
+/// Output format for command results
+///
+/// Controls the format of user-facing output that goes to stdout.
+/// This is independent of logging format (which goes to stderr/file).
+#[derive(Clone, Copy, Debug, Default, clap::ValueEnum)]
+pub enum OutputFormat {
+    /// Human-readable text output (default)
+    ///
+    /// Produces formatted text with tables, sections, and visual elements
+    /// optimized for terminal display and human consumption.
+    #[default]
+    Text,
+
+    /// JSON output for automation and programmatic parsing
+    ///
+    /// Produces machine-readable JSON objects that can be parsed by tools
+    /// like jq, scripts, and AI agents for programmatic extraction of data.
+    Json,
+}
+```
+
+**GlobalArgs update:**
+
+```rust
+/// Global CLI arguments for logging and output configuration
+#[derive(clap::Args, Debug)]
+pub struct GlobalArgs {
+    // ... existing log-related fields ...
+
+    /// Output format for command results (default: text)
+    ///
+    /// Controls the format of user-facing output (stdout channel).
+    /// - text: Human-readable formatted output (default)
+    /// - json: Machine-readable JSON for automation
+    ///
+    /// This is independent of logging format (--log-file-format, --log-stderr-format)
+    /// which controls stderr/file output.
+    #[arg(long, short = 'o', value_enum, default_value = "text", global = true)]
+    pub output_format: OutputFormat,
+}
+```
 
 ### Phase 2: Add JSON Output Method to View
 
@@ -474,20 +559,43 @@ impl EnvironmentDetailsView {
 }
 ```
 
-### Phase 3: Implement Format Switching
+### Phase 3: Implement Format Switching in Controller
 
-- [ ] Add conditional logic based on `--json` flag in controller
-- [ ] Call `EnvironmentDetailsView::render_json()` when flag set
-- [ ] Call `EnvironmentDetailsView::render_human_readable()` otherwise (default)
+- [ ] Pass `output_format` from router to controller
+- [ ] Add conditional logic based on `OutputFormat` in controller
+- [ ] Call `EnvironmentDetailsView::render_json()` when `OutputFormat::Json`
+- [ ] Call `EnvironmentDetailsView::render_human_readable()` when `OutputFormat::Text` (default)
 - [ ] Handle JSON serialization errors appropriately
 
 **Pattern:**
 
+The global `output_format` is accessible through the router. Pass it to the controller's execute method:
+
 ```rust
+// In router (src/presentation/controllers/create/router.rs)
+let output_format = ctx.global_args().output_format;
+controller.execute(&env_file, &working_dir, output_format).await?;
+
+// In controller (src/presentation/controllers/create/subcommands/environment/handler.rs)
+use crate::presentation::input::cli::OutputFormat;
+
+pub async fn execute(
+    &mut self,
+    env_file: &Path,
+    working_dir: &Path,
+    output_format: OutputFormat,  // New parameter
+) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
+    // ... existing steps ...
+
+    self.display_creation_results(&environment, output_format)?;
+
+    Ok(environment)
+}
+
 fn display_creation_results(
     &mut self,
     environment: &Environment<Created>,
-    format: OutputFormat,  // Passed from CLI args
+    format: OutputFormat,  // New parameter
 ) -> Result<(), CreateEnvironmentCommandError> {
     let data = EnvironmentDetailsData::from(environment);
 
@@ -497,7 +605,7 @@ fn display_creation_results(
                 .map_err(|e| CreateEnvironmentCommandError::JsonSerializationFailed { source: e })?;
             self.progress.result(&json_output)?;
         }
-        OutputFormat::HumanReadable => {
+        OutputFormat::Text => {
             let output = EnvironmentDetailsView::render_human_readable(&data);
             self.progress.result(&output)?;
         }
@@ -509,7 +617,8 @@ fn display_creation_results(
 
 **Files to modify:**
 
-- `src/presentation/controllers/create/subcommands/environment/handler.rs`
+- `src/presentation/controllers/create/router.rs` (pass `output_format` to controller)
+- `src/presentation/controllers/create/subcommands/environment/handler.rs` (add parameter and format switching)
 - `src/presentation/controllers/create/errors.rs` (add JSON serialization error variant)
 
 ### Phase 4: Documentation
@@ -525,7 +634,7 @@ fn display_creation_results(
 
 ### Phase 5: Testing
 
-- [ ] Manual testing: verify JSON is valid with `--json` flag
+- [ ] Manual testing: verify JSON is valid with `--output-format json`
 - [ ] Manual testing: verify default output unchanged without flag
 - [ ] Manual testing: pipe to `jq` to verify parsability
 - [ ] Consider adding integration test (optional for v1)
@@ -543,11 +652,11 @@ fn display_creation_results(
 
 ### Functionality
 
-- [ ] `--json` flag is accepted by create command
-- [ ] With `--json` flag, command outputs valid JSON to stdout
+- [ ] `--output-format` global argument is accepted
+- [ ] With `--output-format json`, command outputs valid JSON to stdout
 - [ ] JSON contains all specified fields with correct values
 - [ ] JSON is parsable by standard tools (`jq`, `serde_json`, etc.)
-- [ ] Without `--json` flag, output is unchanged (human-readable format)
+- [ ] Without flag (or with `--output-format text`), output is unchanged (human-readable format)
 - [ ] Errors are still output to stderr (not to stdout)
 
 ### Code Quality
@@ -591,7 +700,7 @@ torrust-tracker-deployer create environment --env-file envs/golden-test-json-cre
 1. **Basic JSON output**:
 
    ```bash
-   torrust-tracker-deployer create --env-file envs/test.json --json
+   torrust-tracker-deployer create --env-file envs/test.json --output-format json
    ```
 
    - Should output valid JSON
@@ -609,7 +718,7 @@ torrust-tracker-deployer create environment --env-file envs/golden-test-json-cre
 3. **JSON parsability**:
 
    ```bash
-   torrust-tracker-deployer create --env-file envs/test.json --json | jq .
+   torrust-tracker-deployer create --env-file envs/test.json -o json | jq .
    ```
 
    - `jq` should successfully parse the output
@@ -618,7 +727,7 @@ torrust-tracker-deployer create environment --env-file envs/golden-test-json-cre
 4. **Extract specific field**:
 
    ```bash
-   DATA_DIR=$(torrust-tracker-deployer create environment --env-file envs/test.json --json | jq -r .data_dir)
+   DATA_DIR=$(torrust-tracker-deployer create environment --env-file envs/test.json -o json | jq -r .data_dir)
    echo "Data directory: $DATA_DIR"
    ```
 
@@ -628,7 +737,7 @@ torrust-tracker-deployer create environment --env-file envs/golden-test-json-cre
 5. **JSON with file-only logging** (production scenario):
 
    ```bash
-   torrust-tracker-deployer create environment --env-file envs/test.json --json --log-output file-only
+   torrust-tracker-deployer create environment --env-file envs/test.json -o json --log-output file-only
    ```
 
    - JSON should go to stdout only
@@ -638,7 +747,7 @@ torrust-tracker-deployer create environment --env-file envs/golden-test-json-cre
 6. **JSON with file-and-stderr logging** (development scenario):
 
    ```bash
-   torrust-tracker-deployer create environment --env-file envs/test.json --json --log-output file-and-stderr
+   torrust-tracker-deployer create environment --env-file envs/test.json --output-format json --log-output file-and-stderr
    ```
 
    - JSON should go to stdout
@@ -648,7 +757,7 @@ torrust-tracker-deployer create environment --env-file envs/golden-test-json-cre
 7. **Output channel separation**:
 
    ```bash
-   torrust-tracker-deployer create environment --env-file envs/test.json --json --log-output file-and-stderr > output.json 2> logs.txt
+   torrust-tracker-deployer create environment --env-file envs/test.json -o json --log-output file-and-stderr > output.json 2> logs.txt
    ```
 
    - `output.json` should contain only the JSON (no log messages)
