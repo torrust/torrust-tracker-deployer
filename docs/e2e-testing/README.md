@@ -84,7 +84,7 @@ For detailed prerequisites and manual setup, see [running-tests.md](running-test
 For information about writing unit tests and testing conventions, see:
 
 - **[docs/contributing/testing/](../contributing/testing/)** - Unit testing guidelines, conventions, and best practices
-- **[docs/contributing/testing/unit-testing.md](../contributing/testing/unit-testing.md)** - Unit test organization and patterns
-- **[docs/contributing/testing/coverage.md](../contributing/testing/coverage.md)** - Test coverage guidelines
+- **[docs/contributing/testing/unit-testing/naming-conventions.md](../contributing/testing/unit-testing/naming-conventions.md)** - Unit test organization and patterns
+- **[docs/contributing/testing/quality/coverage.md](../contributing/testing/quality/coverage.md)** - Test coverage guidelines
 
 E2E tests focus on system-level validation of the complete deployment workflow, while unit tests validate individual components in isolation.

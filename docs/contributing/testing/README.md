@@ -1,252 +1,44 @@
-# Testing Conventions
+# Testing Guide
 
-This document outlines the testing conventions for the Torrust Tracker Deployer project.
+Quick navigation for testing in Torrust Tracker Deployer.
 
-## 🎯 Principles
+## 🚀 Quick Start
 
-Test code should be held to the same quality standards as production code. Tests are not second-class citizens in the codebase.
+New to testing this project? Start here:
 
-### Core Principles
+- [Getting Started](./getting-started.md) - Your first test
+- [Principles](./principles.md) - Core testing philosophy
 
-- **Maintainability**: Tests should be easy to update when requirements change
-- **Readability**: Tests should be clear and understandable at first glance
-- **Reliability**: Tests should be deterministic and not flaky
-- **Isolation**: Each test should be independent and not affect other tests
-- **Documentation**: Tests serve as living documentation of the system's behavior
+## 📚 By Testing Level
 
-Just like production code, tests should follow:
+### Unit Testing
 
-- **DRY (Don't Repeat Yourself)**: Extract common setup logic into helpers and builders
-- **Single Responsibility**: Each test should verify one behavior
-- **Clear Intent**: Test names and structure should make the purpose obvious
-- **Clean Code**: Apply the same refactoring and quality standards as production code
+- [Overview](./unit-testing/README.md)
+- [Naming Conventions](./unit-testing/naming-conventions.md) - `it_should_` pattern
+- [AAA Pattern](./unit-testing/aaa-pattern.md) - Arrange-Act-Assert
+- [Parameterized Tests](./unit-testing/parameterized-tests.md) - Using rstest
+- [Mock Clock](./unit-testing/mock-clock.md) - Deterministic time testing
+- [Temp Directories](./unit-testing/temp-directories.md) - Cleanup and isolation
 
-Remember: **If the test code is hard to read or maintain, it will become a burden rather than an asset.**
+### Integration Testing
 
-## ✅ Good Practices
+- [Overview](./integration-testing/README.md)
+- [Command Testing](./integration-testing/command-testing.md) - Testing commands
+- [Test Builders](./integration-testing/test-builders.md) - Command builders
+- [Mocking Strategies](./integration-testing/mocking-strategies.md) - When to mock
+- [Idempotency Testing](./integration-testing/idempotency-testing.md) - Safe retries
 
-### AAA Pattern (Arrange-Act-Assert)
+### E2E Testing
 
-All tests should follow the AAA pattern, also known as Given-When-Then:
+- [Overview](./e2e-testing/README.md) - Links to main E2E docs
 
-- **Arrange (Given)**: Set up the test data and preconditions
-- **Act (When)**: Execute the behavior being tested
-- **Assert (Then)**: Verify the expected outcome
+## ✅ Quality Standards
 
-This pattern makes tests:
-
-- Easy to read and understand
-- Clear about what is being tested
-- Simple to maintain and modify
-
-#### Example
-
-```rust
-#[test]
-fn it_should_create_ansible_host_with_valid_ipv4() {
-    // Arrange: Set up test data
-    let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-
-    // Act: Execute the behavior
-    let host = AnsibleHost::new(ip);
-
-    // Assert: Verify the outcome
-    assert_eq!(host.as_ip_addr(), &ip);
-}
-```
-
-#### Benefits
-
-- **Clarity**: Each section has a clear purpose
-- **Structure**: Consistent test organization across the codebase
-- **Debugging**: Easy to identify which phase is failing
-- **Maintenance**: Simple to modify specific parts of the test
-
-### Parameterized Tests Over Loops
-
-When testing the same behavior with different inputs and expected outputs, prefer parameterized tests over loops in the test body.
-
-**Why?** Parameterized tests provide:
-
-- **Better Test Isolation**: Each parameter combination runs as a separate test case
-- **Clearer Test Output**: Individual test cases show up separately in test results
-- **Parallel Execution**: Test framework can run each case in parallel
-- **Easier Debugging**: When a test fails, you know exactly which parameter combination caused it
-- **Better IDE Support**: Modern IDEs can run individual parameterized test cases
-
-**How?** Use the `rstest` crate for parameterized testing.
-
-#### ❌ Avoid: Loop in Test Body
-
-```rust
-#[test]
-fn it_should_create_state_file_in_environment_specific_subdirectory() {
-    let test_cases = vec![
-        ("e2e-config", "e2e-config/state.json"),
-        ("e2e-full", "e2e-full/state.json"),
-        ("e2e-provision", "e2e-provision/state.json"),
-    ];
-
-    for (env_name, expected_path) in test_cases {
-        // Test logic here...
-        // If one case fails, you don't know which one without debugging
-    }
-}
-```
-
-**Problem**: If the second iteration fails, the test output only shows the test name, not which specific case failed.
-
-#### ✅ Good: Parameterized Test with rstest
-
-```rust
-use rstest::rstest;
-
-#[rstest]
-#[case("e2e-config", "e2e-config/state.json")]
-#[case("e2e-full", "e2e-full/state.json")]
-#[case("e2e-provision", "e2e-provision/state.json")]
-fn it_should_create_state_file_in_environment_specific_subdirectory(
-    #[case] env_name: &str,
-    #[case] expected_path: &str,
-) {
-    // Test logic here...
-    // Each case runs as a separate test with clear identification
-}
-```
-
-**Benefits**: Test output shows individual cases:
-
-- `it_should_create_state_file_in_environment_specific_subdirectory::case_1` ✅
-- `it_should_create_state_file_in_environment_specific_subdirectory::case_2` ✅
-- `it_should_create_state_file_in_environment_specific_subdirectory::case_3` ✅
-
-#### When to Use Parameterized Tests
-
-Use parameterized tests when:
-
-- ✅ Testing the same behavior with multiple input/output combinations
-- ✅ Validating edge cases with different values
-- ✅ Testing configuration variations
-- ✅ Verifying data transformation with various inputs
-
-Don't use parameterized tests when:
-
-- ❌ Each case tests fundamentally different behavior (use separate tests)
-- ❌ The test logic differs significantly between cases
-- ❌ You only have one or two cases (just write separate tests)
-
-#### Setup
-
-Add `rstest` to your `Cargo.toml`:
-
-```toml
-[dev-dependencies]
-rstest = "0.23"
-```
-
-Then import it in your test module:
-
-```rust
-#[cfg(test)]
-mod tests {
-    use rstest::rstest;
-    // ... other imports
-}
-```
-
-## 🧹 Test Output Cleanliness
-
-**Principle**: Test output should be clean and focused on test results, not cluttered with user-facing messages.
-
-User-facing progress messages (emojis, status indicators, formatting) should **never** appear in test output as they:
-
-- Make test output noisy and difficult to read
-- Obscure actual test failures and important information
-- Create inconsistent output between test runs
-- Interfere with CI/CD log parsing and analysis
-
-### Enforcing Clean Test Output
-
-The project enforces clean test output through:
-
-1. **Silent Verbosity by Default**: `TestContext` uses `VerbosityLevel::Silent` to suppress all user-facing messages
-2. **Test-Specific Output Utilities**: Use `TestUserOutput::wrapped_silent()` for clean test output
-3. **No User Messages in Tests**: Tests should focus on verifying behavior, not producing user output
-
-### Best Practices
-
-#### ✅ Use Silent Verbosity in Tests
-
-```rust
-// ✅ Good: Uses silent verbosity by default
-let context = TestContext::new();
-
-// ✅ Good: Explicit silent output for API tests
-let output = TestUserOutput::wrapped_silent();
-```
-
-#### ❌ Avoid User-Facing Output in Tests
-
-```rust
-// ❌ Bad: Allows user-facing progress messages
-let output = TestUserOutput::wrapped(VerbosityLevel::Normal);
-
-// ❌ Bad: User output appears in test stderr
-user_output.progress("⏳ Processing..."); // This will show in test output!
-```
-
-#### Testing User Output Components
-
-When testing user output functionality itself:
-
-```rust
-#[test]
-fn it_should_format_progress_message_correctly() {
-    // Capture output in test buffers, don't let it reach stderr
-    let test_output = TestUserOutput::new(VerbosityLevel::Normal);
-    test_output.output.progress("⏳ Processing...");
-
-    // Verify the message format in buffers
-    let stderr = test_output.stderr();
-    assert!(stderr.contains("⏳ Processing..."));
-}
-```
-
-### Why This Matters
-
-Clean test output ensures:
-
-- **Readable Results**: Developers can quickly identify failing tests
-- **Reliable CI/CD**: Automated systems can parse test output correctly
-- **Professional Appearance**: Test output looks polished and focused
-- **Debugging Efficiency**: Important error messages aren't buried in noise
-
-**Remember**: If you see user-facing messages (emojis, progress indicators) in test output, it indicates a testing infrastructure issue that should be fixed.
-
-## 🚀 Getting Started
-
-When writing new tests:
-
-- Always use the `it_should_` prefix and describe the specific behavior being validated
-- Use `MockClock` for any time-dependent tests instead of `Utc::now()`
-- Follow the AAA pattern for clear test structure
-- Ensure tests are isolated and don't interfere with each other
-- **Keep test output clean** - Use `TestContext::new()` or `TestUserOutput::wrapped_silent()` to avoid user-facing messages
-- Use test builders for command testing to simplify setup
-- Test commands at multiple levels: unit, integration, and E2E
-
-## 📚 Documentation Index
-
-This section provides links to specialized testing documentation organized by topic:
-
-- **[Unit Testing](./unit-testing.md)** - Naming conventions, behavior-driven testing
-- **[Resource Management](./resource-management.md)** - TempDir usage, test isolation, cleanup
-- **[Testing Commands](./testing-commands.md)** - Command test patterns, builders, mocks, E2E
-- **[Clock Service](./clock-service.md)** - MockClock usage for deterministic time tests
-- **[Coverage](./coverage.md)** - Code coverage targets, tools, CI/CD workflow, and PR guidelines
+- [Coverage](./quality/coverage.md) - Coverage targets and tools
+- [Clean Output](./quality/clean-output.md) - Test output standards
 
 ## 🔗 Related Documentation
 
-- [E2E Testing Guide](../../e2e-testing.md) - End-to-end testing setup and usage
+- [E2E Testing Guide](../../e2e-testing/README.md) - End-to-end testing setup and usage
 - [Error Handling](../error-handling.md) - Testing error scenarios
 - [Module Organization](../module-organization.md) - How to organize test code

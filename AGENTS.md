@@ -145,7 +145,7 @@ These principles should guide all development decisions, code reviews, and featu
 
 17. **When adding new templates**: Read [`docs/contributing/templates/template-system-architecture.md`](docs/contributing/templates/template-system-architecture.md) to understand the Project Generator pattern. The `templates/` directory contains source templates. Dynamic templates (`.tera`) are automatically processed, but static files must be explicitly registered in their respective `ProjectGenerator` to be copied to the build directory.
 
-18. **When writing unit tests** (CRITICAL for test quality): Read [`docs/contributing/testing/unit-testing.md`](docs/contributing/testing/unit-testing.md) and follow the behavior-driven naming convention. **NEVER use the `test_` prefix** for test function names. Always use the `it_should_{expected_behavior}_when_{condition}` or `it_should_{expected_behavior}_given_{state}` pattern. This ensures tests clearly document the behavior being validated and the conditions under which it occurs. Example: `it_should_return_error_when_username_is_invalid()` instead of `test_invalid_username()`. Test names should follow the three-part structure (What-When-Then) and be descriptive enough that the test's purpose is clear without reading the code.
+18. **When writing unit tests** (CRITICAL for test quality): Read [`docs/contributing/testing/unit-testing/naming-conventions.md`](docs/contributing/testing/unit-testing/naming-conventions.md) and follow the behavior-driven naming convention. **NEVER use the `test_` prefix** for test function names. Always use the `it_should_{expected_behavior}_when_{condition}` or `it_should_{expected_behavior}_given_{state}` pattern. This ensures tests clearly document the behavior being validated and the conditions under which it occurs. Example: `it_should_return_error_when_username_is_invalid()` instead of `test_invalid_username()`. Test names should follow the three-part structure (What-When-Then) and be descriptive enough that the test's purpose is clear without reading the code.
 
 19. **When handling sensitive data (secrets)** (CRITICAL for security): Read [`docs/contributing/secret-handling.md`](docs/contributing/secret-handling.md) for the complete guide. **NEVER use `String` for sensitive data like API tokens, passwords, private keys, or database credentials**. Always use wrapper types from `src/shared/secrets/`: `ApiToken` for API tokens, `Password` for passwords, and their plain type aliases (`PlainApiToken`/`PlainPassword`) at DTO boundaries. Call `.expose_secret()` only when the actual value is needed. See the [ADR](docs/decisions/secrecy-crate-for-sensitive-data.md) for architectural rationale.
 
@@ -269,19 +269,19 @@ The project has comprehensive documentation organized in the [`docs/`](docs/) di
 
 ### Quick Navigation by Task
 
-| Task                      | Start Here                                                                               |
-| ------------------------- | ---------------------------------------------------------------------------------------- |
-| Start using the deployer  | [`docs/user-guide/README.md`](docs/user-guide/README.md)                                 |
-| Contribute code           | [`docs/contributing/README.md`](docs/contributing/README.md)                             |
-| Create a new issue        | [`docs/contributing/roadmap-issues.md`](docs/contributing/roadmap-issues.md)             |
-| Understand architecture   | [`docs/codebase-architecture.md`](docs/codebase-architecture.md)                         |
-| Add code to correct layer | [`docs/contributing/ddd-layer-placement.md`](docs/contributing/ddd-layer-placement.md)   |
-| Run E2E tests             | [`docs/e2e-testing/README.md`](docs/e2e-testing/README.md)                               |
-| Write unit tests          | [`docs/contributing/testing/unit-testing.md`](docs/contributing/testing/unit-testing.md) |
-| Understand a decision     | [`docs/decisions/README.md`](docs/decisions/README.md)                                   |
-| Plan a new feature        | [`docs/features/README.md`](docs/features/README.md)                                     |
-| Fix external tool issues  | [`docs/external-issues/README.md`](docs/external-issues/README.md)                       |
-| Work with templates       | [`docs/contributing/templates/`](docs/contributing/templates/)                           |
-| Handle errors properly    | [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md)             |
-| Handle output properly    | [`docs/contributing/output-handling.md`](docs/contributing/output-handling.md)           |
-| Organize Rust modules     | [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md)   |
+| Task                      | Start Here                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Start using the deployer  | [`docs/user-guide/README.md`](docs/user-guide/README.md)                                                                       |
+| Contribute code           | [`docs/contributing/README.md`](docs/contributing/README.md)                                                                   |
+| Create a new issue        | [`docs/contributing/roadmap-issues.md`](docs/contributing/roadmap-issues.md)                                                   |
+| Understand architecture   | [`docs/codebase-architecture.md`](docs/codebase-architecture.md)                                                               |
+| Add code to correct layer | [`docs/contributing/ddd-layer-placement.md`](docs/contributing/ddd-layer-placement.md)                                         |
+| Run E2E tests             | [`docs/e2e-testing/README.md`](docs/e2e-testing/README.md)                                                                     |
+| Write unit tests          | [`docs/contributing/testing/unit-testing/naming-conventions.md`](docs/contributing/testing/unit-testing/naming-conventions.md) |
+| Understand a decision     | [`docs/decisions/README.md`](docs/decisions/README.md)                                                                         |
+| Plan a new feature        | [`docs/features/README.md`](docs/features/README.md)                                                                           |
+| Fix external tool issues  | [`docs/external-issues/README.md`](docs/external-issues/README.md)                                                             |
+| Work with templates       | [`docs/contributing/templates/`](docs/contributing/templates/)                                                                 |
+| Handle errors properly    | [`docs/contributing/error-handling.md`](docs/contributing/error-handling.md)                                                   |
+| Handle output properly    | [`docs/contributing/output-handling.md`](docs/contributing/output-handling.md)                                                 |
+| Organize Rust modules     | [`docs/contributing/module-organization.md`](docs/contributing/module-organization.md)                                         |

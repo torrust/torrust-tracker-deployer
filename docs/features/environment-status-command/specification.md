@@ -203,26 +203,22 @@ Status: ✓ All services running
 ### Key Design Decisions
 
 1. **Command Name: `show`**
-
    - Displays stored environment information only
    - Consistent with industry CLI patterns for information display
    - Reserves `status` for future service health/runtime status checks
    - Clear separation of concerns: `show` (data), `test` (infrastructure), `status` (services)
 
 2. **Read-Only Operation**
-
    - No state modifications
    - Fast and safe to run repeatedly
    - No side effects on infrastructure
 
 3. **Human-Friendly Output First**
-
    - Initial implementation uses pretty-printed output with formatting
    - JSON output can be added later with `--format json` flag
    - Consistent with existing command output patterns
 
 4. **State-Aware Information**
-
    - Different details shown based on environment state
    - Provides relevant, actionable information for each state
    - Clear next-step guidance
@@ -760,7 +756,7 @@ Follow module organization conventions in `docs/contributing/module-organization
 
 ### Testing Conventions
 
-Follow unit testing conventions in `docs/contributing/testing/unit-testing.md`:
+Follow unit testing conventions in `docs/contributing/testing/unit-testing/naming-conventions.md`:
 
 - Use behavior-driven naming: `it_should_display_ip_when_environment_is_provisioned()`
 - Never use `test_` prefix
