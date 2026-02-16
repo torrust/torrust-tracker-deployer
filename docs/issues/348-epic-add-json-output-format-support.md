@@ -72,27 +72,37 @@ Thanks to the MVC pattern already in place (presentation layer separation), addi
 - CI/CD pipelines coordinating multiple environments
 - Scripts that need to know where to find generated files
 
-### 12.2 Add JSON output to `provision` command
+### 12.2 Add JSON output to `provision` command ✅ COMPLETED
 
-**Issue**: [#352](https://github.com/torrust/torrust-tracker-deployer/issues/352)
+**Issue**: [#352](https://github.com/torrust/torrust-tracker-deployer/issues/352) ✅ Merged in [PR #353](https://github.com/torrust/torrust-tracker-deployer/pull/353)
 **Specification**: [docs/issues/352-add-json-output-to-provision-command.md](./352-add-json-output-to-provision-command.md)
 
 **Rationale**: Contains the provisioned instance IP address - critical for automation workflows. Easier to parse and extract IP than regex matching console output.
 
 **Key fields** (CRITICAL):
 
-- Instance IP address
-- Provider information
-- Instance ID/name
-- Region/location
+- Instance IP address ✅
+- Provider information ✅
+- Instance ID/name ✅
+- SSH credentials (username, port, key paths) ✅
+- Domains (for HTTPS configurations) ✅
+- Provisioned timestamp ✅
 
 **Use cases**:
 
-- DNS automation (updating A records with new IP)
-- Inventory systems (registering new instances)
-- Next-step automation (configure, release, run)
+- DNS automation (updating A records with new IP) ✅
+- Inventory systems (registering new instances) ✅
+- Next-step automation (configure, release, run) ✅
+- SSH connection automation ✅
 
 **Priority**: This is often the **most important** command for automation - the IP is needed for all subsequent workflow steps.
+
+**Implementation Details**:
+
+- Strategy Pattern (DTO + TextView + JsonView)
+- 22 unit tests + 10 manual tests passing
+- 6 automation examples in documentation (Shell, CI/CD, Python, Terraform)
+- Backward compatible (text output remains default)
 
 ### 12.3 Add JSON output to `show` command
 

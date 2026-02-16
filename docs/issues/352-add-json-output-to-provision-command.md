@@ -4,16 +4,19 @@
 **Parent Epic**: [#348](https://github.com/torrust/torrust-tracker-deployer/issues/348) - Add JSON output format support
 **Related**: [Roadmap Section 12.2](https://github.com/torrust/torrust-tracker-deployer/blob/main/docs/roadmap.md#12-add-json-output-format-support), [Issue #349 - Add JSON output to create command](https://github.com/torrust/torrust-tracker-deployer/issues/349) ✅ Completed
 
-**Implementation Status**: ✅ **COMPLETE** (Ready for PR)
+**Implementation Status**: ✅ **MERGED** - [PR #353](https://github.com/torrust/torrust-tracker-deployer/pull/353)
 
-- **Code**: ✅ 100% Complete (Committed: 422692f6)
+- **Code**: ✅ 100% Complete (Merged to main)
 - **Tests**: ✅ 22 unit tests + 10 manual tests passing
 - **Quality**: ✅ All linters passing, no unused dependencies
 - **Documentation**: ✅ Complete (User guide updated with automation examples)
 
-**Branch**: `352-add-json-output-to-provision-command`
-**Commit**: `422692f6` - "feat: [#352] add JSON output to provision command"
-**Files Changed**: 7 files, 707 insertions(+), 108 deletions(-)
+**Branch**: `352-add-json-output-to-provision-command` (merged)
+**Commits**:
+
+- `422692f6` - "feat: [#352] add JSON output to provision command" (implementation)
+- `23412448` - "docs: [#352] add JSON output documentation for provision command" (documentation)
+  **Files Changed**: 10 files total, 1171 insertions(+), 222 deletions(-)
 
 ## Overview
 
