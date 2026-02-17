@@ -252,81 +252,64 @@ Shows technical implementation details (commands, parameters, raw output):
 
 ```text
 ⏳ [1/3] Validating environment...
-⏳   ✓ Environment name validated: verbosity-test-provision (took 0ms)
+⏳   ✓ Environment name validated: verbosity-demo (took 0ms)
 ⏳ [2/3] Creating command handler...
 ⏳   ✓ Done (took 0ms)
 ⏳ [3/3] Provisioning infrastructure...
 📋   [Step 1/9] Rendering OpenTofu templates...
-🔍      → Template source: templates/tofu
-🔍      → Template destination: build/verbosity-test-provision/tofu
-📋      → Template directory: build/verbosity-test-provision/tofu
-🔍      → Rendering main.tf from template
-📋      → Generated main.tf
+🔍      → Template generator: torrust_tracker_deployer_lib::infrastructure::templating::tofu::template::common::renderer::project_generator::TofuProjectGenerator
+📋      → Generated OpenTofu configuration files
 📋   [Step 2/9] Initializing OpenTofu...
-🔍      → Command: cd build/verbosity-test-provision/tofu && tofu init
-🔍      → Exit code: 0
+🔍      → Working directory: ./build/verbosity-demo/tofu/lxd
+🔍      → Executing: tofu init
+🔍      → Command completed successfully
 📋      → Initialized OpenTofu backend
 📋   [Step 3/9] Validating infrastructure configuration...
-🔍      → Command: cd build/verbosity-test-provision/tofu && tofu validate
-🔍      → Output: Success! The configuration is valid.
+🔍      → Working directory: ./build/verbosity-demo/tofu/lxd
+🔍      → Executing: tofu validate
+🔍      → Validation output: Success! The configuration is valid.
 📋      → Configuration is valid ✓
 📋   [Step 4/9] Planning infrastructure changes...
-🔍      → Command: cd build/verbosity-test-provision/tofu && tofu plan
-🔍      → Output: Plan: 3 to add, 0 to change, 0 to destroy.
-📋      → Plan: 3 to add, 0 to change, 0 to destroy
+🔍      → Working directory: ./build/verbosity-demo/tofu/lxd
+🔍      → Executing: tofu plan -var-file=variables.tfvars
+📋      → Plan: 2 to add, 0 to change, 0 to destroy.
 📋   [Step 5/9] Applying infrastructure changes...
-🔍      → Command: cd build/verbosity-test-provision/tofu && tofu apply -auto-approve
-🔍      → Output: lxd_instance.vm: Creating...
-🔍      → Output: lxd_instance.vm: Creation complete after 5s [id=torrust-tracker-vm-verbosity-test-provision]
-📋      → Creating lxd_instance.vm...
-📋      → Instance created successfully
+🔍      → Working directory: ./build/verbosity-demo/tofu/lxd
+🔍      → Executing: tofu apply -var-file=variables.tfvars -auto-approve
+📋      → Infrastructure resources created successfully
 📋   [Step 6/9] Retrieving instance information...
-🔍      → Command: cd build/verbosity-test-provision/tofu && tofu output -json
-🔍      → Parsed instance IP from output: 10.140.190.235
-📋      → Instance IP: 10.140.190.235
+🔍      → Working directory: ./build/verbosity-demo/tofu/lxd
+🔍      → Executing: tofu output -json
+🔍      → Instance name: torrust-tracker-vm-verbosity-demo
+📋      → Instance IP: 10.140.190.7
 📋   [Step 7/9] Rendering Ansible templates...
-🔍      → Template source: templates/ansible
-🔍      → Template destination: build/verbosity-test-provision/ansible
-🔍      → Injecting runtime parameter: instance_ip=10.140.190.235
-📋      → Template directory: build/verbosity-test-provision/ansible
+🔍      → Template directory: ./data/verbosity-demo/templates
+🔍      → Build directory: ./build/verbosity-demo/ansible
+🔍      → Instance IP: 10.140.190.7
+📋      → Template directory: ./build/verbosity-demo/ansible
 📋      → Generated inventory and playbooks
 📋   [Step 8/9] Waiting for SSH connectivity...
-🔍      → Max attempts: 30, timeout per attempt: 5s
-📋      → Attempt 1/30: Testing connection to 10.140.190.235:22
-🔍      → Command: ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no torrust@10.140.190.235 echo ok
-🔍      → Exit code: 255 (connection refused)
-📋      → Attempt 2/30: Testing connection to 10.140.190.235:22
-🔍      → Exit code: 0 (success)
+🔍      → SSH target: torrust@10.140.190.7:22
+🔍      → Private key: /home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-02/fixtures/testing_rsa
+📋      → Testing connection to 10.140.190.7:22
 📋      → SSH connection established ✓
 📋   [Step 9/9] Waiting for cloud-init completion...
-🔍      → Command: ansible-playbook -i build/verbosity-test-provision/ansible/inventory.yml playbooks/wait_cloud_init.yml
-🔍      → Output: TASK [Wait for cloud-init] *****
-📋      → Cloud-init status: running
-🔍      → Waiting 2s before retry...
+🔍      → Ansible working directory: ./build/verbosity-demo/ansible
+🔍      → Executing: ansible-playbook wait-cloud-init.yml
+🔍      → Playbook completed successfully
 📋      → Cloud-init status: done ✓
-⏳   ✓ Infrastructure provisioned (took 27.0s)
-✅ Environment 'verbosity-test-provision' provisioned successfully
+⏳   ✓ Infrastructure provisioned (took 25.9s)
+✅ Environment 'verbosity-demo' provisioned successfully
 
 
 Instance Connection Details:
-  IP Address:        10.140.190.235
+  IP Address:        10.140.190.7
   SSH Port:          22
   SSH Private Key:   /home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-02/fixtures/testing_rsa
   SSH Username:      torrust
 
 Connect using:
-  ssh -i /home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-02/fixtures/testing_rsa torrust@10.140.190.235 -p 22
-
-⚠️  DNS Setup Required:
-  Your configuration uses custom domains. Remember to update your DNS records
-  to point your domains to the server IP: 10.140.190.235
-
-  Configured domains:
-    - tracker1.example.com
-    - tracker2.example.com
-    - api.example.com
-    - grafana.example.com
-    - health.example.com
+  ssh -i /home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-02/fixtures/testing_rsa torrust@10.140.190.7 -p 22
 ```
 
 **Legend**:
