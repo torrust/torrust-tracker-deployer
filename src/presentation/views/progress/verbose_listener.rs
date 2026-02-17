@@ -63,7 +63,7 @@ impl VerboseProgressListener {
 impl CommandProgressListener for VerboseProgressListener {
     fn on_step_started(&self, step_number: usize, total_steps: usize, description: &str) {
         self.with_output(|output| {
-            output.detail(&format!(
+            output.step_progress(&format!(
                 "  [Step {step_number}/{total_steps}] {description}..."
             ));
         });
@@ -130,8 +130,21 @@ mod tests {
     }
 
     #[test]
-    fn it_should_emit_detail_at_verbose_level() {
+    fn it_should_not_emit_detail_at_verbose_level() {
         let (listener, stderr_buffer) = create_listener(VerbosityLevel::Verbose);
+
+        listener.on_detail("Template directory: build/test/tofu");
+
+        let output = String::from_utf8(stderr_buffer.lock().clone()).unwrap();
+        assert!(
+            output.is_empty(),
+            "Expected no detail output at Verbose level, got: {output}"
+        );
+    }
+
+    #[test]
+    fn it_should_emit_detail_at_very_verbose_level() {
+        let (listener, stderr_buffer) = create_listener(VerbosityLevel::VeryVerbose);
 
         listener.on_detail("Template directory: build/test/tofu");
 

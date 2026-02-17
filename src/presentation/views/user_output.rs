@@ -14,7 +14,8 @@ use std::io::Write;
 // Internal crate imports
 use super::messages::{
     BlankLineMessage, DebugDetailMessage, DetailMessage, ErrorMessage, InfoBlockMessage,
-    ProgressMessage, ResultMessage, StepsMessage, SuccessMessage, WarningMessage,
+    ProgressMessage, ResultMessage, StepProgressMessage, StepsMessage, SuccessMessage,
+    WarningMessage,
 };
 use super::sinks::StandardSink;
 use super::verbosity::VerbosityFilter;
@@ -205,9 +206,9 @@ impl UserOutput {
         });
     }
 
-    /// Display a detail message to stderr (Verbose level and above)
+    /// Display a step progress message to stderr (Verbose level and above)
     ///
-    /// Detail messages provide step-level progress information during command
+    /// Step progress messages mark workflow step boundaries during command
     /// execution. They are shown when the user requests verbose output (`-v`).
     ///
     /// # Examples
@@ -216,8 +217,28 @@ impl UserOutput {
     /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     ///
     /// let mut output = UserOutput::new(VerbosityLevel::Verbose);
-    /// output.detail("  [Step 1/9] Rendering OpenTofu templates...");
+    /// output.step_progress("  [Step 1/9] Rendering OpenTofu templates...");
     /// // Output to stderr: 📋   [Step 1/9] Rendering OpenTofu templates...
+    /// ```
+    pub fn step_progress(&mut self, message: &str) {
+        self.write(&StepProgressMessage {
+            text: message.to_string(),
+        });
+    }
+
+    /// Display a detail message to stderr (`VeryVerbose` level and above)
+    ///
+    /// Detail messages provide contextual information within steps during command
+    /// execution. They are shown when the user requests very verbose output (`-vv`).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
+    ///
+    /// let mut output = UserOutput::new(VerbosityLevel::VeryVerbose);
+    /// output.detail("     → Instance IP: 10.140.190.235");
+    /// // Output to stderr: 📋      → Instance IP: 10.140.190.235
     /// ```
     pub fn detail(&mut self, message: &str) {
         self.write(&DetailMessage {
