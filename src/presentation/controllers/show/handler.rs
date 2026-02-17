@@ -12,7 +12,8 @@ use crate::application::command_handlers::show::info::EnvironmentInfo;
 use crate::application::command_handlers::show::{ShowCommandHandler, ShowCommandHandlerError};
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::presentation::views::commands::show::TextView;
+use crate::presentation::input::cli::OutputFormat;
+use crate::presentation::views::commands::show::{JsonView, TextView};
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 
@@ -98,11 +99,16 @@ impl ShowCommandController {
     /// # Arguments
     ///
     /// * `environment_name` - Name of the environment to show
+    /// * `output_format` - Output format (Text or Json)
     ///
     /// # Errors
     ///
     /// Returns `ShowSubcommandError` if any step fails
-    pub fn execute(&mut self, environment_name: &str) -> Result<(), ShowSubcommandError> {
+    pub fn execute(
+        &mut self,
+        environment_name: &str,
+        output_format: OutputFormat,
+    ) -> Result<(), ShowSubcommandError> {
         // Step 1: Validate environment name
         let env_name = self.validate_environment_name(environment_name)?;
 
@@ -110,7 +116,7 @@ impl ShowCommandController {
         let env_info = self.load_environment(&env_name)?;
 
         // Step 3: Display information
-        self.display_information(&env_info)?;
+        self.display_information(&env_info, output_format)?;
 
         Ok(())
     }
@@ -185,18 +191,25 @@ impl ShowCommandController {
     ///
     /// Following the MVC pattern with functional composition:
     /// - Model: `EnvironmentInfo` (application layer DTO)
-    /// - View: `TextView::render()` (formatting)
+    /// - View: `TextView::render()` or `JsonView::render()` (formatting)
     /// - Controller (this method): Orchestrates the pipeline
     /// - Output: `ProgressReporter::result()` (routing to stdout)
     fn display_information(
         &mut self,
         env_info: &EnvironmentInfo,
+        output_format: OutputFormat,
     ) -> Result<(), ShowSubcommandError> {
         self.progress
             .start_step(ShowStep::DisplayInformation.description())?;
 
+        // Render using appropriate view based on output format (Strategy Pattern)
+        let output = match output_format {
+            OutputFormat::Text => TextView::render(env_info),
+            OutputFormat::Json => JsonView::render(env_info),
+        };
+
         // Pipeline: EnvironmentInfo → render → output to stdout
-        self.progress.result(&TextView::render(env_info))?;
+        self.progress.result(&output)?;
 
         self.progress.complete_step(Some("Information displayed"))?;
 

@@ -18,6 +18,7 @@ mod tracker;
 use std::net::IpAddr;
 
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 
 pub use self::grafana::GrafanaInfo;
 pub use self::prometheus::PrometheusInfo;
@@ -28,7 +29,7 @@ pub use self::tracker::{LocalhostServiceInfo, ServiceInfo, TlsDomainInfo};
 /// This DTO contains all information about an environment that can be
 /// displayed to the user. It is state-aware and contains optional fields
 /// that are populated based on the environment's current state.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct EnvironmentInfo {
     /// Name of the environment
     pub name: String,
@@ -113,7 +114,7 @@ impl EnvironmentInfo {
 /// Infrastructure details for an environment
 ///
 /// This information is available after the environment has been provisioned.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct InfrastructureInfo {
     /// Instance IP address
     pub instance_ip: IpAddr,

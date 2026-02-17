@@ -213,7 +213,7 @@ pub async fn route_command(
             context
                 .container()
                 .create_show_controller()
-                .execute(&environment)?;
+                .execute(&environment, context.output_format())?;
             Ok(())
         }
         Commands::List => {
