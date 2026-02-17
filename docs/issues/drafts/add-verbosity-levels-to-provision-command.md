@@ -694,21 +694,21 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 
 - [x] Task 3.1: Manual testing with `-v`, `-vv`, `-vvv` flags
 - [x] Task 3.2: Verify output readability at all levels
-- [ ] Task 3.3: Update user guide documentation
+- [x] Task 3.3: Update user guide documentation
 - [ ] Task 3.4: Add examples to `--help` output
 - [ ] Task 3.5: Consider extending to other commands (future work)
 
-**Status**: 🚧 **IN PROGRESS** - Core implementation complete, documentation pending
+**Status**: 🚧 **IN PROGRESS** - Core implementation complete, user guide updated, help text pending
 
 **Completed**:
 
 - Manual testing verified all verbosity levels work correctly
 - Output formatting is clean and readable at all levels
 - Implementation plan updated with actual output examples
+- User guide documentation added to provision command (commit `24a31b12`)
 
 **Remaining**:
 
-- User guide documentation (Task 3.3)
 - Help text examples (Task 3.4)
 - Extension to other commands (Task 3.5 - future work)
 
