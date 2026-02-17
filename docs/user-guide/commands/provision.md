@@ -21,6 +21,174 @@ torrust-tracker-deployer provision <ENVIRONMENT>
 
 - `<ENVIRONMENT>` (required) - Name of the environment to provision
 
+## Verbosity Levels
+
+Control the amount of progress detail displayed during provisioning with the global `-v` flag. This helps you see what's happening under the hood when you need more visibility.
+
+### Available Levels
+
+| Level           | Flag      | Shows                                      | Use Case                                    |
+| --------------- | --------- | ------------------------------------------ | ------------------------------------------- |
+| **Normal**      | (default) | Essential progress and results             | Regular usage, clean output                 |
+| **Verbose**     | `-v`      | + Detailed progress (9 provisioning steps) | Understanding the provisioning workflow     |
+| **VeryVerbose** | `-vv`     | + Context details (paths, status, retries) | Troubleshooting common issues               |
+| **Debug**       | `-vvv`    | + Technical details (commands, parameters) | Deep troubleshooting, development debugging |
+
+**Important**: Verbosity controls **only** progress messages. For internal diagnostic logs, use the `RUST_LOG` environment variable (see [Logging Guide](../logging.md)).
+
+### Normal Level (Default)
+
+Shows essential progress with minimal output:
+
+```bash
+torrust-tracker-deployer provision my-env
+```
+
+**Output**:
+
+```text
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: my-env (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Provisioning infrastructure...
+⏳   ✓ Infrastructure provisioned (took 26.5s)
+✅ Environment 'my-env' provisioned successfully
+
+Instance Connection Details:
+  IP Address:        10.140.190.42
+  SSH Port:          22
+  ...
+```
+
+### Verbose Level (`-v`)
+
+Shows the 9 internal provisioning steps:
+
+```bash
+torrust-tracker-deployer provision my-env -v
+```
+
+**Output**:
+
+```text
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: my-env (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Provisioning infrastructure...
+📋   [Step 1/9] Rendering OpenTofu templates...
+📋   [Step 2/9] Initializing OpenTofu...
+📋   [Step 3/9] Validating infrastructure configuration...
+📋   [Step 4/9] Planning infrastructure changes...
+📋   [Step 5/9] Applying infrastructure changes...
+📋   [Step 6/9] Retrieving instance information...
+📋   [Step 7/9] Rendering Ansible templates...
+📋   [Step 8/9] Waiting for SSH connectivity...
+📋   [Step 9/9] Waiting for cloud-init completion...
+⏳   ✓ Infrastructure provisioned (took 26.5s)
+✅ Environment 'my-env' provisioned successfully
+```
+
+**When to use**: Understanding the provisioning workflow, seeing which step is taking time, or confirming the command is making progress.
+
+### VeryVerbose Level (`-vv`)
+
+Adds contextual details like paths, validation results, and retry attempts:
+
+```bash
+torrust-tracker-deployer provision my-env -vv
+```
+
+**Output**:
+
+```text
+⏳ [3/3] Provisioning infrastructure...
+📋   [Step 1/9] Rendering OpenTofu templates...
+📋      → Generated OpenTofu configuration files
+📋   [Step 2/9] Initializing OpenTofu...
+📋      → Initialized OpenTofu backend
+📋   [Step 3/9] Validating infrastructure configuration...
+📋      → Configuration is valid ✓
+📋   [Step 4/9] Planning infrastructure changes...
+📋      → Plan: 2 to add, 0 to change, 0 to destroy.
+📋   [Step 5/9] Applying infrastructure changes...
+📋      → Infrastructure resources created successfully
+📋   [Step 6/9] Retrieving instance information...
+📋      → Instance IP: 10.140.190.42
+📋   [Step 7/9] Rendering Ansible templates...
+📋      → Template directory: ./build/my-env/ansible
+📋      → Generated inventory and playbooks
+📋   [Step 8/9] Waiting for SSH connectivity...
+📋      → Testing connection to 10.140.190.42:22
+📋      → SSH connection established ✓
+📋   [Step 9/9] Waiting for cloud-init completion...
+📋      → Cloud-init status: done ✓
+⏳   ✓ Infrastructure provisioned (took 26.5s)
+```
+
+**When to use**: Troubleshooting SSH connectivity issues, verifying file locations, understanding why a step failed, or monitoring retry attempts.
+
+### Debug Level (`-vvv`)
+
+Shows technical implementation details including commands executed:
+
+```bash
+torrust-tracker-deployer provision my-env -vvv
+```
+
+**Output**:
+
+```text
+⏳ [3/3] Provisioning infrastructure...
+📋   [Step 1/9] Rendering OpenTofu templates...
+🔍      → Template generator: torrust_tracker_deployer_lib::infrastructure::templating::tofu::...
+📋      → Generated OpenTofu configuration files
+📋   [Step 2/9] Initializing OpenTofu...
+🔍      → Working directory: ./build/my-env/tofu/lxd
+🔍      → Executing: tofu init
+🔍      → Command completed successfully
+📋      → Initialized OpenTofu backend
+📋   [Step 3/9] Validating infrastructure configuration...
+🔍      → Working directory: ./build/my-env/tofu/lxd
+🔍      → Executing: tofu validate
+🔍      → Validation output: Success! The configuration is valid.
+📋      → Configuration is valid ✓
+📋   [Step 4/9] Planning infrastructure changes...
+🔍      → Working directory: ./build/my-env/tofu/lxd
+🔍      → Executing: tofu plan -var-file=variables.tfvars
+📋      → Plan: 2 to add, 0 to change, 0 to destroy.
+📋   [Step 5/9] Applying infrastructure changes...
+🔍      → Working directory: ./build/my-env/tofu/lxd
+🔍      → Executing: tofu apply -var-file=variables.tfvars -auto-approve
+📋      → Infrastructure resources created successfully
+...
+```
+
+**When to use**: Deep debugging, understanding exactly what commands are executed, verifying working directories, or reporting issues with detailed context.
+
+**Symbol Legend**:
+
+- ⏳ = Major progress milestone (all levels)
+- ✅ = Success message (all levels)
+- 📋 = Detailed progress (Verbose `-v` and above)
+- 🔍 = Technical details (Debug `-vvv` only)
+
+### Combining with Other Flags
+
+Verbosity works with all other flags:
+
+```bash
+# Verbose output with JSON result format
+torrust-tracker-deployer provision my-env -v --output-format json
+
+# Debug verbosity with file-only logging
+torrust-tracker-deployer provision my-env -vvv --log-output file-only
+
+# Very verbose in CI environment
+LOG_OUTPUT=file-only torrust-tracker-deployer provision my-env -vv
+```
+
 ## Output Formats
 
 The `provision` command supports two output formats for command results:
