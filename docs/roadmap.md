@@ -272,7 +272,7 @@ Add machine-readable JSON output format (`--json` flag) for selected commands to
   - Rationale: Contains the instance IP and comprehensive environment state
   - Structured format makes it simple to query specific fields programmatically
 
-- [ ] **12.4** Add JSON output to `run` command
+- [x] **12.4** Add JSON output to `run` command ✅ Completed - [Issue #357](https://github.com/torrust/torrust-tracker-deployer/issues/357), [PR #358](https://github.com/torrust/torrust-tracker-deployer/pull/358)
   - Rationale: Contains the list of enabled services and their URLs
   - Allows automation to verify which services are running and how to access them
 
