@@ -122,25 +122,39 @@ torrust-tracker-deployer configure my-env -vvv
 #### Normal Level (Default)
 
 ```text
-⏳ [2/3] Configuring provisioned infrastructure...
-⏳   ✓ Infrastructure configured (took 18.3s)
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: e2e-deployment (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Configuring infrastructure...
+⏳   ✓ Infrastructure configured (took 34.1s)
+✅ Environment 'e2e-deployment' configured successfully
 ```
 
 #### Verbose Level (-v)
 
 ```text
-⏳ [2/3] Configuring provisioned infrastructure...
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: e2e-deployment (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Configuring infrastructure...
 📋   [Step 1/4] Installing Docker...
 📋   [Step 2/4] Installing Docker Compose...
 📋   [Step 3/4] Configuring automatic security updates...
 📋   [Step 4/4] Configuring firewall (UFW)...
-⏳   ✓ Infrastructure configured (took 18.3s)
+⏳   ✓ Infrastructure configured (took 34.1s)
+✅ Environment 'e2e-deployment' configured successfully
 ```
 
 #### VeryVerbose Level (-vv)
 
 ```text
-⏳ [2/3] Configuring provisioned infrastructure...
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: e2e-deployment (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Configuring infrastructure...
 📋   [Step 1/4] Installing Docker...
       → Installing Docker Engine from official repository
       → Docker version: 24.0.7
@@ -154,18 +168,34 @@ torrust-tracker-deployer configure my-env -vvv
       → Configuring UFW with restrictive default policies
       → Allowing SSH access before enabling firewall
       → Firewall status: active
+⏳   ✓ Infrastructure configured (took 34.1s)
+✅ Environment 'e2e-deployment' configured successfully
 ...
 ```
 
 #### Debug Level (-vvv)
 
 ```text
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: e2e-deployment (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Configuring infrastructure...
 📋   [Step 1/4] Installing Docker...
-🔍      → Ansible working directory: ./build/my-env/ansible
+🔍      → Ansible working directory: ./build/e2e-deployment/ansible
 🔍      → Executing playbook: ansible-playbook install-docker.yml -i inventory.ini
 🔍      → Playbook completed successfully
       → Installing Docker Engine from official repository
       → Docker version: 24.0.7
+📋   [Step 2/4] Installing Docker Compose...
+🔍      → Ansible working directory: ./build/e2e-deployment/ansible
+🔍      → Executing playbook: ansible-playbook install-docker-compose.yml -i inventory.ini
+🔍      → Playbook completed successfully
+      → Installing Docker Compose plugin
+      → Compose version: 2.23.3
+...
+⏳   ✓ Infrastructure configured (took 34.1s)
+✅ Environment 'e2e-deployment' configured successfully
 ```
 
 ## Configuration Steps Overview
