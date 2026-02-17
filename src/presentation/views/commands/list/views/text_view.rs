@@ -121,14 +121,14 @@ impl TextView {
     /// Render table header row
     fn render_table_header() -> String {
         format!(
-            "{:<20} {:<18} {:<14} {}",
+            "{:<50} {:<18} {:<14} {}",
             "Name", "State", "Provider", "Created"
         )
     }
 
     /// Render table separator
     fn render_table_separator() -> String {
-        "─".repeat(76)
+        "─".repeat(106)
     }
 
     /// Render a single table row
@@ -136,8 +136,8 @@ impl TextView {
         env: &crate::application::command_handlers::list::info::EnvironmentSummary,
     ) -> String {
         format!(
-            "{:<20} {:<18} {:<14} {}",
-            Self::truncate(&env.name, 20),
+            "{:<50} {:<18} {:<14} {}",
+            Self::truncate(&env.name, 50),
             Self::truncate(&env.state, 18),
             Self::truncate(&env.provider, 14),
             &env.created_at
@@ -262,8 +262,8 @@ mod tests {
 
         let output = TextView::render(&list);
 
-        // Should truncate the long name
-        assert!(output.contains("very-long-environ..."));
+        // Should truncate the long name at 50 characters
+        assert!(output.contains("very-long-environment-name-that-exceeds-column-..."));
         assert!(output
             .contains("Hint: Use 'purge' command to completely remove destroyed environments."));
     }
