@@ -16,6 +16,7 @@ use crate::domain::environment::Environment;
 use crate::presentation::input::cli::OutputFormat;
 use crate::presentation::views::commands::provision::{JsonView, ProvisionDetailsData, TextView};
 use crate::presentation::views::progress::ProgressReporter;
+use crate::presentation::views::progress::VerboseProgressListener;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
@@ -201,12 +202,20 @@ impl ProvisionCommandController {
         self.progress
             .start_step(ProvisionStep::ProvisionInfrastructure.description())?;
 
-        let provisioned = handler.execute(env_name).await.map_err(|source| {
-            ProvisionSubcommandError::ProvisionOperationFailed {
-                name: env_name.to_string(),
-                source: Box::new(source),
-            }
-        })?;
+        // Create the listener for verbose progress reporting.
+        // The VerboseProgressListener translates step events into
+        // user-facing detail messages via UserOutput's verbosity filter.
+        let listener = VerboseProgressListener::new(self.progress.output().clone());
+
+        let provisioned = handler
+            .execute(env_name, Some(&listener))
+            .await
+            .map_err(
+                |source| ProvisionSubcommandError::ProvisionOperationFailed {
+                    name: env_name.to_string(),
+                    source: Box::new(source),
+                },
+            )?;
 
         self.progress
             .complete_step(Some("Infrastructure provisioned"))?;

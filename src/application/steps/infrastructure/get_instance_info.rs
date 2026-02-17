@@ -27,6 +27,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::adapters::tofu::client::{InstanceInfo, OpenTofuClient, OpenTofuError};
+use crate::application::traits::CommandProgressListener;
 
 /// Simple step that retrieves instance information from `OpenTofu` outputs
 ///
@@ -45,6 +46,10 @@ impl GetInstanceInfoStep {
 
     /// Execute the get instance info step
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting details
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -57,11 +62,22 @@ impl GetInstanceInfoStep {
         skip_all,
         fields(step_type = "infrastructure", operation = "info")
     )]
-    pub fn execute(&self) -> Result<InstanceInfo, OpenTofuError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<InstanceInfo, OpenTofuError> {
         info!(
             step = "get_instance_info",
             "Getting instance information from OpenTofu outputs"
         );
+
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Working directory: {}",
+                self.opentofu_client.working_dir().display()
+            ));
+            l.on_debug("Executing: tofu output -json");
+        }
 
         // Get the instance IP from OpenTofu outputs
         // NOTE: We prefer OpenTofu outputs over provider-specific methods because:
@@ -71,6 +87,14 @@ impl GetInstanceInfoStep {
         //      It has to return always the instance info we expect.
         // Using OpenTofu outputs provides a consistent interface across all providers.
         let opentofu_instance_info = self.opentofu_client.get_instance_info()?;
+
+        if let Some(l) = listener {
+            l.on_debug(&format!("Instance name: {}", opentofu_instance_info.name));
+            l.on_detail(&format!(
+                "Instance IP: {}",
+                opentofu_instance_info.ip_address
+            ));
+        }
 
         info!(
             step = "get_instance_info",

@@ -70,8 +70,9 @@
 pub use channel::Channel;
 pub use formatters::JsonFormatter;
 pub use messages::{
-    ErrorMessage, InfoBlockMessage, InfoBlockMessageBuilder, ProgressMessage, ResultMessage,
-    StepsMessage, StepsMessageBuilder, SuccessMessage, WarningMessage,
+    DebugDetailMessage, DetailMessage, ErrorMessage, InfoBlockMessage, InfoBlockMessageBuilder,
+    ProgressMessage, ResultMessage, StepsMessage, StepsMessageBuilder, SuccessMessage,
+    WarningMessage,
 };
 pub use sinks::{CompositeSink, FileSink, StandardSink, TelemetrySink};
 pub use theme::Theme;

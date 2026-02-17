@@ -7,7 +7,7 @@ use tracing::{error, info, instrument};
 
 use super::errors::ProvisionCommandHandlerError;
 use crate::adapters::ansible::AnsibleClient;
-use crate::adapters::ssh::{SshConfig, SshCredentials};
+use crate::adapters::ssh::SshConfig;
 use crate::adapters::tofu::client::InstanceInfo;
 use crate::adapters::OpenTofuClient;
 use crate::application::command_handlers::common::StepResult;
@@ -17,6 +17,7 @@ use crate::application::steps::{
     PlanInfrastructureStep, RenderOpenTofuTemplatesStep, ValidateInfrastructureStep,
     WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
+use crate::application::traits::CommandProgressListener;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::runtime_outputs::ProvisionMethod;
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};
@@ -25,6 +26,12 @@ use crate::domain::EnvironmentName;
 use crate::infrastructure::templating::tofu::TofuProjectGenerator;
 use crate::shared::clock::SystemClock;
 use crate::shared::error::Traceable;
+
+/// Total number of steps in the provisioning workflow.
+///
+/// This constant is used for progress reporting via `CommandProgressListener`
+/// to display step progress like "[Step 1/9] Rendering `OpenTofu` templates...".
+const TOTAL_PROVISION_STEPS: usize = 9;
 
 /// `ProvisionCommandHandler` orchestrates the complete infrastructure provisioning workflow
 ///
@@ -74,6 +81,9 @@ impl ProvisionCommandHandler {
     /// # Arguments
     ///
     /// * `env_name` - The name of the environment to provision
+    /// * `listener` - Optional progress listener for reporting step-level progress.
+    ///   When provided, the handler reports progress at each of the 9 provisioning steps.
+    ///   When `None`, the handler executes silently (backward compatible).
     ///
     /// # Returns
     ///
@@ -101,6 +111,7 @@ impl ProvisionCommandHandler {
     pub async fn execute(
         &self,
         env_name: &EnvironmentName,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
         let environment = self.load_created_environment(env_name)?;
 
@@ -112,7 +123,10 @@ impl ProvisionCommandHandler {
 
         // Execute provisioning workflow with explicit step tracking
         // This allows us to know exactly which step failed if an error occurs
-        match self.execute_provisioning_workflow(&environment).await {
+        match self
+            .execute_provisioning_workflow(&environment, listener)
+            .await
+        {
             Ok(provisioned) => {
                 info!(
                     command = "provision",
@@ -165,13 +179,14 @@ impl ProvisionCommandHandler {
     async fn execute_provisioning_workflow(
         &self,
         environment: &Environment<Provisioning>,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> StepResult<Environment<Provisioned>, ProvisionCommandHandlerError, ProvisionStep> {
-        let instance_ip = self.provision_infrastructure(environment).await?;
+        let instance_ip = self.provision_infrastructure(environment, listener).await?;
 
-        self.prepare_for_configuration(environment, instance_ip)
+        self.prepare_for_configuration(environment, instance_ip, listener)
             .await?;
 
-        self.wait_for_system_readiness(environment, instance_ip)
+        self.wait_for_system_readiness(environment, instance_ip, listener)
             .await?;
 
         let provisioned = environment
@@ -186,13 +201,17 @@ impl ProvisionCommandHandler {
     /// Provision infrastructure using `OpenTofu`
     ///
     /// This method handles the complete `OpenTofu`-based infrastructure provisioning:
-    /// - Render `OpenTofu` templates
-    /// - Initialize, validate, plan, and apply infrastructure
-    /// - Retrieve instance information
+    /// - Render `OpenTofu` templates (step 1/9)
+    /// - Initialize `OpenTofu` (step 2/9)
+    /// - Validate configuration (step 3/9)
+    /// - Plan infrastructure changes (step 4/9)
+    /// - Apply infrastructure changes (step 5/9)
+    /// - Retrieve instance information (step 6/9)
     ///
     /// # Arguments
     ///
     /// * `environment` - The environment in Provisioning state
+    /// * `listener` - Optional progress listener for step-level reporting
     ///
     /// # Returns
     ///
@@ -204,21 +223,51 @@ impl ProvisionCommandHandler {
     async fn provision_infrastructure(
         &self,
         environment: &Environment<Provisioning>,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> StepResult<IpAddr, ProvisionCommandHandlerError, ProvisionStep> {
         let (tofu_template_renderer, opentofu_client) =
             Self::build_infrastructure_dependencies(environment);
 
+        // Step 1/9: Render OpenTofu templates
         let current_step = ProvisionStep::RenderOpenTofuTemplates;
-        self.render_opentofu_templates(&tofu_template_renderer)
+        Self::notify_step_started(listener, 1, "Rendering OpenTofu templates");
+        self.render_opentofu_templates(&tofu_template_renderer, listener)
             .await
             .map_err(|e| (e, current_step))?;
 
+        // Step 2/9: Initialize OpenTofu
         let current_step = ProvisionStep::OpenTofuInit;
-        Self::create_instance(&opentofu_client).map_err(|e| (e, current_step))?;
+        Self::notify_step_started(listener, 2, "Initializing OpenTofu");
+        InitializeInfrastructureStep::new(Arc::clone(&opentofu_client))
+            .execute(listener)
+            .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
 
+        // Step 3/9: Validate infrastructure configuration
+        let current_step = ProvisionStep::OpenTofuValidate;
+        Self::notify_step_started(listener, 3, "Validating infrastructure configuration");
+        ValidateInfrastructureStep::new(Arc::clone(&opentofu_client))
+            .execute(listener)
+            .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
+
+        // Step 4/9: Plan infrastructure changes
+        let current_step = ProvisionStep::OpenTofuPlan;
+        Self::notify_step_started(listener, 4, "Planning infrastructure changes");
+        PlanInfrastructureStep::new(Arc::clone(&opentofu_client))
+            .execute(listener)
+            .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
+
+        // Step 5/9: Apply infrastructure changes
+        let current_step = ProvisionStep::OpenTofuApply;
+        Self::notify_step_started(listener, 5, "Applying infrastructure changes");
+        ApplyInfrastructureStep::new(Arc::clone(&opentofu_client))
+            .execute(listener)
+            .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
+
+        // Step 6/9: Get instance information
         let current_step = ProvisionStep::GetInstanceInfo;
+        Self::notify_step_started(listener, 6, "Retrieving instance information");
         let instance_info =
-            Self::get_instance_info(&opentofu_client).map_err(|e| (e, current_step))?;
+            Self::get_instance_info(&opentofu_client, listener).map_err(|e| (e, current_step))?;
         let instance_ip = instance_info.ip_address;
 
         Ok(instance_ip)
@@ -264,12 +313,13 @@ impl ProvisionCommandHandler {
     /// Prepare for configuration stages
     ///
     /// This method handles preparation for future configuration stages:
-    /// - Render Ansible templates with user inputs and runtime instance IP
+    /// - Render Ansible templates with user inputs and runtime instance IP (step 7/9)
     ///
     /// # Arguments
     ///
     /// * `environment` - The environment in Provisioning state
     /// * `instance_ip` - IP address of the provisioned instance
+    /// * `listener` - Optional progress listener for step-level reporting
     ///
     /// # Errors
     ///
@@ -278,8 +328,23 @@ impl ProvisionCommandHandler {
         &self,
         environment: &Environment<Provisioning>,
         instance_ip: IpAddr,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> StepResult<(), ProvisionCommandHandlerError, ProvisionStep> {
+        // Step 7/9: Render Ansible templates
         let current_step = ProvisionStep::RenderAnsibleTemplates;
+        Self::notify_step_started(listener, 7, "Rendering Ansible templates");
+
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Template directory: {}",
+                environment.templates_dir().display()
+            ));
+            l.on_debug(&format!(
+                "Build directory: {}",
+                environment.ansible_build_dir().display()
+            ));
+            l.on_debug(&format!("Instance IP: {instance_ip}"));
+        }
 
         let ansible_template_service = AnsibleTemplateRenderingService::from_paths(
             environment.templates_dir(),
@@ -297,19 +362,28 @@ impl ProvisionCommandHandler {
                 )
             })?;
 
+        if let Some(l) = listener {
+            l.on_detail(&format!(
+                "Template directory: {}",
+                environment.ansible_build_dir().display()
+            ));
+            l.on_detail("Generated inventory and playbooks");
+        }
+
         Ok(())
     }
 
     /// Wait for system readiness
     ///
     /// This method waits for the provisioned instance to be ready:
-    /// - Wait for SSH connectivity on the configured port
-    /// - Wait for cloud-init completion
+    /// - Wait for SSH connectivity on the configured port (step 8/9)
+    /// - Wait for cloud-init completion (step 9/9)
     ///
     /// # Arguments
     ///
     /// * `environment` - The environment in Provisioning state
     /// * `instance_ip` - IP address of the provisioned instance
+    /// * `listener` - Optional progress listener for step-level reporting
     ///
     /// # Errors
     ///
@@ -318,15 +392,28 @@ impl ProvisionCommandHandler {
         &self,
         environment: &Environment<Provisioning>,
         instance_ip: IpAddr,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> StepResult<(), ProvisionCommandHandlerError, ProvisionStep> {
         let ansible_client = Self::build_ansible_client(environment);
         let ssh_credentials = environment.ssh_credentials();
         let ssh_port = environment.ssh_port();
+        let ssh_socket_addr = SocketAddr::new(instance_ip, ssh_port);
+        let ssh_config = SshConfig::new(ssh_credentials.clone(), ssh_socket_addr);
 
+        // Step 8/9: Wait for SSH connectivity
         let current_step = ProvisionStep::WaitSshConnectivity;
-        self.wait_for_readiness(&ansible_client, ssh_credentials, instance_ip, ssh_port)
+        Self::notify_step_started(listener, 8, "Waiting for SSH connectivity");
+        WaitForSSHConnectivityStep::new(ssh_config)
+            .execute(listener)
             .await
-            .map_err(|e| (e, current_step))?;
+            .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
+
+        // Step 9/9: Wait for cloud-init completion
+        let current_step = ProvisionStep::CloudInitWait;
+        Self::notify_step_started(listener, 9, "Waiting for cloud-init completion");
+        WaitForCloudInitStep::new(Arc::clone(&ansible_client))
+            .execute(listener)
+            .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
 
         Ok(())
     }
@@ -350,38 +437,22 @@ impl ProvisionCommandHandler {
     ///
     /// Generates `OpenTofu` configuration files from templates.
     ///
+    /// # Arguments
+    ///
+    /// * `tofu_template_renderer` - The template renderer for generating `OpenTofu` configs
+    /// * `listener` - Optional progress listener for reporting details
+    ///
     /// # Errors
     ///
     /// Returns an error if template rendering fails
     async fn render_opentofu_templates(
         &self,
         tofu_template_renderer: &Arc<TofuProjectGenerator>,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> Result<(), ProvisionCommandHandlerError> {
         RenderOpenTofuTemplatesStep::new(tofu_template_renderer.clone())
-            .execute()
+            .execute(listener)
             .await?;
-
-        Ok(())
-    }
-
-    /// Create the infrastructure instance using `OpenTofu`
-    ///
-    /// This method handles the `OpenTofu` workflow:
-    /// - Initialize `OpenTofu` configuration
-    /// - Validate configuration syntax and consistency
-    /// - Plan the infrastructure changes
-    /// - Apply the infrastructure changes
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if any `OpenTofu` operation fails
-    fn create_instance(
-        opentofu_client: &Arc<OpenTofuClient>,
-    ) -> Result<(), ProvisionCommandHandlerError> {
-        InitializeInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
-        ValidateInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
-        PlanInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
-        ApplyInfrastructureStep::new(Arc::clone(opentofu_client)).execute()?;
 
         Ok(())
     }
@@ -390,47 +461,35 @@ impl ProvisionCommandHandler {
     ///
     /// Retrieves information about the provisioned instance, including its IP address.
     ///
+    /// # Arguments
+    ///
+    /// * `opentofu_client` - The `OpenTofu` client for executing commands
+    /// * `listener` - Optional progress listener for reporting details
+    ///
     /// # Errors
     ///
     /// Returns an error if instance information cannot be retrieved
     fn get_instance_info(
         opentofu_client: &Arc<OpenTofuClient>,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> Result<InstanceInfo, ProvisionCommandHandlerError> {
-        let instance_info = GetInstanceInfoStep::new(Arc::clone(opentofu_client)).execute()?;
+        let instance_info =
+            GetInstanceInfoStep::new(Arc::clone(opentofu_client)).execute(listener)?;
         Ok(instance_info)
     }
 
-    /// Wait for system readiness
+    /// Notify the progress listener that a step has started.
     ///
-    /// Waits for SSH connectivity and cloud-init completion.
-    ///
-    /// # Arguments
-    ///
-    /// * `ansible_client` - Ansible client for running cloud-init wait playbook
-    /// * `ssh_credentials` - SSH credentials for connecting to the instance
-    /// * `instance_ip` - IP address of the provisioned instance
-    /// * `ssh_port` - The configured SSH port to wait for
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if SSH connectivity fails or cloud-init does not complete
-    async fn wait_for_readiness(
-        &self,
-        ansible_client: &Arc<AnsibleClient>,
-        ssh_credentials: &SshCredentials,
-        instance_ip: IpAddr,
-        ssh_port: u16,
-    ) -> Result<(), ProvisionCommandHandlerError> {
-        let ssh_socket_addr = SocketAddr::new(instance_ip, ssh_port);
-        let ssh_config = SshConfig::new(ssh_credentials.clone(), ssh_socket_addr);
-
-        WaitForSSHConnectivityStep::new(ssh_config)
-            .execute()
-            .await?;
-
-        WaitForCloudInitStep::new(Arc::clone(ansible_client)).execute()?;
-
-        Ok(())
+    /// This is a convenience helper that handles the `Option` check,
+    /// keeping the step-reporting code in the workflow methods clean.
+    fn notify_step_started(
+        listener: Option<&dyn CommandProgressListener>,
+        step_number: usize,
+        description: &str,
+    ) {
+        if let Some(l) = listener {
+            l.on_step_started(step_number, TOTAL_PROVISION_STEPS, description);
+        }
     }
 
     /// Build failure context for a provisioning error and generate trace file
@@ -510,5 +569,97 @@ impl ProvisionCommandHandler {
         })?;
 
         Ok(any_env.try_into_created()?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::{ProgressEvent, RecordingProgressListener};
+
+    #[test]
+    fn it_should_have_nine_total_provision_steps() {
+        assert_eq!(TOTAL_PROVISION_STEPS, 9);
+    }
+
+    #[test]
+    fn it_should_notify_listener_when_provided() {
+        let listener = RecordingProgressListener::new();
+
+        ProvisionCommandHandler::notify_step_started(Some(&listener), 1, "Test step");
+
+        let events = listener.events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(
+            events[0],
+            ProgressEvent::StepStarted {
+                step_number: 1,
+                total_steps: TOTAL_PROVISION_STEPS,
+                description: "Test step".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn it_should_not_panic_when_listener_is_none() {
+        ProvisionCommandHandler::notify_step_started(None, 1, "Test step");
+    }
+
+    #[test]
+    fn it_should_pass_correct_total_steps_to_listener() {
+        let listener = RecordingProgressListener::new();
+
+        ProvisionCommandHandler::notify_step_started(Some(&listener), 5, "Some step");
+
+        let events = listener.events();
+        assert_eq!(events.len(), 1);
+        if let ProgressEvent::StepStarted { total_steps, .. } = &events[0] {
+            assert_eq!(*total_steps, 9);
+        } else {
+            panic!("Expected StepStarted event");
+        }
+    }
+
+    #[test]
+    fn it_should_record_all_nine_step_descriptions_when_notified_sequentially() {
+        let listener = RecordingProgressListener::new();
+
+        let step_descriptions = [
+            (1, "Rendering OpenTofu templates"),
+            (2, "Initializing OpenTofu"),
+            (3, "Validating infrastructure configuration"),
+            (4, "Planning infrastructure changes"),
+            (5, "Applying infrastructure changes"),
+            (6, "Retrieving instance information"),
+            (7, "Rendering Ansible templates"),
+            (8, "Waiting for SSH connectivity"),
+            (9, "Waiting for cloud-init completion"),
+        ];
+
+        for (step_number, description) in &step_descriptions {
+            ProvisionCommandHandler::notify_step_started(
+                Some(&listener),
+                *step_number,
+                description,
+            );
+        }
+
+        let events = listener.step_started_events();
+        assert_eq!(events.len(), 9);
+
+        for (i, (expected_number, expected_desc)) in step_descriptions.iter().enumerate() {
+            if let ProgressEvent::StepStarted {
+                step_number,
+                total_steps,
+                description,
+            } = &events[i]
+            {
+                assert_eq!(step_number, expected_number);
+                assert_eq!(*total_steps, TOTAL_PROVISION_STEPS);
+                assert_eq!(description, *expected_desc);
+            } else {
+                panic!("Expected StepStarted event at index {i}");
+            }
+        }
     }
 }

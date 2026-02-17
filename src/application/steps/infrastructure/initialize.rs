@@ -26,6 +26,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::adapters::tofu::client::OpenTofuClient;
+use crate::application::traits::CommandProgressListener;
 use crate::shared::command::CommandError;
 
 /// Simple step that initializes `OpenTofu` configuration by executing `tofu init`
@@ -41,6 +42,10 @@ impl InitializeInfrastructureStep {
 
     /// Execute the `OpenTofu` initialization step
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting details
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -52,14 +57,30 @@ impl InitializeInfrastructureStep {
         skip_all,
         fields(step_type = "infrastructure", operation = "init")
     )]
-    pub fn execute(&self) -> Result<(), CommandError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), CommandError> {
         info!(
             step = "initialize_infrastructure",
             "Initializing OpenTofu infrastructure"
         );
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Working directory: {}",
+                self.opentofu_client.working_dir().display()
+            ));
+            l.on_debug("Executing: tofu init");
+        }
+
         // Execute tofu init command
         let output = self.opentofu_client.init()?;
+
+        if let Some(l) = listener {
+            l.on_debug("Command completed successfully");
+            l.on_detail("Initialized OpenTofu backend");
+        }
 
         info!(
             step = "initialize_infrastructure",

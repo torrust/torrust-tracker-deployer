@@ -4,65 +4,14 @@
 //! that take significant time to complete. It builds on top of `UserOutput` to
 //! provide standardized progress updates with timing information.
 //!
-//! ## Features
+//! ## Sub-modules
 //!
-//! - **Step Tracking**: Reports progress through numbered steps (e.g., "[1/5] Loading configuration...")
-//! - **Timing Information**: Tracks and reports duration for each completed step
-//! - **Sub-step Support**: Shows detailed progress within major steps
-//! - **Verbosity Aware**: Respects user verbosity settings through `UserOutput`
-//! - **Consistent Format**: Standardized output format across all commands
-//!
-//! ## Example Usage
-//!
-//! ```rust
-//! use std::sync::Arc;
-//! use std::cell::RefCell;
-//! use parking_lot::ReentrantMutex;
-//! use torrust_tracker_deployer_lib::presentation::views::progress::ProgressReporter;
-//! use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
-//!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
-//! let mut progress = ProgressReporter::new(output, 3);
-//!
-//! // Step 1: Load configuration
-//! progress.start_step("Loading configuration")?;
-//! // ... perform operation ...
-//! progress.complete_step(Some("Configuration loaded: test-env"))?;
-//!
-//! // Step 2: Provision with sub-steps
-//! progress.start_step("Provisioning infrastructure")?;
-//! progress.sub_step("Creating virtual machine")?;
-//! progress.sub_step("Configuring network")?;
-//! // ... perform operations ...
-//! progress.complete_step(Some("Instance created: test-instance"))?;
-//!
-//! // Step 3: Finalize
-//! progress.start_step("Finalizing environment")?;
-//! // ... perform operation ...
-//! progress.complete_step(None)?;
-//!
-//! // Complete with summary
-//! progress.complete("Environment 'test-env' created successfully")?;
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! ## Output Format
-//!
-//! The progress reporter generates output like:
-//!
-//! ```text
-//! ⏳ [1/3] Loading configuration...
-//!   ✓ Configuration loaded: test-env (took 150ms)
-//! ⏳ [2/3] Provisioning infrastructure...
-//!     → Creating virtual machine
-//!     → Configuring network
-//!   ✓ Instance created: test-instance (took 2.3s)
-//! ⏳ [3/3] Finalizing environment...
-//!   ✓ Done (took 450ms)
-//! ✅ Environment 'test-env' created successfully
-//! ```
+//! - `verbose_listener` - `CommandProgressListener` implementation that translates
+//!   application-layer progress events into user-facing output
+
+pub mod verbose_listener;
+
+pub use verbose_listener::VerboseProgressListener;
 
 use std::cell::RefCell;
 use std::sync::Arc;

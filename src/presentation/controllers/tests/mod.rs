@@ -429,6 +429,7 @@ pub fn default_global_args(
         log_dir: working_dir.join("logs"),
         working_dir: working_dir.to_path_buf(),
         output_format: OutputFormat::Text,
+        verbosity: 0, // Normal verbosity by default
     }
 }
 

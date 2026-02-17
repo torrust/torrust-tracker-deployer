@@ -26,6 +26,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::adapters::tofu::client::OpenTofuClient;
+use crate::application::traits::CommandProgressListener;
 use crate::shared::command::CommandError;
 
 /// Simple step that plans `OpenTofu` configuration by executing `tofu plan`
@@ -41,6 +42,10 @@ impl PlanInfrastructureStep {
 
     /// Execute the `OpenTofu` plan step
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting details
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -52,14 +57,37 @@ impl PlanInfrastructureStep {
         skip_all,
         fields(step_type = "infrastructure", operation = "plan")
     )]
-    pub fn execute(&self) -> Result<(), CommandError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), CommandError> {
         info!(
             step = "plan_infrastructure",
             "Planning OpenTofu infrastructure"
         );
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Working directory: {}",
+                self.opentofu_client.working_dir().display()
+            ));
+            l.on_debug("Executing: tofu plan -var-file=variables.tfvars");
+        }
+
         // Execute tofu plan command with variables file
         let output = self.opentofu_client.plan(&["-var-file=variables.tfvars"])?;
+
+        // Extract and report plan summary if listener is provided
+        if let Some(l) = listener {
+            // Parse output to extract resource change counts
+            if let Some(plan_line) = output.lines().find(|line| line.contains("Plan:")) {
+                l.on_detail(plan_line.trim());
+            } else if output.contains("No changes") {
+                l.on_detail("Plan: No changes. Infrastructure is up-to-date.");
+            } else {
+                l.on_detail("Plan created successfully");
+            }
+        }
 
         info!(
             step = "plan_infrastructure",
