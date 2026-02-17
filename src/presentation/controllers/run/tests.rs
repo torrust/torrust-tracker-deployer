@@ -13,6 +13,7 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 use crate::presentation::controllers::run::handler::RunCommandController;
+use crate::presentation::input::cli::OutputFormat;
 use crate::presentation::views::testing::TestUserOutput;
 use crate::presentation::views::{UserOutput, VerbosityLevel};
 use crate::shared::clock::Clock;
@@ -46,7 +47,7 @@ mod environment_name_validation {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = RunCommandController::new(repository, clock, user_output)
-            .execute("invalid_name")
+            .execute("invalid_name", OutputFormat::Text)
             .await;
 
         assert!(matches!(
@@ -61,7 +62,7 @@ mod environment_name_validation {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = RunCommandController::new(repository, clock, user_output)
-            .execute("")
+            .execute("", OutputFormat::Text)
             .await;
 
         assert!(matches!(
@@ -76,7 +77,7 @@ mod environment_name_validation {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = RunCommandController::new(repository, clock, user_output)
-            .execute("-invalid")
+            .execute("-invalid", OutputFormat::Text)
             .await;
 
         assert!(matches!(
@@ -97,7 +98,7 @@ mod real_workflow {
 
         // Valid environment name but environment doesn't exist
         let result = RunCommandController::new(repository, clock, user_output)
-            .execute("production")
+            .execute("production", OutputFormat::Text)
             .await;
 
         assert!(
@@ -115,7 +116,7 @@ mod real_workflow {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = RunCommandController::new(repository, clock, user_output)
-            .execute("my-test-env")
+            .execute("my-test-env", OutputFormat::Text)
             .await;
 
         assert!(

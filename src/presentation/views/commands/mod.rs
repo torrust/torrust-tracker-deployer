@@ -7,5 +7,6 @@
 pub mod create;
 pub mod list;
 pub mod provision;
+pub mod run;
 pub mod shared;
 pub mod show;

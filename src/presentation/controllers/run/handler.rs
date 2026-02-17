@@ -13,9 +13,8 @@ use crate::application::command_handlers::show::info::{GrafanaInfo, ServiceInfo}
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::AnyEnvironmentState;
-use crate::presentation::views::commands::shared::service_urls::{
-    CompactServiceUrlsView, DnsHintView,
-};
+use crate::presentation::input::cli::OutputFormat;
+use crate::presentation::views::commands::run::{JsonView, TextView};
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -101,6 +100,7 @@ impl RunCommandController {
     /// # Arguments
     ///
     /// * `environment_name` - The name of the environment to run services in
+    /// * `output_format` - Output format (Text or Json)
     ///
     /// # Errors
     ///
@@ -114,12 +114,16 @@ impl RunCommandController {
     /// Returns `Ok(())` on success, or a `RunSubcommandError` if any step fails.
     #[allow(clippy::result_large_err)]
     #[allow(clippy::unused_async)] // Part of uniform async presentation layer interface
-    pub async fn execute(&mut self, environment_name: &str) -> Result<(), RunSubcommandError> {
+    pub async fn execute(
+        &mut self,
+        environment_name: &str,
+        output_format: OutputFormat,
+    ) -> Result<(), RunSubcommandError> {
         let env_name = self.validate_environment_name(environment_name)?;
 
         self.run_services(&env_name)?;
 
-        self.complete_workflow(environment_name)?;
+        self.complete_workflow(environment_name, output_format)?;
 
         Ok(())
     }
@@ -185,7 +189,11 @@ impl RunCommandController {
     /// Follows the same pattern as the show command for loading environment
     /// and extracting service information.
     #[allow(clippy::result_large_err)]
-    fn complete_workflow(&mut self, name: &str) -> Result<(), RunSubcommandError> {
+    fn complete_workflow(
+        &mut self,
+        name: &str,
+        output_format: OutputFormat,
+    ) -> Result<(), RunSubcommandError> {
         // Load environment to get service information
         let env_name = EnvironmentName::new(name.to_string()).map_err(|source| {
             RunSubcommandError::InvalidEnvironmentName {
@@ -201,7 +209,7 @@ impl RunCommandController {
             .complete(&format!("Run command completed for '{name}'"))?;
 
         // Display service URLs and hints
-        self.display_service_urls(&any_env)?;
+        self.display_service_urls(&any_env, output_format)?;
 
         Ok(())
     }
@@ -231,15 +239,22 @@ impl RunCommandController {
 
     /// Display service URLs and DNS hints
     ///
-    /// Renders service URLs using the shared views:
-    /// - `CompactServiceUrlsView` - Only shows publicly accessible services
-    /// - `DnsHintView` - Shows DNS configuration hint for HTTPS services
+    /// Uses the Strategy Pattern to render output in the requested format:
+    /// - Text format: Uses `TextView` with `CompactServiceUrlsView` and `DnsHintView`
+    /// - JSON format: Uses `JsonView` for machine-readable output
     ///
-    /// Also displays a tip about using the `show` command for full details.
+    /// # Architecture
+    ///
+    /// Following the MVC pattern with functional composition:
+    /// - Model: `ServiceInfo` and `GrafanaInfo` (application layer DTOs)
+    /// - View: `TextView::render()` or `JsonView::render()` (formatting)
+    /// - Controller (this method): Orchestrates the pipeline
+    /// - Output: `ProgressReporter::result()` (routing to stdout)
     #[allow(clippy::result_large_err)]
     fn display_service_urls(
         &mut self,
         any_env: &AnyEnvironmentState,
+        output_format: OutputFormat,
     ) -> Result<(), RunSubcommandError> {
         if let Some(instance_ip) = any_env.instance_ip() {
             let tracker_config = any_env.tracker_config();
@@ -251,22 +266,18 @@ impl RunCommandController {
             let grafana =
                 grafana_config.map(|config| GrafanaInfo::from_config(config, instance_ip));
 
-            // Render service URLs (only public services)
-            let service_urls_output = CompactServiceUrlsView::render(&services, grafana.as_ref());
-            if !service_urls_output.is_empty() {
-                self.progress.result(&format!("\n{service_urls_output}"))?;
-            }
+            // Render using appropriate view based on output format (Strategy Pattern)
+            let output = match output_format {
+                OutputFormat::Text => {
+                    TextView::render(any_env.name().as_str(), &services, grafana.as_ref())
+                }
+                OutputFormat::Json => {
+                    JsonView::render(any_env.name().as_str(), &services, grafana.as_ref())
+                }
+            };
 
-            // Show DNS hint if HTTPS services are configured
-            if let Some(dns_hint) = DnsHintView::render(&services) {
-                self.progress.result(&format!("\n{dns_hint}"))?;
-            }
-
-            // Show tip about show command
-            self.progress.result(&format!(
-                "\nTip: Run 'torrust-tracker-deployer show {}' for full details\n",
-                any_env.name()
-            ))?;
+            // Pipeline: ServiceInfo + GrafanaInfo → render → output to stdout
+            self.progress.result(&output)?;
         }
 
         Ok(())
@@ -278,6 +289,7 @@ mod tests {
     use super::*;
     use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
     use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
+    use crate::presentation::input::cli::OutputFormat;
     use crate::presentation::views::testing::TestUserOutput;
     use crate::presentation::views::VerbosityLevel;
     use crate::shared::SystemClock;
@@ -310,7 +322,7 @@ mod tests {
 
         // Test with invalid environment name (contains underscore)
         let result = RunCommandController::new(repository, clock, user_output.clone())
-            .execute("invalid_name")
+            .execute("invalid_name", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
@@ -329,7 +341,7 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = RunCommandController::new(repository, clock, user_output.clone())
-            .execute("")
+            .execute("", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
@@ -349,7 +361,7 @@ mod tests {
 
         // Valid environment name but doesn't exist
         let result = RunCommandController::new(repository, clock, user_output.clone())
-            .execute("test-env")
+            .execute("test-env", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
