@@ -4,12 +4,14 @@
 //! for list display purposes. They provide a clean separation between the domain
 //! model and the presentation layer.
 
+use serde::Serialize;
+
 /// Lightweight environment summary for list display
 ///
 /// This DTO contains minimal information about an environment suitable for
 /// display in a list view. It is designed to be fast to extract and small
 /// in memory footprint.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct EnvironmentSummary {
     /// Name of the environment
     pub name: String,
@@ -41,7 +43,7 @@ impl EnvironmentSummary {
 ///
 /// This DTO wraps a list of environment summaries along with metadata
 /// about the listing operation, including any partial failures encountered.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct EnvironmentList {
     /// Successfully loaded environment summaries
     pub environments: Vec<EnvironmentSummary>,

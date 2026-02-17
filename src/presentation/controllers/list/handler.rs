@@ -12,7 +12,8 @@ use parking_lot::ReentrantMutex;
 use crate::application::command_handlers::list::info::EnvironmentList;
 use crate::application::command_handlers::list::{ListCommandHandler, ListCommandHandlerError};
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::views::commands::list::TextView;
+use crate::presentation::input::cli::output_format::OutputFormat;
+use crate::presentation::views::commands::list::{JsonView, TextView};
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 
@@ -90,15 +91,19 @@ impl ListCommandController {
     /// 1. Scan for environments via application layer
     /// 2. Display results to user
     ///
+    /// # Arguments
+    ///
+    /// * `output_format` - Output format (Text or Json)
+    ///
     /// # Errors
     ///
     /// Returns `ListSubcommandError` if any step fails
-    pub fn execute(&mut self) -> Result<(), ListSubcommandError> {
+    pub fn execute(&mut self, output_format: OutputFormat) -> Result<(), ListSubcommandError> {
         // Step 1: Scan for environments via application layer
         let env_list = self.scan_environments()?;
 
         // Step 2: Display results
-        self.display_results(&env_list)?;
+        self.display_results(&env_list, output_format)?;
 
         Ok(())
     }
@@ -139,12 +144,27 @@ impl ListCommandController {
     ///
     /// The output is written to stdout (not stderr) as it represents the final
     /// command result rather than progress information.
-    fn display_results(&mut self, env_list: &EnvironmentList) -> Result<(), ListSubcommandError> {
+    ///
+    /// # Arguments
+    ///
+    /// * `env_list` - Environment list to display
+    /// * `output_format` - Output format (Text or Json)
+    fn display_results(
+        &mut self,
+        env_list: &EnvironmentList,
+        output_format: OutputFormat,
+    ) -> Result<(), ListSubcommandError> {
         self.progress
             .start_step(ListStep::DisplayResults.description())?;
 
         // Pipeline: EnvironmentList → render → output to stdout
-        self.progress.result(&TextView::render(env_list))?;
+        // Use Strategy Pattern to select view based on output format
+        let output = match output_format {
+            OutputFormat::Text => TextView::render(env_list),
+            OutputFormat::Json => JsonView::render(env_list),
+        };
+
+        self.progress.result(&output)?;
 
         self.progress.complete_step(Some("Results displayed"))?;
 
