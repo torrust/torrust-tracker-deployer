@@ -21,6 +21,7 @@
 use tracing::{info, instrument};
 
 use crate::adapters::ssh::{SshClient, SshConfig, SshError};
+use crate::application::traits::CommandProgressListener;
 
 /// Step that waits for SSH connectivity to be established on a remote host
 pub struct WaitForSSHConnectivityStep {
@@ -38,6 +39,10 @@ impl WaitForSSHConnectivityStep {
     /// This will create an SSH client and wait until connectivity is established
     /// with the remote host before returning.
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting retry attempts
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -49,7 +54,7 @@ impl WaitForSSHConnectivityStep {
         skip_all,
         fields(step_type = "connectivity", protocol = "ssh")
     )]
-    pub async fn execute(&self) -> Result<(), SshError> {
+    pub async fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), SshError> {
         info!(
             step = "wait_ssh_connectivity",
             instance_ip = %self.ssh_config.host_ip(),
@@ -60,8 +65,20 @@ impl WaitForSSHConnectivityStep {
         // Create SSH client
         let ssh_client = SshClient::new(self.ssh_config.clone());
 
+        if let Some(l) = listener {
+            l.on_detail(&format!(
+                "Testing connection to {}:{}",
+                self.ssh_config.host_ip(),
+                self.ssh_config.ssh_port()
+            ));
+        }
+
         // Wait for connectivity
         ssh_client.wait_for_connectivity().await?;
+
+        if let Some(l) = listener {
+            l.on_detail("SSH connection established ✓");
+        }
 
         info!(
             step = "wait_ssh_connectivity",

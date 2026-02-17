@@ -27,6 +27,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::adapters::tofu::client::OpenTofuClient;
+use crate::application::traits::CommandProgressListener;
 use crate::shared::command::CommandError;
 
 /// Simple step that validates `OpenTofu` configuration by executing `tofu validate`
@@ -42,6 +43,10 @@ impl ValidateInfrastructureStep {
 
     /// Execute the `OpenTofu` validation step
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting details
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -54,7 +59,7 @@ impl ValidateInfrastructureStep {
         skip_all,
         fields(step_type = "infrastructure", operation = "validate")
     )]
-    pub fn execute(&self) -> Result<(), CommandError> {
+    pub fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), CommandError> {
         info!(
             step = "validate_infrastructure",
             "Validating OpenTofu configuration"
@@ -62,6 +67,10 @@ impl ValidateInfrastructureStep {
 
         // Execute tofu validate command
         let output = self.opentofu_client.validate()?;
+
+        if let Some(l) = listener {
+            l.on_detail("Configuration is valid ✓");
+        }
 
         info!(
             step = "validate_infrastructure",

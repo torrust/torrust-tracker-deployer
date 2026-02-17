@@ -21,6 +21,7 @@ use std::sync::Arc;
 
 use tracing::{info, instrument};
 
+use crate::application::traits::CommandProgressListener;
 use crate::infrastructure::templating::tofu::{TofuProjectGenerator, TofuProjectGeneratorError};
 
 /// Simple step that renders `OpenTofu` templates to the build directory
@@ -38,6 +39,10 @@ impl RenderOpenTofuTemplatesStep {
 
     /// Execute the template rendering step
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting details
+    ///
     /// # Errors
     ///
     /// Returns an error if the template rendering fails or if there are issues
@@ -47,13 +52,17 @@ impl RenderOpenTofuTemplatesStep {
         skip_all,
         fields(step_type = "rendering", template_type = "opentofu")
     )]
-    pub async fn execute(&self) -> Result<(), TofuProjectGeneratorError> {
+    pub async fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), TofuProjectGeneratorError> {
         info!(
             step = "render_opentofu_templates",
             "Rendering OpenTofu templates"
         );
 
         self.tofu_template_renderer.render().await?;
+
+        if let Some(l) = listener {
+            l.on_detail("Generated OpenTofu configuration files");
+        }
 
         info!(
             step = "render_opentofu_templates",

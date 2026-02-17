@@ -26,6 +26,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::adapters::tofu::client::OpenTofuClient;
+use crate::application::traits::CommandProgressListener;
 use crate::shared::command::CommandError;
 
 /// Simple step that applies `OpenTofu` configuration by executing `tofu apply`
@@ -51,6 +52,10 @@ impl ApplyInfrastructureStep {
 
     /// Execute the `OpenTofu` apply step
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting details
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -66,7 +71,7 @@ impl ApplyInfrastructureStep {
             auto_approve = %self.auto_approve
         )
     )]
-    pub fn execute(&self) -> Result<(), CommandError> {
+    pub fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), CommandError> {
         info!(
             step = "apply_infrastructure",
             auto_approve = self.auto_approve,
@@ -77,6 +82,16 @@ impl ApplyInfrastructureStep {
         let output = self
             .opentofu_client
             .apply(self.auto_approve, &["-var-file=variables.tfvars"])?;
+
+        // Report apply completion details if listener is provided
+        if let Some(l) = listener {
+            // Check for resource creation/modification in output
+            if output.contains("Creation complete") || output.contains("Modifications complete") {
+                l.on_detail("Infrastructure resources created successfully");
+            } else if output.contains("Apply complete") {
+                l.on_detail("Infrastructure applied successfully");
+            }
+        }
 
         info!(
             step = "apply_infrastructure",

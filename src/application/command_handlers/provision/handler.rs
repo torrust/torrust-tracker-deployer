@@ -231,7 +231,7 @@ impl ProvisionCommandHandler {
         // Step 1/9: Render OpenTofu templates
         let current_step = ProvisionStep::RenderOpenTofuTemplates;
         Self::notify_step_started(listener, 1, "Rendering OpenTofu templates");
-        self.render_opentofu_templates(&tofu_template_renderer)
+        self.render_opentofu_templates(&tofu_template_renderer, listener)
             .await
             .map_err(|e| (e, current_step))?;
 
@@ -239,35 +239,35 @@ impl ProvisionCommandHandler {
         let current_step = ProvisionStep::OpenTofuInit;
         Self::notify_step_started(listener, 2, "Initializing OpenTofu");
         InitializeInfrastructureStep::new(Arc::clone(&opentofu_client))
-            .execute()
+            .execute(listener)
             .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
 
         // Step 3/9: Validate infrastructure configuration
         let current_step = ProvisionStep::OpenTofuValidate;
         Self::notify_step_started(listener, 3, "Validating infrastructure configuration");
         ValidateInfrastructureStep::new(Arc::clone(&opentofu_client))
-            .execute()
+            .execute(listener)
             .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
 
         // Step 4/9: Plan infrastructure changes
         let current_step = ProvisionStep::OpenTofuPlan;
         Self::notify_step_started(listener, 4, "Planning infrastructure changes");
         PlanInfrastructureStep::new(Arc::clone(&opentofu_client))
-            .execute()
+            .execute(listener)
             .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
 
         // Step 5/9: Apply infrastructure changes
         let current_step = ProvisionStep::OpenTofuApply;
         Self::notify_step_started(listener, 5, "Applying infrastructure changes");
         ApplyInfrastructureStep::new(Arc::clone(&opentofu_client))
-            .execute()
+            .execute(listener)
             .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
 
         // Step 6/9: Get instance information
         let current_step = ProvisionStep::GetInstanceInfo;
         Self::notify_step_started(listener, 6, "Retrieving instance information");
         let instance_info =
-            Self::get_instance_info(&opentofu_client).map_err(|e| (e, current_step))?;
+            Self::get_instance_info(&opentofu_client, listener).map_err(|e| (e, current_step))?;
         let instance_ip = instance_info.ip_address;
 
         Ok(instance_ip)
@@ -350,6 +350,14 @@ impl ProvisionCommandHandler {
                 )
             })?;
 
+        if let Some(l) = listener {
+            l.on_detail(&format!(
+                "Template directory: {}",
+                environment.ansible_build_dir().display()
+            ));
+            l.on_detail("Generated inventory and playbooks");
+        }
+
         Ok(())
     }
 
@@ -384,7 +392,7 @@ impl ProvisionCommandHandler {
         let current_step = ProvisionStep::WaitSshConnectivity;
         Self::notify_step_started(listener, 8, "Waiting for SSH connectivity");
         WaitForSSHConnectivityStep::new(ssh_config)
-            .execute()
+            .execute(listener)
             .await
             .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
 
@@ -392,7 +400,7 @@ impl ProvisionCommandHandler {
         let current_step = ProvisionStep::CloudInitWait;
         Self::notify_step_started(listener, 9, "Waiting for cloud-init completion");
         WaitForCloudInitStep::new(Arc::clone(&ansible_client))
-            .execute()
+            .execute(listener)
             .map_err(|e| (ProvisionCommandHandlerError::from(e), current_step))?;
 
         Ok(())
@@ -417,15 +425,21 @@ impl ProvisionCommandHandler {
     ///
     /// Generates `OpenTofu` configuration files from templates.
     ///
+    /// # Arguments
+    ///
+    /// * `tofu_template_renderer` - The template renderer for generating OpenTofu configs
+    /// * `listener` - Optional progress listener for reporting details
+    ///
     /// # Errors
     ///
     /// Returns an error if template rendering fails
     async fn render_opentofu_templates(
         &self,
         tofu_template_renderer: &Arc<TofuProjectGenerator>,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> Result<(), ProvisionCommandHandlerError> {
         RenderOpenTofuTemplatesStep::new(tofu_template_renderer.clone())
-            .execute()
+            .execute(listener)
             .await?;
 
         Ok(())
@@ -435,13 +449,20 @@ impl ProvisionCommandHandler {
     ///
     /// Retrieves information about the provisioned instance, including its IP address.
     ///
+    /// # Arguments
+    ///
+    /// * `opentofu_client` - The OpenTofu client for executing commands
+    /// * `listener` - Optional progress listener for reporting details
+    ///
     /// # Errors
     ///
     /// Returns an error if instance information cannot be retrieved
     fn get_instance_info(
         opentofu_client: &Arc<OpenTofuClient>,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> Result<InstanceInfo, ProvisionCommandHandlerError> {
-        let instance_info = GetInstanceInfoStep::new(Arc::clone(opentofu_client)).execute()?;
+        let instance_info =
+            GetInstanceInfoStep::new(Arc::clone(opentofu_client)).execute(listener)?;
         Ok(instance_info)
     }
 

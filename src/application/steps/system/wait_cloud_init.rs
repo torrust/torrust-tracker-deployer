@@ -20,6 +20,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::adapters::ansible::AnsibleClient;
+use crate::application::traits::CommandProgressListener;
 use crate::shared::command::CommandError;
 
 /// Step that waits for cloud-init completion on a remote host
@@ -38,6 +39,10 @@ impl WaitForCloudInitStep {
     /// This will run the "wait-cloud-init" Ansible playbook to ensure
     /// cloud-init has completed on the remote host before proceeding.
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting cloud-init status
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -49,7 +54,7 @@ impl WaitForCloudInitStep {
         skip_all,
         fields(step_type = "system", component = "cloud_init")
     )]
-    pub fn execute(&self) -> Result<(), CommandError> {
+    pub fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), CommandError> {
         info!(
             step = "wait_cloud_init",
             action = "wait_cloud_init",
@@ -57,6 +62,10 @@ impl WaitForCloudInitStep {
         );
 
         self.ansible_client.run_playbook("wait-cloud-init", &[])?;
+
+        if let Some(l) = listener {
+            l.on_detail("Cloud-init status: done ✓");
+        }
 
         info!(
             step = "wait_cloud_init",
