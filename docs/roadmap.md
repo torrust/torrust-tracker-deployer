@@ -268,7 +268,7 @@ Add machine-readable JSON output format (`--json` flag) for selected commands to
   - Easier to parse and extract IP than regex matching console output
   - Enables SSH automation, DNS updates, and CI/CD pipeline integration
 
-- [ ] **12.3** Add JSON output to `show` command
+- [x] **12.3** Add JSON output to `show` command ✅ Completed - [Issue #355](https://github.com/torrust/torrust-tracker-deployer/issues/355), [PR #356](https://github.com/torrust/torrust-tracker-deployer/pull/356)
   - Rationale: Contains the instance IP and comprehensive environment state
   - Structured format makes it simple to query specific fields programmatically
 
