@@ -10,7 +10,7 @@
 - [Generic Command Progress Listener for Verbosity](generic-command-progress-listener-for-verbosity.md) — architectural design for the `CommandProgressListener` trait that enables application-layer progress reporting
 - [Progress Reporting in Application Layer](../../features/progress-reporting-in-application-layer/README.md) — feature doc describing the broader problem of reporting progress from inside command handlers
 
-**Status**: 🚧 **DRAFT** - Exploration phase, no issue opened yet
+**Status**: 🚧 **IN PROGRESS** - Core implementation complete (Phase 1 & 2), documentation pending (Phase 3)
 
 ## Overview
 
@@ -20,11 +20,13 @@ Add graduated verbosity levels (`-v`, `-vv`, `-vvv`) to the `provision` command 
 
 ## Goals
 
-- [ ] Add CLI verbosity flags (`-v`, `-vv`, `-vvv`) to control user output detail
-- [ ] Wire verbosity level through execution context to controllers
-- [ ] Implement graduated verbosity levels for provision command
-- [ ] Maintain backward compatibility (default = Normal level)
-- [ ] Keep user output completely separate from tracing logs
+- [x] Add CLI verbosity flags (`-v`, `-vv`, `-vvv`) to control user output detail
+- [x] Wire verbosity level through execution context to controllers
+- [x] Implement graduated verbosity levels for provision command
+- [x] Maintain backward compatibility (default = Normal level)
+- [x] Keep user output completely separate from tracing logs
+- [ ] Update user documentation with verbosity examples
+- [ ] Add help text examples for verbosity flags
 
 ## 🏗️ Architecture Requirements
 
@@ -50,24 +52,26 @@ The following components **already exist** and need to be wired together:
 
 **What's missing**:
 
-- ❌ CLI flags to capture user's desired verbosity level
-- ❌ Wiring from CLI args → ExecutionContext → Controllers
-- ❌ Progressive detail levels for progress messages
+- ✅ CLI flags to capture user's desired verbosity level
+- ✅ Wiring from CLI args → ExecutionContext → Controllers
+- ✅ Progressive detail levels for progress messages
+- ❌ User guide documentation
+- ❌ Help text examples
 
 ### Module Structure Requirements
 
-- [ ] Add verbosity flags to `GlobalArgs` (global for all commands)
-- [ ] Update `ExecutionContext` to carry verbosity level
-- [ ] Update `UserOutput` construction to use CLI-provided verbosity
-- [ ] Add verbosity-aware progress messages to provision workflow
+- [x] Add verbosity flags to `GlobalArgs` (global for all commands)
+- [x] Update `ExecutionContext` to carry verbosity level
+- [x] Update `UserOutput` construction to use CLI-provided verbosity
+- [x] Add verbosity-aware progress messages to provision workflow
 
 ### Architectural Constraints
 
-- [ ] Verbosity flags control **only UserOutput** (user-facing messages)
-- [ ] **Do not** mix verbosity with tracing logs (logs use `RUST_LOG`)
-- [ ] Follow separation documented in [user-output-vs-logging-separation.md](../../research/UX/user-output-vs-logging-separation.md)
-- [ ] Maintain channel separation (stdout for results, stderr for progress)
-- [ ] Backward compatible (default = Normal level, existing output unchanged)
+- [x] Verbosity flags control **only UserOutput** (user-facing messages)
+- [x] **Do not** mix verbosity with tracing logs (logs use `RUST_LOG`)
+- [x] Follow separation documented in [user-output-vs-logging-separation.md](../../research/UX/user-output-vs-logging-separation.md)
+- [x] Maintain channel separation (stdout for results, stderr for progress)
+- [x] Backward compatible (default = Normal level, existing output unchanged)
 
 ### Anti-Patterns to Avoid
 
@@ -489,16 +493,18 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 
 **Goal**: Build the `CommandProgressListener` trait, new message types, and presentation-layer listener implementation
 
-- [ ] Task 2.0.1: Create `CommandProgressListener` trait in `src/application/traits/progress.rs` with methods: `on_step_started()`, `on_step_completed()`, `on_detail()`, `on_debug()`
-- [ ] Task 2.0.2: Create `NullProgressListener` (no-op) in the same module for tests and backward compatibility
-- [ ] Task 2.0.3: Create `DetailMessage` in `src/presentation/views/messages/detail.rs` (VerbosityLevel::Verbose, 📋 symbol)
-- [ ] Task 2.0.4: Create `DebugDetailMessage` in `src/presentation/views/messages/debug_detail.rs` (VerbosityLevel::Debug, 🔍 symbol)
-- [ ] Task 2.0.5: Add `.detail()` and `.debug_detail()` methods to `UserOutput`
-- [ ] Task 2.0.6: Create `VerboseProgressListener` in `src/presentation/views/progress/verbose_listener.rs` implementing `CommandProgressListener` using `UserOutput`
-- [ ] Task 2.0.7: Add `listener` parameter to `ProvisionCommandHandler.execute()` (optional, backward compatible)
-- [ ] Task 2.0.8: Wire controller to create `VerboseProgressListener` and pass to handler
-- [ ] Task 2.0.9: Write unit tests (trait implementation, message types, null listener)
-- [ ] Task 2.0.10: Commit Phase 2.0 changes
+- [x] Task 2.0.1: Create `CommandProgressListener` trait in `src/application/traits/progress.rs` with methods: `on_step_started()`, `on_step_completed()`, `on_detail()`, `on_debug()`
+- [x] Task 2.0.2: Create `NullProgressListener` (no-op) in the same module for tests and backward compatibility
+- [x] Task 2.0.3: Create `DetailMessage` in `src/presentation/views/messages/detail.rs` (VerbosityLevel::Verbose, 📋 symbol)
+- [x] Task 2.0.4: Create `DebugDetailMessage` in `src/presentation/views/messages/debug_detail.rs` (VerbosityLevel::Debug, 🔍 symbol)
+- [x] Task 2.0.5: Add `.detail()` and `.debug_detail()` methods to `UserOutput`
+- [x] Task 2.0.6: Create `VerboseProgressListener` in `src/presentation/views/progress/verbose_listener.rs` implementing `CommandProgressListener` using `UserOutput`
+- [x] Task 2.0.7: Add `listener` parameter to `ProvisionCommandHandler.execute()` (optional, backward compatible)
+- [x] Task 2.0.8: Wire controller to create `VerboseProgressListener` and pass to handler
+- [x] Task 2.0.9: Write unit tests (trait implementation, message types, null listener)
+- [x] Task 2.0.10: Commit Phase 2.0 changes
+
+**Status**: ✅ **COMPLETED** - Commit `136dba25`
 
 **Rationale**: Builds the complete infrastructure before adding any progress calls. All existing behavior remains unchanged because no `on_*()` calls are emitted yet.
 
@@ -506,20 +512,22 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 
 **Goal**: Show the 9 ProvisionStep values as progress messages via `on_step_started()`
 
-- [ ] Task 2A.1: Add `listener.on_step_started()` calls at the start of each of the 9 steps in `ProvisionCommandHandler`:
-  - [ ] Step 1/9: Rendering OpenTofu templates
-  - [ ] Step 2/9: Initializing OpenTofu
-  - [ ] Step 3/9: Validating infrastructure configuration
-  - [ ] Step 4/9: Planning infrastructure changes
-  - [ ] Step 5/9: Applying infrastructure changes
-  - [ ] Step 6/9: Retrieving instance information
-  - [ ] Step 7/9: Rendering Ansible templates
-  - [ ] Step 8/9: Waiting for SSH connectivity
-  - [ ] Step 9/9: Waiting for cloud-init completion
-- [ ] Task 2A.2: Create `RecordingProgressListener` for test assertions
-- [ ] Task 2A.3: Write unit tests verifying the handler emits correct step events
-- [ ] Task 2A.4: Manual test with `-v` flag to verify output
-- [ ] Task 2A.5: Commit Phase 2A changes
+- [x] Task 2A.1: Add `listener.on_step_started()` calls at the start of each of the 9 steps in `ProvisionCommandHandler`:
+  - [x] Step 1/9: Rendering OpenTofu templates
+  - [x] Step 2/9: Initializing OpenTofu
+  - [x] Step 3/9: Validating infrastructure configuration
+  - [x] Step 4/9: Planning infrastructure changes
+  - [x] Step 5/9: Applying infrastructure changes
+  - [x] Step 6/9: Retrieving instance information
+  - [x] Step 7/9: Rendering Ansible templates
+  - [x] Step 8/9: Waiting for SSH connectivity
+  - [x] Step 9/9: Waiting for cloud-init completion
+- [x] Task 2A.2: Create `RecordingProgressListener` for test assertions
+- [x] Task 2A.3: Write unit tests verifying the handler emits correct step events
+- [x] Task 2A.4: Manual test with `-v` flag to verify output
+- [x] Task 2A.5: Commit Phase 2A changes
+
+**Status**: ✅ **COMPLETED** - Commit `136dba25`
 
 **Rationale**: Minimum useful enhancement. Users with `-v` see what the command is doing step-by-step. Tests verify event emission without presentation dependencies.
 
@@ -543,7 +551,7 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 - [x] Task 2B.5: Commit Phase 2B changes
 - [x] Task 2B.6: Fix verbosity filtering (DetailMessage → VeryVerbose, add StepProgressMessage for Verbose)
 
-**Status**: ✅ **COMPLETED**
+**Status**: ✅ **COMPLETED** - Commits `136dba25` (initial), `5b67e6a6` (filtering fix)
 
 **Actual Output Examples**:
 
@@ -620,8 +628,9 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 - [x] Task 2C.2: Manual test with `-vvv` flag to verify output
 - [x] Task 2C.3: Review for information overload (ensure readability)
 - [x] Task 2C.4: Commit Phase 2C changes
+- [x] Task 2C.5: Update documentation with actual output example
 
-**Status**: ✅ **COMPLETED**
+**Status**: ✅ **COMPLETED** - Commits `ebd2cdf1` (implementation), `df42958b` (documentation)
 
 **Actual Output Example**:
 
@@ -683,11 +692,25 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 
 ### Phase 3: Testing and Documentation (2-3 hours)
 
-- [ ] Task 3.1: Manual testing with `-v`, `-vv`, `-vvv` flags
-- [ ] Task 3.2: Verify output readability at all levels
+- [x] Task 3.1: Manual testing with `-v`, `-vv`, `-vvv` flags
+- [x] Task 3.2: Verify output readability at all levels
 - [ ] Task 3.3: Update user guide documentation
 - [ ] Task 3.4: Add examples to `--help` output
 - [ ] Task 3.5: Consider extending to other commands (future work)
+
+**Status**: 🚧 **IN PROGRESS** - Core implementation complete, documentation pending
+
+**Completed**:
+
+- Manual testing verified all verbosity levels work correctly
+- Output formatting is clean and readable at all levels
+- Implementation plan updated with actual output examples
+
+**Remaining**:
+
+- User guide documentation (Task 3.3)
+- Help text examples (Task 3.4)
+- Extension to other commands (Task 3.5 - future work)
 
 **Total Estimated Time**: 10-14 hours for provision command exploration
 
@@ -697,22 +720,23 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
-- [ ] No unused dependencies: `cargo machete`
-- [ ] All existing tests pass
-- [ ] No clippy warnings
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] No unused dependencies: `cargo machete`
+- [x] All existing tests pass
+- [x] No clippy warnings
 
 **Task-Specific Criteria**:
 
-- [ ] CLI accepts `-v`, `-vv`, `-vvv` flags (counted verbosity)
-- [ ] Default behavior (no flags) remains unchanged from current output
-- [ ] Verbose level (`-v`) shows detailed progress messages
-- [ ] Debug level (`-vvv`) shows technical details for troubleshooting
-- [ ] User output stays completely separate from tracing logs
-- [ ] `RUST_LOG` continues to control logging independently
+- [x] CLI accepts `-v`, `-vv`, `-vvv` flags (counted verbosity)
+- [x] Default behavior (no flags) remains unchanged from current output
+- [x] Verbose level (`-v`) shows detailed progress messages
+- [x] Very Verbose level (`-vv`) shows contextual details
+- [x] Debug level (`-vvv`) shows technical details for troubleshooting
+- [x] User output stays completely separate from tracing logs
+- [x] `RUST_LOG` continues to control logging independently
 - [ ] Help text clearly explains verbosity levels and their difference from logging
-- [ ] Output remains clean and readable at all verbosity levels
-- [ ] Channel separation maintained (stdout for results, stderr for progress)
+- [x] Output remains clean and readable at all verbosity levels
+- [x] Channel separation maintained (stdout for results, stderr for progress)
 
 **Out of Scope**:
 
