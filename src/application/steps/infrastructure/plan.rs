@@ -57,7 +57,10 @@ impl PlanInfrastructureStep {
         skip_all,
         fields(step_type = "infrastructure", operation = "plan")
     )]
-    pub fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), CommandError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), CommandError> {
         info!(
             step = "plan_infrastructure",
             "Planning OpenTofu infrastructure"

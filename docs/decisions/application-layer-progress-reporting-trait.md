@@ -245,6 +245,121 @@ handler.execute(env_name).await?;
 - Tests would need cleanup (unregister observers)
 - More complex than passing trait at call site
 
+## Implementation Learnings
+
+These patterns emerged from implementing Phase 2B (VeryVerbose detail messages) in the provision command:
+
+### Pattern 1: Report After Infrastructure Calls
+
+Steps report detail messages **after** Infrastructure layer calls complete, using return values:
+
+```rust
+// Step executes Infrastructure operation first
+let output = self.opentofu_client.init()?;
+
+// Then reports using the result
+if let Some(l) = listener {
+    l.on_detail("Initialized OpenTofu backend");
+}
+```
+
+**Why**: Infrastructure layer cannot receive the listener (DDD boundary violation). Steps wrap Infrastructure calls and report using inputs/outputs.
+
+**For complex outputs**: Parse the Infrastructure response to extract meaningful information:
+
+```rust
+let output = self.opentofu_client.plan()?;
+
+// Parse plan output for resource counts
+if let Some(l) = listener {
+    if output.contains("Plan:") {
+        // Extract "3 to add, 0 to change, 0 to destroy"
+        l.on_detail(&parse_plan_summary(&output));
+    }
+}
+```
+
+### Pattern 2: Avoid Private Field Access
+
+Detail messages should use **public APIs** only, not implementation details:
+
+```rust
+// ❌ WRONG - Accesses private field
+l.on_detail(&format!("Generated files in {}", renderer.build_dir()));
+
+// ✅ CORRECT - Uses generic message
+l.on_detail("Generated OpenTofu configuration files");
+```
+
+**Why**: Attempting to access private fields/methods causes compilation errors. Keep messages user-focused, not implementation-focused.
+
+### Pattern 3: Helper Methods Reduce Boilerplate
+
+Handlers can use helper methods to reduce repetitive `if let Some` checks:
+
+```rust
+impl ProvisionCommandHandler {
+    fn notify_step_started(
+        listener: Option<&dyn CommandProgressListener>,
+        step_number: usize,
+        description: &str,
+    ) {
+        if let Some(l) = listener {
+            l.on_step_started(step_number, TOTAL_PROVISION_STEPS, description);
+        }
+    }
+}
+
+// Usage in handler
+Self::notify_step_started(listener, 1, "Rendering OpenTofu templates");
+```
+
+**Benefit**: Cleaner handler code, consistent step notification pattern.
+
+### Pattern 4: Message Granularity Guidelines
+
+Based on Phase 2B implementation:
+
+| Method      | Information Type                | Examples                                                  |
+| ----------- | ------------------------------- | --------------------------------------------------------- |
+| `on_detail` | User-facing context and results | "Instance IP: 10.140.190.235", "Configuration is valid ✓" |
+| `on_debug`  | Technical details for debugging | "Command: tofu init", "Exit code: 0", raw output excerpts |
+| `on_step_*` | High-level workflow progress    | "Rendering OpenTofu templates" (step descriptions)        |
+
+**Guidelines**:
+
+- **Detail messages**: Answer "what happened?" from the user's perspective
+- **Debug messages**: Answer "how did it work?" from the developer's perspective
+- **Keep it concise**: One line per message, no multiline blocks
+- **Use return values**: Report information that the Step already computed
+
+### Pattern 5: Listener Threading Through Layers
+
+The listener parameter flows:
+
+```text
+Controller → Handler.execute(listener) → Handler.provision_infrastructure(listener) → Step.execute(listener)
+```
+
+**Each layer**:
+
+1. **Receives** `Option<&dyn CommandProgressListener>`
+2. **Checks** for presence with `if let Some(l) = listener`
+3. **Passes** the same reference to nested calls
+4. **Reports** at its level of abstraction
+
+**Key insight**: The Option type means every layer handles the "no listener" case gracefully. No separate code paths needed.
+
+### Pattern 6: Backward Compatibility Validation
+
+Using `Option<&dyn CommandProgressListener>` provided complete backward compatibility:
+
+- **E2E tests**: Pass `None` - no changes needed
+- **Direct handler calls**: Can omit listener parameter
+- **New code**: Pass `Some(&listener)` for progress reporting
+
+**Validation**: All 2288 library tests passed after Phase 2B without modification.
+
 ## Related Decisions
 
 - [Execution Context Wrapper](execution-context-wrapper.md) - How `UserOutput` is passed through controller layer

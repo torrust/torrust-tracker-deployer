@@ -71,7 +71,10 @@ impl ApplyInfrastructureStep {
             auto_approve = %self.auto_approve
         )
     )]
-    pub fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), CommandError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), CommandError> {
         info!(
             step = "apply_infrastructure",
             auto_approve = self.auto_approve,

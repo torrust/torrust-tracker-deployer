@@ -52,7 +52,10 @@ impl RenderOpenTofuTemplatesStep {
         skip_all,
         fields(step_type = "rendering", template_type = "opentofu")
     )]
-    pub async fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), TofuProjectGeneratorError> {
+    pub async fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), TofuProjectGeneratorError> {
         info!(
             step = "render_opentofu_templates",
             "Rendering OpenTofu templates"

@@ -62,7 +62,10 @@ impl GetInstanceInfoStep {
         skip_all,
         fields(step_type = "infrastructure", operation = "info")
     )]
-    pub fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<InstanceInfo, OpenTofuError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<InstanceInfo, OpenTofuError> {
         info!(
             step = "get_instance_info",
             "Getting instance information from OpenTofu outputs"
@@ -78,7 +81,10 @@ impl GetInstanceInfoStep {
         let opentofu_instance_info = self.opentofu_client.get_instance_info()?;
 
         if let Some(l) = listener {
-            l.on_detail(&format!("Instance IP: {}", opentofu_instance_info.ip_address));
+            l.on_detail(&format!(
+                "Instance IP: {}",
+                opentofu_instance_info.ip_address
+            ));
         }
 
         info!(

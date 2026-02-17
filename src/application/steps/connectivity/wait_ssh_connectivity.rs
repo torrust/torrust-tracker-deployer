@@ -54,7 +54,10 @@ impl WaitForSSHConnectivityStep {
         skip_all,
         fields(step_type = "connectivity", protocol = "ssh")
     )]
-    pub async fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), SshError> {
+    pub async fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), SshError> {
         info!(
             step = "wait_ssh_connectivity",
             instance_ip = %self.ssh_config.host_ip(),

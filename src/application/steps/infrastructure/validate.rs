@@ -59,7 +59,10 @@ impl ValidateInfrastructureStep {
         skip_all,
         fields(step_type = "infrastructure", operation = "validate")
     )]
-    pub fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), CommandError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), CommandError> {
         info!(
             step = "validate_infrastructure",
             "Validating OpenTofu configuration"

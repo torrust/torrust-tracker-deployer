@@ -54,7 +54,10 @@ impl WaitForCloudInitStep {
         skip_all,
         fields(step_type = "system", component = "cloud_init")
     )]
-    pub fn execute(&self, listener: Option<&dyn CommandProgressListener>) -> Result<(), CommandError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), CommandError> {
         info!(
             step = "wait_cloud_init",
             action = "wait_cloud_init",

@@ -427,7 +427,7 @@ impl ProvisionCommandHandler {
     ///
     /// # Arguments
     ///
-    /// * `tofu_template_renderer` - The template renderer for generating OpenTofu configs
+    /// * `tofu_template_renderer` - The template renderer for generating `OpenTofu` configs
     /// * `listener` - Optional progress listener for reporting details
     ///
     /// # Errors
@@ -451,7 +451,7 @@ impl ProvisionCommandHandler {
     ///
     /// # Arguments
     ///
-    /// * `opentofu_client` - The OpenTofu client for executing commands
+    /// * `opentofu_client` - The `OpenTofu` client for executing commands
     /// * `listener` - Optional progress listener for reporting details
     ///
     /// # Errors
