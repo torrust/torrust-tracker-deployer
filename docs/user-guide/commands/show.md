@@ -9,12 +9,16 @@ Provides a quick, read-only view of environment details including state, infrast
 ## Command Syntax
 
 ```bash
-torrust-tracker-deployer show <ENVIRONMENT>
+torrust-tracker-deployer show <ENVIRONMENT> [OPTIONS]
 ```
 
 ## Arguments
 
 - `<ENVIRONMENT>` (required) - Name of the environment to display
+
+## Options
+
+- `-o, --output-format <FORMAT>` (optional) - Output format: `text` (default) or `json`
 
 ## Prerequisites
 
@@ -91,6 +95,96 @@ Tracker Services:
 Tracker is running! Use the URLs above to connect.
 ```
 
+## Output Formats
+
+The `show` command supports two output formats:
+
+### Text Format (Default)
+
+Human-readable format suitable for terminal viewing:
+
+```bash
+torrust-tracker-deployer show my-environment
+# or explicitly:
+torrust-tracker-deployer show my-environment --output-format text
+```
+
+### JSON Format
+
+Machine-readable format for automation and scripting:
+
+```bash
+torrust-tracker-deployer show my-environment --output-format json
+```
+
+#### JSON Output for Provisioned State
+
+```json
+{
+  "name": "my-environment",
+  "state": "Provisioned",
+  "provider": "LXD",
+  "created_at": "2026-02-16T17:56:43.788700279Z",
+  "infrastructure": {
+    "instance_ip": "10.140.190.85",
+    "ssh_port": 22,
+    "ssh_user": "torrust",
+    "ssh_key_path": "/home/user/.ssh/torrust_key"
+  },
+  "services": null,
+  "prometheus": null,
+  "grafana": null,
+  "state_name": "provisioned"
+}
+```
+
+#### JSON Output for Running State
+
+```json
+{
+  "name": "my-environment",
+  "state": "Running",
+  "provider": "LXD",
+  "created_at": "2026-02-11T09:52:28.800407753Z",
+  "infrastructure": {
+    "instance_ip": "10.140.190.36",
+    "ssh_port": 22,
+    "ssh_user": "torrust",
+    "ssh_key_path": "/home/user/.ssh/torrust_key"
+  },
+  "services": {
+    "udp_trackers": ["udp://udp.tracker.local:6969/announce"],
+    "https_http_trackers": ["https://http.tracker.local/announce"],
+    "direct_http_trackers": [],
+    "localhost_http_trackers": [],
+    "api_endpoint": "https://api.tracker.local/api",
+    "api_uses_https": true,
+    "api_is_localhost_only": false,
+    "health_check_url": "https://health.tracker.local/health_check",
+    "health_check_uses_https": true,
+    "health_check_is_localhost_only": false,
+    "tls_domains": [
+      {
+        "domain": "http.tracker.local",
+        "internal_port": 7070
+      },
+      {
+        "domain": "api.tracker.local",
+        "internal_port": 1212
+      }
+    ]
+  },
+  "prometheus": {
+    "access_note": "Internal only (localhost:9090) - not exposed externally"
+  },
+  "grafana": {
+    "url": "https://grafana.tracker.local/",
+    "uses_https": true
+  },
+  "state_name": "running"
+}
+```
+
 ## Examples
 
 ### Basic usage
@@ -110,6 +204,37 @@ if torrust-tracker-deployer show my-environment 2>/dev/null; then
 else
     echo "Environment not found - creating..."
     torrust-tracker-deployer create environment -f config.json
+fi
+```
+
+### Parse JSON output for automation
+
+```bash
+#!/bin/bash
+# Extract tracker URL from environment
+API_URL=$(torrust-tracker-deployer show my-env -o json | \
+    jq -r '.services.api_endpoint // empty')
+
+if [ -n "$API_URL" ]; then
+    echo "API available at: $API_URL"
+    curl "$API_URL/stats"
+else
+    echo "Service not yet running"
+fi
+```
+
+### Monitor environment state
+
+```bash
+#!/bin/bash
+# Check if environment is fully running
+STATE=$(torrust-tracker-deployer show my-env -o json | \
+    jq -r '.state_name')
+
+if [ "$STATE" = "running" ]; then
+    echo "✓ Environment is fully operational"
+else
+    echo "⚠ Environment is in '$STATE' state"
 fi
 ```
 

@@ -1,8 +1,8 @@
 //! Views for the Show Command
 //!
 //! This module provides different rendering strategies for environment information.
-//! Following the Strategy Pattern, each view (TextView, JsonView) implements
-//! a different output format for the same underlying data (EnvironmentInfo DTO).
+//! Following the Strategy Pattern, each view (`TextView`, `JsonView`) implements
+//! a different output format for the same underlying data (`EnvironmentInfo` DTO).
 
 mod json_view;
 mod text_view;

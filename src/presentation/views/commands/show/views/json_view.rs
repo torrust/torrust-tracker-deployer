@@ -2,11 +2,11 @@
 //!
 //! This module provides JSON-based rendering for environment information.
 //! It follows the Strategy Pattern, providing a machine-readable output format
-//! for the same underlying data (EnvironmentInfo DTO).
+//! for the same underlying data (`EnvironmentInfo` DTO).
 //!
 //! # Design
 //!
-//! The JsonView simply serializes the EnvironmentInfo DTO to JSON using serde_json.
+//! The `JsonView` simply serializes the `EnvironmentInfo` DTO to JSON using `serde_json`.
 //! No transformation is needed since the DTO structure is already designed for display
 //! purposes and contains all necessary information in a well-structured format.
 
@@ -91,7 +91,7 @@ impl JsonView {
     #[must_use]
     pub fn render(info: &EnvironmentInfo) -> String {
         serde_json::to_string_pretty(info)
-            .unwrap_or_else(|e| format!(r#"{{"error": "Failed to serialize: {}"}}"#, e))
+            .unwrap_or_else(|e| format!(r#"{{"error": "Failed to serialize: {e}"}}"#))
     }
 }
 
