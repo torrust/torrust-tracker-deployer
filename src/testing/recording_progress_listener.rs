@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use crate::application::ports::CommandProgressListener;
+use crate::application::traits::CommandProgressListener;
 
 /// A recorded progress event from a command handler.
 ///
@@ -45,7 +45,7 @@ pub enum ProgressEvent {
 /// ```rust
 /// use torrust_tracker_deployer_lib::testing::RecordingProgressListener;
 /// use torrust_tracker_deployer_lib::testing::ProgressEvent;
-/// use torrust_tracker_deployer_lib::application::ports::CommandProgressListener;
+/// use torrust_tracker_deployer_lib::application::traits::CommandProgressListener;
 ///
 /// let listener = RecordingProgressListener::new();
 ///

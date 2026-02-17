@@ -7,14 +7,14 @@
 //! ## Components
 //!
 //! - `command_handlers` - High-level deployment command handlers implementing the Command Handler pattern
-//! - `ports` - Interfaces (traits) defined in the application layer and implemented by outer layers
+//! - `traits` - Application-layer trait definitions (DDD ports) implemented by outer layers
 //! - `services` - Shared application services used by multiple command handlers
 //! - `steps` - Workflow orchestration and business process coordination
 
 pub mod command_handlers;
-pub mod ports;
 pub mod services;
 pub mod steps;
+pub mod traits;
 
 // Re-export command handler types for convenience
 pub use command_handlers::{

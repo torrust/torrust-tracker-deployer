@@ -11,13 +11,13 @@ use crate::adapters::ssh::SshConfig;
 use crate::adapters::tofu::client::InstanceInfo;
 use crate::adapters::OpenTofuClient;
 use crate::application::command_handlers::common::StepResult;
-use crate::application::ports::CommandProgressListener;
 use crate::application::services::rendering::AnsibleTemplateRenderingService;
 use crate::application::steps::{
     ApplyInfrastructureStep, GetInstanceInfoStep, InitializeInfrastructureStep,
     PlanInfrastructureStep, RenderOpenTofuTemplatesStep, ValidateInfrastructureStep,
     WaitForCloudInitStep, WaitForSSHConnectivityStep,
 };
+use crate::application::traits::CommandProgressListener;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::runtime_outputs::ProvisionMethod;
 use crate::domain::environment::state::{ProvisionFailureContext, ProvisionStep};

@@ -87,7 +87,7 @@ Lives in the **application layer** (where it's consumed):
 ///
 /// # DDD Layer Placement
 ///
-/// - **Defined in**: Application layer (`src/application/ports/`)
+/// - **Defined in**: Application layer (`src/application/traits/`)
 /// - **Implemented in**: Presentation layer (`src/presentation/`)
 /// - **Dependency direction**: Presentation → Application (correct)
 ///
@@ -135,7 +135,7 @@ pub trait CommandProgressListener: Send + Sync {
 
 ### Why Application Layer (Not Domain or Shared)?
 
-The trait lives in `src/application/ports/` because:
+The trait lives in `src/application/traits/` because:
 
 - **It's a use-case concern**: Progress reporting is about orchestrating steps in a workflow, which is the application layer's responsibility
 - **Domain layer is too low**: The domain doesn't know about command workflows or steps
@@ -275,7 +275,7 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
-use crate::application::ports::CommandProgressListener;
+use crate::application::traits::CommandProgressListener;
 use crate::presentation::views::UserOutput;
 
 /// Presentation layer implementation of `CommandProgressListener`.
@@ -368,7 +368,7 @@ async fn provision_infrastructure(
 #### No-Op Listener for Tests
 
 ```rust
-// src/application/ports/progress.rs (or a testing module)
+// src/application/traits/progress.rs (or a testing module)
 
 /// A no-op listener for use in tests or when progress reporting is not needed.
 pub struct NullProgressListener;

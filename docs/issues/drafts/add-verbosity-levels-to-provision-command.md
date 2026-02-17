@@ -506,7 +506,7 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 
 **Goal**: Build the `CommandProgressListener` trait, new message types, and presentation-layer listener implementation
 
-- [ ] Task 2.0.1: Create `CommandProgressListener` trait in `src/application/ports/progress.rs` with methods: `on_step_started()`, `on_step_completed()`, `on_detail()`, `on_debug()`
+- [ ] Task 2.0.1: Create `CommandProgressListener` trait in `src/application/traits/progress.rs` with methods: `on_step_started()`, `on_step_completed()`, `on_detail()`, `on_debug()`
 - [ ] Task 2.0.2: Create `NullProgressListener` (no-op) in the same module for tests and backward compatibility
 - [ ] Task 2.0.3: Create `DetailMessage` in `src/presentation/views/messages/detail.rs` (VerbosityLevel::Verbose, 📋 symbol)
 - [ ] Task 2.0.4: Create `DebugDetailMessage` in `src/presentation/views/messages/debug_detail.rs` (VerbosityLevel::Debug, 🔍 symbol)

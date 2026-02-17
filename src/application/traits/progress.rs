@@ -6,7 +6,7 @@
 //!
 //! # DDD Layer Placement
 //!
-//! - **Defined in**: Application layer (`src/application/ports/`)
+//! - **Defined in**: Application layer (`src/application/traits/`)
 //! - **Implemented in**: Presentation layer (`src/presentation/`)
 //! - **Dependency direction**: Presentation → Application (correct)
 //!
@@ -30,7 +30,7 @@
 //! # Example
 //!
 //! ```rust,ignore
-//! use torrust_tracker_deployer_lib::application::ports::CommandProgressListener;
+//! use torrust_tracker_deployer_lib::application::traits::CommandProgressListener;
 //!
 //! async fn execute(
 //!     &self,
@@ -108,8 +108,8 @@ pub trait CommandProgressListener: Send + Sync {
 /// # Examples
 ///
 /// ```rust
-/// use torrust_tracker_deployer_lib::application::ports::NullProgressListener;
-/// use torrust_tracker_deployer_lib::application::ports::CommandProgressListener;
+/// use torrust_tracker_deployer_lib::application::traits::NullProgressListener;
+/// use torrust_tracker_deployer_lib::application::traits::CommandProgressListener;
 ///
 /// let listener = NullProgressListener;
 /// listener.on_step_started(1, 3, "Step one");

@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
-use crate::application::ports::CommandProgressListener;
+use crate::application::traits::CommandProgressListener;
 use crate::presentation::views::UserOutput;
 
 /// Presentation layer implementation of `CommandProgressListener`.
