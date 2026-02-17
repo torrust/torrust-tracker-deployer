@@ -276,7 +276,7 @@ Add machine-readable JSON output format (`--json` flag) for selected commands to
   - Rationale: Contains the list of enabled services and their URLs
   - Allows automation to verify which services are running and how to access them
 
-- [ ] **12.5** Add JSON output to `list` command
+- [ ] **12.5** Add JSON output to `list` command - [Issue #359](https://github.com/torrust/torrust-tracker-deployer/issues/359)
   - Rationale: Shows full environment names without truncation, enabling unambiguous identification
   - Table format truncates long names - JSON provides complete information
 
