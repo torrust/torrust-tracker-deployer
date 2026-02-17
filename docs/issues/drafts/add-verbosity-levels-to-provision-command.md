@@ -10,7 +10,7 @@
 - [Generic Command Progress Listener for Verbosity](generic-command-progress-listener-for-verbosity.md) — architectural design for the `CommandProgressListener` trait that enables application-layer progress reporting
 - [Progress Reporting in Application Layer](../../features/progress-reporting-in-application-layer/README.md) — feature doc describing the broader problem of reporting progress from inside command handlers
 
-**Status**: 🚧 **IN PROGRESS** - Core implementation complete (Phase 1 & 2), documentation pending (Phase 3)
+**Status**: ✅ **COMPLETED** - All phases complete (Phase 1, 2A, 2B, 2C, 3), Task 3.5 deferred as future work
 
 ## Overview
 
@@ -25,8 +25,8 @@ Add graduated verbosity levels (`-v`, `-vv`, `-vvv`) to the `provision` command 
 - [x] Implement graduated verbosity levels for provision command
 - [x] Maintain backward compatibility (default = Normal level)
 - [x] Keep user output completely separate from tracing logs
-- [ ] Update user documentation with verbosity examples
-- [ ] Add help text examples for verbosity flags
+- [x] Update user documentation with verbosity examples
+- [x] Add help text examples for verbosity flags
 
 ## 🏗️ Architecture Requirements
 
@@ -695,22 +695,22 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 - [x] Task 3.1: Manual testing with `-v`, `-vv`, `-vvv` flags
 - [x] Task 3.2: Verify output readability at all levels
 - [x] Task 3.3: Update user guide documentation
-- [ ] Task 3.4: Add examples to `--help` output
+- [x] Task 3.4: Add examples to `--help` output (commit `cde6050e`)
 - [ ] Task 3.5: Consider extending to other commands (future work)
 
-**Status**: 🚧 **IN PROGRESS** - Core implementation complete, user guide updated, help text pending
+**Status**: ✅ **COMPLETED** - All tasks complete, Task 3.5 deferred as future work
 
 **Completed**:
 
-- Manual testing verified all verbosity levels work correctly
-- Output formatting is clean and readable at all levels
-- Implementation plan updated with actual output examples
-- User guide documentation added to provision command (commit `24a31b12`)
+- Manual testing verified all verbosity levels work correctly (Task 3.1)
+- Output formatting is clean and readable at all levels (Task 3.2)
+- Implementation plan updated with actual output examples (Phase 2C)
+- User guide documentation added to provision command (Task 3.3 - commit `24a31b12`)
+- Help text examples already included in CLI args (Task 3.4 - commit `cde6050e`)
 
-**Remaining**:
+**Deferred**:
 
-- Help text examples (Task 3.4)
-- Extension to other commands (Task 3.5 - future work)
+- Extension to other commands (Task 3.5 - future work, separate issue)
 
 **Total Estimated Time**: 10-14 hours for provision command exploration
 
@@ -734,7 +734,7 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 - [x] Debug level (`-vvv`) shows technical details for troubleshooting
 - [x] User output stays completely separate from tracing logs
 - [x] `RUST_LOG` continues to control logging independently
-- [ ] Help text clearly explains verbosity levels and their difference from logging
+- [x] Help text clearly explains verbosity levels and their difference from logging
 - [x] Output remains clean and readable at all verbosity levels
 - [x] Channel separation maintained (stdout for results, stderr for progress)
 
