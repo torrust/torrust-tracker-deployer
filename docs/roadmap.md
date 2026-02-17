@@ -151,9 +151,23 @@ When starting work on a new feature:
 
 ### 8. Add levels of verbosity
 
-- [ ] **8.1** Add levels of verbosity as described in the UX research
-  - Implement `-v`, `-vv`, `-vvv` flags for user-facing output
-  - See [`docs/research/UX/`](https://github.com/torrust/torrust-tracker-deployer/tree/main/docs/research/UX) for detailed UX research
+Add graduated verbosity levels (`-v`, `-vv`, `-vvv`) to the most complex and time-consuming commands to give users control over the amount of progress detail displayed during operations.
+
+- [x] **8.1** Add verbosity levels to `provision` command ✅ Completed - [PR #361](https://github.com/torrust/torrust-tracker-deployer/pull/361)
+  - Four graduated levels: Normal (default), Verbose (-v), VeryVerbose (-vv), Debug (-vvv)
+  - CommandProgressListener trait for application-layer progress reporting
+  - Comprehensive user guide documentation
+  - See [`docs/research/UX/`](https://github.com/torrust/torrust-tracker-deployer/tree/main/docs/research/UX) for UX research
+- [ ] **8.2** Add verbosity levels to `configure` command
+  - Apply same verbosity pattern established in provision command
+  - Show configuration steps, Ansible operations, system changes at different detail levels
+  - Reuse CommandProgressListener infrastructure
+- [ ] **8.3** Add verbosity levels to `release` command
+  - Apply same verbosity pattern established in provision command
+  - Show artifact generation, file transfers, Docker operations at different detail levels
+  - Reuse CommandProgressListener infrastructure
+
+**Note:** Focus on the three most complex and time-consuming commands (provision, configure, release). Other commands may be enhanced with verbosity levels based on user demand.
 
 ### 9. Extend deployer usability
 
