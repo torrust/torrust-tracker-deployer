@@ -25,6 +25,7 @@ EAAAADAQABAAABAQC
 EPEL
 Falkenstein
 Gossman
+goroutines
 Grafana
 Grafonnet
 Graça
@@ -34,6 +35,7 @@ Hillsboro
 Hostnames
 ISAM
 Inno
+inspectable
 Kopia
 LUKS
 Liskov
