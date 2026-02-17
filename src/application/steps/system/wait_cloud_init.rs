@@ -64,9 +64,18 @@ impl WaitForCloudInitStep {
             "Waiting for cloud-init completion"
         );
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Ansible working directory: {}",
+                self.ansible_client.working_dir().display()
+            ));
+            l.on_debug("Executing: ansible-playbook wait-cloud-init.yml");
+        }
+
         self.ansible_client.run_playbook("wait-cloud-init", &[])?;
 
         if let Some(l) = listener {
+            l.on_debug("Playbook completed successfully");
             l.on_detail("Cloud-init status: done ✓");
         }
 

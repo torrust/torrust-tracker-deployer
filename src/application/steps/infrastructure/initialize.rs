@@ -66,10 +66,19 @@ impl InitializeInfrastructureStep {
             "Initializing OpenTofu infrastructure"
         );
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Working directory: {}",
+                self.opentofu_client.working_dir().display()
+            ));
+            l.on_debug("Executing: tofu init");
+        }
+
         // Execute tofu init command
         let output = self.opentofu_client.init()?;
 
         if let Some(l) = listener {
+            l.on_debug("Command completed successfully");
             l.on_detail("Initialized OpenTofu backend");
         }
 

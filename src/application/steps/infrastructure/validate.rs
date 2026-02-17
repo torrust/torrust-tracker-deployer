@@ -68,10 +68,19 @@ impl ValidateInfrastructureStep {
             "Validating OpenTofu configuration"
         );
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Working directory: {}",
+                self.opentofu_client.working_dir().display()
+            ));
+            l.on_debug("Executing: tofu validate");
+        }
+
         // Execute tofu validate command
         let output = self.opentofu_client.validate()?;
 
         if let Some(l) = listener {
+            l.on_debug(&format!("Validation output: {}", output.trim()));
             l.on_detail("Configuration is valid ✓");
         }
 

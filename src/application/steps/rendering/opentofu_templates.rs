@@ -61,6 +61,13 @@ impl RenderOpenTofuTemplatesStep {
             "Rendering OpenTofu templates"
         );
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Template generator: {}",
+                std::any::type_name::<TofuProjectGenerator>()
+            ));
+        }
+
         self.tofu_template_renderer.render().await?;
 
         if let Some(l) = listener {

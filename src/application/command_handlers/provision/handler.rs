@@ -334,6 +334,18 @@ impl ProvisionCommandHandler {
         let current_step = ProvisionStep::RenderAnsibleTemplates;
         Self::notify_step_started(listener, 7, "Rendering Ansible templates");
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Template directory: {}",
+                environment.templates_dir().display()
+            ));
+            l.on_debug(&format!(
+                "Build directory: {}",
+                environment.ansible_build_dir().display()
+            ));
+            l.on_debug(&format!("Instance IP: {instance_ip}"));
+        }
+
         let ansible_template_service = AnsibleTemplateRenderingService::from_paths(
             environment.templates_dir(),
             environment.build_dir().clone(),

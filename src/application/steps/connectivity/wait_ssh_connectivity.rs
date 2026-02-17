@@ -65,6 +65,19 @@ impl WaitForSSHConnectivityStep {
             "Waiting for SSH connectivity to be established"
         );
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "SSH target: {}@{}:{}",
+                self.ssh_config.ssh_username(),
+                self.ssh_config.host_ip(),
+                self.ssh_config.ssh_port()
+            ));
+            l.on_debug(&format!(
+                "Private key: {}",
+                self.ssh_config.ssh_priv_key_path().display()
+            ));
+        }
+
         // Create SSH client
         let ssh_client = SshClient::new(self.ssh_config.clone());
 

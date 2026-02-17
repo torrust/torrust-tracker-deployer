@@ -71,6 +71,14 @@ impl GetInstanceInfoStep {
             "Getting instance information from OpenTofu outputs"
         );
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Working directory: {}",
+                self.opentofu_client.working_dir().display()
+            ));
+            l.on_debug("Executing: tofu output -json");
+        }
+
         // Get the instance IP from OpenTofu outputs
         // NOTE: We prefer OpenTofu outputs over provider-specific methods because:
         // - If we add more providers (different than LXD) in the future, we have two options:
@@ -81,6 +89,7 @@ impl GetInstanceInfoStep {
         let opentofu_instance_info = self.opentofu_client.get_instance_info()?;
 
         if let Some(l) = listener {
+            l.on_debug(&format!("Instance name: {}", opentofu_instance_info.name));
             l.on_detail(&format!(
                 "Instance IP: {}",
                 opentofu_instance_info.ip_address

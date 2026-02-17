@@ -66,6 +66,14 @@ impl PlanInfrastructureStep {
             "Planning OpenTofu infrastructure"
         );
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Working directory: {}",
+                self.opentofu_client.working_dir().display()
+            ));
+            l.on_debug("Executing: tofu plan -var-file=variables.tfvars");
+        }
+
         // Execute tofu plan command with variables file
         let output = self.opentofu_client.plan(&["-var-file=variables.tfvars"])?;
 

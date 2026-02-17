@@ -81,6 +81,21 @@ impl ApplyInfrastructureStep {
             "Applying OpenTofu infrastructure"
         );
 
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Working directory: {}",
+                self.opentofu_client.working_dir().display()
+            ));
+            l.on_debug(&format!(
+                "Executing: tofu apply -var-file=variables.tfvars{}",
+                if self.auto_approve {
+                    " -auto-approve"
+                } else {
+                    ""
+                }
+            ));
+        }
+
         // Execute tofu apply command with variables file
         let output = self
             .opentofu_client

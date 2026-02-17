@@ -627,16 +627,72 @@ let provisioned = handler.execute(env_name, Some(&listener)).await?;
 
 **Goal**: Add `on_debug()` calls with technical details (commands, exit codes, raw output)
 
-- [ ] Task 2C.1: Add `listener.on_debug()` calls in Steps with technical details:
-  - [ ] Commands executed (full command strings)
-  - [ ] Exit codes from external tools
-  - [ ] Raw output from tools (relevant excerpts)
-  - [ ] Template source/destination paths
-  - [ ] Runtime parameters injected
-  - [ ] Timeout values and retry configurations
-- [ ] Task 2C.2: Manual test with `-vvv` flag to verify output
-- [ ] Task 2C.3: Review for information overload (ensure readability)
-- [ ] Task 2C.4: Commit Phase 2C changes
+- [x] Task 2C.1: Add `listener.on_debug()` calls in Steps with technical details:
+  - [x] Commands executed (full command strings)
+  - [x] Exit codes from external tools
+  - [x] Raw output from tools (relevant excerpts)
+  - [x] Template source/destination paths
+  - [x] Runtime parameters injected
+  - [x] Timeout values and retry configurations
+- [x] Task 2C.2: Manual test with `-vvv` flag to verify output
+- [x] Task 2C.3: Review for information overload (ensure readability)
+- [x] Task 2C.4: Commit Phase 2C changes
+
+**Status**: ✅ **COMPLETED**
+
+**Actual Output Example**:
+
+<details>
+<summary><strong>Debug Level (-vvv)</strong> - Shows step headers + details + technical debug info</summary>
+
+```text
+⏳ [3/3] Provisioning infrastructure...
+📋   [Step 1/9] Rendering OpenTofu templates...
+🔍      → Template generator: torrust_tracker_deployer_lib::infrastructure::templating::tofu::template::common::renderer::project_generator::TofuProjectGenerator
+📋      → Generated OpenTofu configuration files
+📋   [Step 2/9] Initializing OpenTofu...
+🔍      → Working directory: ./build/verbosity-test-debug/tofu/lxd
+🔍      → Executing: tofu init
+🔍      → Command completed successfully
+📋      → Initialized OpenTofu backend
+📋   [Step 3/9] Validating infrastructure configuration...
+🔍      → Working directory: ./build/verbosity-test-debug/tofu/lxd
+🔍      → Executing: tofu validate
+🔍      → Validation output: Success! The configuration is valid.
+📋      → Configuration is valid ✓
+📋   [Step 4/9] Planning infrastructure changes...
+🔍      → Working directory: ./build/verbosity-test-debug/tofu/lxd
+🔍      → Executing: tofu plan -var-file=variables.tfvars
+📋      → Plan: 2 to add, 0 to change, 0 to destroy.
+📋   [Step 5/9] Applying infrastructure changes...
+🔍      → Working directory: ./build/verbosity-test-debug/tofu/lxd
+🔍      → Executing: tofu apply -var-file=variables.tfvars -auto-approve
+📋      → Infrastructure resources created successfully
+📋   [Step 6/9] Retrieving instance information...
+🔍      → Working directory: ./build/verbosity-test-debug/tofu/lxd
+🔍      → Executing: tofu output -json
+🔍      → Instance name: torrust-tracker-vm-verbosity-test-debug
+📋      → Instance IP: 10.140.190.78
+📋   [Step 7/9] Rendering Ansible templates...
+🔍      → Template directory: ./data/verbosity-test-debug/templates
+🔍      → Build directory: ./build/verbosity-test-debug/ansible
+🔍      → Instance IP: 10.140.190.78
+📋      → Template directory: ./build/verbosity-test-debug/ansible
+📋      → Generated inventory and playbooks
+📋   [Step 8/9] Waiting for SSH connectivity...
+🔍      → SSH target: torrust@10.140.190.78:22
+🔍      → Private key: /home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-02/fixtures/testing_rsa
+📋      → Testing connection to 10.140.190.78:22
+📋      → SSH connection established ✓
+📋   [Step 9/9] Waiting for cloud-init completion...
+🔍      → Ansible working directory: ./build/verbosity-test-debug/ansible
+🔍      → Executing: ansible-playbook wait-cloud-init.yml
+🔍      → Playbook completed successfully
+📋      → Cloud-init status: done ✓
+⏳   ✓ Infrastructure provisioned (took 25.8s)
+```
+
+</details>
 
 **Rationale**: Steps report around Infrastructure calls using return values. Infrastructure layer stays opaque (it cannot receive the listener due to DDD dependency rules). For retry loops inside Infrastructure (e.g., SSH connectivity), the pragmatic approach is to report before/after the call; moving the loop into the Step is a future improvement.
 
