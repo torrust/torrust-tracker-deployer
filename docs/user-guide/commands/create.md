@@ -248,21 +248,21 @@ torrust-tracker-deployer create environment --env-file config.json
 
 ```text
 ⏳ [1/3] Loading configuration...
-⏳     → Loading configuration from 'config.json'...
-⏳   ✓ Configuration loaded: my-env (took 2ms)
+⏳     → Loading configuration from 'envs/full-stack-docs.json'...
+⏳   ✓ Configuration loaded: full-stack-docs (took 0ms)
 ⏳ [2/3] Creating command handler...
 ⏳   ✓ Done (took 0ms)
 ⏳ [3/3] Creating environment...
-⏳     → Creating environment 'my-env'...
+⏳     → Creating environment 'full-stack-docs'...
 ⏳     → Validating configuration and creating environment...
-⏳   ✓ Environment created: my-env (took 15ms)
-✅ Environment 'my-env' created successfully
+⏳   ✓ Environment created: full-stack-docs (took 1ms)
+✅ Environment 'full-stack-docs' created successfully
 
 Environment Details:
-1. Environment name: my-env
-2. Instance name: torrust-tracker-vm-my-env
-3. Data directory: ./data/my-env
-4. Build directory: ./build/my-env
+1. Environment name: full-stack-docs
+2. Instance name: torrust-tracker-vm-full-stack-docs
+3. Data directory: ./data/full-stack-docs
+4. Build directory: ./build/full-stack-docs
 ```
 
 **Features**:

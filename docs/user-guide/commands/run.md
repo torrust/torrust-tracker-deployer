@@ -77,14 +77,23 @@ All services run inside a single `torrust/tracker:develop` Docker container.
 When the run command completes successfully, it displays service URLs for easy access:
 
 ```text
-✓ Run command completed for 'my-environment'
+⏳ [1/2] Validating environment...
+⏳   ✓ Environment name validated: full-stack-docs (took 0ms)
+⏳ [2/2] Running application services...
+⏳   ✓ Services started (took 39.9s)
+✅ Run command completed for 'full-stack-docs'
 
-Service URLs:
-  API:             http://192.168.1.100:1212
-  HTTP Tracker:    http://192.168.1.100:7070
-  Health Check:    http://192.168.1.100:1212/api/health_check
+Services are now accessible:
+  Tracker (UDP):  udp://10.140.190.211:6969/announce
+  Tracker (UDP):  udp://10.140.190.211:6970/announce
+  Tracker (HTTP): https://tracker1.example.com/announce
+  Tracker (HTTP): https://tracker2.example.com/announce
+  API:            https://api.example.com/api
+  Health Check:   https://health.example.com/health_check
+  Grafana:        https://grafana.example.com/
 
-Tip: Run 'torrust-tracker-deployer show my-environment' for full details
+Note: HTTPS services require DNS configuration. See 'show' command for details.
+Tip: Run 'torrust-tracker-deployer show full-stack-docs' for full details
 ```
 
 **Notes**:

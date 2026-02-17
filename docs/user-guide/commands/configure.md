@@ -47,16 +47,16 @@ When you configure an environment:
 
 ```bash
 # Configure the environment
-torrust-tracker-deployer configure my-environment
+torrust-tracker-deployer configure full-stack-docs
 
 # Output:
-# ✓ Validating prerequisites...
-# ✓ Running Ansible playbooks...
-# ✓ Installing Docker...
-# ✓ Installing Docker Compose...
-# ✓ Configuring permissions...
-# ✓ Verifying installation...
-# ✓ Environment configured successfully
+# ⏳ [1/3] Validating environment...
+# ⏳   ✓ Environment name validated: full-stack-docs (took 0ms)
+# ⏳ [2/3] Creating command handler...
+# ⏳   ✓ Done (took 0ms)
+# ⏳ [3/3] Configuring infrastructure...
+# ⏳   ✓ Infrastructure configured (took 38.2s)
+# ✅ Environment 'full-stack-docs' configured successfully
 ```
 
 ### Configure multiple environments
@@ -261,14 +261,12 @@ torrust-tracker-deployer configure my-environment
 The configure command runs these playbooks in order:
 
 1. **install-docker.yml** - Installs Docker Engine
-
    - Adds Docker GPG key
    - Adds Docker repository
    - Installs docker-ce, docker-ce-cli, containerd.io
    - Starts and enables Docker service
 
 2. **install-docker-compose.yml** - Installs Docker Compose
-
    - Downloads Docker Compose plugin
    - Installs to `/usr/local/lib/docker/cli-plugins/docker-compose`
    - Sets executable permissions

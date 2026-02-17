@@ -68,31 +68,46 @@ Next: Run 'configure my-environment' to install software
 When services have been deployed:
 
 ```text
-Environment: my-environment
+Environment: full-stack-docs
 State: Running
 Provider: LXD
-Created: 2025-01-07 14:30:00 UTC
+Created: 2026-02-17 12:10:49 UTC
 
 Infrastructure:
-  Instance IP: 10.140.190.171
+  Instance IP: 10.140.190.211
   SSH Port: 22
   SSH User: torrust
-  SSH Key: ~/.ssh/torrust_deployer_key
+  SSH Key: /home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-01/fixtures/testing_rsa
 
 Connection:
-  ssh -i ~/.ssh/torrust_deployer_key torrust@10.140.190.171
+  ssh -i /home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-01/fixtures/testing_rsa torrust@10.140.190.211
 
 Tracker Services:
   UDP Trackers:
-    - udp://10.140.190.171:6969/announce
-  HTTP Trackers:
-    - http://10.140.190.171:7070/announce
-  API Endpoint:
-    - http://10.140.190.171:1212/api
-  Health Check:
-    - http://10.140.190.171:1313/health_check
+    - udp://10.140.190.211:6969/announce
+    - udp://10.140.190.211:6970/announce
+  HTTP Trackers (HTTPS via Caddy):
+    - https://tracker1.example.com/announce
+    - https://tracker2.example.com/announce
+  API Endpoint (HTTPS via Caddy):
+    - https://api.example.com/api
+  Health Check (HTTPS via Caddy):
+    - https://health.example.com/health_check
 
-Tracker is running! Use the URLs above to connect.
+Prometheus:
+  Internal only (localhost:9090) - not exposed externally
+
+Grafana (HTTPS via Caddy):
+  https://grafana.example.com/
+
+Note: HTTPS services require domain-based access. For local domains (*.local),
+add the following to your /etc/hosts file:
+
+  10.140.190.211   tracker1.example.com tracker2.example.com api.example.com grafana.example.com health.example.com
+
+Internal ports (7070, 7071, 1212, 3000, 1313) are not directly accessible when TLS is enabled.
+
+Services are running. Use 'test' to verify health.
 ```
 
 ## Output Formats
@@ -142,35 +157,53 @@ torrust-tracker-deployer show my-environment --output-format json
 
 ```json
 {
-  "name": "my-environment",
+  "name": "full-stack-docs",
   "state": "Running",
   "provider": "LXD",
-  "created_at": "2026-02-11T09:52:28.800407753Z",
+  "created_at": "2026-02-17T12:10:49.328958106Z",
   "infrastructure": {
-    "instance_ip": "10.140.190.36",
+    "instance_ip": "10.140.190.211",
     "ssh_port": 22,
     "ssh_user": "torrust",
-    "ssh_key_path": "/home/user/.ssh/torrust_key"
+    "ssh_key_path": "/home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-01/fixtures/testing_rsa"
   },
   "services": {
-    "udp_trackers": ["udp://udp.tracker.local:6969/announce"],
-    "https_http_trackers": ["https://http.tracker.local/announce"],
+    "udp_trackers": [
+      "udp://10.140.190.211:6969/announce",
+      "udp://10.140.190.211:6970/announce"
+    ],
+    "https_http_trackers": [
+      "https://tracker1.example.com/announce",
+      "https://tracker2.example.com/announce"
+    ],
     "direct_http_trackers": [],
     "localhost_http_trackers": [],
-    "api_endpoint": "https://api.tracker.local/api",
+    "api_endpoint": "https://api.example.com/api",
     "api_uses_https": true,
     "api_is_localhost_only": false,
-    "health_check_url": "https://health.tracker.local/health_check",
+    "health_check_url": "https://health.example.com/health_check",
     "health_check_uses_https": true,
     "health_check_is_localhost_only": false,
     "tls_domains": [
       {
-        "domain": "http.tracker.local",
+        "domain": "tracker1.example.com",
         "internal_port": 7070
       },
       {
-        "domain": "api.tracker.local",
+        "domain": "tracker2.example.com",
+        "internal_port": 7071
+      },
+      {
+        "domain": "api.example.com",
         "internal_port": 1212
+      },
+      {
+        "domain": "grafana.example.com",
+        "internal_port": 3000
+      },
+      {
+        "domain": "health.example.com",
+        "internal_port": 1313
       }
     ]
   },
@@ -178,7 +211,7 @@ torrust-tracker-deployer show my-environment --output-format json
     "access_note": "Internal only (localhost:9090) - not exposed externally"
   },
   "grafana": {
-    "url": "https://grafana.tracker.local/",
+    "url": "https://grafana.example.com/",
     "uses_https": true
   },
   "state_name": "running"
