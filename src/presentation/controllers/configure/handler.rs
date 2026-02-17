@@ -14,6 +14,7 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Configured;
 use crate::domain::environment::Environment;
 use crate::presentation::views::progress::ProgressReporter;
+use crate::presentation::views::progress::VerboseProgressListener;
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
@@ -195,12 +196,19 @@ impl ConfigureCommandController {
         self.progress
             .start_step(ConfigureStep::ConfigureInfrastructure.description())?;
 
-        let configured = handler.execute(env_name).map_err(|source| {
-            ConfigureSubcommandError::ConfigureOperationFailed {
-                name: env_name.to_string(),
-                source: Box::new(source),
-            }
-        })?;
+        // Create the listener for verbose progress reporting.
+        // The VerboseProgressListener translates step events into
+        // user-facing detail messages via UserOutput's verbosity filter.
+        let listener = VerboseProgressListener::new(self.progress.output().clone());
+
+        let configured = handler
+            .execute(env_name, Some(&listener))
+            .map_err(
+                |source| ConfigureSubcommandError::ConfigureOperationFailed {
+                    name: env_name.to_string(),
+                    source: Box::new(source),
+                },
+            )?;
 
         self.progress
             .complete_step(Some("Infrastructure configured"))?;
