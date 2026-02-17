@@ -96,7 +96,17 @@ If backup is enabled in your environment configuration, the release command also
 
 ```bash
 # Release after configuration
-torrust-tracker-deployer release my-environment
+torrust-tracker-deployer release full-stack-docs
+```
+
+**Output**:
+
+```text
+⏳ [1/2] Validating environment...
+⏳   ✓ Environment name validated: full-stack-docs (took 0ms)
+⏳ [2/2] Releasing application...
+⏳   ✓ Application released successfully (took 27.4s)
+✅ Release command completed successfully for 'full-stack-docs'
 ```
 
 ### Complete Workflow

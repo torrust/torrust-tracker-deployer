@@ -36,6 +36,21 @@ Destroy an environment:
 torrust-tracker-deployer destroy my-environment
 ```
 
+**Output**:
+
+```text
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: full-stack-docs (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Tearing down infrastructure...
+⏳   ✓ Infrastructure torn down (took 2.6s)
+✅ Environment 'full-stack-docs' destroyed successfully
+
+💡 Local data preserved for debugging. To completely remove and reuse the name:
+   torrust-tracker-deployer purge full-stack-docs --force
+```
+
 With verbose logging to see progress:
 
 ```bash
@@ -344,18 +359,18 @@ name: Cleanup Test Environments
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # Run at 2 AM daily
+    - cron: "0 2 * * *" # Run at 2 AM daily
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup tools
         run: |
           # Install OpenTofu, LXD, etc.
-          
+
       - name: Destroy old environments
         run: |
           for env in test-1 test-2 staging-temp; do
@@ -382,14 +397,14 @@ for env in "${ENVIRONMENTS_TO_DESTROY[@]}"; do
     echo "═══════════════════════════════════════════"
     echo "Destroying environment: $env"
     echo "═══════════════════════════════════════════"
-    
+
     if torrust-tracker-deployer destroy "$env"; then
         echo "✓ Successfully destroyed $env"
     else
         echo "✗ Failed to destroy $env"
         # Continue with other environments
     fi
-    
+
     echo ""
 done
 

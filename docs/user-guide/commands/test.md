@@ -45,16 +45,38 @@ When you test an environment:
 
 ```bash
 # Test the environment
-torrust-tracker-deployer test my-environment
+torrust-tracker-deployer test full-stack-docs
 
 # Output:
-# ✓ Validating environment state...
-# ✓ Checking VM connectivity...
-# ✓ Testing Docker installation...
-# ✓ Testing Docker Compose...
-# ✓ Verifying user permissions...
-# ✓ Running infrastructure tests...
-# ✓ All tests passed
+# ⏳ [1/3] Validating environment...
+# ⏳   ✓ Environment name validated: full-stack-docs (took 0ms)
+# ⏳ [2/3] Creating command handler...
+# ⏳   ✓ Done (took 0ms)
+# ⏳ [3/3] Testing infrastructure...
+# ❌ Test command failed: Validation failed for environment 'full-stack-docs': Remote action failed: Action 'running-services-validation' validation failed: HTTPS request to 'https://api.example.com/api/health_check' failed: error sending request for url (https://api.example.com/api/health_check). Check that Caddy is running and port 443 is open. Domain 'api.example.com' was resolved to 10.140.190.211 for testing.
+# Tip: Check logs and try running with --log-output file-and-stderr for more details
+#
+# For detailed troubleshooting:
+# Validation Failed - Detailed Troubleshooting:
+#
+# 1. Check validation logs for specific failure:
+#    - Re-run with verbose logging:
+#      torrust-tracker-deployer test <environment-name> --log-output file-and-stderr
+#
+# 2. Common validation failures:
+#    - Cloud-init not completed: Wait for instance initialization
+#    - Docker not installed: Run configure command
+#    - Docker Compose not installed: Run configure command
+#
+# 3. Remediation steps:
+#    - If cloud-init failed: Destroy and re-provision
+#    - If Docker/Compose missing: Run configure command
+#      torrust-tracker-deployer configure <environment-name>
+#
+# 4. Check instance status:
+#    - Verify instance is running
+#    - Check SSH connectivity
+#    - Review system logs on the instance
 ```
 
 ### Complete workflow

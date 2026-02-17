@@ -66,15 +66,15 @@ The validate command performs comprehensive validation of environment configurat
 ⏳ [3/3] Validating configuration fields...
 ⏳   ✓ Field validation passed (took 0ms)
 
-✅ Configuration file 'envs/my-environment.json' is valid
+✅ Configuration file 'envs/full-stack-docs.json' is valid
 
 Environment Details:
-  • Name:  my-environment
-  • Provider: lxd
-  • Prometheus: Enabled
-  • Grafana: Enabled
-  • HTTPS: Disabled
-  • Backups: Enabled
+• Name: full-stack-docs
+• Provider: lxd
+• Prometheus: Enabled
+• Grafana: Enabled
+• HTTPS: Enabled
+• Backups: Enabled
 ```
 
 ### Error Output Examples

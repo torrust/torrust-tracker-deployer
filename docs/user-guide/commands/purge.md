@@ -61,6 +61,16 @@ For scripts and automation, use `--force` to skip the confirmation prompt:
 torrust-tracker-deployer purge my-environment --force
 ```
 
+**Output**:
+
+```text
+⏳ [1/3] Validating environment...
+⏳   ✓ Done (took 0ms)
+⏳ [2/3] Purging local data...
+⏳   ✓ Done (took 0ms)
+✅ Environment 'full-stack-docs' purged successfully
+```
+
 ### With Verbose Logging
 
 See detailed progress during purge:

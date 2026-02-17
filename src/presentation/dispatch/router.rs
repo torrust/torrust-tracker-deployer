@@ -218,7 +218,11 @@ pub async fn route_command(
             Ok(())
         }
         Commands::List => {
-            context.container().create_list_controller().execute()?;
+            let output_format = context.output_format();
+            context
+                .container()
+                .create_list_controller()
+                .execute(output_format)?;
             Ok(())
         }
     }

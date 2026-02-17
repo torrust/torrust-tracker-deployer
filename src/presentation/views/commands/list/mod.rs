@@ -6,22 +6,22 @@
 //!
 //! This module follows the Strategy Pattern for rendering:
 //! - `TextView`: Renders human-readable text table output
+//! - `JsonView`: Renders machine-readable JSON output
 //!
 //! # Structure
 //!
 //! - `views/`: View rendering implementations
 //!   - `text_view.rs`: Human-readable table rendering
-//!
-//! # Future Expansion
-//!
-//! When JSON output support is added (EPIC #348 task 12.5), create `views/json_view.rs`.
+//!   - `json_view.rs`: JSON output for automation workflows
 
 pub mod views {
+    pub mod json_view;
     pub mod text_view;
 
     // Re-export main types for convenience
+    pub use json_view::JsonView;
     pub use text_view::TextView;
 }
 
 // Re-export everything at the module level for backward compatibility
-pub use views::TextView;
+pub use views::{JsonView, TextView};

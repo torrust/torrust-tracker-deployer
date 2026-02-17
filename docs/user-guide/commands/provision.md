@@ -35,34 +35,40 @@ Use the global `--output-format` flag to control the format.
 The default output format provides human-readable information with visual formatting:
 
 ```bash
-torrust-tracker-deployer provision my-environment
+torrust-tracker-deployer provision full-stack-docs
 ```
 
 **Output**:
 
 ```text
-✓ Rendering OpenTofu templates...
-✓ Initializing infrastructure...
-✓ Planning infrastructure changes...
-✓ Applying infrastructure...
-✓ Retrieving instance information...
-✓ Instance IP: 10.140.190.42
-✓ Rendering Ansible templates...
-✓ Waiting for SSH connectivity...
-✓ Waiting for cloud-init completion...
-✓ Environment provisioned successfully
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: full-stack-docs (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Provisioning infrastructure...
+⏳   ✓ Infrastructure provisioned (took 26.5s)
+✅ Environment 'full-stack-docs' provisioned successfully
 
-Provisioning Details:
- 1. Environment name: my-environment
- 2. Instance name: torrust-tracker-vm-my-environment
- 3. Instance IP: 10.140.190.42
- 4. SSH credentials:
-    - Private key: /home/user/.ssh/id_rsa
-    - Public key: /home/user/.ssh/id_rsa.pub
-    - Username: torrust
-    - Port: 22
- 5. Provider: lxd
- 6. Domains: (none)
+
+Instance Connection Details:
+  IP Address:        10.140.190.211
+  SSH Port:          22
+  SSH Private Key:   /home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-01/fixtures/testing_rsa
+  SSH Username:      torrust
+
+Connect using:
+  ssh -i /home/josecelano/Documents/git/committer/me/github/torrust/torrust-tracker-deployer-agent-01/fixtures/testing_rsa torrust@10.140.190.211 -p 22
+
+⚠️  DNS Setup Required:
+  Your configuration uses custom domains. Remember to update your DNS records
+  to point your domains to the server IP: 10.140.190.211
+
+  Configured domains:
+    - tracker1.example.com
+    - tracker2.example.com
+    - api.example.com
+    - grafana.example.com
+    - health.example.com
 ```
 
 **Features**:
