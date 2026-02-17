@@ -113,6 +113,146 @@ Service URLs:
 Tip: Run 'torrust-tracker-deployer show my-tls-env' for full details
 ```
 
+## JSON Output
+
+The `run` command supports JSON output for automation workflows using the `--output-format json` or `-o json` flag.
+
+### Command Syntax
+
+```bash
+torrust-tracker-deployer run <ENVIRONMENT> --output-format json
+# Or use the short form:
+torrust-tracker-deployer run <ENVIRONMENT> -o json
+```
+
+### JSON Output Structure
+
+```json
+{
+  "environment_name": "my-environment",
+  "state": "Running",
+  "services": {
+    "udp_trackers": ["udp://udp.tracker.local:6969/announce"],
+    "https_http_trackers": [],
+    "direct_http_trackers": ["http://10.140.190.133:7070/announce"],
+    "localhost_http_trackers": [],
+    "api_endpoint": "http://10.140.190.133:1212/api",
+    "api_uses_https": false,
+    "api_is_localhost_only": false,
+    "health_check_url": "http://10.140.190.133:1313/health_check",
+    "health_check_uses_https": false,
+    "health_check_is_localhost_only": false,
+    "tls_domains": []
+  },
+  "grafana": {
+    "url": "http://10.140.190.133:3000/",
+    "uses_https": false
+  }
+}
+```
+
+### JSON Output with HTTPS/TLS
+
+When TLS is configured, the output includes HTTPS URLs and domain information:
+
+```json
+{
+  "environment_name": "my-tls-env",
+  "state": "Running",
+  "services": {
+    "udp_trackers": ["udp://udp.tracker.example.com:6969/announce"],
+    "https_http_trackers": ["https://tracker.example.com:7070/announce"],
+    "direct_http_trackers": [],
+    "localhost_http_trackers": [],
+    "api_endpoint": "https://tracker.example.com:1212/api",
+    "api_uses_https": true,
+    "api_is_localhost_only": false,
+    "health_check_url": "https://tracker.example.com:1313/health_check",
+    "health_check_uses_https": true,
+    "health_check_is_localhost_only": false,
+    "tls_domains": ["tracker.example.com"]
+  },
+  "grafana": {
+    "url": "https://tracker.example.com:3000/",
+    "uses_https": true
+  }
+}
+```
+
+### Automation Use Cases
+
+#### Extract API Endpoint
+
+```bash
+# Get API endpoint for automated testing
+API_ENDPOINT=$(torrust-tracker-deployer run my-env -o json | jq -r '.services.api_endpoint')
+curl "$API_ENDPOINT/health_check"
+```
+
+#### Check if HTTPS is Required
+
+```bash
+# Determine if API uses HTTPS
+USES_HTTPS=$(torrust-tracker-deployer run my-env -o json | jq -r '.services.api_uses_https')
+if [ "$USES_HTTPS" = "true" ]; then
+    echo "HTTPS is enabled"
+else
+    echo "Using HTTP only"
+fi
+```
+
+#### Extract All HTTP Tracker URLs
+
+```bash
+# Get all HTTP/HTTPS tracker announce URLs for testing
+torrust-tracker-deployer run my-env -o json | \
+  jq -r '.services | (.direct_http_trackers + .https_http_trackers)[]'
+```
+
+#### Parse TLS Domains for DNS Configuration
+
+```bash
+# Extract domains that need DNS configuration
+DOMAINS=$(torrust-tracker-deployer run my-env -o json | jq -r '.services.tls_domains[]')
+for domain in $DOMAINS; do
+    echo "Configure DNS A record: $domain → $(jq -r '.services.api_endpoint' <<< "$JSON" | cut -d: -f2 | tr -d '/')"
+done
+```
+
+#### Monitor Service Status in CI/CD
+
+```bash
+# Save output for later analysis
+torrust-tracker-deployer run production-env -o json > run-output.json
+
+# Parse for verification
+jq '.services.api_endpoint' run-output.json
+jq '.services.udp_trackers[]' run-output.json
+jq '.grafana.url' run-output.json
+```
+
+### JSON Output Fields
+
+| Field                                     | Type     | Description                                       |
+| ----------------------------------------- | -------- | ------------------------------------------------- |
+| `environment_name`                        | string   | Name of the environment                           |
+| `state`                                   | string   | Always "Running" after successful run             |
+| `services.udp_trackers`                   | string[] | UDP tracker announce URLs                         |
+| `services.https_http_trackers`            | string[] | HTTPS HTTP tracker announce URLs (TLS configured) |
+| `services.direct_http_trackers`           | string[] | HTTP tracker announce URLs (no TLS)               |
+| `services.localhost_http_trackers`        | string[] | Localhost-only HTTP trackers (for testing)        |
+| `services.api_endpoint`                   | string   | Tracker API base URL                              |
+| `services.api_uses_https`                 | boolean  | True if API uses HTTPS                            |
+| `services.api_is_localhost_only`          | boolean  | True if API only bound to localhost               |
+| `services.health_check_url`               | string   | Health check endpoint URL                         |
+| `services.health_check_uses_https`        | boolean  | True if health check uses HTTPS                   |
+| `services.health_check_is_localhost_only` | boolean  | True if health check only on localhost            |
+| `services.tls_domains`                    | string[] | Domains requiring DNS configuration for TLS       |
+| `grafana.url`                             | string   | Grafana dashboard URL (if enabled)                |
+| `grafana.uses_https`                      | boolean  | True if Grafana uses HTTPS                        |
+
+**Note**: `grafana` will be `null` if monitoring is not enabled in the environment configuration.
+
 ## Example Usage
 
 ### Basic Run
