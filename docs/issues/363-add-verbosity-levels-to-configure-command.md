@@ -11,20 +11,21 @@
 - [Generic Command Progress Listener for Verbosity](./drafts/generic-command-progress-listener-for-verbosity.md) — architectural design for the `CommandProgressListener` trait
 - [Progress Reporting in Application Layer](../features/progress-reporting-in-application-layer/README.md)
 
-**Status**: ✅ **COMPLETE** — All phases implemented (handler + step-level verbosity + documentation)
+**Status**: ✅ **MERGED** — All phases implemented and merged into main
 
 **Latest Commits**:
 
 - `666ca363` - "feat: [#363] add verbosity levels to configure command" (Phase 1)
 - `206d6137` - "feat: [#363] add step-level verbosity (VeryVerbose and Debug levels)" (Phase 2)
 - `1ab53fd2` - "docs: [#363] update issue spec with Phase 2 completion status"
+- `8c80ff2b` - "docs: [#363] add verbosity documentation to configure command user guide" (Phase 3)
 
-**Branch**: `363-add-verbosity-configure`
-**PR**: [#TBD](https://github.com/torrust/torrust-tracker-deployer/pull/TBD) _(ready for creation)_
+**Branch**: `363-add-verbosity-configure` _(merged and deleted)_
+**PR**: [#364](https://github.com/torrust/torrust-tracker-deployer/pull/364) ✅ **MERGED**
 
 ## Current Implementation Status
 
-**All Features Complete** (commit `1ab53fd2` + docs update):
+**All Features Merged** (PR #364):
 
 - ✅ **Normal (default)**: Shows 3 main workflow phases
 - ✅ **Verbose (`-v`)**: Shows all 4 configuration steps (Docker, Docker Compose, Security Updates, Firewall)
@@ -32,7 +33,7 @@
 - ✅ **Debug (`-vvv`)**: Shows debug messages (Ansible commands, working directories) with 🔍 icon
 - ✅ **Documentation**: User guide updated with verbosity examples and patterns
 
-**Status**: Implementation complete and ready for PR review.
+**Status**: Implementation merged into main. Issue can be closed.
 
 ## Overview
 
