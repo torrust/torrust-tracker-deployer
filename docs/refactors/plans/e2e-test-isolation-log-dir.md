@@ -30,9 +30,9 @@ Add `.log_dir()` support to all E2E test ProcessRunner calls to achieve complete
 **Total Active Proposals**: 6
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 4
+**Completed**: 6
 **In Progress**: 0
-**Not Started**: 2
+**Not Started**: 0
 
 ### Phase Summary
 
@@ -40,8 +40,8 @@ Add `.log_dir()` support to all E2E test ProcessRunner calls to achieve complete
 - **Phase 1 - Create Command Tests (High Impact, Low Effort)**: ✅ 1/1 completed (100%) - Commit e452efe6
 - **Phase 2 - List Command Tests (High Impact, Low Effort)**: ✅ 1/1 completed (100%) - Commit 53b87a8d
 - **Phase 3 - Show Command Tests (High Impact, Low Effort)**: ✅ 1/1 completed (100%) - Commit 5682ae05
-- **Phase 4 - Destroy Command Tests (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 5 - Purge Command Tests (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
+- **Phase 4 - Destroy Command Tests (High Impact, Low Effort)**: ✅ 1/1 completed (100%) - Commit 82946459
+- **Phase 5 - Purge Command Tests (High Impact, Low Effort)**: ✅ 1/1 completed (100%) - Commit 1c437d80
 
 ### Discarded Proposals
 
@@ -335,17 +335,20 @@ Add `.log_dir(temp_workspace.path().join("logs"))` to all 7 ProcessRunner calls.
 
 #### Implementation Checklist
 
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~67
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~83
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~117
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~133
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~161
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~194
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~211
-- [ ] Run `cargo test --test e2e_integration destroy_command`
-- [ ] Verify all tests pass
-- [ ] Clean data folder and verify it remains empty after tests
-- [ ] Commit changes: `fix: [#365] add log_dir to destroy_command tests for complete isolation`
+- [x] Add `.log_dir()` to ProcessRunner call at line ~67
+- [x] Add `.log_dir()` to ProcessRunner call at line ~83
+- [x] Add `.log_dir()` to ProcessRunner call at line ~117
+- [x] Add `.log_dir()` to ProcessRunner call at line ~133
+- [x] Add `.log_dir()` to ProcessRunner call at line ~161
+- [x] Add `.log_dir()` to ProcessRunner call at line ~194
+- [x] Add `.log_dir()` to ProcessRunner call at line ~211
+- [x] Run `cargo test --test e2e_integration destroy_command`
+- [x] Verify all tests pass
+- [x] Clean data folder and verify it remains empty after tests
+- [x] Commit changes: `fix: [#365] add log_dir to destroy_command tests for complete isolation`
+
+**Status**: ✅ Completed (Commit 82946459)  
+**Result**: All 4 tests pass, data/ folder remains empty
 
 #### Testing Strategy
 
@@ -376,25 +379,29 @@ Add `.log_dir(temp_workspace.path().join("logs"))` to all 14 ProcessRunner calls
 
 #### Implementation Checklist
 
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~75
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~87
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~104
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~140
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~174
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~186
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~198
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~233
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~249
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~264
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~303
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~316
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~324
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~331
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~344
-- [ ] Run `cargo test --test e2e_integration purge_command`
-- [ ] Verify all tests pass
-- [ ] Clean data folder and verify it remains empty after tests
-- [ ] Commit changes: `fix: [#365] add log_dir to purge_command tests for complete isolation`
+- [x] Add `.log_dir()` to ProcessRunner call at line ~75
+- [x] Add `.log_dir()` to ProcessRunner call at line ~87
+- [x] Add `.log_dir()` to ProcessRunner call at line ~104
+- [x] Add `.log_dir()` to ProcessRunner call at line ~140
+- [x] Add `.log_dir()` to ProcessRunner call at line ~174
+- [x] Add `.log_dir()` to ProcessRunner call at line ~186
+- [x] Add `.log_dir()` to ProcessRunner call at line ~198
+- [x] Add `.log_dir()` to ProcessRunner call at line ~233
+- [x] Add `.log_dir()` to ProcessRunner call at line ~249
+- [x] Add `.log_dir()` to ProcessRunner call at line ~264
+- [x] Add `.log_dir()` to ProcessRunner call at line ~303
+- [x] Add `.log_dir()` to ProcessRunner call at line ~316
+- [x] Add `.log_dir()` to ProcessRunner call at line ~324
+- [x] Add `.log_dir()` to ProcessRunner call at line ~331
+- [x] Add `.log_dir()` to ProcessRunner call at line ~344
+- [x] Run `cargo test --test e2e_integration purge_command`
+- [x] Verify all tests pass
+- [x] Clean data folder and verify it remains empty after tests
+- [x] Commit changes: `fix: [#365] add log_dir to purge_command tests for complete isolation`
+
+**Status**: ✅ Completed (Commit 1c437d80)  
+**Result**: All 5 tests pass, data/ folder remains empty  
+**Note**: Found 15 ProcessRunner calls (not 14 as estimated)
 
 #### Testing Strategy
 
@@ -406,7 +413,15 @@ Verify `data/` folder remains empty after running purge_command tests.
 
 - **Start Date**: 2026-02-18
 - **Target Completion**: 2026-02-18 (same day - low effort refactoring)
-- **Actual Completion**: [Date]
+- **Actual Completion**: 2026-02-18
+
+**Final Statistics**:
+
+- Total ProcessRunner calls fixed: 45 (4 + 5 + 6 + 7 + 7 + 15 + 1 additional)
+- Total test files modified: 6 (validate, create, list, show, destroy, purge commands)
+- Total commits: 6 (one per phase)
+- All tests pass: 408 passed; 0 failed; 95 ignored
+- Production data/ folder: Completely empty after all tests
 
 ## 🔍 Review Process
 
