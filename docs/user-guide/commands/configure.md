@@ -12,6 +12,156 @@ Installs and configures Docker and Docker Compose on provisioned VM infrastructu
 torrust-tracker-deployer configure <ENVIRONMENT>
 ```
 
+## Verbosity Levels
+
+Control the amount of progress detail displayed during configuration with the global `-v` flag. This helps you see what's happening under the hood when you need more visibility.
+
+### Available Levels
+
+| Level           | Flag      | Shows                                       | Use Case                                    |
+| --------------- | --------- | ------------------------------------------- | ------------------------------------------- |
+| **Normal**      | (default) | Essential progress and results              | Regular usage, clean output                 |
+| **Verbose**     | `-v`      | + Detailed progress (4 configuration steps) | Understanding the configuration workflow    |
+| **VeryVerbose** | `-vv`     | + Context details (versions, status)        | Troubleshooting configuration issues        |
+| **Debug**       | `-vvv`    | + Technical details (Ansible commands)      | Deep troubleshooting, development debugging |
+
+**Important**: Verbosity controls **only** progress messages. For internal diagnostic logs, use the `RUST_LOG` environment variable (see [Logging Guide](../logging.md)).
+
+### Normal Level (Default)
+
+Shows essential progress with minimal output:
+
+```bash
+torrust-tracker-deployer configure my-env
+```
+
+**Output**:
+
+```text
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: my-env (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Configuring infrastructure...
+⏳   ✓ Infrastructure configured (took 37.3s)
+✅ Environment 'my-env' configured successfully
+```
+
+### Verbose Level (`-v`)
+
+Shows the 4 internal configuration steps:
+
+```bash
+torrust-tracker-deployer configure my-env -v
+```
+
+**Output**:
+
+```text
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: my-env (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Configuring infrastructure...
+📋   [Step 1/4] Installing Docker...
+📋   [Step 2/4] Installing Docker Compose...
+📋   [Step 3/4] Configuring automatic security updates...
+📋   [Step 4/4] Configuring firewall (UFW)...
+⏳   ✓ Infrastructure configured (took 34.1s)
+✅ Environment 'my-env' configured successfully
+```
+
+**When to use**: Understanding the configuration workflow, seeing which step is taking time, or confirming the command is making progress.
+
+### VeryVerbose Level (`-vv`)
+
+Adds contextual details like software versions, configurations, and status information:
+
+```bash
+torrust-tracker-deployer configure my-env -vv
+```
+
+**Output**:
+
+```text
+⏳ [3/3] Configuring infrastructure...
+📋   [Step 1/4] Installing Docker...
+📋      → Installing Docker Engine from official repository
+📋      → Docker version: 24.0.7
+📋   [Step 2/4] Installing Docker Compose...
+📋      → Installing Docker Compose plugin
+📋      → Compose version: 2.23.3
+📋   [Step 3/4] Configuring automatic security updates...
+📋      → Configuring unattended-upgrades for automatic security patches
+📋      → Update configuration status: enabled
+📋   [Step 4/4] Configuring firewall (UFW)...
+📋      → Configuring UFW with restrictive default policies
+📋      → Allowing SSH access before enabling firewall
+📋      → Firewall status: active
+⏳   ✓ Infrastructure configured (took 34.1s)
+✅ Environment 'my-env' configured successfully
+```
+
+**When to use**: Troubleshooting installation issues, verifying software versions, understanding firewall configurations, or monitoring security update setup.
+
+### Debug Level (`-vvv`)
+
+Shows technical implementation details including Ansible commands executed:
+
+```bash
+torrust-tracker-deployer configure my-env -vvv
+```
+
+**Output**:
+
+```text
+⏳ [3/3] Configuring infrastructure...
+📋   [Step 1/4] Installing Docker...
+🔍      → Ansible working directory: ./build/my-env/ansible
+🔍      → Executing playbook: ansible-playbook install-docker.yml -i inventory.ini
+📋      → Installing Docker Engine from official repository
+📋      → Docker version: 24.0.7
+📋   [Step 2/4] Installing Docker Compose...
+🔍      → Ansible working directory: ./build/my-env/ansible
+🔍      → Executing playbook: ansible-playbook install-docker-compose.yml -i inventory.ini
+📋      → Installing Docker Compose plugin
+📋      → Compose version: 2.23.3
+📋   [Step 3/4] Configuring automatic security updates...
+🔍      → Ansible working directory: ./build/my-env/ansible
+🔍      → Executing playbook: ansible-playbook configure-security-updates.yml -i inventory.ini
+📋      → Configuring unattended-upgrades for automatic security patches
+📋      → Update configuration status: enabled
+📋   [Step 4/4] Configuring firewall (UFW)...
+🔍      → Ansible working directory: ./build/my-env/ansible
+🔍      → Executing playbook: ansible-playbook configure-firewall.yml -e @variables.yml -i inventory.ini
+📋      → Configuring UFW with restrictive default policies
+📋      → Allowing SSH access before enabling firewall
+📋      → Firewall status: active
+⏳   ✓ Infrastructure configured (took 36.0s)
+✅ Environment 'my-env' configured successfully
+```
+
+**When to use**: Deep debugging, understanding exactly what Ansible playbooks are executed, verifying working directories, or reporting issues with detailed context.
+
+**Symbol Legend**:
+
+- ⏳ = Major progress milestone (all levels)
+- ✅ = Success message (all levels)
+- 📋 = Detailed progress (Verbose `-v` and above)
+- 🔍 = Technical details (Debug `-vvv` only)
+
+### Combining with Other Flags
+
+Verbosity works with all other flags:
+
+```bash
+# Debug output with file and stderr logging
+torrust-tracker-deployer configure my-env -vvv --log-output file-and-stderr
+
+# Verbose output with custom log file
+torrust-tracker-deployer configure my-env -v --log-output file --log-file custom.log
+```
+
 ## Arguments
 
 - `<ENVIRONMENT>` (required) - Name of the environment to configure
