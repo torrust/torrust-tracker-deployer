@@ -145,3 +145,28 @@ jobs:
       - id: test
         name: Run Unit Tests
         run: cargo test --tests --benches --examples --workspace --all-targets --all-features
+
+      - id: verify-test-isolation
+        name: Verify Test Isolation (data folder should be empty)
+        run: |
+          echo "Checking if data/ folder is polluted by tests..."
+          if [ -d "data" ]; then
+            FILE_COUNT=$(find data/ -mindepth 1 -type f | wc -l)
+            DIR_COUNT=$(find data/ -mindepth 1 -type d | wc -l)
+            echo "Files in data/: $FILE_COUNT"
+            echo "Subdirectories in data/: $DIR_COUNT"
+
+            if [ $FILE_COUNT -gt 0 ] || [ $DIR_COUNT -gt 0 ]; then
+              echo "❌ ERROR: Tests polluted the production data/ folder!"
+              echo "Contents of data/ folder:"
+              ls -laR data/
+              echo ""
+              echo "Tests must use temporary directories (TempWorkspace) with proper isolation."
+              echo "See docs/contributing/testing/ for best practices."
+              exit 1
+            else
+              echo "✅ Test isolation verified: data/ folder is clean"
+            fi
+          else
+            echo "✅ Test isolation verified: data/ folder does not exist"
+          fi
