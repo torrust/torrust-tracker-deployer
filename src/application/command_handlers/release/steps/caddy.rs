@@ -15,6 +15,7 @@ use crate::application::command_handlers::common::StepResult;
 use crate::application::command_handlers::release::errors::ReleaseCommandHandlerError;
 use crate::application::steps::application::DeployCaddyConfigStep;
 use crate::application::steps::rendering::RenderCaddyTemplatesStep;
+use crate::application::traits::CommandProgressListener;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
 use crate::shared::clock::SystemClock;
@@ -27,12 +28,18 @@ use crate::shared::clock::SystemClock;
 ///
 /// If HTTPS is not configured, all steps are skipped.
 ///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
+///
 /// # Errors
 ///
 /// Returns a tuple of (error, step) if any Caddy step fails
 #[allow(clippy::result_large_err)]
 pub fn release(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     // Check if HTTPS is configured
     if environment.context().user_inputs.https().is_none() {
@@ -45,12 +52,17 @@ pub fn release(
         return Ok(());
     }
 
-    render_templates(environment)?;
-    deploy_config_to_remote(environment)?;
+    render_templates(environment, listener)?;
+    deploy_config_to_remote(environment, listener)?;
     Ok(())
 }
 
 /// Render Caddy configuration templates
+///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
 ///
 /// # Errors
 ///
@@ -58,8 +70,16 @@ pub fn release(
 #[allow(clippy::result_large_err)]
 fn render_templates(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::RenderCaddyTemplates;
+
+    if let Some(l) = listener {
+        l.on_debug(&format!(
+            "Template source: {}/caddy/",
+            environment.templates_dir().display()
+        ));
+    }
 
     let clock = Arc::new(SystemClock);
     let step = RenderCaddyTemplatesStep::new(
@@ -79,6 +99,10 @@ fn render_templates(
         )
     })?;
 
+    if let Some(l) = listener {
+        l.on_detail("Rendering Caddyfile from template");
+    }
+
     info!(
         command = "release",
         step = %current_step,
@@ -90,14 +114,24 @@ fn render_templates(
 
 /// Deploy Caddy configuration to the remote host
 ///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
+///
 /// # Errors
 ///
 /// Returns a tuple of (error, `ReleaseStep::DeployCaddyConfigToRemote`) if deployment fails
 #[allow(clippy::result_large_err)]
 fn deploy_config_to_remote(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::DeployCaddyConfigToRemote;
+
+    if let Some(l) = listener {
+        l.on_debug("Executing playbook: ansible-playbook deploy-caddy-config.yml");
+    }
 
     DeployCaddyConfigStep::new(ansible_client(environment))
         .execute()
@@ -110,6 +144,10 @@ fn deploy_config_to_remote(
                 current_step,
             )
         })?;
+
+    if let Some(l) = listener {
+        l.on_detail("Deploying Caddyfile to /opt/torrust/Caddyfile");
+    }
 
     info!(
         command = "release",

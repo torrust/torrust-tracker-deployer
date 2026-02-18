@@ -11,6 +11,7 @@ use super::common::ansible_client;
 use crate::application::command_handlers::common::StepResult;
 use crate::application::command_handlers::release::errors::ReleaseCommandHandlerError;
 use crate::application::steps::application::CreateMysqlStorageStep;
+use crate::application::traits::CommandProgressListener;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
 
@@ -21,12 +22,18 @@ use crate::domain::environment::{Environment, Releasing};
 ///
 /// If `MySQL` is not configured as the tracker database, all steps are skipped.
 ///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
+///
 /// # Errors
 ///
 /// Returns a tuple of (error, step) if `MySQL` storage creation fails
 #[allow(clippy::result_large_err)]
 pub fn release(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     // Check if MySQL is configured (via tracker database driver)
     if !environment.context().user_inputs.tracker().uses_mysql() {
@@ -39,11 +46,16 @@ pub fn release(
         return Ok(());
     }
 
-    create_storage(environment)?;
+    create_storage(environment, listener)?;
     Ok(())
 }
 
 /// Create `MySQL` storage directories on the remote host
+///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
 ///
 /// # Errors
 ///
@@ -51,8 +63,17 @@ pub fn release(
 #[allow(clippy::result_large_err)]
 fn create_storage(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::CreateMysqlStorage;
+
+    if let Some(l) = listener {
+        l.on_debug(&format!(
+            "Ansible working directory: {}",
+            environment.ansible_build_dir().display()
+        ));
+        l.on_debug("Executing playbook: ansible-playbook create-mysql-storage.yml");
+    }
 
     CreateMysqlStorageStep::new(ansible_client(environment))
         .execute()
@@ -65,6 +86,10 @@ fn create_storage(
                 current_step,
             )
         })?;
+
+    if let Some(l) = listener {
+        l.on_detail("Creating storage directories: /opt/torrust/storage/mysql/data");
+    }
 
     info!(
         command = "release",

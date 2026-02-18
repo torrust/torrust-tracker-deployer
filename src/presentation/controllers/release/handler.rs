@@ -12,7 +12,7 @@ use tracing::info;
 use crate::application::command_handlers::release::ReleaseCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::presentation::views::progress::ProgressReporter;
+use crate::presentation::views::progress::{ProgressReporter, VerboseProgressListener};
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
 
@@ -157,8 +157,13 @@ impl ReleaseCommandController {
 
         let handler = ReleaseCommandHandler::new(self.repository.clone(), self.clock.clone());
 
+        // Create the listener for verbose progress reporting.
+        // The VerboseProgressListener translates step events into
+        // user-facing detail messages via UserOutput's verbosity filter.
+        let listener = VerboseProgressListener::new(self.progress.output().clone());
+
         let _released_env = handler
-            .execute(env_name)
+            .execute(env_name, Some(&listener))
             .await
             .map_err(|source| ReleaseSubcommandError::ApplicationLayerError { source })?;
 

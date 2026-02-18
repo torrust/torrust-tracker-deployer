@@ -12,20 +12,20 @@
 - [Generic Command Progress Listener for Verbosity](./drafts/generic-command-progress-listener-for-verbosity.md) — architectural design for the `CommandProgressListener` trait
 - [Progress Reporting in Application Layer](../features/progress-reporting-in-application-layer/README.md)
 
-**Status**: 🔜 **NOT STARTED** — Ready for implementation
+**Status**: ✅ **COMPLETED** — Implementation finished
 
-**Branch**: TBD
+**Branch**: `367-add-verbosity-levels-to-release-command`
 **PR**: TBD
 
 ## Current Implementation Status
 
-**Pending Implementation**:
+**Implemented**:
 
-- [ ] **Normal (default)**: Show 2 main workflow phases (validate + release)
-- [ ] **Verbose (`-v`)**: Show all 7 service-specific release steps
-- [ ] **VeryVerbose (`-vv`)**: Show detail messages (files deployed, templates rendered, paths)
-- [ ] **Debug (`-vvv`)**: Show debug messages (Ansible commands, working directories, full outputs)
-- [ ] **Documentation**: User guide update with verbosity examples and patterns
+- [x] **Normal (default)**: Show 2 main workflow phases (validate + release)
+- [x] **Verbose (`-v`)**: Show all 7 service-specific release steps
+- [x] **VeryVerbose (`-vv`)**: Show detail messages (files deployed, templates rendered, paths)
+- [x] **Debug (`-vvv`)**: Show debug messages (Ansible commands, working directories, full outputs)
+- [x] **Documentation**: User guide updated with verbosity examples and patterns
 
 ## Overview
 
@@ -35,13 +35,13 @@ Add graduated verbosity levels (`-v`, `-vv`, `-vvv`) to the `release` command to
 
 ## Goals
 
-- [ ] Reuse `CommandProgressListener` infrastructure from provision/configure commands
-- [ ] Apply same four verbosity levels to release command
-- [ ] Show service-specific release steps, template rendering, file deployments at different detail levels
-- [ ] Maintain backward compatibility (default = Normal level)
-- [ ] Keep user output completely separate from tracing logs
-- [ ] Update user documentation with verbosity examples
-- [ ] Help text examples already present (global flags)
+- [x] Reuse `CommandProgressListener` infrastructure from provision/configure commands
+- [x] Apply same four verbosity levels to release command
+- [x] Show service-specific release steps, template rendering, file deployments at different detail levels
+- [x] Maintain backward compatibility (default = Normal level)
+- [x] Keep user output completely separate from tracing logs
+- [x] Update user documentation with verbosity examples
+- [x] Help text examples already present (global flags)
 
 ## 🏗️ Architecture Requirements
 
@@ -73,29 +73,29 @@ The following components **already exist** from previous verbosity implementatio
 
 **What's needed for release command**:
 
-- [ ] Pass `CommandProgressListener` to release command handler
-- [ ] Add `on_step_started()` calls for all 7 service-specific release steps
-- [ ] Add `on_detail()` calls for template rendering, file deployments, and service operations
-- [ ] Add `on_debug()` calls for Ansible commands, working directories, full outputs
-- [ ] Update user guide documentation
-- [ ] Verify help text shows verbosity options (already present from global flags)
+- [x] Pass `CommandProgressListener` to release command handler
+- [x] Add `on_step_started()` calls for all 7 service-specific release steps
+- [x] Add `on_detail()` calls for template rendering, file deployments, and service operations
+- [x] Add `on_debug()` calls for Ansible commands, working directories, full outputs
+- [x] Update user guide documentation
+- [x] Verify help text shows verbosity options (already present from global flags)
 
 ### Module Structure Requirements
 
-- [ ] Follow same pattern as provision/configure commands (reference implementations)
-- [ ] Handler emits step-level progress events
-- [ ] Workflow coordinates service steps and emits progress for each service
-- [ ] Service steps emit detail and debug events
-- [ ] Infrastructure layer (Ansible, template rendering) remains unaware of listener
+- [x] Follow same pattern as provision/configure commands (reference implementations)
+- [x] Handler emits step-level progress events
+- [x] Workflow coordinates service steps and emits progress for each service
+- [x] Service steps emit detail and debug events
+- [x] Infrastructure layer (Ansible, template rendering) remains unaware of listener
 
 ### Architectural Constraints
 
-- [ ] Verbosity flags control **only UserOutput** (user-facing messages)
-- [ ] **Do not** mix verbosity with tracing logs (logs use `RUST_LOG`)
-- [ ] Follow separation documented in [user-output-vs-logging-separation.md](../research/UX/user-output-vs-logging-separation.md)
-- [ ] Maintain channel separation (stdout for results, stderr for progress)
-- [ ] Backward compatible (default = Normal level, existing output unchanged)
-- [ ] Reuse `CommandProgressListener` trait (do not create command-specific variants)
+- [x] Verbosity flags control **only UserOutput** (user-facing messages)
+- [x] **Do not** mix verbosity with tracing logs (logs use `RUST_LOG`)
+- [x] Follow separation documented in [user-output-vs-logging-separation.md](../research/UX/user-output-vs-logging-separation.md)
+- [x] Maintain channel separation (stdout for results, stderr for progress)
+- [x] Backward compatible (default = Normal level, existing output unchanged)
+- [x] Reuse `CommandProgressListener` trait (do not create command-specific variants)
 
 ### Anti-Patterns to Avoid
 
@@ -266,12 +266,12 @@ torrust-tracker-deployer release my-env -vvv
 
 **Tasks**:
 
-- [ ] Task 1.1: Update `ReleaseCommandHandler::execute()` to accept optional `&dyn CommandProgressListener`
-- [ ] Task 1.2: Add `TOTAL_RELEASE_STEPS` constant (7 services)
-- [ ] Task 1.3: Add `on_step_started()` calls before each service release in `workflow::execute()`
-- [ ] Task 1.4: Pass listener from controller to handler
-- [ ] Task 1.5: Update E2E tests to pass `None` for listener (backward compatibility)
-- [ ] Task 1.6: Test Normal and Verbose levels work correctly
+- [x] Task 1.1: Update `ReleaseCommandHandler::execute()` to accept optional `&dyn CommandProgressListener`
+- [x] Task 1.2: Add `TOTAL_RELEASE_STEPS` constant (7 services)
+- [x] Task 1.3: Add `on_step_started()` calls before each service release in `workflow::execute()`
+- [x] Task 1.4: Pass listener from controller to handler
+- [x] Task 1.5: Update E2E tests to pass `None` for listener (backward compatibility)
+- [x] Task 1.6: Test Normal and Verbose levels work correctly
 
 **Rationale**: Matches the pattern established in provision and configure commands. Handler orchestrates high-level workflow, emitting progress for each major service step.
 
@@ -294,20 +294,20 @@ torrust-tracker-deployer release my-env -vvv
 
 **Tasks**:
 
-- [ ] Task 2.1: Update all 7 service release functions to accept optional `&dyn CommandProgressListener`
-- [ ] Task 2.2: Add `on_detail()` calls for:
+- [x] Task 2.1: Update all 7 service release functions to accept optional `&dyn CommandProgressListener`
+- [x] Task 2.2: Add `on_detail()` calls for:
   - Storage directory creation
   - Database initialization
   - Template rendering operations
   - File deployment paths
   - Service-specific operations
-- [ ] Task 2.3: Add `on_debug()` calls for:
+- [x] Task 2.3: Add `on_debug()` calls for:
   - Ansible command execution
   - Working directories
   - Template source/output paths
   - Playbook names
-- [ ] Task 2.4: Pass listener from workflow to all service steps
-- [ ] Task 2.5: Test VeryVerbose and Debug levels work correctly
+- [x] Task 2.4: Pass listener from workflow to all service steps
+- [x] Task 2.5: Test VeryVerbose and Debug levels work correctly
 
 **Rationale**: Service steps are the natural place to report detailed progress. They know what files are being rendered, where they're deployed, and what Ansible commands execute. Following the same pattern as configure command.
 
@@ -324,12 +324,12 @@ torrust-tracker-deployer release my-env -vvv
 
 **Tasks**:
 
-- [ ] Task 3.1: Add "Verbosity Levels" section to release.md
-- [ ] Task 3.2: Include examples for all 4 verbosity levels (Normal, Verbose, VeryVerbose, Debug)
-- [ ] Task 3.3: Document use cases for each level
-- [ ] Task 3.4: Add examples showing combined usage with other flags
-- [ ] Task 3.5: Verify help text includes verbosity examples (already present from global flags)
-- [ ] Task 3.6: Update this issue spec with implementation status
+- [x] Task 3.1: Add "Verbosity Levels" section to release.md
+- [x] Task 3.2: Include examples for all 4 verbosity levels (Normal, Verbose, VeryVerbose, Debug)
+- [x] Task 3.3: Document use cases for each level
+- [x] Task 3.4: Add examples showing combined usage with other flags
+- [x] Task 3.5: Verify help text includes verbosity examples (already present from global flags)
+- [x] Task 3.6: Update this issue spec with implementation status
 
 **Rationale**: Same validation as provision/configure commands. Ensure clean, readable output and comprehensive documentation.
 
@@ -343,38 +343,38 @@ torrust-tracker-deployer release my-env -vvv
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
-- [ ] No unused dependencies: `cargo machete`
-- [ ] All existing tests pass
-- [ ] No clippy warnings
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] No unused dependencies: `cargo machete`
+- [x] All existing tests pass
+- [x] No clippy warnings
 
 **Task-Specific Criteria**:
 
-- [ ] Release command accepts `-v`, `-vv`, `-vvv` flags (global flags, already works)
-- [ ] Default behavior (no flags) remains unchanged from current output
-- [ ] Verbose level (`-v`) shows all 7 service-specific release steps
-- [ ] VeryVerbose level (`-vv`) shows template rendering, file deployments, storage operations
-- [ ] Debug level (`-vvv`) shows Ansible commands, working directories, full paths
-- [ ] User output stays completely separate from tracing logs
-- [ ] `RUST_LOG` continues to control logging independently
-- [ ] Help text clearly explains verbosity levels (verified in global flags)
-- [ ] Output remains clean and readable at all verbosity levels
-- [ ] Channel separation maintained (stdout for results, stderr for progress)
-- [ ] Pattern matches provision/configure command implementations (consistency)
+- [x] Release command accepts `-v`, `-vv`, `-vvv` flags (global flags, already works)
+- [x] Default behavior (no flags) remains unchanged from current output
+- [x] Verbose level (`-v`) shows all 7 service-specific release steps
+- [x] VeryVerbose level (`-vv`) shows template rendering, file deployments, storage operations
+- [x] Debug level (`-vvv`) shows Ansible commands, working directories, full paths
+- [x] User output stays completely separate from tracing logs
+- [x] `RUST_LOG` continues to control logging independently
+- [x] Help text clearly explains verbosity levels (verified in global flags)
+- [x] Output remains clean and readable at all verbosity levels
+- [x] Channel separation maintained (stdout for results, stderr for progress)
+- [x] Pattern matches provision/configure command implementations (consistency)
 
 **Documentation Criteria**:
 
-- [ ] User guide (`docs/user-guide/commands/release.md`) updated with verbosity section
-- [ ] Examples provided for all 4 verbosity levels
-- [ ] Symbol legend explained (⏳ ✅ 📋 🔍)
-- [ ] Use cases documented for each verbosity level
-- [ ] Combined flag usage examples provided
+- [x] User guide (`docs/user-guide/commands/release.md`) updated with verbosity section
+- [x] Examples provided for all 4 verbosity levels
+- [x] Symbol legend explained (⏳ ✅ 📋 🔍)
+- [x] Use cases documented for each verbosity level
+- [x] Combined flag usage examples provided
 
 **Out of Scope**:
 
-- [ ] Quiet mode (`-q`) - defer to future work
-- [ ] Silent mode - defer to future work
-- [ ] Per-step timing breakdown - not needed, total duration is sufficient
+- [x] Quiet mode (`-q`) - defer to future work
+- [x] Silent mode - defer to future work
+- [x] Per-step timing breakdown - not needed, total duration is sufficient
 
 ## Related Documentation
 

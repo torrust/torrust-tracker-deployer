@@ -6,11 +6,18 @@ use tracing::{error, info, instrument};
 
 use super::errors::ReleaseCommandHandlerError;
 use super::workflow;
+use crate::application::traits::CommandProgressListener;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ReleaseFailureContext, ReleaseStep};
 use crate::domain::environment::{Configured, Environment, Released, Releasing};
 use crate::domain::EnvironmentName;
 use crate::shared::error::Traceable;
+
+/// Total number of steps in the release workflow.
+///
+/// This constant is used for progress reporting via `CommandProgressListener`
+/// to display step progress like "[Step 1/7] Releasing Tracker service...".
+pub(super) const TOTAL_RELEASE_STEPS: usize = 7;
 
 /// `ReleaseCommandHandler` orchestrates the software release workflow
 ///
@@ -63,6 +70,7 @@ impl ReleaseCommandHandler {
     /// # Arguments
     ///
     /// * `env_name` - The name of the environment to release to
+    /// * `listener` - Optional progress listener for step-level reporting
     ///
     /// # Returns
     ///
@@ -87,6 +95,7 @@ impl ReleaseCommandHandler {
     pub async fn execute(
         &self,
         env_name: &EnvironmentName,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> Result<Environment<Released>, ReleaseCommandHandlerError> {
         let environment = self.load_configured_environment(env_name)?;
 
@@ -119,7 +128,7 @@ impl ReleaseCommandHandler {
             "Releasing state persisted. Executing release steps."
         );
 
-        match workflow::execute(&releasing_env).await {
+        match workflow::execute(&releasing_env, listener).await {
             Ok(released) => {
                 info!(
                     command = "release",

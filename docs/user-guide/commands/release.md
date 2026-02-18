@@ -130,6 +130,168 @@ torrust-tracker-deployer release my-environment
 torrust-tracker-deployer run my-environment
 ```
 
+## Verbosity Levels
+
+The release command supports multiple verbosity levels to control the amount of progress detail displayed:
+
+### Default (Normal) - Essential Progress Only
+
+Shows only the essential progress and results:
+
+```bash
+torrust-tracker-deployer release my-environment
+```
+
+**Output**:
+
+```text
+⏳ [1/2] Validating environment...
+⏳   ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/2] Releasing application...
+⏳   ✓ Application released successfully (took 45.8s)
+✅ Release command completed successfully for 'my-environment'
+```
+
+### Verbose (`-v`) - Show Service Release Steps
+
+Shows all 7 service-specific release steps:
+
+```bash
+torrust-tracker-deployer release my-environment -v
+```
+
+**Output**:
+
+```text
+⏳ [1/2] Validating environment...
+⏳   ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/2] Releasing application...
+📋   [Step 1/7] Releasing Tracker service...
+📋   [Step 2/7] Releasing Prometheus service...
+📋   [Step 3/7] Releasing Grafana service...
+📋   [Step 4/7] Releasing MySQL service...
+📋   [Step 5/7] Releasing Backup service...
+📋   [Step 6/7] Releasing Caddy service...
+📋   [Step 7/7] Deploying Docker Compose configuration...
+⏳   ✓ Application released successfully (took 43.2s)
+✅ Release command completed successfully for 'my-environment'
+```
+
+**Use Case**: When you want visibility into which service is being deployed.
+
+### Very Verbose (`-vv`) - Show Detailed Operations
+
+Shows template rendering, file paths, and deployment details:
+
+```bash
+torrust-tracker-deployer release my-environment -vv
+```
+
+**Output** (excerpt):
+
+```text
+⏳ [1/2] Validating environment...
+⏳   ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/2] Releasing application...
+📋   [Step 1/7] Releasing Tracker service...
+📋      → Creating storage directories: /opt/torrust/storage/tracker/{lib,log,etc}
+📋      → Initializing database: tracker.db
+📋      → Rendering tracker.toml from template
+📋      → Deploying config to /opt/torrust/storage/tracker/etc/tracker.toml
+📋   [Step 2/7] Releasing Prometheus service...
+📋      → Creating storage directories: /opt/torrust/storage/prometheus/etc
+📋      → Rendering prometheus.yml from template
+📋      → Deploying config to /opt/torrust/storage/prometheus/etc/prometheus.yml
+📋   [Step 3/7] Releasing Grafana service...
+📋      → Creating storage directories: /opt/torrust/storage/grafana/{data,provisioning}
+📋      → Rendering Grafana provisioning files (datasources, dashboards)
+📋      → Deploying provisioning to /opt/torrust/storage/grafana/provisioning
+📋   [Step 7/7] Deploying Docker Compose configuration...
+📋      → Rendering docker-compose.yml and .env from templates
+📋      → Deploying docker-compose.yml and .env to /opt/torrust
+⏳   ✓ Application released successfully (took 43.5s)
+✅ Release command completed successfully for 'my-environment'
+```
+
+**Use Case**: Troubleshooting release issues or verifying what files are being deployed where.
+
+### Debug (`-vvv`) - Show Technical Details
+
+Shows Ansible commands, working directories, and full execution details:
+
+```bash
+torrust-tracker-deployer release my-environment -vvv
+```
+
+**Output** (excerpt):
+
+```text
+⏳ [1/2] Validating environment...
+⏳   ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/2] Releasing application...
+📋   [Step 1/7] Releasing Tracker service...
+🔍      → Ansible working directory: ./build/my-environment/ansible
+🔍      → Executing playbook: ansible-playbook create-tracker-storage.yml
+📋      → Creating storage directories: /opt/torrust/storage/tracker/{lib,log,etc}
+🔍      → Executing playbook: ansible-playbook init-tracker-database.yml
+📋      → Initializing database: tracker.db
+🔍      → Template source: ./data/my-environment/templates/tracker/
+📋      → Rendering tracker.toml from template
+🔍      → Template output: ./build/my-environment/tracker
+🔍      → Executing playbook: ansible-playbook deploy-tracker-config.yml
+📋      → Deploying config to /opt/torrust/storage/tracker/etc/tracker.toml
+📋   [Step 7/7] Deploying Docker Compose configuration...
+🔍      → Template source: ./data/my-environment/templates/docker-compose/
+📋      → Rendering docker-compose.yml and .env from templates
+🔍      → Template output: ./build/my-environment/docker-compose
+🔍      → Ansible working directory: ./build/my-environment/ansible
+🔍      → Executing playbook: ansible-playbook deploy-compose-files.yml
+📋      → Deploying docker-compose.yml and .env to /opt/torrust
+⏳   ✓ Application released successfully (took 43.8s)
+✅ Release command completed successfully for 'my-environment'
+```
+
+**Use Case**: Deep troubleshooting, debugging, or when you need to understand exactly what commands are being executed.
+
+### Symbol Legend
+
+| Symbol | Meaning                          | Verbosity Level |
+| ------ | -------------------------------- | --------------- |
+| ⏳     | Operation in progress            | Normal+         |
+| ✅     | Operation completed successfully | Normal+         |
+| 📋     | Detailed contextual information  | VeryVerbose     |
+| 🔍     | Technical implementation detail  | Debug           |
+
+### Combining with Other Options
+
+Verbosity flags can be combined with other command options:
+
+```bash
+# Very verbose release with trace logging
+RUST_LOG=trace torrust-tracker-deployer release my-environment -vv
+```
+
+**Note**: Verbosity flags (`-v`, `-vv`, `-vvv`) control user-facing progress output, while `RUST_LOG` controls internal application logging for debugging purposes.
+
+```bash
+# 1. Create environment
+torrust-tracker-deployer create template --provider lxd > my-env.json
+# Edit my-env.json with your settings
+torrust-tracker-deployer create environment --env-file my-env.json
+
+# 2. Provision infrastructure
+torrust-tracker-deployer provision my-environment
+
+# 3. Configure system
+torrust-tracker-deployer configure my-environment
+
+# 4. Release application
+torrust-tracker-deployer release my-environment
+
+# 5. Start services (next step)
+torrust-tracker-deployer run my-environment
+```
+
 ## What Gets Configured
 
 ### Tracker Configuration (`tracker.toml`)
