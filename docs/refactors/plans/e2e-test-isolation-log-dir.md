@@ -30,16 +30,16 @@ Add `.log_dir()` support to all E2E test ProcessRunner calls to achieve complete
 **Total Active Proposals**: 6
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 0
+**Completed**: 4
 **In Progress**: 0
-**Not Started**: 6
+**Not Started**: 2
 
 ### Phase Summary
 
-- **Phase 0 - Validate Command Tests (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 1 - Create Command Tests (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 2 - List Command Tests (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 3 - Show Command Tests (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
+- **Phase 0 - Validate Command Tests (High Impact, Low Effort)**: ✅ 1/1 completed (100%) - Commit 1d576a5a
+- **Phase 1 - Create Command Tests (High Impact, Low Effort)**: ✅ 1/1 completed (100%) - Commit e452efe6
+- **Phase 2 - List Command Tests (High Impact, Low Effort)**: ✅ 1/1 completed (100%) - Commit 53b87a8d
+- **Phase 3 - Show Command Tests (High Impact, Low Effort)**: ✅ 1/1 completed (100%) - Commit 5682ae05
 - **Phase 4 - Destroy Command Tests (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
 - **Phase 5 - Purge Command Tests (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
 
@@ -144,15 +144,18 @@ let result = ProcessRunner::new()
 
 #### Implementation Checklist
 
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~58
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~97
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~146
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~201
-- [ ] Run `cargo test --test e2e_integration validate_command`
-- [ ] Verify all tests pass (4 tests expected)
-- [ ] Clean data folder: `rm -rf data/*`
-- [ ] Run tests again and verify `data/` folder remains empty
-- [ ] Commit changes: `fix: [#365] add log_dir to validate_command tests for complete isolation`
+- [x] Add `.log_dir()` to ProcessRunner call at line ~58
+- [x] Add `.log_dir()` to ProcessRunner call at line ~97
+- [x] Add `.log_dir()` to ProcessRunner call at line ~146
+- [x] Add `.log_dir()` to ProcessRunner call at line ~201
+- [x] Run `cargo test --test e2e_integration validate_command`
+- [x] Verify all tests pass (4 tests expected)
+- [x] Clean data folder: `rm -rf data/*`
+- [x] Run tests again and verify `data/` folder remains empty
+- [x] Commit changes: `fix: [#365] add log_dir to validate_command tests for complete isolation`
+
+**Status**: ✅ Completed (Commit 1d576a5a)  
+**Result**: All 4 tests pass, data/ folder remains empty
 
 #### Testing Strategy
 
@@ -203,15 +206,18 @@ Add `.log_dir(temp_workspace.path().join("logs"))` to all 5 ProcessRunner calls.
 
 #### Implementation Checklist
 
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~69
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~104
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~131
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~163
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~175
-- [ ] Run `cargo test --test e2e_integration create_command`
-- [ ] Verify all tests pass
-- [ ] Clean data folder and verify it remains empty after tests
-- [ ] Commit changes: `fix: [#365] add log_dir to create_command tests for complete isolation`
+- [x] Add `.log_dir()` to ProcessRunner call at line ~69
+- [x] Add `.log_dir()` to ProcessRunner call at line ~104
+- [x] Add `.log_dir()` to ProcessRunner call at line ~131
+- [x] Add `.log_dir()` to ProcessRunner call at line ~163
+- [x] Add `.log_dir()` to ProcessRunner call at line ~175
+- [x] Run `cargo test --test e2e_integration create_command`
+- [x] Verify all tests pass
+- [x] Clean data folder and verify it remains empty after tests
+- [x] Commit changes: `fix: [#365] add log_dir to create_command tests for complete isolation`
+
+**Status**: ✅ Completed (Commit e452efe6)  
+**Result**: All 4 tests pass, data/ folder remains empty
 
 #### Testing Strategy
 
@@ -242,16 +248,19 @@ Add `.log_dir(temp_workspace.path().join("logs"))` to all 6 ProcessRunner calls.
 
 #### Implementation Checklist
 
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~53
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~91
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~107
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~142
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~159
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~176
-- [ ] Run `cargo test --test e2e_integration list_command`
-- [ ] Verify all tests pass
-- [ ] Clean data folder and verify it remains empty after tests
-- [ ] Commit changes: `fix: [#365] add log_dir to list_command tests for complete isolation`
+- [x] Add `.log_dir()` to ProcessRunner call at line ~53
+- [x] Add `.log_dir()` to ProcessRunner call at line ~91
+- [x] Add `.log_dir()` to ProcessRunner call at line ~107
+- [x] Add `.log_dir()` to ProcessRunner call at line ~142
+- [x] Add `.log_dir()` to ProcessRunner call at line ~159
+- [x] Add `.log_dir()` to ProcessRunner call at line ~176
+- [x] Run `cargo test --test e2e_integration list_command`
+- [x] Verify all tests pass
+- [x] Clean data folder and verify it remains empty after tests
+- [x] Commit changes: `fix: [#365] add log_dir to list_command tests for complete isolation`
+
+**Status**: ✅ Completed (Commit 53b87a8d)  
+**Result**: All 3 tests pass, data/ folder remains empty
 
 #### Testing Strategy
 
@@ -282,17 +291,20 @@ Add `.log_dir(temp_workspace.path().join("logs"))` to all 6 ProcessRunner calls.
 
 #### Implementation Checklist
 
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~52
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~90
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~106
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~142
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~154
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~191
-- [ ] Add `.log_dir()` to ProcessRunner call at line ~203
-- [ ] Run `cargo test --test e2e_integration show_command`
-- [ ] Verify all tests pass
-- [ ] Clean data folder and verify it remains empty after tests
-- [ ] Commit changes: `fix: [#365] add log_dir to show_command tests for complete isolation`
+- [x] Add `.log_dir()` to ProcessRunner call at line ~52
+- [x] Add `.log_dir()` to ProcessRunner call at line ~90
+- [x] Add `.log_dir()` to ProcessRunner call at line ~106
+- [x] Add `.log_dir()` to ProcessRunner call at line ~142
+- [x] Add `.log_dir()` to ProcessRunner call at line ~154
+- [x] Add `.log_dir()` to ProcessRunner call at line ~191
+- [x] Add `.log_dir()` to ProcessRunner call at line ~203
+- [x] Run `cargo test --test e2e_integration show_command`
+- [x] Verify all tests pass
+- [x] Clean data folder and verify it remains empty after tests
+- [x] Commit changes: `fix: [#365] add log_dir to show_command tests for complete isolation`
+
+**Status**: ✅ Completed (Commit 5682ae05)  
+**Result**: All 4 tests pass, data/ folder remains empty
 
 #### Testing Strategy
 

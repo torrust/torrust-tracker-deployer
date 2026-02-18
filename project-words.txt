@@ -155,6 +155,7 @@ downcasting
 downloadedi
 dpkg
 drwxr
+drwxrwxr
 dtolnay
 ehthumbs
 elif
