@@ -62,7 +62,7 @@ jobs:
       # Human-readable output in logs
       # This NEVER fails the job; it’s only for visibility
       - name: Display vulnerabilities (table format)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: torrust-tracker-deployer/${{ matrix.image.name }}:latest
           format: "table"
@@ -76,7 +76,7 @@ jobs:
       # - Trivy sometimes exits with 1 even when no vulns exist
       # - GitHub Security UI is responsible for enforcement
       - name: Generate SARIF (Code Scanning)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: torrust-tracker-deployer/${{ matrix.image.name }}:latest
           format: "sarif"
@@ -114,7 +114,7 @@ jobs:
 
     steps:
       - name: Display vulnerabilities (table format)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: ${{ matrix.image }}
           format: "table"
@@ -124,7 +124,7 @@ jobs:
       # Third-party images should NEVER block CI.
       # We only report findings to GitHub Security.
       - name: Generate SARIF (Code Scanning)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: ${{ matrix.image }}
           format: "sarif"
