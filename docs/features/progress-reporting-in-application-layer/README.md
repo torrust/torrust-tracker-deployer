@@ -2,6 +2,24 @@
 
 > **⚠️ DRAFT PROPOSAL**: This feature documentation is a draft and has not yet gone through the full feature definition process (Questions, Specification, etc.). It serves as a preliminary proposal for the implemented changes.
 
+## Status
+
+**Current Phase**: In Progress (Partially Implemented)
+
+**Implemented**:
+
+1. ✅ Enum-based step definition for `provision` command
+2. ✅ Enum-based step definition for `configure` command
+3. ✅ Enum-based step definition for `release` command
+
+**Remaining**:
+
+1. ⏳ Extend to remaining commands (lower priority — shorter workflows benefit less)
+2. ⏳ Application-layer progress reporting (internal steps visible to the user)
+3. ⏳ Verbosity-level integration
+
+**Rationale for partial implementation**: `provision`, `configure`, and `release` are the longest and most complex commands, so detailed progress reporting is most valuable there. Shorter commands provide less benefit and are deferred.
+
 ## 1. Current Implementation: Controller-Level Progress Reporting
 
 We have implemented a **Controller-Level Progress Reporting** mechanism using Enums. This addresses the immediate issue of incorrect step counts in the CLI.
@@ -69,3 +87,7 @@ This feature is closely related to the concept of **Verbosity Levels**. We aim t
 This feature is part of the implementation of the following roadmap task:
 
 - [docs/roadmap.md](../../roadmap.md): **1.9** Add levels of verbosity as described in the UX research.
+
+## 5. Related Decisions
+
+- [Application-Layer Progress Reporting Trait](../../decisions/application-layer-progress-reporting-trait.md) — ADR documenting the architectural decision to introduce a `ProgressReporter` trait for passing progress callbacks into the application layer without violating DDD layering constraints.
