@@ -66,6 +66,7 @@ fn it_should_destroy_environment_with_default_working_directory() {
     // Create environment in default location
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -82,6 +83,7 @@ fn it_should_destroy_environment_with_default_working_directory() {
     // Act: Destroy environment using destroy command
     let destroy_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-destroy-default")
         .expect("Failed to run destroy command");
 
@@ -116,6 +118,7 @@ fn it_should_destroy_environment_with_custom_working_directory() {
     // Create environment in custom location
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -132,6 +135,7 @@ fn it_should_destroy_environment_with_custom_working_directory() {
     // Act: Destroy environment using same working directory
     let destroy_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-destroy-custom")
         .expect("Failed to run destroy command");
 
@@ -160,6 +164,7 @@ fn it_should_fail_when_environment_not_found_in_working_directory() {
     // Act: Try to destroy non-existent environment
     let destroy_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("nonexistent-environment")
         .expect("Failed to run destroy command");
 
@@ -193,6 +198,7 @@ fn it_should_complete_full_lifecycle_with_custom_working_directory() {
     // Act: Create environment in custom location
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -210,6 +216,7 @@ fn it_should_complete_full_lifecycle_with_custom_working_directory() {
     // Act: Destroy environment
     let destroy_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-lifecycle")
         .expect("Failed to run destroy command");
 

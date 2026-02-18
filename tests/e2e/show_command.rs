@@ -51,6 +51,7 @@ fn it_should_report_environment_not_found_when_environment_does_not_exist() {
     // Act: Run show command for a non-existing environment
     let show_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_show_command("non-existing-env")
         .expect("Failed to run show command");
 
@@ -89,6 +90,7 @@ fn it_should_show_created_environment_details() {
     // Create environment
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -105,6 +107,7 @@ fn it_should_show_created_environment_details() {
     // Act: Run show command
     let show_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_show_command("test-show-env")
         .expect("Failed to run show command");
 
@@ -141,6 +144,7 @@ fn it_should_show_environment_state() {
     // Create environment
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -153,6 +157,7 @@ fn it_should_show_environment_state() {
     // Act: Run show command
     let show_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_show_command("test-show-state")
         .expect("Failed to run show command");
 
@@ -190,6 +195,7 @@ fn it_should_show_provider_information() {
     // Create environment
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -202,6 +208,7 @@ fn it_should_show_provider_information() {
     // Act: Run show command
     let show_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_show_command("test-show-provider")
         .expect("Failed to run show command");
 

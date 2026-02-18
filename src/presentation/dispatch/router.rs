@@ -197,6 +197,7 @@ pub async fn route_command(
                     &instance_ip,
                     output_dir.as_path(),
                     force,
+                    context.working_dir(),
                 )
                 .await?;
             Ok(())

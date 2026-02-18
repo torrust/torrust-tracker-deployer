@@ -74,6 +74,7 @@ fn it_should_purge_destroyed_environment_successfully() {
     // Create environment in default location
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -86,6 +87,7 @@ fn it_should_purge_destroyed_environment_successfully() {
     // Destroy environment first (normal workflow)
     let destroy_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-purge-destroyed")
         .expect("Failed to run destroy command");
 
@@ -103,6 +105,7 @@ fn it_should_purge_destroyed_environment_successfully() {
     // Act: Purge environment using purge command with --force
     let purge_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_purge_command("test-purge-destroyed")
         .expect("Failed to run purge command");
 
@@ -139,6 +142,7 @@ fn it_should_fail_when_purging_nonexistent_environment() {
     // Act: Try to purge non-existent environment
     let purge_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_purge_command("nonexistent-env")
         .expect("Failed to run purge command");
 
@@ -173,6 +177,7 @@ fn it_should_purge_with_custom_working_directory() {
     // Create environment in custom location
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -185,6 +190,7 @@ fn it_should_purge_with_custom_working_directory() {
     // Destroy environment
     let destroy_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-purge-custom-dir")
         .expect("Failed to run destroy command");
 
@@ -197,6 +203,7 @@ fn it_should_purge_with_custom_working_directory() {
     // Act: Purge environment from custom working directory
     let purge_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_purge_command("test-purge-custom-dir")
         .expect("Failed to run purge command");
 
@@ -232,6 +239,7 @@ fn it_should_complete_full_lifecycle_from_create_to_purge() {
     // Step 1: Create environment
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -248,6 +256,7 @@ fn it_should_complete_full_lifecycle_from_create_to_purge() {
     // Step 2: Destroy environment
     let destroy_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-full-lifecycle-purge")
         .expect("Failed to run destroy command");
 
@@ -263,6 +272,7 @@ fn it_should_complete_full_lifecycle_from_create_to_purge() {
     // Step 3: Purge environment
     let purge_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_purge_command("test-full-lifecycle-purge")
         .expect("Failed to run purge command");
 
@@ -302,6 +312,7 @@ fn it_should_remove_only_specified_environment_data() {
 
     let create1_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./env1.json")
         .expect("Failed to run create command");
 
@@ -315,6 +326,7 @@ fn it_should_remove_only_specified_environment_data() {
 
     let create2_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./env2.json")
         .expect("Failed to run create command");
 
@@ -323,6 +335,7 @@ fn it_should_remove_only_specified_environment_data() {
     // Destroy both environments
     let destroy1_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-purge-env1")
         .expect("Failed to run destroy command");
 
@@ -330,6 +343,7 @@ fn it_should_remove_only_specified_environment_data() {
 
     let destroy2_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-purge-env2")
         .expect("Failed to run destroy command");
 
@@ -343,6 +357,7 @@ fn it_should_remove_only_specified_environment_data() {
     // Act: Purge ONLY the first environment
     let purge_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_purge_command("test-purge-env1")
         .expect("Failed to run purge command");
 

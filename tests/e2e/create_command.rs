@@ -68,6 +68,7 @@ fn it_should_create_environment_from_config_file_black_box() {
     // Act: Run production application as external process
     let result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -103,6 +104,7 @@ fn it_should_fail_gracefully_with_invalid_config() {
     // Run command and expect failure
     let result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./invalid.json")
         .expect("Failed to run create command");
 
@@ -130,6 +132,7 @@ fn it_should_fail_when_config_file_not_found() {
     // Run command with non-existent config file
     let result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./nonexistent.json")
         .expect("Failed to run create command");
 
@@ -162,6 +165,7 @@ fn it_should_fail_when_environment_already_exists() {
     // Create environment first time
     let result1 = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./config.json")
         .expect("Failed to run create command");
 
@@ -174,6 +178,7 @@ fn it_should_fail_when_environment_already_exists() {
     // Try to create same environment again
     let result2 = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./config.json")
         .expect("Failed to run create command");
 

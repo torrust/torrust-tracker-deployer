@@ -52,6 +52,7 @@ fn it_should_report_no_data_directory_when_workspace_is_empty() {
     // Act: Run list command on empty workspace
     let list_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_list_command()
         .expect("Failed to run list command");
 
@@ -90,6 +91,7 @@ fn it_should_list_created_environment() {
     // Create environment
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -106,6 +108,7 @@ fn it_should_list_created_environment() {
     // Act: Run list command
     let list_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_list_command()
         .expect("Failed to run list command");
 
@@ -141,6 +144,7 @@ fn it_should_list_multiple_environments() {
 
     let create_result1 = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./env1.json")
         .expect("Failed to run first create command");
 
@@ -158,6 +162,7 @@ fn it_should_list_multiple_environments() {
 
     let create_result2 = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./env2.json")
         .expect("Failed to run second create command");
 
@@ -175,6 +180,7 @@ fn it_should_list_multiple_environments() {
     // Act: Run list command
     let list_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_list_command()
         .expect("Failed to run list command");
 

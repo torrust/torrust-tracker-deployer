@@ -57,6 +57,7 @@ fn it_should_report_file_not_found_when_configuration_file_does_not_exist() {
     // Act: Run validate command for non-existent file
     let result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_validate_command(nonexistent_file.to_str().unwrap())
         .expect("Failed to run validate command");
 
@@ -96,6 +97,7 @@ fn it_should_report_invalid_json_when_configuration_file_has_malformed_json() {
     // Act: Run validate command
     let result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_validate_command(config_path.to_str().unwrap())
         .expect("Failed to run validate command");
 
@@ -145,6 +147,7 @@ fn it_should_succeed_when_configuration_file_is_valid() {
     // Act: Run validate command
     let result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_validate_command(config_path.to_str().unwrap())
         .expect("Failed to run validate command");
 
@@ -200,6 +203,7 @@ fn it_should_validate_configuration_without_creating_deployment() {
     // Act: Run validate command
     let result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_validate_command(config_path.to_str().unwrap())
         .expect("Failed to run validate command");
 

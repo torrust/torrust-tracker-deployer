@@ -103,7 +103,14 @@ fn collect_example_files(examples_dir: &PathBuf) -> Vec<PathBuf> {
 fn validate_configuration(config_path: &Path) -> Result<(), String> {
     let config_path_str = path_to_str(config_path, "config path")?;
 
+    // Create a temporary workspace for this validation
+    let temp_workspace =
+        TempDir::new().map_err(|e| format!("Failed to create temp workspace: {e}"))?;
+    let log_dir = temp_workspace.path().join("logs");
+
     let result = ProcessRunner::new()
+        .working_dir(temp_workspace.path())
+        .log_dir(&log_dir)
         .run_validate_command(config_path_str)
         .map_err(|e| format!("Failed to run validate command: {e}"))?;
 
@@ -208,7 +215,7 @@ fn render_configuration(config_path: &Path) -> Result<(), String> {
     let temp_config_file = prepare_test_config(config_path, &temp_workspace)?;
     let output_dir = temp_workspace.path().join("output");
 
-    execute_render_command(&temp_config_file, &output_dir)?;
+    execute_render_command(&temp_config_file, &output_dir, &temp_workspace)?;
     verify_render_output_directories(&output_dir)?;
 
     Ok(())
@@ -263,11 +270,20 @@ fn replace_ssh_credentials_with_fixtures(config: &mut serde_json::Value) -> Resu
 }
 
 /// Execute the render command using `ProcessRunner`
-fn execute_render_command(temp_config_file: &Path, output_dir: &Path) -> Result<(), String> {
+fn execute_render_command(
+    temp_config_file: &Path,
+    output_dir: &Path,
+    temp_workspace: &TempDir,
+) -> Result<(), String> {
     let temp_config_file_str = path_to_str(temp_config_file, "temp config file path")?;
     let output_dir_str = path_to_str(output_dir, "output directory path")?;
 
+    // Create log directory in temp workspace
+    let log_dir = temp_workspace.path().join("logs");
+
     let result = ProcessRunner::new()
+        .working_dir(temp_workspace.path())
+        .log_dir(&log_dir)
         .run_render_command_with_config_file(temp_config_file_str, PLACEHOLDER_IP, output_dir_str)
         .map_err(|e| format!("Failed to run render command: {e}"))?;
 

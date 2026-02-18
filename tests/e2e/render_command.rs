@@ -78,6 +78,7 @@ fn it_should_render_artifacts_using_env_name_successfully() {
     // Create environment in default location
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -96,6 +97,7 @@ fn it_should_render_artifacts_using_env_name_successfully() {
     let output_dir = temp_workspace.path().join("render-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
             "test-render-env-name",
             "192.168.1.100",
@@ -160,6 +162,7 @@ fn it_should_render_artifacts_using_config_file_successfully() {
     let output_dir = temp_workspace.path().join("render-config-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_config_file(
             &config_path,
             "192.168.1.101",
@@ -217,6 +220,7 @@ fn it_should_fail_when_output_directory_already_exists() {
 
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -230,6 +234,7 @@ fn it_should_fail_when_output_directory_already_exists() {
     let output_dir = temp_workspace.path().join("render-idempotent-output");
     let render1_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
             "test-render-output-dir-exists",
             "192.168.1.102",
@@ -246,6 +251,7 @@ fn it_should_fail_when_output_directory_already_exists() {
     // Act: Render artifacts second time (should fail with OutputDirectoryExists error)
     let render2_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
             "test-render-output-dir-exists",
             "192.168.1.102",
@@ -284,6 +290,7 @@ fn it_should_fail_when_environment_not_found() {
     let output_dir = temp_workspace.path().join("nonexistent-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
             "nonexistent-env",
             "192.168.1.103",
@@ -317,6 +324,7 @@ fn it_should_fail_when_config_file_not_found() {
     let output_dir = temp_workspace.path().join("missing-config-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_config_file(
             "./nonexistent.json",
             "192.168.1.104",
@@ -355,6 +363,7 @@ fn it_should_work_with_custom_working_directory() {
     // Create environment in custom location
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -368,6 +377,7 @@ fn it_should_work_with_custom_working_directory() {
     let output_dir = temp_workspace.path().join("custom-dir-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
             "test-render-custom-dir",
             "192.168.1.105",
@@ -414,6 +424,7 @@ fn it_should_complete_full_lifecycle_from_create_to_render() {
     // Step 1: Create environment
     let create_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
         .expect("Failed to run create command");
 
@@ -432,6 +443,7 @@ fn it_should_complete_full_lifecycle_from_create_to_render() {
     let output_dir = temp_workspace.path().join("lifecycle-output");
     let render_result = ProcessRunner::new()
         .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
             "test-full-lifecycle-render",
             "192.168.1.106",

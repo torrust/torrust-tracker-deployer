@@ -101,6 +101,7 @@ impl RenderCommandController {
     /// * `ip` - Target instance IP address (required)
     /// * `output_dir` - Output directory for generated artifacts (required)
     /// * `force` - Whether to overwrite existing output directory
+    /// * `working_dir` - Working directory for environment data (from --working-dir global arg)
     ///
     /// # Returns
     ///
@@ -123,6 +124,7 @@ impl RenderCommandController {
         ip: &str,
         output_dir: &Path,
         force: bool,
+        working_dir: &Path,
     ) -> Result<(), RenderCommandError> {
         // Step 1: Validate input
         self.progress
@@ -169,12 +171,8 @@ impl RenderCommandController {
         self.progress
             .start_step(RenderStep::LoadConfiguration.description())?;
 
-        // Get working directory
-        let working_dir = std::env::current_dir().map_err(|e| {
-            RenderCommandError::WorkingDirectoryUnavailable {
-                reason: e.to_string(),
-            }
-        })?;
+        // working_dir is now passed as a parameter from the router
+        // which gets it from context.working_dir() (the --working-dir global argument)
 
         self.progress.complete_step(None)?;
 
@@ -185,7 +183,7 @@ impl RenderCommandController {
         // Call application handler
         let result = self
             .handler
-            .execute(input_mode, ip, output_dir, force, &working_dir)
+            .execute(input_mode, ip, output_dir, force, working_dir)
             .await
             .map_err(RenderCommandError::from)?;
 
