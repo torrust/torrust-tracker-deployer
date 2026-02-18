@@ -312,4 +312,44 @@ impl ExecutionContext {
     pub fn output_format(&self) -> OutputFormat {
         self.global_args.output_format
     }
+
+    /// Get the working directory from global CLI arguments
+    ///
+    /// Returns the working directory path specified by the user (or default ".").
+    /// This is where environment data will be stored (data/ and build/ subdirectories).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use torrust_tracker_deployer_lib::bootstrap::Container;
+    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::dispatch::ExecutionContext;
+    /// use torrust_tracker_deployer_lib::presentation::input::cli::args::GlobalArgs;
+    /// use torrust_tracker_deployer_lib::presentation::input::cli::OutputFormat;
+    /// use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput};
+    /// use std::sync::Arc;
+    /// use std::path::PathBuf;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let container = Container::new(VerbosityLevel::Normal, &PathBuf::from("."));
+    /// let global_args = GlobalArgs {
+    ///     log_file_format: LogFormat::Compact,
+    ///     log_stderr_format: LogFormat::Pretty,
+    ///     log_output: LogOutput::FileOnly,
+    ///     log_dir: PathBuf::from("./data/logs"),
+    ///     working_dir: PathBuf::from("/tmp/test-workspace"),
+    ///     output_format: OutputFormat::Text,
+    ///     verbosity: 0,
+    /// };
+    /// let context = ExecutionContext::new(Arc::new(container), global_args);
+    ///
+    /// let working_dir = context.working_dir();
+    /// println!("Working directory: {}", working_dir.display());
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn working_dir(&self) -> &std::path::Path {
+        &self.global_args.working_dir
+    }
 }

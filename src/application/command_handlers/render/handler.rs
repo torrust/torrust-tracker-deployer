@@ -225,7 +225,7 @@ impl RenderCommandHandler {
         config_path: &Path,
         ip_addr: IpAddr,
         output_dir: &Path,
-        _working_dir: &Path,
+        working_dir: &Path,
     ) -> Result<RenderResult, RenderCommandHandlerError> {
         info!(
             config_file = %config_path.display(),
@@ -260,13 +260,10 @@ impl RenderCommandHandler {
         // Create a temporary environment for template rendering (not persisted)
         let env_name = params.environment_name.clone();
         let clock: Arc<dyn Clock> = Arc::new(SystemClock);
-        let created_env = Environment::<Created>::new(
-            params.environment_name,
-            params.provider_config,
-            params.ssh_credentials,
-            params.ssh_port,
-            clock.now(),
-        );
+        let created_env = Environment::<Created>::create(params, working_dir, clock.now())
+            .map_err(|e| RenderCommandHandlerError::DomainValidationFailed {
+                reason: e.to_string(),
+            })?;
 
         // Render all templates
         self.render_all_templates(&created_env, ip_addr, output_dir)
