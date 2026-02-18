@@ -165,10 +165,11 @@ Add graduated verbosity levels (`-v`, `-vv`, `-vvv`) to the most complex and tim
   - Shows configuration steps (Docker, Docker Compose, Security Updates, Firewall) at different detail levels
   - Reuses CommandProgressListener infrastructure
   - Comprehensive user guide documentation with live-tested examples
-- [ ] **8.3** Add verbosity levels to `release` command
-  - Apply same verbosity pattern established in provision command
-  - Show artifact generation, file transfers, Docker operations at different detail levels
-  - Reuse CommandProgressListener infrastructure
+- [x] **8.3** Add verbosity levels to `release` command ✅ Completed - [Issue #367](https://github.com/torrust/torrust-tracker-deployer/issues/367), [PR #368](https://github.com/torrust/torrust-tracker-deployer/pull/368)
+  - Applied same verbosity pattern established in provision command
+  - Shows all 7 service-specific release steps at different detail levels
+  - Reuses CommandProgressListener infrastructure
+  - Comprehensive user guide documentation with verified output examples
 
 **Note:** Focus on the three most complex and time-consuming commands (provision, configure, release). Other commands may be enhanced with verbosity levels based on user demand.
 
