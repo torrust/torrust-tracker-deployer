@@ -13,25 +13,11 @@ Feature documentation serves to:
 
 ## 📁 Active Features
 
-| Feature                                                              | Status         | Priority | Created      |
-| -------------------------------------------------------------------- | -------------- | -------- | ------------ |
-| [Config Validation Command](./config-validation-command/README.md)   | 📋 Specified   | Medium   | Jan 21, 2026 |
-| [Environment Status Command](./environment-status-command/README.md) | 📋 Specified   | Medium   | Dec 16, 2025 |
-| [JSON Schema Generation](./json-schema-generation/README.md)         | 📋 Specified   | High     | Dec 12, 2025 |
-| [Linter Auto-fix](./linter-auto-fix/README.md)                       | 📋 Specified   | Medium   | Oct 9, 2025  |
-| [Linter Parallel Execution](./linter-parallel-execution/README.md)   | ⏸️ Deferred    | Low      | Oct 9, 2025  |
-| [Environment State Management](./environment-state-management/)      | 🔄 Refactoring | High     | Sept 9, 2025 |
+See [active-features.md](./active-features.md) for the current list of ongoing feature work.
 
 ## ✅ Completed Features
 
-| Feature                                                              | Completed    | Description                                                           |
-| -------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------- |
-| [Hetzner Provider Support](./hetzner-provider-support/README.md)     | Dec 1, 2025  | Multi-provider architecture with Hetzner Cloud as production provider |
-| [Register Existing Instances](./import-existing-instances/README.md) | Nov 19, 2025 | Register command to import already-provisioned instances              |
-| Persistent Logging with Optional Stderr                              | Oct 9, 2025  | LoggingBuilder with fluent API for file and optional stderr logging   |
-| [Environment-Aware Logging](./environment-aware-logging/README.md)   | Oct 9, 2025  | Multi-environment log visibility with proper span hierarchy           |
-
-**Note**: Completed features remain in the repository for reference. Full implementation history is available in git history.
+See [completed-features.md](./completed-features.md) for the complete history of finished features.
 
 ## 🔄 Feature Development Workflow
 
@@ -87,7 +73,7 @@ Based on question answers:
 When feature is complete:
 
 1. Mark status as ✅ Complete in feature README
-2. Update this main README with completion date
+2. Move entry from [active-features.md](./active-features.md) to [completed-features.md](./completed-features.md)
 3. Feature documentation remains in repository for reference
 4. Implementation history preserved in git
 
@@ -96,8 +82,8 @@ When feature is complete:
 For features that are fully mature and well-documented elsewhere:
 
 - Consider moving to git history (delete from main branch)
-- Update this README to reference git commit/tag where documentation existed
-- Keep entry in "Completed Features" table with link to git history
+- Update [completed-features.md](./completed-features.md) to reference git commit/tag where documentation existed
+- Keep entry in [completed-features.md](./completed-features.md) with link to git history
 
 ## 🎯 Feature Document Structure
 
@@ -118,7 +104,7 @@ To create a new feature:
 1. Copy the templates to a new folder: `docs/features/{feature-name}/`
 2. Rename files (remove `TEMPLATE-` prefix): `README.md`, `questions.md`, `specification.md`
 3. Fill in the templates with feature-specific information
-4. Update this main README to list the new feature in "Active Features"
+4. Add the new feature to [active-features.md](./active-features.md)
 
 ### Document Purposes
 
