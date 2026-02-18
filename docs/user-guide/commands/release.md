@@ -163,6 +163,8 @@ torrust-tracker-deployer release my-environment -v
 **Output**:
 
 ```text
+⏳ [1/2] Validating environment...
+⏳   ✓ Environment name validated: my-environment (took 0ms)
 ⏳ [2/2] Releasing application...
 📋   [Step 1/7] Releasing Tracker service...
 📋   [Step 2/7] Releasing Prometheus service...
@@ -172,6 +174,7 @@ torrust-tracker-deployer release my-environment -v
 📋   [Step 6/7] Releasing Caddy service...
 📋   [Step 7/7] Deploying Docker Compose configuration...
 ⏳   ✓ Application released successfully (took 43.2s)
+✅ Release command completed successfully for 'my-environment'
 ```
 
 **Use Case**: When you want visibility into which service is being deployed.
@@ -187,18 +190,27 @@ torrust-tracker-deployer release my-environment -vv
 **Output** (excerpt):
 
 ```text
+⏳ [1/2] Validating environment...
+⏳   ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/2] Releasing application...
 📋   [Step 1/7] Releasing Tracker service...
 📋      → Creating storage directories: /opt/torrust/storage/tracker/{lib,log,etc}
 📋      → Initializing database: tracker.db
 📋      → Rendering tracker.toml from template
 📋      → Deploying config to /opt/torrust/storage/tracker/etc/tracker.toml
 📋   [Step 2/7] Releasing Prometheus service...
+📋      → Creating storage directories: /opt/torrust/storage/prometheus/etc
 📋      → Rendering prometheus.yml from template
 📋      → Deploying config to /opt/torrust/storage/prometheus/etc/prometheus.yml
+📋   [Step 3/7] Releasing Grafana service...
+📋      → Creating storage directories: /opt/torrust/storage/grafana/{data,provisioning}
+📋      → Rendering Grafana provisioning files (datasources, dashboards)
+📋      → Deploying provisioning to /opt/torrust/storage/grafana/provisioning
 📋   [Step 7/7] Deploying Docker Compose configuration...
-📋      → Rendering docker-compose.yml (7 services enabled)
-📋      → Rendering .env file (12 environment variables)
-📋      → Deploying to /opt/torrust/docker-compose.yml
+📋      → Rendering docker-compose.yml and .env from templates
+📋      → Deploying docker-compose.yml and .env to /opt/torrust
+⏳   ✓ Application released successfully (took 43.5s)
+✅ Release command completed successfully for 'my-environment'
 ```
 
 **Use Case**: Troubleshooting release issues or verifying what files are being deployed where.
@@ -214,17 +226,29 @@ torrust-tracker-deployer release my-environment -vvv
 **Output** (excerpt):
 
 ```text
+⏳ [1/2] Validating environment...
+⏳   ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/2] Releasing application...
 📋   [Step 1/7] Releasing Tracker service...
 🔍      → Ansible working directory: ./build/my-environment/ansible
 🔍      → Executing playbook: ansible-playbook create-tracker-storage.yml
 📋      → Creating storage directories: /opt/torrust/storage/tracker/{lib,log,etc}
 🔍      → Executing playbook: ansible-playbook init-tracker-database.yml
 📋      → Initializing database: tracker.db
-🔍      → Template source: ./templates/tracker/tracker.toml.tera
-🔍      → Template output: ./build/my-environment/tracker/tracker.toml
+🔍      → Template source: ./data/my-environment/templates/tracker/
 📋      → Rendering tracker.toml from template
+🔍      → Template output: ./build/my-environment/tracker
 🔍      → Executing playbook: ansible-playbook deploy-tracker-config.yml
 📋      → Deploying config to /opt/torrust/storage/tracker/etc/tracker.toml
+📋   [Step 7/7] Deploying Docker Compose configuration...
+🔍      → Template source: ./data/my-environment/templates/docker-compose/
+📋      → Rendering docker-compose.yml and .env from templates
+🔍      → Template output: ./build/my-environment/docker-compose
+🔍      → Ansible working directory: ./build/my-environment/ansible
+🔍      → Executing playbook: ansible-playbook deploy-compose-files.yml
+📋      → Deploying docker-compose.yml and .env to /opt/torrust
+⏳   ✓ Application released successfully (took 43.8s)
+✅ Release command completed successfully for 'my-environment'
 ```
 
 **Use Case**: Deep troubleshooting, debugging, or when you need to understand exactly what commands are being executed.
