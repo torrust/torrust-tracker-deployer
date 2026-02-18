@@ -34,7 +34,7 @@ async fn it_should_return_environment_not_found_error_when_environment_does_not_
     let (handler, _temp_dir) = create_test_handler();
     let env_name = EnvironmentName::new("nonexistent-env").unwrap();
 
-    let result = handler.execute(&env_name).await;
+    let result = handler.execute(&env_name, None).await;
 
     assert!(result.is_err());
     let error = result.unwrap_err();

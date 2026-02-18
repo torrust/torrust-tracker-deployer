@@ -12,20 +12,20 @@
 - [Generic Command Progress Listener for Verbosity](./drafts/generic-command-progress-listener-for-verbosity.md) — architectural design for the `CommandProgressListener` trait
 - [Progress Reporting in Application Layer](../features/progress-reporting-in-application-layer/README.md)
 
-**Status**: 🔜 **NOT STARTED** — Ready for implementation
+**Status**: ✅ **COMPLETED** — Implementation finished
 
-**Branch**: TBD
+**Branch**: `367-add-verbosity-levels-to-release-command`
 **PR**: TBD
 
 ## Current Implementation Status
 
-**Pending Implementation**:
+**Implemented**:
 
-- [ ] **Normal (default)**: Show 2 main workflow phases (validate + release)
-- [ ] **Verbose (`-v`)**: Show all 7 service-specific release steps
-- [ ] **VeryVerbose (`-vv`)**: Show detail messages (files deployed, templates rendered, paths)
-- [ ] **Debug (`-vvv`)**: Show debug messages (Ansible commands, working directories, full outputs)
-- [ ] **Documentation**: User guide update with verbosity examples and patterns
+- [x] **Normal (default)**: Show 2 main workflow phases (validate + release)
+- [x] **Verbose (`-v`)**: Show all 7 service-specific release steps
+- [x] **VeryVerbose (`-vv`)**: Show detail messages (files deployed, templates rendered, paths)
+- [x] **Debug (`-vvv`)**: Show debug messages (Ansible commands, working directories, full outputs)
+- [x] **Documentation**: User guide updated with verbosity examples and patterns
 
 ## Overview
 

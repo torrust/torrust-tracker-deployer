@@ -18,6 +18,7 @@ use crate::application::steps::application::{
     CreatePrometheusStorageStep, DeployPrometheusConfigStep,
 };
 use crate::application::steps::rendering::RenderPrometheusTemplatesStep;
+use crate::application::traits::CommandProgressListener;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
 use crate::shared::clock::SystemClock;
@@ -31,12 +32,18 @@ use crate::shared::clock::SystemClock;
 ///
 /// If Prometheus is not configured, all steps are skipped.
 ///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
+///
 /// # Errors
 ///
 /// Returns a tuple of (error, step) if any Prometheus step fails
 #[allow(clippy::result_large_err)]
 pub fn release(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     // Check if Prometheus is configured
     if environment.context().user_inputs.prometheus().is_none() {
@@ -49,13 +56,18 @@ pub fn release(
         return Ok(());
     }
 
-    create_storage(environment)?;
-    render_templates(environment)?;
-    deploy_config_to_remote(environment)?;
+    create_storage(environment, listener)?;
+    render_templates(environment, listener)?;
+    deploy_config_to_remote(environment, listener)?;
     Ok(())
 }
 
 /// Create Prometheus storage directories on the remote host
+///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
 ///
 /// # Errors
 ///
@@ -63,8 +75,17 @@ pub fn release(
 #[allow(clippy::result_large_err)]
 fn create_storage(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::CreatePrometheusStorage;
+
+    if let Some(l) = listener {
+        l.on_debug(&format!(
+            "Ansible working directory: {}",
+            environment.ansible_build_dir().display()
+        ));
+        l.on_debug("Executing playbook: ansible-playbook create-prometheus-storage.yml");
+    }
 
     CreatePrometheusStorageStep::new(ansible_client(environment))
         .execute()
@@ -78,6 +99,10 @@ fn create_storage(
             )
         })?;
 
+    if let Some(l) = listener {
+        l.on_detail("Creating storage directories: /opt/torrust/storage/prometheus/etc");
+    }
+
     info!(
         command = "release",
         step = %current_step,
@@ -89,14 +114,27 @@ fn create_storage(
 
 /// Render Prometheus configuration templates to the build directory
 ///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
+///
 /// # Errors
 ///
 /// Returns a tuple of (error, `ReleaseStep::RenderPrometheusTemplates`) if rendering fails
 #[allow(clippy::result_large_err)]
 fn render_templates(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::RenderPrometheusTemplates;
+
+    if let Some(l) = listener {
+        l.on_debug(&format!(
+            "Template source: {}/prometheus/",
+            environment.templates_dir().display()
+        ));
+    }
 
     let clock = Arc::new(SystemClock);
     let step = RenderPrometheusTemplatesStep::new(
@@ -116,6 +154,10 @@ fn render_templates(
         )
     })?;
 
+    if let Some(l) = listener {
+        l.on_detail("Rendering prometheus.yml from template");
+    }
+
     info!(
         command = "release",
         step = %current_step,
@@ -127,14 +169,24 @@ fn render_templates(
 
 /// Deploy Prometheus configuration to the remote host via Ansible
 ///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
+///
 /// # Errors
 ///
 /// Returns a tuple of (error, `ReleaseStep::DeployPrometheusConfigToRemote`) if deployment fails
 #[allow(clippy::result_large_err)]
 fn deploy_config_to_remote(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::DeployPrometheusConfigToRemote;
+
+    if let Some(l) = listener {
+        l.on_debug("Executing playbook: ansible-playbook deploy-prometheus-config.yml");
+    }
 
     DeployPrometheusConfigStep::new(ansible_client(environment))
         .execute()
@@ -147,6 +199,10 @@ fn deploy_config_to_remote(
                 current_step,
             )
         })?;
+
+    if let Some(l) = listener {
+        l.on_detail("Deploying config to /opt/torrust/storage/prometheus/etc/prometheus.yml");
+    }
 
     info!(
         command = "release",

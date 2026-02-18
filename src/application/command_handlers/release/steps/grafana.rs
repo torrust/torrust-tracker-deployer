@@ -19,6 +19,7 @@ use crate::application::steps::application::{
     CreateGrafanaStorageStep, DeployGrafanaProvisioningStep,
 };
 use crate::application::steps::rendering::RenderGrafanaTemplatesStep;
+use crate::application::traits::CommandProgressListener;
 use crate::domain::environment::state::ReleaseStep;
 use crate::domain::environment::{Environment, Releasing};
 use crate::shared::clock::SystemClock;
@@ -33,12 +34,18 @@ use crate::shared::clock::SystemClock;
 /// If Grafana is not configured, all steps are skipped.
 /// Provisioning steps are skipped if Prometheus is not configured.
 ///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
+///
 /// # Errors
 ///
 /// Returns a tuple of (error, step) if any Grafana step fails
 #[allow(clippy::result_large_err)]
 pub fn release(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     // Check if Grafana is configured
     if environment.context().user_inputs.grafana().is_none() {
@@ -51,7 +58,7 @@ pub fn release(
         return Ok(());
     }
 
-    create_storage(environment)?;
+    create_storage(environment, listener)?;
 
     // Provisioning requires Prometheus for datasource configuration
     if environment.context().user_inputs.prometheus().is_none() {
@@ -64,12 +71,17 @@ pub fn release(
         return Ok(());
     }
 
-    render_templates(environment)?;
-    deploy_provisioning_to_remote(environment)?;
+    render_templates(environment, listener)?;
+    deploy_provisioning_to_remote(environment, listener)?;
     Ok(())
 }
 
 /// Create Grafana storage directories on the remote host
+///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
 ///
 /// # Errors
 ///
@@ -77,8 +89,17 @@ pub fn release(
 #[allow(clippy::result_large_err)]
 fn create_storage(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::CreateGrafanaStorage;
+
+    if let Some(l) = listener {
+        l.on_debug(&format!(
+            "Ansible working directory: {}",
+            environment.ansible_build_dir().display()
+        ));
+        l.on_debug("Executing playbook: ansible-playbook create-grafana-storage.yml");
+    }
 
     CreateGrafanaStorageStep::new(ansible_client(environment))
         .execute()
@@ -92,6 +113,12 @@ fn create_storage(
             )
         })?;
 
+    if let Some(l) = listener {
+        l.on_detail(
+            "Creating storage directories: /opt/torrust/storage/grafana/{data,provisioning}",
+        );
+    }
+
     info!(
         command = "release",
         step = %current_step,
@@ -103,14 +130,27 @@ fn create_storage(
 
 /// Render Grafana provisioning templates
 ///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
+///
 /// # Errors
 ///
 /// Returns a tuple of (error, `ReleaseStep::RenderGrafanaTemplates`) if rendering fails
 #[allow(clippy::result_large_err)]
 fn render_templates(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::RenderGrafanaTemplates;
+
+    if let Some(l) = listener {
+        l.on_debug(&format!(
+            "Template source: {}/grafana/",
+            environment.templates_dir().display()
+        ));
+    }
 
     let clock = Arc::new(SystemClock);
     let step = RenderGrafanaTemplatesStep::new(
@@ -130,6 +170,10 @@ fn render_templates(
         )
     })?;
 
+    if let Some(l) = listener {
+        l.on_detail("Rendering Grafana provisioning files (datasources, dashboards)");
+    }
+
     info!(
         command = "release",
         step = %current_step,
@@ -141,14 +185,24 @@ fn render_templates(
 
 /// Deploy Grafana provisioning configuration to the remote host
 ///
+/// # Arguments
+///
+/// * `environment` - The environment in Releasing state
+/// * `listener` - Optional progress listener for detail and debug reporting
+///
 /// # Errors
 ///
 /// Returns a tuple of (error, `ReleaseStep::DeployGrafanaProvisioning`) if deployment fails
 #[allow(clippy::result_large_err)]
 fn deploy_provisioning_to_remote(
     environment: &Environment<Releasing>,
+    listener: Option<&dyn CommandProgressListener>,
 ) -> StepResult<(), ReleaseCommandHandlerError, ReleaseStep> {
     let current_step = ReleaseStep::DeployGrafanaProvisioning;
+
+    if let Some(l) = listener {
+        l.on_debug("Executing playbook: ansible-playbook deploy-grafana-provisioning.yml");
+    }
 
     DeployGrafanaProvisioningStep::new(ansible_client(environment))
         .execute()
@@ -161,6 +215,10 @@ fn deploy_provisioning_to_remote(
                 current_step,
             )
         })?;
+
+    if let Some(l) = listener {
+        l.on_detail("Deploying provisioning to /opt/torrust/storage/grafana/provisioning");
+    }
 
     info!(
         command = "release",
