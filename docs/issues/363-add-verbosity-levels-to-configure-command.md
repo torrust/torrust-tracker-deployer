@@ -300,7 +300,6 @@ Each step should emit:
 ## Acceptance Criteria
 
 > **Note for Contributors**: These criteria define what the PR reviewer will check. Use this as your pre-review checklist before submitting the PR to minimize back-and-forth iterations.
-
 > **Current Status** (commit `666ca363`): ✅ 8/22 criteria complete (36%)
 
 **Quality Checks**:

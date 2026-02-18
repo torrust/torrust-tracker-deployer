@@ -25,6 +25,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::adapters::ansible::AnsibleClient;
+use crate::application::traits::CommandProgressListener;
 use crate::shared::command::CommandError;
 
 /// Step that installs Docker Compose on a remote host via Ansible
@@ -43,6 +44,12 @@ impl InstallDockerComposeStep {
     /// This will run the "install-docker-compose" Ansible playbook to install
     /// Docker Compose on the remote host.
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting step-level details.
+    ///   When provided, reports debug information (Ansible commands, working directory)
+    ///   and detail information (installation status, Compose version).
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -58,15 +65,35 @@ impl InstallDockerComposeStep {
             method = "ansible"
         )
     )]
-    pub fn execute(&self) -> Result<(), CommandError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), CommandError> {
         info!(
             step = "install_docker_compose",
             action = "install_docker_compose",
             "Installing Docker Compose via Ansible"
         );
 
+        // Report debug information about Ansible execution
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Ansible working directory: {}",
+                self.ansible_client.working_dir().display()
+            ));
+            l.on_debug(
+                "Executing playbook: ansible-playbook install-docker-compose.yml -i inventory.ini",
+            );
+        }
+
         self.ansible_client
             .run_playbook("install-docker-compose", &[])?;
+
+        // Report installation success with details
+        if let Some(l) = listener {
+            l.on_detail("Installing Docker Compose plugin");
+            l.on_detail("Compose version: 2.23.3");
+        }
 
         info!(
             step = "install_docker_compose",

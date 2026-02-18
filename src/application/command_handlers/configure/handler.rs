@@ -177,7 +177,7 @@ impl ConfigureCommandHandler {
             );
         } else {
             InstallDockerStep::new(Arc::clone(&ansible_client))
-                .execute()
+                .execute(listener)
                 .map_err(|e| (e.into(), current_step))?;
         }
 
@@ -193,7 +193,7 @@ impl ConfigureCommandHandler {
             );
         } else {
             InstallDockerComposeStep::new(Arc::clone(&ansible_client))
-                .execute()
+                .execute(listener)
                 .map_err(|e| (e.into(), current_step))?;
         }
 
@@ -201,7 +201,7 @@ impl ConfigureCommandHandler {
         let current_step = ConfigureStep::ConfigureSecurityUpdates;
         Self::notify_step_started(listener, 3, "Configuring automatic security updates");
         ConfigureSecurityUpdatesStep::new(Arc::clone(&ansible_client))
-            .execute()
+            .execute(listener)
             .map_err(|e| (e.into(), current_step))?;
 
         // Step 4/4: Configure firewall (UFW)
@@ -222,7 +222,7 @@ impl ConfigureCommandHandler {
             );
         } else {
             ConfigureFirewallStep::new(Arc::clone(&ansible_client))
-                .execute()
+                .execute(listener)
                 .map_err(|e| (e.into(), current_step))?;
         }
 
