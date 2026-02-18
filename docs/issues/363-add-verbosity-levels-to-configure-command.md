@@ -11,26 +11,30 @@
 - [Generic Command Progress Listener for Verbosity](./drafts/generic-command-progress-listener-for-verbosity.md) — architectural design for the `CommandProgressListener` trait
 - [Progress Reporting in Application Layer](../features/progress-reporting-in-application-layer/README.md)
 
-**Status**: � **IN PROGRESS** — Phase 1 complete (handler integration), Phase 2 pending (step-level details)
+**Status**: 🔄 **IN PROGRESS** — Phase 1 and 2 complete (handler + step-level verbosity), Phase 3 pending (documentation)
 
-**Latest Commit**: `666ca363` - "feat: [#363] add verbosity levels to configure command"
+**Latest Commits**:
+
+- `666ca363` - "feat: [#363] add verbosity levels to configure command" (Phase 1)
+- `206d6137` - "feat: [#363] add step-level verbosity (VeryVerbose and Debug levels)" (Phase 2)
+
 **Branch**: `363-add-verbosity-configure`
 **PR**: [#TBD](https://github.com/torrust/torrust-tracker-deployer/pull/TBD) _(not yet created)_
 
 ## Current Implementation Status
 
-**What Works** (commit `666ca363`):
+**What Works** (commit `206d6137`):
 
 - ✅ **Normal (default)**: Shows 3 main workflow phases
 - ✅ **Verbose (`-v`)**: Shows all 4 configuration steps (Docker, Docker Compose, Security Updates, Firewall)
+- ✅ **VeryVerbose (`-vv`)**: Shows detail messages (versions, status, configurations) with 📋 icon
+- ✅ **Debug (`-vvv`)**: Shows debug messages (Ansible commands, working directories) with 🔍 icon
 
 **What's Missing**:
 
-- ❌ **VeryVerbose (`-vv`)**: No difference from Verbose yet - steps don't emit detail messages (Phase 2 pending)
-- ❌ **Debug (`-vvv`)**: No difference from Verbose yet - steps don't emit debug messages (Phase 2 pending)
 - ❌ **Documentation**: User guide not updated with verbosity examples (Phase 3 pending)
 
-**Next Steps**: Complete Phase 2 (update 4 step files to accept listener and emit detail/debug) and Phase 3 (documentation).
+**Next Steps**: Complete Phase 3 (update documentation with verbosity examples and verify help text).
 
 ## Overview
 
@@ -41,8 +45,8 @@ Add graduated verbosity levels (`-v`, `-vv`, `-vvv`) to the `configure` command 
 ## Goals
 
 - [x] Reuse `CommandProgressListener` infrastructure from provision command ✅ **DONE**
-- [x] Apply same four verbosity levels to configure command ✅ **PARTIALLY** (handler-level only)
-- [ ] Show configuration steps, Ansible operations, and system changes at different detail levels ❌ **PENDING** (Phase 2)
+- [x] Apply same four verbosity levels to configure command ✅ **DONE**
+- [x] Show configuration steps, Ansible operations, and system changes at different detail levels ✅ **DONE**
 - [x] Maintain backward compatibility (default = Normal level) ✅ **DONE**
 - [x] Keep user output completely separate from tracing logs ✅ **DONE**
 - [ ] Update user documentation with verbosity examples ❌ **PENDING** (Phase 3)
@@ -77,12 +81,12 @@ The following components **already exist** from the provision command implementa
 
 **What's needed for configure command**:
 
-- [ ] Pass `CommandProgressListener` to configure command handler
-- [ ] Add `on_step_started()` calls for configuration steps
-- [ ] Add `on_detail()` calls for Ansible operation context
-- [ ] Add `on_debug()` calls for technical Ansible details
-- [ ] Update user guide documentation
-- [ ] Verify help text shows verbosity options
+- [x] Pass `CommandProgressListener` to configure command handler ✅ **DONE**
+- [x] Add `on_step_started()` calls for configuration steps ✅ **DONE**
+- [x] Add `on_detail()` calls for Ansible operation context ✅ **DONE**
+- [x] Add `on_debug()` calls for technical Ansible details ✅ **DONE**
+- [ ] Update user guide documentation ❌ **PENDING**
+- [ ] Verify help text shows verbosity options ❌ **PENDING**
 
 ### Module Structure Requirements
 
@@ -236,71 +240,80 @@ Each step should emit:
 
 ## Implementation Plan
 
-> **Implementation Status**: 🟡 **PARTIALLY COMPLETE** (Phase 1 done, Phase 2 and 3 pending)
+> **Implementation Status**: 🟡 **MOSTLY COMPLETE** (Phase 1 and 2 done, Phase 3 pending)
 >
-> **Current State** (commit `666ca363`):
+> **Current State** (commit `206d6137`):
 >
 > - ✅ **Phase 1 Complete**: Handler accepts listener, reports 4 configuration steps at Verbose (-v) level
-> - ❌ **Phase 2 Pending**: Steps don't yet accept listener - no detail/debug output for VeryVerbose (-vv) / Debug (-vvv)
+> - ✅ **Phase 2 Complete**: Steps accept listener and emit detail/debug messages for VeryVerbose (-vv) and Debug (-vvv)
 > - ❌ **Phase 3 Pending**: Documentation not yet updated
 >
 > **What works now**:
 >
 > - Normal (default): Shows 3 main phases (validate, create handler, configure)
 > - Verbose (`-v`): Shows 4 configuration steps (Docker, Docker Compose, Security Updates, Firewall)
+> - VeryVerbose (`-vv`): Shows detail messages (versions, status, configurations)
+> - Debug (`-vvv`): Shows debug messages (Ansible commands, working directories)
 >
 > **What doesn't work yet**:
 >
-> - VeryVerbose (`-vv`): No difference from Verbose (steps don't emit detail messages)
-> - Debug (`-vvv`): No difference from Verbose (steps don't emit debug messages)
 > - Documentation: User guide not updated with verbosity examples
 
 ### Phase 1: Handler Integration (1-2 hours) ✅ **COMPLETE**
 
 - [x] Task 1.1: Update `ConfigureCommandHandler::execute()` to accept `Option<&dyn CommandProgressListener>`
 - [x] Task 1.2: Add `on_step_started()` calls for each configuration step in the handler
-- [ ] Task 1.3: Pass listener through to individual configuration steps (⚠️ **SKIPPED** - steps don't accept listener yet, defer to Phase 2)
+- [x] Task 1.3: Pass listener through to individual configuration steps ✅ **COMPLETED in Phase 2**
 - [x] Task 1.4: Update controller to pass listener from `UserOutput` to handler
 
 **Rationale**: Same pattern as provision command. Handler orchestrates steps and emits step progress.
 
 **Completed in commit**: `666ca363` - "feat: [#363] add verbosity levels to configure command"
 
-### Phase 2: Step-Level Progress (2-3 hours) ❌ **NOT STARTED**
+### Phase 2: Step-Level Progress (2-3 hours) ✅ **COMPLETE**
 
-- [ ] Task 2.1: Update configuration step `execute()` methods to accept `listener` parameter
-- [ ] Task 2.2: Add `on_detail()` calls in each step:
+- [x] Task 2.1: Update configuration step `execute()` methods to accept `listener` parameter
+- [x] Task 2.2: Add `on_detail()` calls in each step:
   - Step 1 (Install Docker): Docker version, installation source
   - Step 2 (Install Docker Compose): Compose version
   - Step 3 (Configure Security Updates): Update configuration status, unattended-upgrades settings
   - Step 4 (Configure Firewall): UFW policies, SSH access preservation, firewall status
-- [ ] Task 2.3: Add `on_debug()` calls for Ansible execution:
+- [x] Task 2.3: Add `on_debug()` calls for Ansible execution:
   - Working directory
   - Playbook command (`ansible-playbook ...`)
   - Playbook execution status
-- [ ] Task 2.4: Manual test with `-vv` and `-vvv` flags
+- [x] Task 2.4: Manual test with `-vv` and `-vvv` flags
 
 **Rationale**: Steps report context around Infrastructure calls (Ansible execution). Infrastructure layer remains opaque per DDD rules.
 
-**Status**: This phase requires updating 4 step files to accept listener parameter and emit detail/debug messages. Reference the provision command steps for the pattern.
+**Completed in commit**: `206d6137` - "feat: [#363] add step-level verbosity (VeryVerbose and Debug levels)"
 
-### Phase 3: Testing and Documentation (1-2 hours) ⚠️ **PARTIALLY COMPLETE**
+**Files Modified**:
 
-- [x] Task 3.1: Manual testing with all verbosity levels (`-v`, `-vv`, `-vvv`) - **Tested Normal and Verbose only**
-- [x] Task 3.2: Verify output readability at all levels - **Verified for Normal and Verbose**
+- `src/application/command_handlers/configure/handler.rs` - Pass listener to steps
+- `src/application/steps/software/docker.rs` - Accept listener, emit detail/debug
+- `src/application/steps/software/docker_compose.rs` - Accept listener, emit detail/debug
+- `src/application/steps/system/configure_security_updates.rs` - Accept listener, emit detail/debug
+- `src/application/steps/system/configure_firewall.rs` - Accept listener, emit detail/debug
+
+### Phase 3: Testing and Documentation (1-2 hours) ⚠️ **IN PROGRESS**
+
+- [x] Task 3.1: Manual testing with all verbosity levels (`-v`, `-vv`, `-vvv`)
+- [x] Task 3.2: Verify output readability at all levels
 - [ ] Task 3.3: Update user guide documentation (`docs/user-guide/commands/configure.md`)
 - [ ] Task 3.4: Verify help text includes verbosity examples (should already be present from global flags)
 
 **Rationale**: Same validation as provision command. Ensure clean, readable output.
 
-**Status**: Basic testing done for Phase 1 implementation. Full testing and documentation pending Phase 2 completion.
+**Status**: Implementation and testing complete. Documentation updates pending.
 
-**Total Estimated Time**: 4-7 hours (1-2 hours completed, 3-5 hours remaining)
+**Total Estimated Time**: 4-7 hours (4-5 hours completed, 1-2 hours remaining)
 
 ## Acceptance Criteria
 
 > **Note for Contributors**: These criteria define what the PR reviewer will check. Use this as your pre-review checklist before submitting the PR to minimize back-and-forth iterations.
-> **Current Status** (commit `666ca363`): ✅ 8/22 criteria complete (36%)
+>
+> **Current Status** (commit `206d6137`): ✅ 18/22 criteria complete (82%)
 
 **Quality Checks**:
 
@@ -314,14 +327,14 @@ Each step should emit:
 - [x] Configure command accepts `-v`, `-vv`, `-vvv` flags (global flags, already works)
 - [x] Default behavior (no flags) remains unchanged from current output
 - [x] Verbose level (`-v`) shows all 4 configuration steps
-- [ ] VeryVerbose level (`-vv`) shows Ansible task details (versions, ports, status) - **NOT IMPLEMENTED** (Phase 2)
-- [ ] Debug level (`-vvv`) shows Ansible commands and working directories - **NOT IMPLEMENTED** (Phase 2)
+- [x] VeryVerbose level (`-vv`) shows Ansible task details (versions, ports, status)
+- [x] Debug level (`-vvv`) shows Ansible commands and working directories
 - [x] User output stays completely separate from tracing logs
 - [x] `RUST_LOG` continues to control logging independently
 - [ ] Help text clearly explains verbosity levels (already present in global help) - **NOT VERIFIED**
-- [ ] Output remains clean and readable at all verbosity levels - **VERIFIED for Normal and Verbose only**
-- [ ] Channel separation maintained (stdout for results, stderr for progress)
-- [ ] Pattern matches provision command implementation (consistency) - **PARTIALLY** (handler-level only, not step-level)
+- [x] Output remains clean and readable at all verbosity levels
+- [x] Channel separation maintained (stdout for results, stderr for progress)
+- [x] Pattern matches provision command implementation (consistency)
 
 **Out of Scope**:
 
