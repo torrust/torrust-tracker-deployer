@@ -231,6 +231,7 @@ Available skills:
 | Creating refactor plans      | `.github/skills/create-refactor-plan/skill.md`      |
 | Rendering tracker artifacts  | `.github/skills/render-tracker-artifacts/skill.md`  |
 | Running linters              | `.github/skills/run-linters/skill.md`               |
+| Running local E2E tests      | `.github/skills/run-local-e2e-test/skill.md`        |
 | Running pre-commit checks    | `.github/skills/run-pre-commit-checks/skill.md`     |
 | Writing unit tests           | `.github/skills/write-unit-test/skill.md`           |
 
