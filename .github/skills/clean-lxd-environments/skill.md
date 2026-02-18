@@ -114,18 +114,6 @@ cargo run --bin lxd_cleanup -- \
     manual-cron-test
 ```
 
-### Scenario 4: Verify Cleanup Across Repository Clones
-
-```bash
-# Check if VMs are associated with other clones
-echo "=== Checking data in other clones ==="
-ls ~/path/to/agent-02/data/
-ls ~/path/to/agent-03/data/
-
-# If environment only exists in current clone, safe to clean
-cargo run --bin lxd_cleanup -- environment-name
-```
-
 ## Verification Steps
 
 ### Before Cleanup
@@ -183,5 +171,6 @@ Cannot be undone. Use with caution.
 ## See Also
 
 - Full documentation: `docs/tools/lxd-cleanup.md`
+- LXD provider guide: `docs/tech-stack/lxd.md`
 - Normal cleanup: User guide destroy/purge commands
 - E2E testing: `docs/e2e-testing/README.md`
