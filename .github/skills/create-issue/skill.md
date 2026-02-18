@@ -66,7 +66,17 @@ Fill in the specification. Key sections:
 
 Leave the **Issue** and **Parent Epic** fields as placeholders — they will be filled after the GitHub issue is created.
 
+**CRITICAL**: Do NOT use a "fake" or temporary issue number (like `#365` or `#TBD`). Use a clear placeholder like `[To be assigned]` or leave blank until the real GitHub issue is created.
+
 For simple bugs or small tasks, the specification can be minimal but should still be created for user review.
+
+**After drafting the spec, run all linters**:
+
+```bash
+cargo run --bin linter all
+```
+
+Fix any linter errors before presenting the specification to the user.
 
 ### Step 2: User Reviews the Draft
 
