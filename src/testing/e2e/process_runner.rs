@@ -13,13 +13,17 @@ use std::process::{Command, Output};
 /// with different command-line arguments for black-box testing.
 pub struct ProcessRunner {
     working_dir: Option<PathBuf>,
+    log_dir: Option<PathBuf>,
 }
 
 impl ProcessRunner {
     /// Create a new process runner
     #[must_use]
     pub fn new() -> Self {
-        Self { working_dir: None }
+        Self {
+            working_dir: None,
+            log_dir: None,
+        }
     }
 
     /// Set the working directory for the test process (not the app working dir)
@@ -29,6 +33,16 @@ impl ProcessRunner {
     #[must_use]
     pub fn working_dir<P: AsRef<Path>>(mut self, dir: P) -> Self {
         self.working_dir = Some(dir.as_ref().to_path_buf());
+        self
+    }
+
+    /// Set the log directory for the application
+    ///
+    /// This is passed as `--log-dir` to the application to control where
+    /// logs are written, enabling test isolation.
+    #[must_use]
+    pub fn log_dir<P: AsRef<Path>>(mut self, dir: P) -> Self {
+        self.log_dir = Some(dir.as_ref().to_path_buf());
         self
     }
 
@@ -80,6 +94,12 @@ impl ProcessRunner {
             ]);
         }
 
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
+        }
+
         let output = cmd.output().context("Failed to execute create command")?;
 
         Ok(ProcessResult::new(output))
@@ -113,6 +133,12 @@ impl ProcessRunner {
         } else {
             // No working directory, use relative paths
             cmd.args(["run", "--", "provision", environment_name]);
+        }
+
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
         }
 
         let output = cmd
@@ -150,6 +176,12 @@ impl ProcessRunner {
         } else {
             // No working directory, use relative paths
             cmd.args(["run", "--", "destroy", environment_name]);
+        }
+
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
         }
 
         let output = cmd.output().context("Failed to execute destroy command")?;
@@ -216,6 +248,12 @@ impl ProcessRunner {
             cmd.args(args);
         }
 
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
+        }
+
         let output = cmd.output().context("Failed to execute register command")?;
 
         Ok(ProcessResult::new(output))
@@ -249,6 +287,12 @@ impl ProcessRunner {
         } else {
             // No working directory, use relative paths
             cmd.args(["run", "--", "configure", environment_name]);
+        }
+
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
         }
 
         let output = cmd
@@ -288,6 +332,12 @@ impl ProcessRunner {
             cmd.args(["run", "--", "test", environment_name]);
         }
 
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
+        }
+
         let output = cmd.output().context("Failed to execute test command")?;
 
         Ok(ProcessResult::new(output))
@@ -321,6 +371,12 @@ impl ProcessRunner {
         } else {
             // No working directory, use relative paths
             cmd.args(["run", "--", "release", environment_name]);
+        }
+
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
         }
 
         let output = cmd.output().context("Failed to execute release command")?;
@@ -358,6 +414,12 @@ impl ProcessRunner {
             cmd.args(["run", "--", "run", environment_name]);
         }
 
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
+        }
+
         let output = cmd.output().context("Failed to execute run command")?;
 
         Ok(ProcessResult::new(output))
@@ -390,6 +452,12 @@ impl ProcessRunner {
         } else {
             // No working directory, use relative paths
             cmd.args(["run", "--", "list"]);
+        }
+
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
         }
 
         let output = cmd.output().context("Failed to execute list command")?;
@@ -427,6 +495,12 @@ impl ProcessRunner {
             cmd.args(["run", "--", "show", environment_name]);
         }
 
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
+        }
+
         let output = cmd.output().context("Failed to execute show command")?;
 
         Ok(ProcessResult::new(output))
@@ -443,24 +517,23 @@ impl ProcessRunner {
     ///
     /// # Panics
     ///
-    /// Panics if the working directory path or config file path contains invalid UTF-8.
+    /// Panics if the working directory or log directory path contains invalid UTF-8.
     pub fn run_validate_command(&self, config_file: &str) -> Result<ProcessResult> {
         let mut cmd = Command::new("cargo");
 
+        // Build base command
+        cmd.args(["run", "--", "validate", "-f", config_file]);
+
+        // Add working-dir if specified
         if let Some(working_dir) = &self.working_dir {
-            // Build command with working directory
-            cmd.args([
-                "run",
-                "--",
-                "validate",
-                "-f",
-                config_file,
-                "--working-dir",
-                working_dir.to_str().unwrap(),
-            ]);
-        } else {
-            // No working directory, use relative paths
-            cmd.args(["run", "--", "validate", "-f", config_file]);
+            cmd.arg("--working-dir");
+            cmd.arg(working_dir);
+        }
+
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
         }
 
         let output = cmd.output().context("Failed to execute validate command")?;
@@ -531,6 +604,12 @@ impl ProcessRunner {
             ]);
         }
 
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
+        }
+
         let output = cmd
             .output()
             .context("Failed to execute render command with env-name")?;
@@ -541,7 +620,7 @@ impl ProcessRunner {
     /// Run the render command with config file input mode
     ///
     /// This method runs `cargo run -- render --env-file <path> --instance-ip <ip> --output-dir <dir>`
-    /// with optional working directory for the application itself via `--working-dir`.
+    /// with optional working directory and log directory for test isolation.
     ///
     /// # Errors
     ///
@@ -549,7 +628,7 @@ impl ProcessRunner {
     ///
     /// # Panics
     ///
-    /// May panic if the working directory path is not valid UTF-8.
+    /// May panic if the working directory or log directory path is not valid UTF-8.
     pub fn run_render_command_with_config_file(
         &self,
         config_file: &str,
@@ -558,34 +637,29 @@ impl ProcessRunner {
     ) -> Result<ProcessResult> {
         let mut cmd = Command::new("cargo");
 
+        // Build base command
+        cmd.args([
+            "run",
+            "--",
+            "render",
+            "--env-file",
+            config_file,
+            "--instance-ip",
+            instance_ip,
+            "--output-dir",
+            output_dir,
+        ]);
+
+        // Add working-dir if specified
         if let Some(working_dir) = &self.working_dir {
-            // Build command with working directory
-            cmd.args([
-                "run",
-                "--",
-                "render",
-                "--env-file",
-                config_file,
-                "--instance-ip",
-                instance_ip,
-                "--output-dir",
-                output_dir,
-                "--working-dir",
-                working_dir.to_str().unwrap(),
-            ]);
-        } else {
-            // No working directory, use relative paths
-            cmd.args([
-                "run",
-                "--",
-                "render",
-                "--env-file",
-                config_file,
-                "--instance-ip",
-                instance_ip,
-                "--output-dir",
-                output_dir,
-            ]);
+            cmd.arg("--working-dir");
+            cmd.arg(working_dir);
+        }
+
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
         }
 
         let output = cmd
@@ -625,6 +699,12 @@ impl ProcessRunner {
         } else {
             // No working directory, use relative paths
             cmd.args(["run", "--", "purge", environment_name, "--force"]);
+        }
+
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
         }
 
         let output = cmd.output().context("Failed to execute purge command")?;
