@@ -160,10 +160,11 @@ Add graduated verbosity levels (`-v`, `-vv`, `-vvv`) to the most complex and tim
   - CommandProgressListener trait for application-layer progress reporting
   - Comprehensive user guide documentation
   - See [`docs/research/UX/`](https://github.com/torrust/torrust-tracker-deployer/tree/main/docs/research/UX) for UX research
-- [ ] **8.2** Add verbosity levels to `configure` command - [Issue #363](https://github.com/torrust/torrust-tracker-deployer/issues/363)
-  - Apply same verbosity pattern established in provision command
-  - Show configuration steps, Ansible operations, system changes at different detail levels
-  - Reuse CommandProgressListener infrastructure
+- [x] **8.2** Add verbosity levels to `configure` command ✅ Completed - [Issue #363](https://github.com/torrust/torrust-tracker-deployer/issues/363), [PR #364](https://github.com/torrust/torrust-tracker-deployer/pull/364)
+  - Applied same verbosity pattern established in provision command
+  - Shows configuration steps (Docker, Docker Compose, Security Updates, Firewall) at different detail levels
+  - Reuses CommandProgressListener infrastructure
+  - Comprehensive user guide documentation with live-tested examples
 - [ ] **8.3** Add verbosity levels to `release` command
   - Apply same verbosity pattern established in provision command
   - Show artifact generation, file transfers, Docker operations at different detail levels
