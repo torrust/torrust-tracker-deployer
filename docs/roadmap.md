@@ -261,12 +261,6 @@ Add features and documentation that make the use of AI agents to operate the dep
   - **Deliverables**: Questionnaire template (494 lines), 15 validated example configs, comprehensive README (469 lines), integration test suite
   - **Components**: `docs/ai-training/questionnaire.md`, `docs/ai-training/dataset/environment-configs/*.json`, `docs/ai-training/README.md`, `tests/validate_ai_training_examples.rs`
 
-- [ ] **11.4** Add dry-run mode for all commands
-  - Allow AI agents (and users) to preview what will happen before executing operations
-  - Particularly valuable for destructive commands (`destroy`, `stop`)
-  - Flag: `--dry-run` shows planned actions without executing
-  - Reduces risk when AI agents operate autonomously
-
 ### 12. Add JSON output format support
 
 **Epic Issue**: [#348 - Add JSON output format support](https://github.com/torrust/torrust-tracker-deployer/issues/348)
@@ -306,10 +300,11 @@ Add machine-readable JSON output format (`--json` flag) for selected commands to
 
 Features considered valuable but **out of scope for v1**. We want to release the first version and wait for user acceptance before investing more time. These can be revisited based on user feedback.
 
-| Feature                               | Rationale                                    | Notes                                                     |
-| ------------------------------------- | -------------------------------------------- | --------------------------------------------------------- |
-| MCP (Model Context Protocol) server   | Native AI integration without shell commands | Would let AI agents call deployer as MCP tools directly   |
-| Structured error format for AI agents | Already improving errors in section 10       | Could formalize with error codes, fix suggestions in JSON |
+| Feature                               | Rationale                                     | Notes                                                                                                                          |
+| ------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| MCP (Model Context Protocol) server   | Native AI integration without shell commands  | Would let AI agents call deployer as MCP tools directly                                                                        |
+| Structured error format for AI agents | Already improving errors in section 10        | Could formalize with error codes, fix suggestions in JSON                                                                      |
+| Dry-run mode for all commands         | Hard to implement; alternatives already exist | `validate` and `render` commands cover preview needs; LXD local environments allow safe testing before deploying to production |
 
 ---
 
