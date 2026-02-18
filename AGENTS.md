@@ -219,6 +219,7 @@ Available skills:
 | ---------------------------- | --------------------------------------------------- |
 | Adding commands              | `.github/skills/add-new-command/skill.md`           |
 | Cleaning up completed issues | `.github/skills/cleanup-completed-issues/skill.md`  |
+| Cleaning LXD environments    | `.github/skills/clean-lxd-environments/skill.md`    |
 | Committing changes           | `.github/skills/commit-changes/skill.md`            |
 | Completing feature specs     | `.github/skills/complete-feature-spec/skill.md`     |
 | Completing refactor plans    | `.github/skills/complete-refactor-plan/skill.md`    |
