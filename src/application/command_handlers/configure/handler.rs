@@ -11,12 +11,19 @@ use crate::application::steps::{
     ConfigureFirewallStep, ConfigureSecurityUpdatesStep, InstallDockerComposeStep,
     InstallDockerStep,
 };
+use crate::application::traits::CommandProgressListener;
 use crate::domain::environment::repository::{EnvironmentRepository, TypedEnvironmentRepository};
 use crate::domain::environment::state::{ConfigureFailureContext, ConfigureStep};
 use crate::domain::environment::{Configured, Configuring, Environment};
 use crate::domain::EnvironmentName;
 use crate::infrastructure::trace::ConfigureTraceWriter;
 use crate::shared::error::Traceable;
+
+/// Total number of steps in the configuration workflow.
+///
+/// This constant is used for progress reporting via `CommandProgressListener`
+/// to display step progress like "[Step 1/4] Installing Docker...".
+const TOTAL_CONFIGURE_STEPS: usize = 4;
 
 /// `ConfigureCommandHandler` orchestrates the complete infrastructure configuration workflow
 ///
@@ -61,6 +68,9 @@ impl ConfigureCommandHandler {
     /// # Arguments
     ///
     /// * `env_name` - The name of the environment to configure
+    /// * `listener` - Optional progress listener for reporting step-level progress.
+    ///   When provided, the handler reports progress at each of the 4 configuration steps.
+    ///   When `None`, the handler executes silently (backward compatible).
     ///
     /// # Returns
     ///
@@ -73,6 +83,7 @@ impl ConfigureCommandHandler {
     /// * Docker installation fails
     /// * Docker Compose installation fails
     /// * Security updates configuration fails
+    /// * Firewall configuration fails
     ///
     /// On error, the environment transitions to `ConfigureFailed` state and is persisted.
     #[instrument(
@@ -86,6 +97,7 @@ impl ConfigureCommandHandler {
     pub fn execute(
         &self,
         env_name: &EnvironmentName,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> Result<Environment<Configured>, ConfigureCommandHandlerError> {
         let environment = self.load_provisioned_environment(env_name)?;
 
@@ -95,7 +107,7 @@ impl ConfigureCommandHandler {
 
         self.repository.save_configuring(&environment)?;
 
-        match Self::execute_configuration_with_tracking(&environment) {
+        match Self::execute_configuration_with_tracking(&environment, listener) {
             Ok(configured_env) => {
                 info!(
                     command = "configure",
@@ -134,11 +146,17 @@ impl ConfigureCommandHandler {
     /// being executed. If an error occurs, it returns both the error and the step that
     /// was being executed, enabling accurate failure context generation.
     ///
+    /// # Arguments
+    ///
+    /// * `environment` - The environment in Configuring state
+    /// * `listener` - Optional progress listener for step-level reporting
+    ///
     /// # Errors
     ///
     /// Returns a tuple of (error, `current_step`) if any configuration step fails
     fn execute_configuration_with_tracking(
         environment: &Environment<Configuring>,
+        listener: Option<&dyn CommandProgressListener>,
     ) -> StepResult<Environment<Configured>, ConfigureCommandHandlerError, ConfigureStep> {
         let ansible_client = Arc::new(AnsibleClient::new(environment.ansible_build_dir()));
 
@@ -147,7 +165,9 @@ impl ConfigureCommandHandler {
         let skip_docker =
             std::env::var("TORRUST_TD_SKIP_DOCKER_INSTALL_IN_CONTAINER").is_ok_and(|v| v == "true");
 
+        // Step 1/4: Install Docker
         let current_step = ConfigureStep::InstallDocker;
+        Self::notify_step_started(listener, 1, "Installing Docker");
         if skip_docker {
             info!(
                 command = "configure",
@@ -157,11 +177,13 @@ impl ConfigureCommandHandler {
             );
         } else {
             InstallDockerStep::new(Arc::clone(&ansible_client))
-                .execute()
+                .execute(listener)
                 .map_err(|e| (e.into(), current_step))?;
         }
 
+        // Step 2/4: Install Docker Compose
         let current_step = ConfigureStep::InstallDockerCompose;
+        Self::notify_step_started(listener, 2, "Installing Docker Compose");
         if skip_docker {
             info!(
                 command = "configure",
@@ -171,16 +193,20 @@ impl ConfigureCommandHandler {
             );
         } else {
             InstallDockerComposeStep::new(Arc::clone(&ansible_client))
-                .execute()
+                .execute(listener)
                 .map_err(|e| (e.into(), current_step))?;
         }
 
+        // Step 3/4: Configure automatic security updates
         let current_step = ConfigureStep::ConfigureSecurityUpdates;
+        Self::notify_step_started(listener, 3, "Configuring automatic security updates");
         ConfigureSecurityUpdatesStep::new(Arc::clone(&ansible_client))
-            .execute()
+            .execute(listener)
             .map_err(|e| (e.into(), current_step))?;
 
+        // Step 4/4: Configure firewall (UFW)
         let current_step = ConfigureStep::ConfigureFirewall;
+        Self::notify_step_started(listener, 4, "Configuring firewall (UFW)");
         // Allow tests or CI to explicitly skip the firewall configuration step
         // (useful for container-based test runs where iptables/ufw require
         // elevated kernel capabilities not available in unprivileged containers).
@@ -196,7 +222,7 @@ impl ConfigureCommandHandler {
             );
         } else {
             ConfigureFirewallStep::new(Arc::clone(&ansible_client))
-                .execute()
+                .execute(listener)
                 .map_err(|e| (e.into(), current_step))?;
         }
 
@@ -287,5 +313,25 @@ impl ConfigureCommandHandler {
         })?;
 
         Ok(any_env.try_into_provisioned()?)
+    }
+
+    /// Notify progress listener that a step has started
+    ///
+    /// Helper method to notify the listener when a configuration step begins.
+    /// If no listener is provided, this is a no-op.
+    ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener
+    /// * `step_number` - The current step number (1-based)
+    /// * `description` - User-facing description of the step
+    fn notify_step_started(
+        listener: Option<&dyn CommandProgressListener>,
+        step_number: usize,
+        description: &str,
+    ) {
+        if let Some(l) = listener {
+            l.on_step_started(step_number, TOTAL_CONFIGURE_STEPS, description);
+        }
     }
 }

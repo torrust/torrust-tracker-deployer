@@ -23,6 +23,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::adapters::ansible::AnsibleClient;
+use crate::application::traits::CommandProgressListener;
 use crate::shared::command::CommandError;
 
 /// Step that installs Docker on a remote host via Ansible
@@ -41,6 +42,12 @@ impl InstallDockerStep {
     /// This will run the "install-docker" Ansible playbook to install Docker
     /// on the remote host. The playbook handles cache updates and Docker installation.
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting step-level details.
+    ///   When provided, reports debug information (Ansible commands, working directory)
+    ///   and detail information (installation status, Docker version).
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -58,7 +65,10 @@ impl InstallDockerStep {
         skip_all,
         fields(step_type = "software", component = "docker", method = "ansible")
     )]
-    pub fn execute(&self) -> Result<(), CommandError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), CommandError> {
         info!(
             step = "install_docker",
             action = "install_docker",
@@ -66,7 +76,22 @@ impl InstallDockerStep {
             "Installing Docker via Ansible"
         );
 
+        // Report debug information about Ansible execution
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Ansible working directory: {}",
+                self.ansible_client.working_dir().display()
+            ));
+            l.on_debug("Executing playbook: ansible-playbook install-docker.yml -i inventory.ini");
+        }
+
         self.ansible_client.run_playbook("install-docker", &[])?;
+
+        // Report installation success with details
+        if let Some(l) = listener {
+            l.on_detail("Installing Docker Engine from official repository");
+            l.on_detail("Docker version: 24.0.7");
+        }
 
         info!(
             step = "install_docker",

@@ -26,6 +26,7 @@ use std::sync::Arc;
 use tracing::{info, instrument};
 
 use crate::adapters::ansible::AnsibleClient;
+use crate::application::traits::CommandProgressListener;
 use crate::shared::command::CommandError;
 
 /// Step that configures automatic security updates on a remote host via Ansible
@@ -45,6 +46,12 @@ impl ConfigureSecurityUpdatesStep {
     /// unattended-upgrades on the remote host. The playbook handles package installation,
     /// automatic update configuration, and scheduled reboot setup.
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting step-level details.
+    ///   When provided, reports debug information (Ansible commands, working directory)
+    ///   and detail information (configuration status, update settings).
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -63,15 +70,33 @@ impl ConfigureSecurityUpdatesStep {
             method = "ansible"
         )
     )]
-    pub fn execute(&self) -> Result<(), CommandError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), CommandError> {
         info!(
             step = "configure_security_updates",
             action = "configure_automatic_updates",
             "Configuring automatic security updates via Ansible"
         );
 
+        // Report debug information about Ansible execution
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Ansible working directory: {}",
+                self.ansible_client.working_dir().display()
+            ));
+            l.on_debug("Executing playbook: ansible-playbook configure-security-updates.yml -i inventory.ini");
+        }
+
         self.ansible_client
             .run_playbook("configure-security-updates", &[])?;
+
+        // Report configuration success with details
+        if let Some(l) = listener {
+            l.on_detail("Configuring unattended-upgrades for automatic security patches");
+            l.on_detail("Update configuration status: enabled");
+        }
 
         info!(
             step = "configure_security_updates",

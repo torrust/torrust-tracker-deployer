@@ -62,7 +62,7 @@ pub fn run_configure_command(test_context: &mut TestContext) -> Result<(), Confi
         ConfigureCommandHandler::new(Arc::clone(&test_context.services.clock), repository);
 
     let configured_env = configure_command_handler
-        .execute(env_name)
+        .execute(env_name, None)
         .map_err(|source| ConfigureTaskError::ConfigurationFailed { source })?;
 
     info!(

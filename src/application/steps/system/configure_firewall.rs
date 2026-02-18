@@ -38,6 +38,7 @@ use std::sync::Arc;
 use tracing::{info, instrument, warn};
 
 use crate::adapters::ansible::AnsibleClient;
+use crate::application::traits::CommandProgressListener;
 use crate::shared::command::CommandError;
 
 /// Step that configures UFW firewall on a remote host via Ansible
@@ -69,6 +70,12 @@ impl ConfigureFirewallStep {
 
     /// Execute the firewall configuration
     ///
+    /// # Arguments
+    ///
+    /// * `listener` - Optional progress listener for reporting step-level details.
+    ///   When provided, reports debug information (Ansible commands, working directory)
+    ///   and detail information (firewall policies, SSH access preservation, status).
+    ///
     /// # Safety
     ///
     /// This method is designed to prevent SSH lockout by:
@@ -91,12 +98,24 @@ impl ConfigureFirewallStep {
         skip_all,
         fields(step_type = "system", component = "firewall", method = "ansible")
     )]
-    pub fn execute(&self) -> Result<(), CommandError> {
+    pub fn execute(
+        &self,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<(), CommandError> {
         warn!(
             step = "configure_firewall",
             action = "configure_ufw",
             "Configuring UFW firewall with variables from variables.yml"
         );
+
+        // Report debug information about Ansible execution
+        if let Some(l) = listener {
+            l.on_debug(&format!(
+                "Ansible working directory: {}",
+                self.ansible_client.working_dir().display()
+            ));
+            l.on_debug("Executing playbook: ansible-playbook configure-firewall.yml -e @variables.yml -i inventory.ini");
+        }
 
         // Run Ansible playbook with variables file
         // Note: The @ symbol in Ansible means "load variables from this file"
@@ -106,6 +125,13 @@ impl ConfigureFirewallStep {
             .run_playbook("configure-firewall", &["-e", "@variables.yml"])
         {
             Ok(_) => {
+                // Report configuration success with details
+                if let Some(l) = listener {
+                    l.on_detail("Configuring UFW with restrictive default policies");
+                    l.on_detail("Allowing SSH access before enabling firewall");
+                    l.on_detail("Firewall status: active");
+                }
+
                 info!(
                     step = "configure_firewall",
                     status = "success",
