@@ -149,7 +149,7 @@ When starting work on a new feature:
   - **Note**: Volume management is out of scope - user provides a mounted location
   - **Implementation Details**: Phase 1-4 completed (container, service integration, crontab scheduling, documentation)
 
-### 8. Add levels of verbosity
+### 8. Add levels of verbosity ✅ COMPLETED
 
 **Epic Issue**: [#362 - Add levels of verbosity](https://github.com/torrust/torrust-tracker-deployer/issues/362)
 
