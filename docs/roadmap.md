@@ -298,7 +298,7 @@ Once all commands have JSON output implemented (Phase 2 complete), the default o
 
 **Phase 2 - Remaining Commands:**
 
-- [ ] **12.6** Add JSON output to `configure` command
+- [ ] **12.6** Add JSON output to `configure` command [Issue #371](https://github.com/torrust/torrust-tracker-deployer/issues/371)
   - Rationale: Contains the list of installed/configured components (Docker, security updates, firewall) and their status
   - Allows automation to verify successful configuration before proceeding to release
 
