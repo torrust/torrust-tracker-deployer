@@ -18,6 +18,10 @@ This directory contains detailed guides for all Torrust Tracker Deployer command
 
 - **[show](show.md)** - Display environment information with state-aware details
 
+### CLI Documentation
+
+- **[docs](docs.md)** - Generate machine-readable JSON documentation of CLI interface
+
 ### Infrastructure Management
 
 - **[provision](provision.md)** - Provision VM infrastructure

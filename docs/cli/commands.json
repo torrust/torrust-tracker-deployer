@@ -1,0 +1,456 @@
+{
+  "cli": {
+    "commands": [
+      {
+        "description": "Create operations (environment creation or template generation)",
+        "long_description": "Create operations (environment creation or template generation)\n\nThis command provides subcommands for creating environments and generating configuration templates.",
+        "name": "create",
+        "subcommands": [
+          {
+            "arguments": [
+              {
+                "help": "Path to the environment configuration file",
+                "id": "env_file",
+                "long": "env-file",
+                "long_help": "Path to the environment configuration file\n\nThe configuration file must be in JSON format and contain all required fields for environment creation.",
+                "required": true,
+                "short": "f",
+                "type": "option",
+                "value_names": [
+                  "FILE"
+                ]
+              }
+            ],
+            "description": "Create environment from configuration file",
+            "long_description": "Create environment from configuration file\n\nThis subcommand creates a new deployment environment based on a configuration file. The configuration file specifies the environment name, SSH credentials, and other settings required for creation.\n\nSTATE TRANSITION: • Prerequisites: None (first command in workflow) • After Success: Environment transitions to Created state • Creates: data/{env-name}/ and build/{env-name}/ directories\n\nWORKFLOW POSITION (Step 1 of 8): [CREATE ENVIRONMENT] → provision/register → configure → release → run\n\nNEXT STEPS: After creating an environment, choose one: 1. Provision new infrastructure: provision {env-name} 2. Register existing infrastructure: register {env-name} --instance-ip <IP>",
+            "name": "environment"
+          },
+          {
+            "arguments": [
+              {
+                "help": "Output path for the template file (optional)",
+                "id": "output_path",
+                "long_help": "Output path for the template file (optional)\n\nIf not provided, creates environment-template.json in the current working directory. Parent directories will be created automatically if they don't exist.",
+                "required": false,
+                "type": "option",
+                "value_names": [
+                  "PATH"
+                ]
+              },
+              {
+                "help": "Provider to generate template for (required)",
+                "id": "provider",
+                "long": "provider",
+                "long_help": "Provider to generate template for (required)\n\nAvailable providers: - lxd: Local LXD provider for development and testing - hetzner: Hetzner Cloud provider for production deployments",
+                "required": true,
+                "short": "p",
+                "type": "option",
+                "value_names": [
+                  "PROVIDER"
+                ]
+              }
+            ],
+            "description": "Generate template configuration file",
+            "long_description": "Generate template configuration file\n\nThis subcommand generates a JSON configuration template file with placeholder values. Edit the template to provide your actual configuration values, then use 'create environment' to create the environment.\n\nWORKFLOW POSITION (Step 0 - Before everything): [CREATE TEMPLATE] → edit → validate → create environment → provision → ...\n\nAVAILABLE PROVIDERS: Templates are provider-specific and include appropriate defaults: • Local VM providers (e.g., LXD) - for development/testing • Cloud providers (e.g., Hetzner) - for production deployments Each provider template includes provider-specific configuration fields\n\nCUSTOMIZATION REQUIRED: Generated templates have placeholder values that MUST be edited: • Environment name (must be unique) • SSH credentials (username, key paths) • Provider settings (varies by provider) • Tracker configuration (UDP/HTTP ports, database type) • Optional: monitoring, backup, HTTPS settings\n\nNEXT STEPS: 1. Generate template: create template --provider <type> 2. Edit template: vim environment-template.json 3. Validate config: validate --env-file environment-template.json 4. Create environment: create environment --env-file environment-template.json",
+            "name": "template"
+          },
+          {
+            "arguments": [
+              {
+                "help": "Output path for the schema file (optional)",
+                "id": "output_path",
+                "long_help": "Output path for the schema file (optional)\n\nIf not provided, outputs the schema to stdout. Parent directories will be created automatically if they don't exist.",
+                "required": false,
+                "type": "option",
+                "value_names": [
+                  "PATH"
+                ]
+              }
+            ],
+            "description": "Generate JSON Schema for environment configuration",
+            "long_description": "Generate JSON Schema for environment configuration\n\nThis subcommand generates a JSON Schema that describes the structure and validation rules for environment configuration files. The schema can be used by IDEs, editors, and AI assistants for autocomplete, validation, and inline documentation.\n\nNOT PART OF DEPLOYMENT WORKFLOW: This is a meta-command for IDE integration. Generate once and configure your editor to use it for environment JSON files.\n\nIDE INTEGRATION BENEFITS: • Autocomplete: Suggestions for configuration fields as you type • Validation: Real-time error checking for invalid values • Documentation: Inline help text for each configuration option • Type checking: Ensures correct data types (strings, numbers, booleans)\n\nSETUP INSTRUCTIONS: 1. Generate schema: torrust-tracker-deployer create schema schemas/environment-config.json\n\n2. Configure your IDE: VS Code: Add to settings.json: \"json.schemas\": [{ \"fileMatch\": [\"envs/*.json\"], \"url\": \"./schemas/environment-config.json\" }]\n\n`JetBrains` IDEs: File → Settings → Languages & Frameworks → Schemas and DTDs → JSON Schema Mappings\n\nWHEN TO REGENERATE: After modifying configuration structure in source code: • Added new configuration fields • Changed validation rules or constraints • Updated field descriptions\n\nUSAGE SCENARIOS: • First-time setup: Enable IDE autocomplete for config files • After updates: Regenerate to sync with code changes • CI/CD: Validate configs against schema in automated tests • AI agents: Provide schema for better config generation",
+            "name": "schema"
+          }
+        ]
+      },
+      {
+        "arguments": [
+          {
+            "help": "Name of the environment to destroy",
+            "id": "environment",
+            "long_help": "Name of the environment to destroy\n\nThe environment name must be a valid identifier that was previously created through the provision command.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "ENVIRONMENT"
+            ]
+          }
+        ],
+        "description": "Destroy an existing deployment environment",
+        "long_description": "Destroy an existing deployment environment\n\nThis command will tear down all infrastructure associated with the specified environment, including virtual machines, networks, and persistent data. This operation is irreversible.\n\nWHAT GETS DESTROYED: • VM instance (deleted permanently) • Virtual networks (removed) • Remote data (tracker database, logs, configs on VM) • Running services (stopped and removed)\n\nWHAT GETS PRESERVED: • Local data directory: data/{env-name}/ (use 'purge' to remove) • Build artifacts: build/{env-name}/ (use 'purge' to remove) • Environment state file (allows reusing the name after purge)\n\nSAFETY WARNINGS: • Operation is IRREVERSIBLE - infrastructure cannot be recovered • Remote data (tracker database) will be permanently lost • Always backup important data before destroying\n\nNEXT STEPS: After destroying, you can: • Purge local data to reuse environment name: purge {env-name} • Keep local data for reference or audit trail\n\nEXECUTION TIME: Typical duration: 1-3 minutes Factors: provider API response, resource cleanup timing",
+        "name": "destroy"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Name of the environment to purge",
+            "id": "environment",
+            "long_help": "Name of the environment to purge\n\nThe environment name must match an existing environment in the local data directory.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "ENVIRONMENT"
+            ]
+          },
+          {
+            "help": "Skip confirmation prompt",
+            "id": "force",
+            "long": "force",
+            "long_help": "Skip confirmation prompt\n\nWhen provided, the purge operation proceeds without asking for user confirmation. Use with caution, especially for non-destroyed environments.",
+            "required": false,
+            "short": "f",
+            "type": "option",
+            "value_names": [
+              "FORCE"
+            ]
+          }
+        ],
+        "description": "Purge local data for an environment",
+        "long_description": "Purge local data for an environment\n\nThis command removes all local data directories for an environment, including the data/{env-name}/ and build/{env-name}/ directories.\n\nWORKFLOW POSITION (Step 9 - After destroy, optional): ... → destroy → [PURGE] (optional cleanup to reuse environment name)\n\nCOMPARISON WITH DESTROY: • destroy: Removes REMOTE infrastructure (VMs, cloud resources) • purge:   Removes LOCAL data (state files, build artifacts) Typical sequence: destroy (step 8) → purge (step 9, optional)\n\nWHEN TO USE: • After destroying an environment to reuse the environment name • To free up disk space from environments no longer needed • To clean up state when infrastructure was destroyed independently\n\nWHAT GETS REMOVED: • data/{env-name}/environment.json (state file) • data/{env-name}/logs/ (execution logs) • build/{env-name}/ (rendered templates, Terraform state) After purge, the environment name becomes available for reuse\n\nSAFETY WARNINGS: • Always prompts for confirmation unless --force is provided • Operation is IRREVERSIBLE - local data permanently deleted • For running environments: only removes LOCAL data, does NOT destroy infrastructure • Best practice: only purge after destroy completes successfully\n\nEXAMPLES: After destroying an environment: torrust-tracker-deployer purge my-env\n\nSkip confirmation (for automation/scripts): torrust-tracker-deployer purge my-env --force",
+        "name": "purge"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Name of the environment to provision",
+            "id": "environment",
+            "long_help": "Name of the environment to provision\n\nThe environment name must match an existing environment that was previously created and is in \"Created\" state.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "ENVIRONMENT"
+            ]
+          }
+        ],
+        "description": "Provision a new deployment environment infrastructure",
+        "long_description": "Provision a new deployment environment infrastructure\n\nThis command provisions the virtual machine infrastructure for a deployment environment that was previously created. It will: - Render and apply `OpenTofu` templates - Create VM instances - Configure networking - Wait for SSH connectivity - Wait for cloud-init completion\n\nThe environment must be in \"Created\" state (use 'create environment' first).\n\nSTATE TRANSITION: • Prerequisites: Environment must be in Created state - Use 'create environment' first - Check state: show {env-name} • After Success: Environment transitions to Provisioned state • Infrastructure Created: VM instance, networking, SSH access • On Failure: Remains in Created state\n\nWORKFLOW POSITION (Step 2 of 8): create environment → [PROVISION] → configure → release → run ↓ (alternative: register)\n\nNEXT STEPS: After provisioning: 1. Verify infrastructure (optional): test {env-name} 2. Configure the instance: configure {env-name}\n\nALTERNATIVE: Register Existing Infrastructure If you already have a server/VM, use 'register' instead: register {env-name} --instance-ip <IP> This skips infrastructure provisioning.\n\nCOMMON ERRORS: • \"Environment not in Created state\": Run 'create environment' first • \"Provider credentials missing\": Check environment config file • \"SSH connection failed\": Verify network connectivity",
+        "name": "provision"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Name of the environment to configure",
+            "id": "environment",
+            "long_help": "Name of the environment to configure\n\nThe environment name must match an existing environment that was previously provisioned and is in \"Provisioned\" state.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "ENVIRONMENT"
+            ]
+          }
+        ],
+        "description": "Configure a provisioned deployment environment",
+        "long_description": "Configure a provisioned deployment environment\n\nThis command configures the infrastructure of a provisioned deployment environment. It will: - Install Docker engine - Install Docker Compose - Configure system services\n\nThe environment must be in \"Provisioned\" state (use 'provision' command first).\n\nSTATE TRANSITION: • Prerequisites: Environment must be in Provisioned state - Use 'provision' or 'register' first • After Success: Environment transitions to Configured state • Configuration Applied: Docker, Docker Compose, system packages, firewall • On Failure: Remains in Provisioned state\n\nWORKFLOW POSITION (Step 3 of 8): provision/register → [CONFIGURE] → release → run\n\nWHAT THIS COMMAND DOES NOT DO: • Does not deploy application files (use 'release') • Does not start services (use 'run') • Does not provision infrastructure (use 'provision'/'register' first)\n\nEXECUTION TIME: Typical duration: 2-5 minutes Factors: network speed, package downloads, instance specifications",
+        "name": "configure"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Name of the environment to test",
+            "id": "environment",
+            "long_help": "Name of the environment to test\n\nThe environment name must match an existing environment that was previously provisioned and has an instance IP assigned.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "ENVIRONMENT"
+            ]
+          }
+        ],
+        "description": "Verify deployment infrastructure",
+        "long_description": "Verify deployment infrastructure\n\nThis command validates that a deployed environment's infrastructure is properly configured and ready. It will: - Verify cloud-init completion - Verify Docker installation - Verify Docker Compose installation\n\nThe environment must have an instance IP set (use 'provision' command first).\n\nWHAT GETS VALIDATED: • Cloud-init completion (system initialization finished) • Docker engine installed and running • Docker Compose installed and accessible • SSH connectivity to instance\n\nWHEN TO RUN (Recommended Checkpoints): • After 'provision' - verify infrastructure is ready • After 'register' - verify existing instance meets requirements • Before 'configure' - confirm base system is operational • Troubleshooting - diagnose infrastructure issues\n\nEXIT CODES: • 0: All checks passed - infrastructure ready • Non-zero: One or more checks failed - see output for details\n\nWHAT THIS DOES NOT VALIDATE: • Application deployment (use after 'release' to check that) • Running services (use 'show' after 'run' to check that) • Configuration file syntax (use 'validate' for that)",
+        "name": "test"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Path to the environment configuration file",
+            "id": "env_file",
+            "long": "env-file",
+            "long_help": "Path to the environment configuration file\n\nThe configuration file must be in JSON format. The file will be validated against the environment configuration schema.",
+            "required": true,
+            "short": "f",
+            "type": "option",
+            "value_names": [
+              "FILE"
+            ]
+          }
+        ],
+        "description": "Validate environment configuration without deployment",
+        "long_description": "Validate environment configuration without deployment\n\nThis command validates an environment configuration file without executing any deployment operations. It performs comprehensive validation including: - JSON schema compliance - Environment name format - Provider configuration validity - SSH key file existence - Domain name format (if configured) - Port number ranges\n\nThis is a dry-run command useful for: - Verifying configuration before creating environments - AI agents validating user inputs - CI/CD pipelines checking configurations - Troubleshooting configuration issues\n\nPRE-DEPLOYMENT USAGE: Always validate BEFORE 'create environment' to catch errors early Saves time by detecting issues before resource provisioning\n\nWHAT GETS VALIDATED: • JSON syntax and schema compliance • Environment name (format, length, characters) • Provider configuration (type, credentials structure) • SSH credentials (key file paths exist, format valid) • Network settings (port ranges, IP formats) • Tracker configuration (modes, database type)\n\nBENEFITS OF EARLY VALIDATION: • Fast feedback (no network calls or resource creation) • Clear error messages with specific field issues • Prevents partial deployments from invalid configs • Saves time and costs (catch before provisioning)\n\nEXAMPLE WORKFLOW INTEGRATION: 1. Create template: create template --provider <type> 2. Edit configuration: vim environment-template.json 3. Validate config: validate --env-file environment-template.json 4. Create environment: create environment --env-file environment-template.json\n\nEXAMPLES: torrust-tracker-deployer validate --env-file envs/my-config.json torrust-tracker-deployer validate -f production.json",
+        "name": "validate"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Name of the environment to register the instance with",
+            "id": "environment",
+            "long_help": "Name of the environment to register the instance with\n\nThe environment name must match an existing environment that was previously created and is in \"Created\" state.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "ENVIRONMENT"
+            ]
+          },
+          {
+            "help": "IP address of the existing instance",
+            "id": "instance_ip",
+            "long": "instance-ip",
+            "long_help": "IP address of the existing instance\n\nThe IP address (IPv4 or IPv6) of the instance to register. The instance must be reachable via SSH using the credentials configured in the environment.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "IP_ADDRESS"
+            ]
+          },
+          {
+            "help": "SSH port for the instance (optional - overrides environment config)",
+            "id": "ssh_port",
+            "long": "ssh-port",
+            "long_help": "SSH port for the instance (optional - overrides environment config)\n\nIf not provided, uses the SSH port from the environment configuration. This is useful when the instance uses a non-standard SSH port, such as in Docker bridge networking where ports are dynamically mapped.",
+            "required": false,
+            "type": "option",
+            "value_names": [
+              "PORT"
+            ]
+          }
+        ],
+        "description": "Register an existing instance as an alternative to provisioning",
+        "long_description": "Register an existing instance as an alternative to provisioning\n\nThis command registers an existing VM, physical server, or container with an environment that was previously created. Instead of provisioning new infrastructure, it uses the provided IP address to connect to existing infrastructure.\n\nThe environment must be in \"Created\" state (use 'create environment' first). After registration, the environment transitions to \"Provisioned\" state and can continue with 'configure', 'release', and 'run' commands.\n\nSTATE TRANSITION: • Prerequisites: Environment must be in Created state • After Success: Environment transitions to Provisioned state • Infrastructure: Existing instance registered (not created) • On Failure: Remains in Created state\n\nWORKFLOW POSITION (Alternative to Step 2): create environment → [REGISTER] → configure → release → run ↓ (alternative: provision)\n\nWHEN TO USE REGISTER VS PROVISION: Use REGISTER when: • You have an existing server/VM • You want to use bare-metal hardware • You already provisioned infrastructure externally • You're deploying to a Docker container (for testing)\n\nUse PROVISION when: • You want automated infrastructure creation • You're using supported cloud providers • You want reproducible infrastructure\n\nINSTANCE REQUIREMENTS: • Ubuntu 24.04 LTS • SSH connectivity with credentials from 'create environment' • Public SSH key installed for access • Username with sudo access",
+        "name": "register"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Name of the environment to release to",
+            "id": "environment",
+            "long_help": "Name of the environment to release to\n\nThe environment name must match an existing environment that was previously configured and is in \"Configured\" state.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "ENVIRONMENT"
+            ]
+          }
+        ],
+        "description": "Release application files to a configured environment",
+        "long_description": "Release application files to a configured environment\n\nThis command prepares and transfers application files (docker-compose.yml, configuration files, etc.) to a configured VM. The environment must be in the \"Configured\" state.\n\nAfter successful release: - Docker compose files are copied to /opt/torrust/ on the VM - Environment transitions to \"Released\" state - You can then run `run <environment>` to start the services\n\nSTATE TRANSITION: • Prerequisites: Environment must be in Configured state • After Success: Environment transitions to Released state •  Files Deployed: - docker-compose.yml to /opt/torrust/ - Tracker configuration to /opt/torrust/storage/tracker/etc/ - Environment variables to /opt/torrust/.env - Monitoring configs (if enabled) • On Failure: Remains in Configured state\n\nWORKFLOW POSITION (Step 4 of 8): configure → [RELEASE] → run\n\nWHAT THIS DOES NOT DO: • Does not start containers (use 'run') • Does not install Docker (done in 'configure') • Does not provision infrastructure (done in 'provision')\n\nEXAMPLES: torrust-tracker-deployer release my-env torrust-tracker-deployer release production",
+        "name": "release"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Name of existing environment (mutually exclusive with --env-file)",
+            "id": "env_name",
+            "long": "env-name",
+            "long_help": "Name of existing environment (mutually exclusive with --env-file)\n\nGenerate artifacts from an existing environment at any state. This is a read-only operation that does not modify environment state.",
+            "required": false,
+            "type": "option",
+            "value_names": [
+              "ENV_NAME"
+            ]
+          },
+          {
+            "help": "Path to environment configuration file (mutually exclusive with --env-name)",
+            "id": "env_file",
+            "long": "env-file",
+            "long_help": "Path to environment configuration file (mutually exclusive with --env-name)\n\nGenerate artifacts directly from a configuration file without creating an environment.",
+            "required": false,
+            "short": "f",
+            "type": "option",
+            "value_names": [
+              "ENV_FILE"
+            ]
+          },
+          {
+            "help": "Target instance IP address (REQUIRED)",
+            "id": "instance_ip",
+            "long": "instance-ip",
+            "long_help": "Target instance IP address (REQUIRED)\n\nIP address of the target server where artifacts will be deployed. The IP will be used in generated Ansible inventory and configuration files.\n\nThis allows previewing artifacts for different target IPs before committing to infrastructure provisioning.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "IP_ADDRESS"
+            ]
+          },
+          {
+            "help": "Output directory for generated artifacts (REQUIRED)",
+            "id": "output_dir",
+            "long": "output-dir",
+            "long_help": "Output directory for generated artifacts (REQUIRED)\n\nDirectory where all deployment artifacts will be written. Must be different from the standard build/{env}/ directory used by provision to prevent artifact conflicts and data loss.\n\nThe directory must not exist unless --force is provided.",
+            "required": true,
+            "short": "o",
+            "type": "option",
+            "value_names": [
+              "PATH"
+            ]
+          },
+          {
+            "help": "Overwrite existing output directory",
+            "id": "force",
+            "long": "force",
+            "long_help": "Overwrite existing output directory\n\nIf the output directory already exists, this flag allows overwriting its contents. Without this flag, the command will fail if the directory exists.",
+            "required": false,
+            "type": "option",
+            "value_names": [
+              "FORCE"
+            ]
+          }
+        ],
+        "description": "Generate deployment artifacts without executing deployment",
+        "long_description": "Generate deployment artifacts without executing deployment\n\nThis command generates all deployment artifacts (docker-compose files, tracker configuration, Ansible playbooks, etc.) to the build directory without executing any deployment operations.\n\nNOT PART OF NORMAL DEPLOYMENT WORKFLOW: This is a preview/debugging command. Normal workflow automatically generates artifacts during provision/configure/release commands.\n\nCOMPARISON WITH NORMAL WORKFLOW: Normal: create → provision (generates artifacts + creates infrastructure) Render: create → render (generates artifacts only, no infrastructure) Use render when you want to inspect what will be deployed before committing to infrastructure provisioning.\n\nTWO MODES: 1. From existing environment (--env-name): Read-only preview of what would be deployed Works at any state, does not modify environment\n\n2. From configuration file (--env-file): Generate artifacts without creating environment Useful for validating configurations or generating examples\n\nUSE CASES: • Preview artifacts before provisioning infrastructure • Inspect what will be deployed before committing to provision • Generate artifacts for documentation or examples • Test configuration changes without affecting environment\n\nOUTPUT DIRECTORY: Must be different from standard build/{env}/ directory to prevent conflicts with real deployments. Use custom path like ./preview/\n\nEXAMPLES: Generate from existing environment: torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1 --output-dir ./preview\n\nGenerate from config file (no environment creation): torrust-tracker-deployer render --env-file envs/my-config.json --instance-ip 10.0.0.1 --output-dir /tmp/artifacts\n\nOverwrite existing output directory: torrust-tracker-deployer render --env-name my-env --instance-ip 10.0.0.1 --output-dir ./preview --force",
+        "name": "render"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Name of the environment to run",
+            "id": "environment",
+            "long_help": "Name of the environment to run\n\nThe environment name must match an existing environment that was previously released and is in \"Released\" state.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "ENVIRONMENT"
+            ]
+          }
+        ],
+        "description": "Run the application stack on a released environment",
+        "long_description": "Run the application stack on a released environment\n\nThis command starts the docker compose services on a released VM. The environment must be in the \"Released\" state.\n\nAfter successful run: - Docker containers are started via 'docker compose up -d' - Environment transitions to \"Running\" state - Services are accessible on the VM\n\nSTATE TRANSITION: • Prerequisites: Environment must be in Released state • After Success: Environment transitions to Running state • Services Started: Tracker (UDP/HTTP), Database, Prometheus, Grafana • On Failure: Remains in Released state\n\nWORKFLOW POSITION (Step 5 of 8 - Final deployment step): release → [RUN] → (services running)\n\nSERVICE ACCESS: Once running, services are accessible at: • Tracker UDP: <udp://{instance-ip}:6969> (if enabled) • Tracker HTTP: <http://{instance-ip}:7070> (if enabled) • Tracker API: <http://{instance-ip}:1212> (if enabled) • Grafana: <http://{instance-ip}:3000> (if enabled) • Prometheus: <http://{instance-ip}:9090> (if enabled)\n\nVERIFYING SERVICES: Check services after running: - View environment status: show {env-name} - SSH to check containers: ssh -i ~/.ssh/key user@instance-ip - Check container status: docker compose ps - View logs: docker compose logs tracker\n\nEXAMPLES: torrust-tracker-deployer run my-env torrust-tracker-deployer run production",
+        "name": "run"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Name of the environment to show",
+            "id": "environment",
+            "long_help": "Name of the environment to show\n\nThe environment name must match an existing environment.",
+            "required": true,
+            "type": "option",
+            "value_names": [
+              "ENVIRONMENT"
+            ]
+          }
+        ],
+        "description": "Show environment information with state-aware details",
+        "long_description": "Show environment information with state-aware details\n\nThis command displays a read-only view of stored environment data without remote verification, making it fast and reliable.\n\nThe output includes: - Environment name and current state - Provider information - Infrastructure details (IP, SSH credentials) when provisioned - Service URLs when running - Next-step guidance based on current state\n\nSTATE-DEPENDENT INFORMATION: Created state: Shows environment name, provider, config Provisioned state: Adds instance IP, SSH details Configured state: Adds system configuration status Released state: Adds deployment file locations Running state: Adds service URLs and access information\n\nCOMMON USAGE SCENARIOS: • Check current state before running next command • Get instance IP for SSH access • Get service URLs after deployment • Verify environment exists before operations • Quick status check without network calls\n\nOUTPUT FORMAT OPTIONS: Use --output-format json for machine-readable output Default: Human-readable text with tables\n\nPERFORMANCE NOTE: Fast operation - reads local state file only (no network calls)\n\nEXAMPLES: torrust-tracker-deployer show my-env torrust-tracker-deployer show production",
+        "name": "show"
+      },
+      {
+        "description": "List all environments in the deployment workspace",
+        "long_description": "List all environments in the deployment workspace\n\nThis command provides a quick overview of all environments with their names, states, and providers. It scans the local data directory and does not make any network calls.\n\nNOT PART OF DEPLOYMENT WORKFLOW: This is an informational command that can be run at any time to see what environments exist and their current states.\n\nOUTPUT INFORMATION: For each environment, displays: • Environment name • Current state (Created, Provisioned, Configured, Released, Running, Destroyed) • Provider type (generic, e.g., LXD, Hetzner) • Creation timestamp\n\nWHEN TO USE: • Check which environments exist before creating a new one • Verify environment states before running commands • Quick audit of all deployment environments • See what can be purged to free up space\n\nPERFORMANCE: Fast operation - only reads local JSON files, no network calls\n\nEXAMPLE: torrust-tracker-deployer list",
+        "name": "list"
+      },
+      {
+        "arguments": [
+          {
+            "help": "Output path for CLI documentation file (optional)",
+            "id": "output_path",
+            "long_help": "Output path for CLI documentation file (optional)\n\nIf not provided, documentation is written to stdout.\n\nRecommended location: `docs/cli/commands.json`",
+            "required": false,
+            "type": "option",
+            "value_names": [
+              "PATH"
+            ]
+          }
+        ],
+        "description": "Generate CLI documentation in JSON format",
+        "long_description": "Generate CLI documentation in JSON format\n\nThis command generates machine-readable documentation for all CLI commands, arguments, and their descriptions. The output is a structured JSON document suitable for AI agents, documentation generators, and IDE integrations.\n\nNOT PART OF DEPLOYMENT WORKFLOW: This is a meta-command for generating documentation. It's used by maintainers and AI agents, not part of normal deployment operations.\n\nOUTPUT FORMAT OPTIONS: • No path: Outputs JSON to stdout (pipeable) • With path: Writes JSON to file\n\nWHEN TO REGENERATE: After modifying command documentation in source code: • Added/changed command descriptions • Updated argument help text • Modified command structure Regeneration ensures JSON docs stay in sync with CLI\n\nUSAGE SCENARIOS: • AI agents: Read command descriptions and argument details • Documentation sites: Generate command reference automatically • IDE plugins: Provide autocomplete and inline help • Shell completion: Generate dynamic completion scripts\n\nFORMAT DETAILS: JSON includes for each command: • Name and description • All arguments with types and help text • Subcommands (if applicable) • Default values and constraints\n\nEXAMPLES: Generate to stdout: torrust-tracker-deployer docs\n\nSave to file: torrust-tracker-deployer docs docs/cli/commands.json\n\nPipe to other tools: torrust-tracker-deployer docs | jq '.cli.commands[] | .name'",
+        "name": "docs"
+      }
+    ],
+    "description": "Automated deployment infrastructure for Torrust Tracker",
+    "global_arguments": [
+      {
+        "help": "Format for file logging (default: compact, without ANSI codes)",
+        "id": "log_file_format",
+        "long": "log-file-format",
+        "long_help": "Format for file logging (default: compact, without ANSI codes)\n\n- pretty: Pretty-printed output for development (no ANSI in files) - json: JSON output for production environments (no ANSI) - compact: Compact output for minimal verbosity (no ANSI in files)\n\nNote: ANSI color codes are automatically disabled for file output to ensure logs are easily parsed with standard text tools (grep, awk, sed).",
+        "required": false,
+        "type": "option",
+        "value_names": [
+          "LOG_FILE_FORMAT"
+        ]
+      },
+      {
+        "help": "Format for stderr logging (default: pretty, with ANSI codes)",
+        "id": "log_stderr_format",
+        "long": "log-stderr-format",
+        "long_help": "Format for stderr logging (default: pretty, with ANSI codes)\n\n- pretty: Pretty-printed output with colors for development - json: JSON output for machine processing - compact: Compact output with colors for minimal verbosity\n\nNote: ANSI color codes are automatically enabled for stderr output to provide colored terminal output for better readability.",
+        "required": false,
+        "type": "option",
+        "value_names": [
+          "LOG_STDERR_FORMAT"
+        ]
+      },
+      {
+        "help": "Log output mode (default: file-only for production)",
+        "id": "log_output",
+        "long": "log-output",
+        "long_help": "Log output mode (default: file-only for production)\n\n- file-only: Write logs to file only (production mode) - file-and-stderr: Write logs to both file and stderr (development/testing mode)",
+        "required": false,
+        "type": "option",
+        "value_names": [
+          "LOG_OUTPUT"
+        ]
+      },
+      {
+        "help": "Log directory (default: ./data/logs)",
+        "id": "log_dir",
+        "long": "log-dir",
+        "long_help": "Log directory (default: ./data/logs)\n\nDirectory where log files will be written. The log file will be named 'log.txt' inside this directory. Parent directories will be created automatically if they don't exist.\n\nNote: If the directory cannot be created due to filesystem permissions, the application will exit with an error. Logging is critical for observability and the application cannot function without it.",
+        "required": false,
+        "type": "option",
+        "value_names": [
+          "LOG_DIR"
+        ]
+      },
+      {
+        "help": "Working directory for environment data (default: .)",
+        "id": "working_dir",
+        "long": "working-dir",
+        "long_help": "Working directory for environment data (default: .)\n\nRoot directory where environment data will be stored. Each environment creates subdirectories within this location for build files and state. This is useful for testing or when you want to manage environments in a different location than the current directory.\n\nExamples: - Default: './data' (relative to current directory) - Testing: '/tmp/test-workspace' (absolute path) - Production: '/var/lib/torrust-deployer' (system location)",
+        "required": false,
+        "type": "option",
+        "value_names": [
+          "WORKING_DIR"
+        ]
+      },
+      {
+        "help": "Output format for command results (default: text)",
+        "id": "output_format",
+        "long": "output-format",
+        "long_help": "Output format for command results (default: text)\n\nControls the format of user-facing output (stdout channel). - text: Human-readable formatted output with tables and sections (default) - json: Machine-readable JSON for automation, scripts, and AI agents\n\nThis is independent of logging format (--log-file-format, --log-stderr-format) which controls stderr/file output.\n\nExamples: - Default: Text format for human consumption - Automation: JSON format for programmatic parsing - CI/CD: JSON piped to jq for field extraction",
+        "required": false,
+        "type": "option",
+        "value_names": [
+          "OUTPUT_FORMAT"
+        ]
+      },
+      {
+        "help": "Increase verbosity of user-facing output",
+        "id": "verbosity",
+        "long": "verbose",
+        "long_help": "Increase verbosity of user-facing output\n\nControls the amount of detail shown during operations: - Default: Essential progress and results - -v: Detailed progress including intermediate steps - -vv: Very detailed including decisions and retries - -vvv: Maximum detail for troubleshooting\n\nNote: This controls user-facing messages only. For internal logging verbosity, use the `RUST_LOG` environment variable.\n\nExamples: provision my-env        # Normal verbosity provision my-env -v     # Verbose provision my-env -vv    # Very verbose provision my-env -vvv   # Debug",
+        "required": false,
+        "short": "v",
+        "type": "option",
+        "value_names": [
+          "VERBOSITY"
+        ]
+      }
+    ],
+    "long_description": "Command-line interface for Torrust Tracker Deployer\n\nThis struct defines the top-level CLI structure including global arguments and available subcommands. It uses clap for argument parsing and provides comprehensive help documentation.",
+    "name": "torrust-tracker-deployer",
+    "version": "0.1.0"
+  },
+  "format": "cli-documentation",
+  "format_version": "1.0"
+}
