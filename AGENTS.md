@@ -216,7 +216,7 @@ The project provides Agent Skills in `.github/skills/` for specialized workflows
 Available skills:
 
 | Task                         | Skill to Load                                       |
-| ---------------------------- | --------------------------------------------------- |
+| ---------------------------- | --------------------------------------------------- | --- | --------------------- | --------------------------------------------- | --- | --------------------------- | -------------------------------------------------- |
 | Adding commands              | `.github/skills/add-new-command/skill.md`           |
 | Cleaning up completed issues | `.github/skills/cleanup-completed-issues/skill.md`  |
 | Cleaning LXD environments    | `.github/skills/clean-lxd-environments/skill.md`    |
@@ -229,8 +229,7 @@ Available skills:
 | Creating feature specs       | `.github/skills/create-feature-spec/skill.md`       |
 | Creating issues              | `.github/skills/create-issue/skill.md`              |
 | Creating new skills          | `.github/skills/add-new-skill/skill.md`             |
-| Creating refactor plans      | `.github/skills/create-refactor-plan/skill.md`      |
-| Rendering tracker artifacts  | `.github/skills/render-tracker-artifacts/skill.md`  |
+| Creating refactor plans      | `.github/skills/create-refactor-plan/skill.md`      |     | Regenerating CLI docs | `.github/skills/regenerate-cli-docs/skill.md` |     | Rendering tracker artifacts | `.github/skills/render-tracker-artifacts/skill.md` |
 | Reviewing pull requests      | `.github/skills/review-pr/skill.md`                 |
 | Running linters              | `.github/skills/run-linters/skill.md`               |
 | Running local E2E tests      | `.github/skills/run-local-e2e-test/skill.md`        |
