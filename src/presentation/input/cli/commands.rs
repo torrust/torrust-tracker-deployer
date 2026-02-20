@@ -68,7 +68,7 @@ pub enum Commands {
     /// including the data/{env-name}/ and build/{env-name}/ directories.
     ///
     /// WORKFLOW POSITION (Step 9 - After destroy, optional):
-    ///   ... → destroy → [PURGE] (optional cleanup to reuse environment name)
+    ///   ... → destroy → \[PURGE\] (optional cleanup to reuse environment name)
     ///
     /// COMPARISON WITH DESTROY:
     ///   • destroy: Removes REMOTE infrastructure (VMs, cloud resources)
@@ -135,7 +135,7 @@ pub enum Commands {
     ///   • On Failure: Remains in Created state
     ///
     /// WORKFLOW POSITION (Step 2 of 8):
-    ///   create environment → [PROVISION] → configure → release → run
+    ///   create environment → \[PROVISION\] → configure → release → run
     ///                             ↓
     ///                      (alternative: register)
     ///
@@ -146,7 +146,7 @@ pub enum Commands {
     ///
     /// ALTERNATIVE: Register Existing Infrastructure
     ///   If you already have a server/VM, use 'register' instead:
-    ///   register {env-name} --instance-ip <IP>
+    ///   register {env-name} --instance-ip \<IP\>
     ///   This skips infrastructure provisioning.
     ///
     /// COMMON ERRORS:
@@ -179,7 +179,7 @@ pub enum Commands {
     ///   • On Failure: Remains in Provisioned state
     ///
     /// WORKFLOW POSITION (Step 3 of 8):
-    ///   provision/register → [CONFIGURE] → release → run
+    ///   provision/register → \[CONFIGURE\] → release → run
     ///
     /// WHAT THIS COMMAND DOES NOT DO:
     ///   • Does not deploy application files (use 'release')
@@ -272,7 +272,7 @@ pub enum Commands {
     ///   • Saves time and costs (catch before provisioning)
     ///
     /// EXAMPLE WORKFLOW INTEGRATION:
-    ///   1. Create template: create template --provider <type>
+    ///   1. Create template: create template --provider \<type\>
     ///   2. Edit configuration: vim environment-template.json
     ///   3. Validate config: validate --env-file environment-template.json
     ///   4. Create environment: create environment --env-file environment-template.json
@@ -307,7 +307,7 @@ pub enum Commands {
     ///   • On Failure: Remains in Created state
     ///
     /// WORKFLOW POSITION (Alternative to Step 2):
-    ///   create environment → [REGISTER] → configure → release → run
+    ///   create environment → \[REGISTER\] → configure → release → run
     ///                    ↓
     ///             (alternative: provision)
     ///
@@ -374,7 +374,7 @@ pub enum Commands {
     ///   • On Failure: Remains in Configured state
     ///
     /// WORKFLOW POSITION (Step 4 of 8):
-    ///   configure → [RELEASE] → run
+    ///   configure → \[RELEASE\] → run
     ///
     /// WHAT THIS DOES NOT DO:
     ///   • Does not start containers (use 'run')
@@ -497,7 +497,7 @@ pub enum Commands {
     ///   • On Failure: Remains in Released state
     ///
     /// WORKFLOW POSITION (Step 5 of 8 - Final deployment step):
-    ///   release → [RUN] → (services running)
+    ///   release → \[RUN\] → (services running)
     ///
     /// SERVICE ACCESS:
     ///   Once running, services are accessible at:
@@ -672,7 +672,7 @@ pub enum CreateAction {
     /// NEXT STEPS:
     ///   After creating an environment, choose one:
     ///   1. Provision new infrastructure: provision {env-name}
-    ///   2. Register existing infrastructure: register {env-name} --instance-ip <IP>
+    ///   2. Register existing infrastructure: register {env-name} --instance-ip \<IP\>
     Environment {
         /// Path to the environment configuration file
         ///
@@ -707,7 +707,7 @@ pub enum CreateAction {
     ///   • Optional: monitoring, backup, HTTPS settings
     ///
     /// NEXT STEPS:
-    ///   1. Generate template: create template --provider <type>
+    ///   1. Generate template: create template --provider \<type\>
     ///   2. Edit template: vim environment-template.json
     ///   3. Validate config: validate --env-file environment-template.json
     ///   4. Create environment: create environment --env-file environment-template.json
