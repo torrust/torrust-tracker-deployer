@@ -28,6 +28,7 @@ docs/
 ├── contributing/          🤝 Contribution guidelines (branching, commits, DDD, errors, templates, testing)
 ├── decisions/            📋 Architectural Decision Records (30+ ADRs with context and rationale)
 ├── e2e-testing/          🧪 E2E test documentation (architecture, running, manual, troubleshooting)
+├── experiments/          🧪 Active experiments exploring potential features and improvements
 ├── features/             ✨ Feature specifications and development tracking (5 active features)
 ├── user-guide/           📖 User documentation (commands, providers, quick start)
 ├── tech-stack/           🛠️ Technology docs (Ansible, LXD, OpenTofu, SSH)
@@ -228,6 +229,17 @@ Ansible testing strategy, Docker vs LXD, E2E testing, UX patterns, MVVM analysis
 - [`research/docker-vs-lxd-ansible-testing.md`](research/docker-vs-lxd-ansible-testing.md) - Technology comparison
 - [`research/UX/`](research/UX/) - UX research documents (console output patterns, logging strategy)
 - [`research/mvvm-pattern-analysis/`](research/mvvm-pattern-analysis/) - MVVM pattern research
+
+</details>
+
+<details>
+<summary><strong>🧪 Experiments (Click to Expand)</strong></summary>
+
+Active experiments exploring potential features and improvements
+
+**Active Experiments:**
+
+- [`experiments/cli-json-schema/`](experiments/cli-json-schema/) - JSON Schema generation for CLI interface (machine-readable, versionable CLI specification)
 
 </details>
 

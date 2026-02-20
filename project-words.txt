@@ -291,6 +291,7 @@ pids
 pingoo
 pingooio
 pipefail
+pipeable
 pipx
 pkcs
 pkill
@@ -419,6 +420,7 @@ utmp
 vbqajnc
 venv
 venvs
+versionable
 viewmodel
 vulns
 webservers

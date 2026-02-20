@@ -12,11 +12,11 @@ use super::errors::CreateCommandError;
 
 /// Route the create command to its appropriate subcommand
 ///
-/// This function routes between different create subcommands (environment, template, or schema).
+/// This function routes between different create subcommands (environment, template, schema, or cli-schema).
 ///
 /// # Arguments
 ///
-/// * `action` - The create action to perform (environment creation, template generation, or schema generation)
+/// * `action` - The create action to perform (environment creation, template generation, schema generation, or CLI schema generation)
 /// * `working_dir` - Root directory for environment data storage
 /// * `context` - Execution context providing access to application services
 ///

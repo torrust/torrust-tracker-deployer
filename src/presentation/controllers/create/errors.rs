@@ -1,7 +1,7 @@
 //! Unified Create Command Errors
 //!
 //! This module defines a unified error type that encompasses all create subcommand errors,
-//! providing a single interface for environment, template, and schema command errors.
+//! providing a single interface for environment, template, schema, and CLI schema command errors.
 
 use thiserror::Error;
 
@@ -13,7 +13,8 @@ use super::subcommands::{
 /// Unified error type for all create subcommands
 ///
 /// This error type provides a unified interface for errors that can occur during
-/// any create subcommand execution (environment creation, template generation, or schema generation).
+/// any create subcommand execution (environment creation, template generation,
+/// or schema generation).
 /// It wraps the specific command errors while preserving their context and help methods.
 #[derive(Debug, Error)]
 pub enum CreateCommandError {

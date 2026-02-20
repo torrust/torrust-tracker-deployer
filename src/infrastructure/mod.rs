@@ -16,8 +16,10 @@
 //! - `persistence` - Persistence infrastructure (repositories, file locking, storage)
 //! - `trace` - Trace file generation for error analysis
 //! - `schema` - JSON Schema generation from Rust types
+//! - `cli_docs` - CLI JSON documentation generation from Clap structures
 //! - `dns` - DNS resolution for domain validation
 
+pub mod cli_docs;
 pub mod dns;
 pub mod external_validators;
 pub mod persistence;
