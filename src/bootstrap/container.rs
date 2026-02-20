@@ -18,6 +18,7 @@ use crate::presentation::controllers::create::subcommands::environment::CreateEn
 use crate::presentation::controllers::create::subcommands::schema::CreateSchemaCommandController;
 use crate::presentation::controllers::create::subcommands::template::CreateTemplateCommandController;
 use crate::presentation::controllers::destroy::DestroyCommandController;
+use crate::presentation::controllers::docs::DocsCommandController;
 use crate::presentation::controllers::list::ListCommandController;
 use crate::presentation::controllers::provision::ProvisionCommandController;
 use crate::presentation::controllers::purge::PurgeCommandController;
@@ -216,6 +217,12 @@ impl Container {
     #[must_use]
     pub fn create_schema_controller(&self) -> CreateSchemaCommandController {
         CreateSchemaCommandController::new(&self.user_output())
+    }
+
+    /// Create a new `DocsCommandController`
+    #[must_use]
+    pub fn create_docs_controller(&self) -> DocsCommandController {
+        DocsCommandController::new(&self.user_output())
     }
 
     /// Create a new `ProvisionCommandController`

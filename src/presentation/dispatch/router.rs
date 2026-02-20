@@ -226,5 +226,12 @@ pub async fn route_command(
                 .execute(output_format)?;
             Ok(())
         }
+        Commands::Docs { output_path } => {
+            context
+                .container()
+                .create_docs_controller()
+                .execute(output_path.as_ref())?;
+            Ok(())
+        }
     }
 }

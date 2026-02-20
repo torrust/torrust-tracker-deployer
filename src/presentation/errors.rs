@@ -21,7 +21,7 @@ use thiserror::Error;
 
 use crate::presentation::controllers::{
     configure::ConfigureSubcommandError, create::CreateCommandError,
-    destroy::DestroySubcommandError, list::ListSubcommandError,
+    destroy::DestroySubcommandError, docs::DocsCommandError, list::ListSubcommandError,
     provision::ProvisionSubcommandError, purge::PurgeSubcommandError,
     register::errors::RegisterSubcommandError, release::ReleaseSubcommandError,
     render::errors::RenderCommandError, run::RunSubcommandError, show::ShowSubcommandError,
@@ -48,6 +48,13 @@ pub enum CommandError {
     /// Use `.help()` for detailed troubleshooting steps.
     #[error("Destroy command failed: {0}")]
     Destroy(Box<DestroySubcommandError>),
+
+    /// Docs command specific errors
+    ///
+    /// Encapsulates all errors that can occur during CLI documentation generation.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Docs command failed: {0}")]
+    Docs(Box<DocsCommandError>),
 
     /// Provision command specific errors
     ///
@@ -143,6 +150,12 @@ impl From<CreateCommandError> for CommandError {
 impl From<DestroySubcommandError> for CommandError {
     fn from(error: DestroySubcommandError) -> Self {
         Self::Destroy(Box::new(error))
+    }
+}
+
+impl From<DocsCommandError> for CommandError {
+    fn from(error: DocsCommandError) -> Self {
+        Self::Docs(Box::new(error))
     }
 }
 
@@ -250,6 +263,7 @@ impl CommandError {
         match self {
             Self::Create(e) => e.help(),
             Self::Destroy(e) => e.help().to_string(),
+            Self::Docs(e) => e.help(),
             Self::Provision(e) => e.help().to_string(),
             Self::Configure(e) => e.help().to_string(),
             Self::Register(e) => e.help().to_string(),
