@@ -265,11 +265,15 @@ Add features and documentation that make the use of AI agents to operate the dep
 
 **Epic Issue**: [#348 - Add JSON output format support](https://github.com/torrust/torrust-tracker-deployer/issues/348)
 
-Add machine-readable JSON output format (`--json` flag) for selected commands to improve automation and AI agent integration. Initial phase focuses on commands where structured output provides the most value.
+Add machine-readable JSON output format to all commands to improve automation and AI agent integration. Once all commands support JSON output, **JSON will become the default format** (replacing `text`) because the deployer is primarily used by AI agents and automation workflows. Use `--output-format text` for human-friendly terminal output.
 
-**Context**: JSON output enables programmatic parsing, making it easier for scripts and AI agents to extract specific information (like IP addresses, service URLs, environment names) without parsing human-readable text.
+**Context**: JSON output enables programmatic parsing, making it easier for scripts and AI agents to extract specific information (like IP addresses, service URLs, environment names) without parsing human-readable text. We are prioritizing AI UX over human UX because human UX is increasingly the use of AI agents.
 
-**Phase 1 - High-Value Commands:**
+#### Decision: JSON as Future Default Format
+
+Once all commands have JSON output implemented (Phase 2 complete), the default output format will switch to JSON (`--output-format json`). Users who prefer human-readable output will need to explicitly pass `--output-format text`. This decision prioritizes AI agent UX since AI agents can more easily process structured JSON than natural language output. The switch cannot happen before all commands support JSON, otherwise the application would panic for commands with no JSON implementation.
+
+**Phase 1 - High-Value Commands (Completed):**
 
 - [x] **12.1** Add JSON output to `create` command ✅ Completed - [Issue #349](https://github.com/torrust/torrust-tracker-deployer/issues/349), [PR #351](https://github.com/torrust/torrust-tracker-deployer/pull/351)
   - Rationale: Contains info about where to find more detailed information (paths, configuration references)
@@ -292,7 +296,46 @@ Add machine-readable JSON output format (`--json` flag) for selected commands to
   - Rationale: Shows full environment names without truncation, enabling unambiguous identification
   - Table format truncates long names - JSON provides complete information
 
-**Future Enhancement:** JSON output can be extended to all commands (`configure`, `release`, `test`, `destroy`, `validate`, `render`, `purge`) based on user demand and use cases.
+**Phase 2 - Remaining Commands:**
+
+- [ ] **12.6** Add JSON output to `configure` command [Issue #371](https://github.com/torrust/torrust-tracker-deployer/issues/371)
+  - Rationale: Contains the list of installed/configured components (Docker, security updates, firewall) and their status
+  - Allows automation to verify successful configuration before proceeding to release
+
+- [ ] **12.7** Add JSON output to `release` command
+  - Rationale: Contains the list of deployed artifacts and their remote paths on the VM
+  - Allows automation to verify all files were correctly transferred before running
+
+- [ ] **12.8** Add JSON output to `test` command
+  - Rationale: Contains test results for each verified component (cloud-init, Docker, Docker Compose)
+  - Structured pass/fail per component enables CI/CD pipelines to gate on specific checks
+
+- [ ] **12.9** Add JSON output to `destroy` command
+  - Rationale: Confirms which resources were destroyed and the final environment state
+  - Enables automation to verify cleanup before proceeding
+
+- [ ] **12.10** Add JSON output to `validate` command
+  - Rationale: Contains validation results per field with error details
+  - Allows automation and AI agents to surface configuration errors programmatically
+
+- [ ] **12.11** Add JSON output to `render` command
+  - Rationale: Contains the list of generated artifact paths and their destinations
+  - Enables automation to locate and process the generated files
+
+- [ ] **12.12** Add JSON output to `purge` command
+  - Rationale: Lists the directories and files that were removed
+  - Provides a machine-readable record of what was cleaned up
+
+- [ ] **12.13** Add JSON output to `register` command
+  - Rationale: Confirms the registered instance details (IP, SSH port, state transition)
+  - Enables automation to verify successful registration before proceeding to configure
+
+- [ ] **12.14** Switch default output format from `text` to `json` (after 12.6–12.13 complete)
+  - Prerequisite: All commands must have JSON output implemented to avoid panics
+  - Change `#[default]` in `OutputFormat` enum from `Text` to `Json`
+  - Update `default_value = "text"` to `default_value = "json"` in CLI args
+  - Update all doctests and documentation referencing the old default
+  - Rationale: Prioritize AI agent UX — JSON is easier for agents to parse than human-readable text
 
 ---
 
