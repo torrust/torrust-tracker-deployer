@@ -82,7 +82,7 @@ pub use crate::application::command_handlers::list::ListCommandHandlerError;
 pub use crate::application::command_handlers::purge::errors::PurgeCommandHandlerError;
 pub use crate::application::command_handlers::show::ShowCommandHandlerError;
 pub use crate::application::command_handlers::validate::ValidateCommandHandlerError;
-pub use error::CreateEnvironmentFromFileError;
+pub use error::{CreateEnvironmentFromFileError, SdkError};
 
 // === Extension points ===
 pub use crate::application::traits::{CommandProgressListener, NullProgressListener};
