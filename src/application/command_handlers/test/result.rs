@@ -18,6 +18,8 @@ use crate::shared::domain_name::DomainName;
 /// the application layer produces structured data, the presentation layer renders it.
 #[derive(Debug)]
 pub struct TestResult {
+    /// IP address of the tested instance
+    pub instance_ip: IpAddr,
     /// Advisory DNS warnings (domains that failed to resolve or resolved to wrong IP)
     pub dns_warnings: Vec<DnsWarning>,
 }
@@ -25,16 +27,20 @@ pub struct TestResult {
 impl TestResult {
     /// Create a new `TestResult` with no warnings
     #[must_use]
-    pub fn success() -> Self {
+    pub fn success(instance_ip: IpAddr) -> Self {
         Self {
+            instance_ip,
             dns_warnings: Vec::new(),
         }
     }
 
     /// Create a new `TestResult` with DNS warnings
     #[must_use]
-    pub fn with_dns_warnings(dns_warnings: Vec<DnsWarning>) -> Self {
-        Self { dns_warnings }
+    pub fn with_dns_warnings(instance_ip: IpAddr, dns_warnings: Vec<DnsWarning>) -> Self {
+        Self {
+            instance_ip,
+            dns_warnings,
+        }
     }
 
     /// Check if there are any DNS warnings
@@ -99,11 +105,16 @@ pub enum DnsIssue {
 mod tests {
     use super::*;
 
+    fn test_ip() -> IpAddr {
+        "10.0.0.1".parse().unwrap()
+    }
+
     #[test]
     fn it_should_create_success_result_with_no_warnings() {
-        let result = TestResult::success();
+        let result = TestResult::success(test_ip());
         assert!(!result.has_dns_warnings());
         assert!(result.dns_warnings.is_empty());
+        assert_eq!(result.instance_ip, test_ip());
     }
 
     #[test]
@@ -114,7 +125,7 @@ mod tests {
             issue: DnsIssue::ResolutionFailed("name resolution failed".to_string()),
         }];
 
-        let result = TestResult::with_dns_warnings(warnings);
+        let result = TestResult::with_dns_warnings(test_ip(), warnings);
         assert!(result.has_dns_warnings());
         assert_eq!(result.dns_warnings.len(), 1);
     }
