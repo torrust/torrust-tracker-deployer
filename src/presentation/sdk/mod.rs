@@ -41,7 +41,9 @@
 //! | Method | Description |
 //! |--------|-------------|
 //! | [`Deployer::create_environment`] | Create a new deployment environment |
+//! | [`Deployer::create_environment_from_file`] | Create an environment from a JSON file |
 //! | [`Deployer::show`] | Show information about an environment |
+//! | [`Deployer::exists`] | Check whether a named environment exists |
 //! | [`Deployer::list`] | List all environments in the workspace |
 //! | [`Deployer::validate`] | Validate an environment configuration file |
 //! | [`Deployer::destroy`] | Destroy infrastructure for an environment |

@@ -177,6 +177,44 @@ impl Deployer {
         handler.execute(env_name)
     }
 
+    /// Check whether a named environment exists in the workspace.
+    ///
+    /// Returns `Ok(true)` if the environment is found, `Ok(false)` if it does
+    /// not exist, or `Err` for unexpected repository failures.
+    ///
+    /// This is a convenience wrapper around [`show`](Self::show) that avoids
+    /// forcing callers to pattern-match on `ShowCommandHandlerError`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ShowCommandHandlerError::LoadError`] if the repository
+    /// encounters an unexpected error (filesystem/IO). A "not found" result
+    /// is **not** an error — it returns `Ok(false)`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use torrust_tracker_deployer_lib::presentation::sdk::Deployer;
+    /// use torrust_tracker_deployer_lib::domain::EnvironmentName;
+    ///
+    /// let deployer = Deployer::builder()
+    ///     .working_dir("/path/to/workspace")
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let name = EnvironmentName::new("my-env").unwrap();
+    /// if deployer.exists(&name).unwrap() {
+    ///     println!("environment already exists");
+    /// }
+    /// ```
+    pub fn exists(&self, env_name: &EnvironmentName) -> Result<bool, ShowCommandHandlerError> {
+        match self.show(env_name) {
+            Ok(_) => Ok(true),
+            Err(ShowCommandHandlerError::EnvironmentNotFound { .. }) => Ok(false),
+            Err(e) => Err(e),
+        }
+    }
+
     /// List all environments in the workspace.
     ///
     /// Equivalent to `torrust-tracker-deployer list`.
