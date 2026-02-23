@@ -146,6 +146,7 @@ pub mod validated_params;
 // Re-export commonly used types for convenience
 pub use backup::BackupSection;
 pub use environment_config::{EnvironmentCreationConfig, EnvironmentSection};
+pub use errors::ConfigLoadError;
 pub use errors::CreateConfigError;
 pub use grafana::GrafanaSection;
 pub use https::HttpsSection;

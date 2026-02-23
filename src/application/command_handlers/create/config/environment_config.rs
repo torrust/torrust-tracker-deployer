@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::domain::provider::Provider;
 
 use super::backup::BackupSection;
+use super::errors::load_error;
 use super::errors::CreateConfigError;
 use super::grafana::GrafanaSection;
 use super::https::HttpsSection;
@@ -440,6 +441,87 @@ impl EnvironmentCreationConfig {
         })?;
 
         Ok(())
+    }
+
+    /// Deserialize an [`EnvironmentCreationConfig`] from a JSON string.
+    ///
+    /// This is a convenience constructor that hides the `serde_json` dependency
+    /// from callers — useful when the JSON is already available in memory
+    /// (e.g., built by an AI agent or fetched from a remote source).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`load_error::ConfigLoadError::JsonParseFailed`] if the JSON is
+    /// malformed or does not match the expected structure.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
+    ///
+    /// let json = r#"{
+    ///     "environment": { "name": "dev" },
+    ///     "ssh_credentials": {
+    ///         "private_key_path": "/home/user/.ssh/id_rsa",
+    ///         "public_key_path": "/home/user/.ssh/id_rsa.pub"
+    ///     },
+    ///     "provider": { "provider": "lxd", "profile_name": "torrust" },
+    ///     "tracker": {
+    ///         "core": {
+    ///             "database": { "driver": "sqlite3", "database_name": "tracker.db" },
+    ///             "private": false
+    ///         },
+    ///         "udp_trackers": [{ "bind_address": "0.0.0.0:6969" }],
+    ///         "http_trackers": [{ "bind_address": "0.0.0.0:7070" }],
+    ///         "http_api": { "bind_address": "0.0.0.0:1212", "admin_token": "secret" },
+    ///         "health_check_api": { "bind_address": "127.0.0.1:1313" }
+    ///     }
+    /// }"#;
+    ///
+    /// let config = EnvironmentCreationConfig::from_json(json).unwrap();
+    /// assert_eq!(config.environment.name, "dev");
+    /// ```
+    pub fn from_json(json: &str) -> Result<Self, load_error::ConfigLoadError> {
+        serde_json::from_str(json)
+            .map_err(|source| load_error::ConfigLoadError::JsonParseFailed { source })
+    }
+
+    /// Load an [`EnvironmentCreationConfig`] from a JSON file.
+    ///
+    /// This is a convenience constructor that reads and parses a configuration
+    /// file in one step — equivalent to the CLI's `--env-file <path>` flag.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`load_error::ConfigLoadError`] if:
+    /// - The file does not exist (`FileNotFound`)
+    /// - The file cannot be read (`FileReadFailed`)
+    /// - The JSON content is malformed (`JsonParseFailed`)
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use std::path::Path;
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
+    ///
+    /// let config = EnvironmentCreationConfig::from_file(Path::new("envs/my-env.json")).unwrap();
+    /// println!("Loaded environment: {}", config.environment.name);
+    /// ```
+    pub fn from_file(path: &std::path::Path) -> Result<Self, load_error::ConfigLoadError> {
+        if !path.exists() {
+            return Err(load_error::ConfigLoadError::FileNotFound {
+                path: path.to_path_buf(),
+            });
+        }
+
+        let content = std::fs::read_to_string(path).map_err(|source| {
+            load_error::ConfigLoadError::FileReadFailed {
+                path: path.to_path_buf(),
+                source,
+            }
+        })?;
+
+        Self::from_json(&content)
     }
 }
 
