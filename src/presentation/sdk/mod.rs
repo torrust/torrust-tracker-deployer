@@ -67,7 +67,10 @@ pub use crate::domain::{
 };
 
 // === Configuration types (for create_environment) ===
-pub use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
+pub use crate::application::command_handlers::create::config::{
+    EnvironmentCreationConfig, EnvironmentCreationConfigBuildError,
+    EnvironmentCreationConfigBuilder,
+};
 
 // === Result types ===
 pub use crate::application::command_handlers::list::EnvironmentList;

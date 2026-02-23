@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::domain::provider::Provider;
 
 use super::backup::BackupSection;
+use super::builder::EnvironmentCreationConfigBuilder;
 use super::errors::load_error;
 use super::errors::CreateConfigError;
 use super::grafana::GrafanaSection;
@@ -197,6 +198,29 @@ pub struct EnvironmentSection {
 }
 
 impl EnvironmentCreationConfig {
+    /// Create a fluent builder for `EnvironmentCreationConfig`.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::EnvironmentCreationConfig;
+    ///
+    /// let config = EnvironmentCreationConfig::builder()
+    ///     .name("my-tracker")
+    ///     .ssh_keys("/path/to/key", "/path/to/key.pub")
+    ///     .provider_lxd("torrust-profile")
+    ///     .sqlite("tracker.db")
+    ///     .udp("0.0.0.0:6969")
+    ///     .http("0.0.0.0:7070")
+    ///     .api("0.0.0.0:1212", "MyToken")
+    ///     .build()
+    ///     .expect("Failed to build configuration");
+    /// ```
+    #[must_use]
+    pub fn builder() -> EnvironmentCreationConfigBuilder {
+        EnvironmentCreationConfigBuilder::new()
+    }
+
     /// Creates a new environment creation configuration
     ///
     /// # Examples

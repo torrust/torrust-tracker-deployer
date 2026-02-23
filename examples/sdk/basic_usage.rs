@@ -1,14 +1,14 @@
 //! Basic SDK usage example.
 //!
 //! Demonstrates how to use the Torrust Tracker Deployer SDK to:
-//! 1. Create a deployment environment from JSON
+//! 1. Create a deployment environment using the typed builder
 //! 2. List all environments in the workspace
 //! 3. Show environment details
 //! 4. Purge the environment (clean up)
 //!
 //! This example only uses operations that work locally (no infrastructure
-//! required). It reads an environment config JSON, creates the local
-//! environment data, inspects it, and cleans up.
+//! required). It builds an environment config with the builder, creates the
+//! local environment data, inspects it, and cleans up.
 //!
 //! # Running
 //!
@@ -35,34 +35,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         workspace.display()
     );
 
-    // 2. Create an environment from a JSON config string (no serde_json needed)
+    // 2. Build the environment config with the typed builder — no JSON strings
     println!("--- Step 1: Create environment ---");
-    let config_json = format!(
-        r#"{{
-        "environment": {{ "name": "sdk-example" }},
-        "ssh_credentials": {{
-            "private_key_path": "{workspace}/fixtures/testing_rsa",
-            "public_key_path": "{workspace}/fixtures/testing_rsa.pub"
-        }},
-        "provider": {{
-            "provider": "lxd",
-            "profile_name": "torrust-sdk-example"
-        }},
-        "tracker": {{
-            "core": {{
-                "database": {{ "driver": "sqlite3", "database_name": "tracker.db" }},
-                "private": false
-            }},
-            "udp_trackers": [{{ "bind_address": "0.0.0.0:6969" }}],
-            "http_trackers": [{{ "bind_address": "0.0.0.0:7070" }}],
-            "http_api": {{ "bind_address": "0.0.0.0:1212", "admin_token": "MyAccessToken" }},
-            "health_check_api": {{ "bind_address": "127.0.0.1:1313" }}
-        }}
-    }}"#,
-        workspace = workspace.display()
-    );
+    let private_key = workspace.join("fixtures/testing_rsa");
+    let public_key = workspace.join("fixtures/testing_rsa.pub");
 
-    let config = EnvironmentCreationConfig::from_json(&config_json)?;
+    let config = EnvironmentCreationConfig::builder()
+        .name("sdk-example")
+        .ssh_keys(private_key.to_string_lossy(), public_key.to_string_lossy())
+        .provider_lxd("torrust-sdk-example")
+        .sqlite("tracker.db")
+        .udp("0.0.0.0:6969")
+        .http("0.0.0.0:7070")
+        .api("0.0.0.0:1212", "MyAccessToken")
+        .build()?;
+
     let environment = deployer.create_environment(config)?;
     println!("  Created: {}\n", environment.name());
 
