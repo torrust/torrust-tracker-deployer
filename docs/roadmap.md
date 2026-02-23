@@ -298,15 +298,15 @@ Once all commands have JSON output implemented (Phase 2 complete), the default o
 
 **Phase 2 - Remaining Commands:**
 
-- [ ] **12.6** Add JSON output to `configure` command [Issue #371](https://github.com/torrust/torrust-tracker-deployer/issues/371)
+- [x] **12.6** Add JSON output to `configure` command ✅ Completed - [Issue #371](https://github.com/torrust/torrust-tracker-deployer/issues/371)
   - Rationale: Contains the list of installed/configured components (Docker, security updates, firewall) and their status
   - Allows automation to verify successful configuration before proceeding to release
 
-- [ ] **12.7** Add JSON output to `release` command
+- [x] **12.7** Add JSON output to `release` command ✅ Completed - [Issue #377](https://github.com/torrust/torrust-tracker-deployer/issues/377)
   - Rationale: Contains the list of deployed artifacts and their remote paths on the VM
   - Allows automation to verify all files were correctly transferred before running
 
-- [ ] **12.8** Add JSON output to `test` command
+- [ ] **12.8** Add JSON output to `test` command [Issue #380](https://github.com/torrust/torrust-tracker-deployer/issues/380)
   - Rationale: Contains test results for each verified component (cloud-init, Docker, Docker Compose)
   - Structured pass/fail per component enables CI/CD pipelines to gate on specific checks
 
