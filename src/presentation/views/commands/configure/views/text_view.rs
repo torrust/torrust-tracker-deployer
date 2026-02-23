@@ -122,51 +122,77 @@ impl TextView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{TimeZone, Utc};
+    use chrono::{DateTime, TimeZone, Utc};
     use std::net::{IpAddr, Ipv4Addr};
 
-    #[test]
-    fn it_should_render_configure_details_as_formatted_text() {
-        // Arrange
-        let details = ConfigureDetailsData {
+    // Test fixtures and helpers
+
+    fn create_test_timestamp() -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2026, 2, 23, 10, 0, 0).unwrap()
+    }
+
+    fn create_test_ip() -> IpAddr {
+        IpAddr::V4(Ipv4Addr::new(10, 140, 190, 39))
+    }
+
+    fn create_test_details_with_ip(ip: Option<IpAddr>) -> ConfigureDetailsData {
+        ConfigureDetailsData {
             environment_name: "test-env".to_string(),
             instance_name: "torrust-tracker-vm-test-env".to_string(),
             provider: "lxd".to_string(),
             state: "Configured".to_string(),
-            instance_ip: Some(IpAddr::V4(Ipv4Addr::new(10, 140, 190, 39))),
-            created_at: Utc.with_ymd_and_hms(2026, 2, 23, 10, 0, 0).unwrap(),
-        };
+            instance_ip: ip,
+            created_at: create_test_timestamp(),
+        }
+    }
+
+    /// Helper to assert text contains all expected substrings
+    fn assert_contains_all(text: &str, expected: &[&str]) {
+        for substring in expected {
+            assert!(
+                text.contains(substring),
+                "Expected text to contain '{}' but it didn't.\nActual text:\n{}",
+                substring,
+                text
+            );
+        }
+    }
+
+    // Tests
+
+    #[test]
+    fn it_should_render_configure_details_as_formatted_text() {
+        // Arrange
+        let details = create_test_details_with_ip(Some(create_test_ip()));
 
         // Act
         let text = TextView::render(&details);
 
         // Assert
-        assert!(text.contains("Environment Details:"));
-        assert!(text.contains("Name:"));
-        assert!(text.contains("test-env"));
-        assert!(text.contains("Instance:"));
-        assert!(text.contains("torrust-tracker-vm-test-env"));
-        assert!(text.contains("Provider:"));
-        assert!(text.contains("lxd"));
-        assert!(text.contains("State:"));
-        assert!(text.contains("Configured"));
-        assert!(text.contains("Instance IP:"));
-        assert!(text.contains("10.140.190.39"));
-        assert!(text.contains("Created:"));
-        assert!(text.contains("2026-02-23 10:00:00 UTC"));
+        assert_contains_all(
+            &text,
+            &[
+                "Environment Details:",
+                "Name:",
+                "test-env",
+                "Instance:",
+                "torrust-tracker-vm-test-env",
+                "Provider:",
+                "lxd",
+                "State:",
+                "Configured",
+                "Instance IP:",
+                "10.140.190.39",
+                "Created:",
+                "2026-02-23 10:00:00 UTC",
+            ],
+        );
     }
 
     #[test]
     fn it_should_display_not_available_when_instance_ip_is_none() {
         // Arrange
-        let details = ConfigureDetailsData {
-            environment_name: "test-env".to_string(),
-            instance_name: "torrust-tracker-vm-test-env".to_string(),
-            provider: "lxd".to_string(),
-            state: "Configured".to_string(),
-            instance_ip: None,
-            created_at: Utc.with_ymd_and_hms(2026, 2, 23, 10, 0, 0).unwrap(),
-        };
+        let details = create_test_details_with_ip(None);
 
         // Act
         let text = TextView::render(&details);
@@ -178,24 +204,22 @@ mod tests {
     #[test]
     fn it_should_include_all_required_sections() {
         // Arrange
-        let details = ConfigureDetailsData {
-            environment_name: "my-env".to_string(),
-            instance_name: "torrust-tracker-vm-my-env".to_string(),
-            provider: "hetzner".to_string(),
-            state: "Configured".to_string(),
-            instance_ip: Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 42))),
-            created_at: Utc.with_ymd_and_hms(2026, 2, 20, 14, 30, 45).unwrap(),
-        };
+        let details = create_test_details_with_ip(Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 42))));
 
         // Act
         let text = TextView::render(&details);
 
         // Assert - check all sections are present
-        assert!(text.contains("Name:"));
-        assert!(text.contains("Instance:"));
-        assert!(text.contains("Provider:"));
-        assert!(text.contains("State:"));
-        assert!(text.contains("Instance IP:"));
-        assert!(text.contains("Created:"));
+        assert_contains_all(
+            &text,
+            &[
+                "Name:",
+                "Instance:",
+                "Provider:",
+                "State:",
+                "Instance IP:",
+                "Created:",
+            ],
+        );
     }
 }
