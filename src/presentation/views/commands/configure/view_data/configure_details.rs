@@ -35,7 +35,7 @@ use crate::domain::environment::Environment;
 /// - Decouples domain models from view formatting
 /// - Provides a stable interface for multiple view strategies
 /// - Contains all fields needed for any output format
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ConfigureDetailsData {
     /// Name of the configured environment
     pub environment_name: String,
@@ -86,80 +86,85 @@ mod tests {
     use crate::domain::provider::{LxdConfig, ProviderConfig};
     use crate::domain::ProfileName;
     use crate::shared::Username;
-    use chrono::TimeZone;
+    use chrono::{DateTime, TimeZone, Utc};
     use std::net::{IpAddr, Ipv4Addr};
     use std::path::PathBuf;
+
+    // Test fixtures and helpers
+
+    fn create_test_ssh_credentials() -> SshCredentials {
+        let ssh_username = Username::new("deployer".to_string()).unwrap();
+        SshCredentials::new(
+            PathBuf::from("./keys/test_rsa"),
+            PathBuf::from("./keys/test_rsa.pub"),
+            ssh_username,
+        )
+    }
+
+    fn create_test_provider_config() -> ProviderConfig {
+        ProviderConfig::Lxd(LxdConfig {
+            profile_name: ProfileName::new("lxd-test-env".to_string()).unwrap(),
+        })
+    }
+
+    fn create_test_timestamp() -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2026, 2, 23, 10, 0, 0).unwrap()
+    }
+
+    fn create_configured_environment_with_ip(ip: IpAddr) -> Environment<Configured> {
+        let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
+        let ssh_credentials = create_test_ssh_credentials();
+        let provider_config = create_test_provider_config();
+        let created_at = create_test_timestamp();
+
+        Environment::new(env_name, provider_config, ssh_credentials, 22, created_at)
+            .start_provisioning()
+            .provisioned(ip, ProvisionMethod::Provisioned)
+            .start_configuring()
+            .configured()
+    }
+
+    fn create_test_ip() -> IpAddr {
+        IpAddr::V4(Ipv4Addr::new(10, 140, 190, 39))
+    }
+
+    fn create_expected_dto(ip: IpAddr) -> ConfigureDetailsData {
+        ConfigureDetailsData {
+            environment_name: "test-env".to_string(),
+            instance_name: "torrust-tracker-vm-test-env".to_string(),
+            provider: "lxd".to_string(),
+            state: "Configured".to_string(),
+            instance_ip: Some(ip),
+            created_at: create_test_timestamp(),
+        }
+    }
+
+    // Tests
 
     #[test]
     fn it_should_convert_configured_environment_to_dto() {
         // Arrange
-        let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
-        let ssh_username = Username::new("deployer".to_string()).unwrap();
-        let ssh_credentials = SshCredentials::new(
-            PathBuf::from("./keys/test_rsa"),
-            PathBuf::from("./keys/test_rsa.pub"),
-            ssh_username,
-        );
-        let provider_config = ProviderConfig::Lxd(LxdConfig {
-            profile_name: ProfileName::new("lxd-test-env".to_string()).unwrap(),
-        });
-        let created_at = Utc.with_ymd_and_hms(2026, 2, 23, 10, 0, 0).unwrap();
-
-        let env = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at)
-            .start_provisioning()
-            .provisioned(
-                IpAddr::V4(Ipv4Addr::new(10, 140, 190, 39)),
-                ProvisionMethod::Provisioned,
-            )
-            .start_configuring()
-            .configured();
+        let test_ip = create_test_ip();
+        let env = create_configured_environment_with_ip(test_ip);
+        let expected = create_expected_dto(test_ip);
 
         // Act
         let dto = ConfigureDetailsData::from(&env);
 
         // Assert
-        assert_eq!(dto.environment_name, "test-env");
-        assert_eq!(dto.instance_name, "torrust-tracker-vm-test-env");
-        assert_eq!(dto.provider, "lxd");
-        assert_eq!(dto.state, "Configured");
-        assert_eq!(
-            dto.instance_ip,
-            Some(IpAddr::V4(Ipv4Addr::new(10, 140, 190, 39)))
-        );
-        assert_eq!(dto.created_at, created_at);
+        assert_eq!(dto, expected);
     }
 
     #[test]
     fn it_should_handle_none_instance_ip() {
-        // Arrange - create environment without IP
-        let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
-        let ssh_username = Username::new("deployer".to_string()).unwrap();
-        let ssh_credentials = SshCredentials::new(
-            PathBuf::from("./keys/test_rsa"),
-            PathBuf::from("./keys/test_rsa.pub"),
-            ssh_username,
-        );
-        let provider_config = ProviderConfig::Lxd(LxdConfig {
-            profile_name: ProfileName::new("lxd-test-env".to_string()).unwrap(),
-        });
-        let created_at = Utc.with_ymd_and_hms(2026, 2, 23, 10, 0, 0).unwrap();
-
-        // Create environment in configured state but somehow without IP
-        // (this is theoretically possible if we transition manually for testing)
-        let env = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at)
-            .start_provisioning()
-            .provisioned(
-                IpAddr::V4(Ipv4Addr::new(10, 140, 190, 39)),
-                ProvisionMethod::Provisioned,
-            )
-            .start_configuring()
-            .configured();
+        // Arrange - create environment with IP
+        let env = create_configured_environment_with_ip(create_test_ip());
 
         // Act
         let dto = ConfigureDetailsData::from(&env);
 
         // Assert - in a real configured environment, IP should always be present
-        // This test just documents the behavior when it's None
+        // This test documents that configured environments have IP addresses
         assert!(dto.instance_ip.is_some());
     }
 }
