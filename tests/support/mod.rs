@@ -19,5 +19,17 @@ pub use assertions::EnvironmentStateAssertions;
 pub use temp_workspace::TempWorkspace;
 
 // Re-export ProcessRunner from the library's testing module
-// This allows tests to continue using `support::ProcessRunner` without changes
 pub use torrust_tracker_deployer_lib::testing::e2e::ProcessRunner;
+
+/// Returns a [`ProcessRunner`] configured to use the pre-built production binary.
+///
+/// Cargo sets `CARGO_BIN_EXE_torrust-tracker-deployer` to the absolute path of the
+/// compiled binary when building integration tests. Cargo guarantees the binary is
+/// built as a prerequisite automatically — no race conditions.
+///
+/// # Panics
+///
+/// Panics at compile time if the binary name does not exist in the workspace.
+pub fn process_runner() -> ProcessRunner {
+    ProcessRunner::new().with_binary(env!("CARGO_BIN_EXE_torrust-tracker-deployer"))
+}

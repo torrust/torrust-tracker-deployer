@@ -18,7 +18,7 @@
 //! 2. Single environment: List command shows created environment
 //! 3. Multiple environments: List command shows all created environments
 
-use super::super::support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
+use super::super::support::{process_runner, EnvironmentStateAssertions, TempWorkspace};
 use anyhow::Result;
 use torrust_dependency_installer::{verify_dependencies, Dependency};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::create_test_environment_config;
@@ -50,7 +50,7 @@ fn it_should_report_no_data_directory_when_workspace_is_empty() {
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
     // Act: Run list command on empty workspace
-    let list_result = ProcessRunner::new()
+    let list_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_list_command()
@@ -89,7 +89,7 @@ fn it_should_list_created_environment() {
         .expect("Failed to write config file");
 
     // Create environment
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -106,7 +106,7 @@ fn it_should_list_created_environment() {
     env_assertions.assert_environment_exists("test-list-single");
 
     // Act: Run list command
-    let list_result = ProcessRunner::new()
+    let list_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_list_command()
@@ -142,7 +142,7 @@ fn it_should_list_multiple_environments() {
         .write_config_file("env1.json", &config1)
         .expect("Failed to write first config file");
 
-    let create_result1 = ProcessRunner::new()
+    let create_result1 = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./env1.json")
@@ -160,7 +160,7 @@ fn it_should_list_multiple_environments() {
         .write_config_file("env2.json", &config2)
         .expect("Failed to write second config file");
 
-    let create_result2 = ProcessRunner::new()
+    let create_result2 = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./env2.json")
@@ -178,7 +178,7 @@ fn it_should_list_multiple_environments() {
     env_assertions.assert_environment_exists("test-list-second");
 
     // Act: Run list command
-    let list_result = ProcessRunner::new()
+    let list_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_list_command()

@@ -20,7 +20,7 @@
 //! 3. Missing config file: Appropriate error when file not found
 //! 4. Duplicate detection: Error when environment already exists
 
-use super::super::support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
+use super::super::support::{process_runner, EnvironmentStateAssertions, TempWorkspace};
 use anyhow::Result;
 use torrust_dependency_installer::{verify_dependencies, Dependency};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::create_test_environment_config;
@@ -66,7 +66,7 @@ fn it_should_create_environment_from_config_file_black_box() {
         .expect("Failed to write config file");
 
     // Act: Run production application as external process
-    let result = ProcessRunner::new()
+    let result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -102,7 +102,7 @@ fn it_should_fail_gracefully_with_invalid_config() {
         .expect("Failed to write invalid config");
 
     // Run command and expect failure
-    let result = ProcessRunner::new()
+    let result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./invalid.json")
@@ -130,7 +130,7 @@ fn it_should_fail_when_config_file_not_found() {
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
     // Run command with non-existent config file
-    let result = ProcessRunner::new()
+    let result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./nonexistent.json")
@@ -163,7 +163,7 @@ fn it_should_fail_when_environment_already_exists() {
         .expect("Failed to write config");
 
     // Create environment first time
-    let result1 = ProcessRunner::new()
+    let result1 = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./config.json")
@@ -176,7 +176,7 @@ fn it_should_fail_when_environment_already_exists() {
     );
 
     // Try to create same environment again
-    let result2 = ProcessRunner::new()
+    let result2 = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./config.json")

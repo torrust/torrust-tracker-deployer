@@ -17,7 +17,7 @@
 //! 2. Created environment: Show command displays environment details
 //! 3. State information: Show command includes state-aware details
 
-use super::super::support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
+use super::super::support::{process_runner, EnvironmentStateAssertions, TempWorkspace};
 use anyhow::Result;
 use torrust_dependency_installer::{verify_dependencies, Dependency};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::create_test_environment_config;
@@ -49,7 +49,7 @@ fn it_should_report_environment_not_found_when_environment_does_not_exist() {
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
     // Act: Run show command for a non-existing environment
-    let show_result = ProcessRunner::new()
+    let show_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_show_command("non-existing-env")
@@ -88,7 +88,7 @@ fn it_should_show_created_environment_details() {
         .expect("Failed to write config file");
 
     // Create environment
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -105,7 +105,7 @@ fn it_should_show_created_environment_details() {
     env_assertions.assert_environment_exists("test-show-env");
 
     // Act: Run show command
-    let show_result = ProcessRunner::new()
+    let show_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_show_command("test-show-env")
@@ -142,7 +142,7 @@ fn it_should_show_environment_state() {
         .expect("Failed to write config file");
 
     // Create environment
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -155,7 +155,7 @@ fn it_should_show_environment_state() {
     );
 
     // Act: Run show command
-    let show_result = ProcessRunner::new()
+    let show_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_show_command("test-show-state")
@@ -193,7 +193,7 @@ fn it_should_show_provider_information() {
         .expect("Failed to write config file");
 
     // Create environment
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -206,7 +206,7 @@ fn it_should_show_provider_information() {
     );
 
     // Act: Run show command
-    let show_result = ProcessRunner::new()
+    let show_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_show_command("test-show-provider")
