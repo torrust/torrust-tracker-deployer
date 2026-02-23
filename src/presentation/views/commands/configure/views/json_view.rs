@@ -136,9 +136,7 @@ mod tests {
             assert_eq!(
                 parsed[field].as_str().unwrap_or(""),
                 *expected_value,
-                "Field '{}' should be '{}'",
-                field,
-                expected_value
+                "Field '{field}' should be '{expected_value}'"
             );
         }
     }
@@ -149,9 +147,7 @@ mod tests {
         for field_name in field_names {
             assert!(
                 parsed.get(field_name).is_some(),
-                "Expected JSON to have field '{}' but it didn't.\nActual JSON:\n{}",
-                field_name,
-                json
+                "Expected JSON to have field '{field_name}' but it didn't.\nActual JSON:\n{json}"
             );
         }
     }

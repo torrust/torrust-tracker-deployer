@@ -151,9 +151,7 @@ mod tests {
         for substring in expected {
             assert!(
                 text.contains(substring),
-                "Expected text to contain '{}' but it didn't.\nActual text:\n{}",
-                substring,
-                text
+                "Expected text to contain '{substring}' but it didn't.\nActual text:\n{text}"
             );
         }
     }
