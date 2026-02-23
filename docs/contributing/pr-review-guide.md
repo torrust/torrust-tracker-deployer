@@ -32,6 +32,8 @@ Verify contributors followed these project conventions:
 - [ ] **Tests follow naming conventions** (`it_should_...` pattern)
 - [ ] **Tests are isolated** - use temporary resources, don't depend on external state
 - [ ] **Tests are readable** - clear intent and easy to understand what's being tested
+- [ ] **Test setup code is DRY** - no duplicate Arrange sections across tests
+- [ ] **Test fixtures are decoupled** - helper functions use parameters, not hardcoded internal calls
 - [ ] **Both production and test code** meet quality standards (clean, maintainable, sustainable)
 
 ### Documentation
@@ -80,6 +82,9 @@ Watch for these common issues that indicate quality problems:
 - ❌ **Missing tests for new error paths** - Error handling should be tested
 - ❌ **Tests that depend on external state** - Tests should be isolated
 - ❌ **Test code that doesn't meet production quality standards** - Both should be clean
+- ❌ **Duplicate test setup code** - Extract to helper functions (see PR [#373](https://github.com/torrust/torrust-tracker-deployer/pull/373))
+- ❌ **Coupled helper functions** - Parameterize helpers instead of hardcoding dependencies
+- ❌ **Field-by-field assertions on DTOs** - Add `PartialEq` and assert equality directly
 
 ### Known Issues vs. Real Problems
 
