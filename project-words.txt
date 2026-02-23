@@ -25,7 +25,6 @@ EAAAADAQABAAABAQC
 EPEL
 Falkenstein
 Gossman
-goroutines
 Grafana
 Grafonnet
 Graça
@@ -35,7 +34,6 @@ Hillsboro
 Hostnames
 ISAM
 Inno
-inspectable
 Kopia
 LUKS
 Liskov
@@ -96,6 +94,7 @@ aquasec
 aquasecurity
 architecting
 autocheckpoint
+autolinks
 autorestart
 backlinks
 bencoded
@@ -179,6 +178,7 @@ fswc
 getent
 getopt
 gobinary
+goroutines
 gosu
 gpgv
 handleable
@@ -194,6 +194,7 @@ hugepages
 idna
 impls
 incompletei
+inspectable
 instructionsets
 intervali
 ionice
@@ -290,8 +291,8 @@ pidfile
 pids
 pingoo
 pingooio
-pipefail
 pipeable
+pipefail
 pipx
 pkcs
 pkill
