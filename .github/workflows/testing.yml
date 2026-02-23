@@ -24,16 +24,12 @@ jobs:
           toolchain: nightly
           components: rustfmt
 
-      - id: cache
-        name: Enable Workflow Cache
-        uses: Swatinem/rust-cache@v2
-
       - id: format
         name: Run Formatting-Checks
         run: cargo fmt --check
 
-  check:
-    name: Static Analysis
+  test:
+    name: Test (${{ matrix.toolchain }})
     runs-on: ubuntu-latest
     needs: format
 
@@ -61,104 +57,49 @@ jobs:
         name: Install Tools
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-machete
+          tool: cargo-nextest,cargo-machete
 
-      - id: check
-        name: Run Build Checks
-        run: cargo check --tests --benches --examples --workspace --all-targets --all-features
+      # ── Build (single compilation, reused by all subsequent steps) ──
 
-      - id: docs
-        name: Check Documentation
+      - id: fetch
+        name: Download Dependencies
+        run: cargo fetch --verbose
+
+      - id: build
+        name: Build All Targets
+        run: cargo build --tests --benches --examples --workspace --all-targets --all-features --verbose
+
+      # ── Static Analysis (reuses build artifacts) ──
+
+      - id: docs-check
+        name: Check Documentation Builds
         env:
           RUSTDOCFLAGS: "-D warnings"
         run: cargo doc --no-deps --bins --examples --workspace --all-features
-
-      - id: clean
-        name: Clean Build Directory
-        run: cargo clean
 
       - id: deps
         name: Check Unused Dependencies
         run: cargo machete
 
-  build:
-    name: Build on ${{ matrix.os }} (${{ matrix.toolchain }})
-    runs-on: ${{ matrix.os }}
-    needs: check
+      # ── Unit Tests (lib tests inside src/) ──
 
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        toolchain: [stable, nightly]
+      - id: test-unit
+        name: Run Unit Tests
+        run: cargo nextest run --lib --workspace --all-features
 
-    steps:
-      - id: checkout
-        name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - id: setup
-        name: Setup Toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ matrix.toolchain }}
-
-      - id: cache
-        name: Enable Workflow Cache
-        uses: Swatinem/rust-cache@v2
-
-      - id: fetch
-        name: Download Dependencies
-        run: cargo fetch --verbose
-
-      - id: build
-        name: Build Project
-        run: cargo build --verbose --workspace --all-features
-
-  unit:
-    name: Units
-    runs-on: ubuntu-latest
-    needs: check
-
-    strategy:
-      matrix:
-        toolchain: [stable, nightly]
-
-    steps:
-      - id: checkout
-        name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - id: setup
-        name: Setup Toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ matrix.toolchain }}
-
-      - id: cache
-        name: Enable Job Cache
-        uses: Swatinem/rust-cache@v2
-
-      - id: tools
-        name: Install Tools
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest
-
-      - id: fetch
-        name: Download Dependencies
-        run: cargo fetch --verbose
-
-      - id: build
-        name: Build Test Binaries
-        run: cargo build --tests --benches --examples --workspace --all-targets --all-features --verbose
+      # ── Doc Tests ──
 
       - id: test-docs
         name: Run Documentation Tests
         run: cargo test --doc --workspace
 
-      - id: test
-        name: Run Unit Tests
-        run: cargo nextest run --all-targets --workspace --all-features
+      # ── Integration Tests (all test files in tests/ directory) ──
+
+      - id: test-integration
+        name: Run Integration Tests
+        run: cargo nextest run --test '*' --all-features
+
+      # ── Post-test Verification ──
 
       - id: verify-test-isolation
         name: Verify Test Isolation (data folder should be empty)
@@ -184,3 +125,36 @@ jobs:
           else
             echo "✅ Test isolation verified: data/ folder does not exist"
           fi
+
+  build:
+    name: Build on ${{ matrix.os }} (${{ matrix.toolchain }})
+    runs-on: ${{ matrix.os }}
+    needs: format
+
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+        toolchain: [stable, nightly]
+
+    steps:
+      - id: checkout
+        name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - id: setup
+        name: Setup Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+
+      - id: cache
+        name: Enable Workflow Cache
+        uses: Swatinem/rust-cache@v2
+
+      - id: fetch
+        name: Download Dependencies
+        run: cargo fetch --verbose
+
+      - id: build
+        name: Build Project
+        run: cargo build --verbose --workspace --all-features
