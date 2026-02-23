@@ -136,6 +136,7 @@ impl TestSubcommandError {
     /// use torrust_tracker_deployer_lib::presentation::views::{UserOutput, VerbosityLevel};
     /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
     /// use torrust_tracker_deployer_lib::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
+    /// use torrust_tracker_deployer_lib::presentation::input::cli::OutputFormat;
     ///
     /// # #[tokio::main]
     /// # async fn main() {
@@ -143,7 +144,7 @@ impl TestSubcommandError {
     /// let data_dir = PathBuf::from("./data");
     /// let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
     /// let repository = repository_factory.create(data_dir);
-    /// if let Err(e) = TestCommandController::new(repository, output).execute("test-env").await {
+    /// if let Err(e) = TestCommandController::new(repository, output).execute("test-env", OutputFormat::Text).await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }

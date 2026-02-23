@@ -183,7 +183,7 @@ impl TestCommandHandler {
             "Service testing workflow completed successfully"
         );
 
-        Ok(TestResult::with_dns_warnings(dns_warnings))
+        Ok(TestResult::with_dns_warnings(instance_ip, dns_warnings))
     }
 
     /// Perform advisory DNS checks for configured domains

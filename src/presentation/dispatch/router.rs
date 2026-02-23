@@ -148,10 +148,11 @@ pub async fn route_command(
             Ok(())
         }
         Commands::Test { environment } => {
+            let output_format = context.output_format();
             context
                 .container()
                 .create_test_controller()
-                .execute(&environment)
+                .execute(&environment, output_format)
                 .await?;
             Ok(())
         }

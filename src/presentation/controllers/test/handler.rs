@@ -8,9 +8,12 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
+use crate::application::command_handlers::test::result::TestResult;
 use crate::application::command_handlers::TestCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
+use crate::presentation::input::cli::OutputFormat;
+use crate::presentation::views::commands::test::{JsonView, TestResultData, TextView};
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::UserOutput;
 
@@ -109,7 +112,11 @@ impl TestCommandController {
     /// # Errors
     ///
     /// Returns `TestSubcommandError` if any step fails
-    pub async fn execute(&mut self, environment_name: &str) -> Result<(), TestSubcommandError> {
+    pub async fn execute(
+        &mut self,
+        environment_name: &str,
+        output_format: OutputFormat,
+    ) -> Result<(), TestSubcommandError> {
         // 1. Validate environment name
         let env_name = self.validate_environment_name(environment_name)?;
 
@@ -117,10 +124,10 @@ impl TestCommandController {
         let handler = self.create_command_handler()?;
 
         // 3. Execute validation workflow via application layer
-        self.fixture_infrastructure(&handler, &env_name).await?;
+        let result = self.fixture_infrastructure(&handler, &env_name).await?;
 
-        // 4. Complete workflow
-        self.complete_workflow(environment_name)?;
+        // 4. Complete workflow with rendered output
+        self.complete_workflow(environment_name, &result, output_format)?;
 
         Ok(())
     }
@@ -178,7 +185,7 @@ impl TestCommandController {
         &mut self,
         handler: &TestCommandHandler,
         env_name: &EnvironmentName,
-    ) -> Result<(), TestSubcommandError> {
+    ) -> Result<TestResult, TestSubcommandError> {
         self.progress
             .start_step(TestStep::TestInfrastructure.description())?;
 
@@ -206,7 +213,7 @@ impl TestCommandController {
 
         self.progress.complete_step(Some(step_message))?;
 
-        Ok(())
+        Ok(result)
     }
 
     /// Step 4: Complete workflow and display success message
@@ -214,10 +221,21 @@ impl TestCommandController {
     /// # Errors
     ///
     /// Returns `TestSubcommandError::ProgressReportingFailed` if progress reporting fails
-    fn complete_workflow(&mut self, environment_name: &str) -> Result<(), TestSubcommandError> {
-        self.progress.complete(&format!(
-            "Infrastructure validation completed successfully for '{environment_name}'"
-        ))?;
+    fn complete_workflow(
+        &mut self,
+        environment_name: &str,
+        result: &TestResult,
+        output_format: OutputFormat,
+    ) -> Result<(), TestSubcommandError> {
+        let data = TestResultData::new(environment_name, result);
+
+        let output = match output_format {
+            OutputFormat::Text => TextView::render(&data),
+            OutputFormat::Json => JsonView::render(&data),
+        };
+
+        self.progress.result(&output)?;
+
         Ok(())
     }
 }

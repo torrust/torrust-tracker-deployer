@@ -12,3 +12,4 @@ pub mod release;
 pub mod run;
 pub mod shared;
 pub mod show;
+pub mod test;
