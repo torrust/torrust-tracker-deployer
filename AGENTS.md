@@ -86,6 +86,13 @@ These principles should guide all development decisions, code reviews, and featu
 
 2. **Rust imports**: All imports at the top of the file, grouped (std → external crates → internal crate). Always prefer short imported names over fully-qualified paths (e.g., `Arc<UserOutput>`, not `std::sync::Arc<crate::presentation::views::UserOutput>`). Use full paths only to disambiguate naming conflicts.
 
+3. **Continuous self-review**: All contributors (humans and AI agents) **must** continuously review their own work against the project's quality standards. Use the PR review checklist in [`docs/contributing/pr-review-guide.md`](docs/contributing/pr-review-guide.md) and the review skill in `.github/skills/review-pr/skill.md` to systematically check your changes. Apply self-review at three levels:
+   - **Mandatory** — before opening a pull request
+   - **Strongly recommended** — before each commit
+   - **Recommended** — after completing each small, independent, deployable change
+
+   The sooner and more often you self-review, the less effort it takes to fix issues. Discovering problems early — while the change is fresh in your mind — is far cheaper than reworking code after a PR rejection. Treat self-review as a continuous habit, not a final gate.
+
 ## 🏗️ Deployed Instance Structure
 
 After running the complete deployment workflow (`create → provision → configure → release → run`), the virtual machine has the following structure:
@@ -228,6 +235,7 @@ The project has comprehensive documentation organized in the [`docs/`](docs/) di
 | Task                      | Start Here                                                                                                                     |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Start using the deployer  | [`docs/user-guide/README.md`](docs/user-guide/README.md)                                                                       |
+| Self-review your changes  | [`docs/contributing/pr-review-guide.md`](docs/contributing/pr-review-guide.md)                                                 |
 | Contribute code           | [`docs/contributing/README.md`](docs/contributing/README.md)                                                                   |
 | Create a new issue        | [`docs/contributing/roadmap-issues.md`](docs/contributing/roadmap-issues.md)                                                   |
 | Understand architecture   | [`docs/codebase-architecture.md`](docs/codebase-architecture.md)                                                               |
