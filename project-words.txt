@@ -263,6 +263,7 @@ netfilter
 newgrp
 newtype
 newtypes
+nextest
 nftables
 nistp
 nmap
