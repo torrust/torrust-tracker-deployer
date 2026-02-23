@@ -65,6 +65,19 @@ Both production and test code must be:
 - **Readable**: Clear intent that can be understood by other developers
 - **Testable**: Designed to support comprehensive testing at all levels
 
+**Beck's Four Rules of Simple Design:**
+
+Follow Kent Beck's four rules of simple design (in priority order):
+
+1. **Passes the tests**: The code must work as intended - testing is a first-class activity
+2. **Reveals intention**: Code should be easy to understand, expressing purpose clearly
+3. **No duplication**: Apply DRY (Don't Repeat Yourself) / Once and Only Once - eliminating duplication drives out good designs
+4. **Fewest elements**: Remove anything that doesn't serve the prior three rules - avoid premature optimization for hypothetical future requirements
+
+These rules feed off each other in refining code and apply to any language or paradigm. When in conflict, empathy for the reader wins over strict technical metrics.
+
+Reference: [Beck Design Rules](https://martinfowler.com/bliki/BeckDesignRules.html)
+
 These principles should guide all development decisions, code reviews, and feature implementations.
 
 ## 🔧 Essential Rules
