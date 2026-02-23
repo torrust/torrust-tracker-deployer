@@ -28,12 +28,16 @@ This skill guides you through writing unit tests that follow project conventions
 What are you testing?
 ├── Domain entity/value object?
 │   └── → Phase 1: Simple unit test with naming conventions
+├── New test with repeated setup code?
+│   └── → Phase 2: Check existing tests for duplicate patterns
+├── Duplicate setup code across tests?
+│   └── → Phase 3: Extract helper functions and avoid coupling
 ├── Time-dependent code?
-│   └── → Phase 2: Use MockClock for deterministic time
+│   └── → Phase 4: Use MockClock for deterministic time
 ├── File operations?
-│   └── → Phase 3: Use TempDir for isolation
+│   └── → Phase 5: Use TempDir for isolation
 ├── Multiple input/output combinations?
-│   └── → Phase 4: Use parameterized tests (rstest)
+│   └── → Phase 6: Use parameterized tests (rstest)
 └── Command or handler?
     └── → See write-integration-test skill instead
 ```
@@ -152,12 +156,6 @@ test domain::environment_name::tests::it_should_create_valid_name_when_using_low
 
 **Commit**: `test: add unit tests for EnvironmentName validation`
 
-## Phase 2: Time-Dependent Tests with MockClock
-
-**When to use**: Testing code that uses `Utc::now()` or time-based logic.
-
-**Why**: Direct use of `Utc::now()` makes tests non-deterministic.
-
 ### Step 1: Inject Clock Dependency
 
 **Production code**:
@@ -249,7 +247,361 @@ mod tests {
 
 **Commit**: `test: add time-dependent tests using MockClock`
 
-## Phase 3: Isolated Tests with TempDir
+## Phase 3: Avoiding Duplicate Test Code
+
+**When to use**: When you notice repeated setup code across multiple tests.
+
+**Why**: DRY principle applies to tests - duplicate code makes tests harder to maintain and increases the risk of inconsistencies.
+
+### Step 1: Identify Duplicate Code Patterns
+
+**Watch for these code smells**:
+
+- ❌ **Repeated Arrange sections** - Same setup code copy-pasted across tests
+- ❌ **Coupled helpers** - Helper functions that internally call other helpers with hardcoded values
+- ❌ **Magic values** - Hardcoded test data scattered throughout tests
+- ❌ **Complex setup** - More than 5-10 lines of boilerplate in Arrange section
+
+**Example of duplicate code** (BAD):
+
+```rust
+#[test]
+fn it_should_convert_environment_to_dto() {
+    // Arrange - DUPLICATED SETUP
+    let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
+    let ssh_username = Username::new("deployer".to_string()).unwrap();
+    let ssh_credentials = SshCredentials::new(
+        PathBuf::from("./keys/test_rsa"),
+        PathBuf::from("./keys/test_rsa.pub"),
+        ssh_username,
+    );
+    let provider_config = ProviderConfig::Lxd(LxdConfig {
+        profile_name: ProfileName::new("lxd-test".to_string()).unwrap(),
+    });
+    let created_at = Utc.with_ymd_and_hms(2026, 2, 23, 10, 0, 0).unwrap();
+    let env = Environment::new(env_name, provider_config, ssh_credentials, 22, created_at);
+    // ... test logic
+}
+
+#[test]
+fn it_should_handle_missing_ip() {
+    // Arrange - SAME DUPLICATED SETUP AGAIN
+    let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
+    let ssh_username = Username::new("deployer".to_string()).unwrap();
+    let ssh_credentials = SshCredentials::new(
+        PathBuf::from("./keys/test_rsa"),
+        PathBuf::from("./keys/test_rsa.pub"),
+        ssh_username,
+    );
+    // ... copies continue
+}
+```
+
+### Step 2: Extract Helper Functions
+
+**Rule of thumb**: If you copy code 2+ times, extract it.
+
+**Pattern**: Create focused helper functions for different aspects of setup:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Test fixtures and helpers section
+
+    fn create_test_ssh_credentials() -> SshCredentials {
+        let ssh_username = Username::new("deployer".to_string()).unwrap();
+        SshCredentials::new(
+            PathBuf::from("./keys/test_rsa"),
+            PathBuf::from("./keys/test_rsa.pub"),
+            ssh_username,
+        )
+    }
+
+    fn create_test_provider_config() -> ProviderConfig {
+        ProviderConfig::Lxd(LxdConfig {
+            profile_name: ProfileName::new("lxd-test-env".to_string()).unwrap(),
+        })
+    }
+
+    fn create_test_timestamp() -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2026, 2, 23, 10, 0, 0).unwrap()
+    }
+
+    fn create_test_ip() -> IpAddr {
+        IpAddr::V4(Ipv4Addr::new(10, 140, 190, 39))
+    }
+
+    // Higher-level builder that composes the parts
+    fn create_configured_environment_with_ip(ip: IpAddr) -> Environment<Configured> {
+        let env_name = EnvironmentName::new("test-env".to_string()).unwrap();
+        let ssh_credentials = create_test_ssh_credentials();
+        let provider_config = create_test_provider_config();
+        let created_at = create_test_timestamp();
+
+        Environment::new(env_name, provider_config, ssh_credentials, 22, created_at)
+            .start_provisioning()
+            .provisioned(ip, ProvisionMethod::Provisioned)
+            .start_configuring()
+            .configured()
+    }
+
+    // Tests section
+
+    #[test]
+    fn it_should_convert_configured_environment_to_dto() {
+        // Arrange - Now concise and clear!
+        let test_ip = create_test_ip();
+        let env = create_configured_environment_with_ip(test_ip);
+
+        // Act
+        let dto = ConfigureDetailsData::from(&env);
+
+        // Assert
+        assert_eq!(dto.instance_ip, Some(test_ip));
+    }
+}
+```
+
+### Step 3: Avoid Coupling Between Helpers
+
+**Problem**: Helpers that call each other with hardcoded values create hidden dependencies.
+
+**Anti-pattern - Coupled helpers** (BAD):
+
+```rust
+// ❌ BAD: create_expected_dto() internally calls create_test_ip()
+fn create_expected_dto() -> ConfigureDetailsData {
+    ConfigureDetailsData {
+        instance_ip: Some(create_test_ip()),  // Hardcoded dependency
+        // ...
+    }
+}
+
+#[test]
+fn test_conversion() {
+    let env = create_configured_environment_with_ip(create_test_ip());
+    let expected = create_expected_dto();  // Uses different IP internally!
+    assert_eq!(ConfigureDetailsData::from(&env), expected);
+}
+```
+
+**Fixed - Decoupled helpers** (GOOD):
+
+```rust
+// ✅ GOOD: Accept parameter to stay flexible and explicit
+fn create_expected_dto(ip: IpAddr) -> ConfigureDetailsData {
+    ConfigureDetailsData {
+        instance_ip: Some(ip),  // Use provided IP
+        // ...
+    }
+}
+
+#[test]
+fn test_conversion() {
+    // Arrange: Single source of truth
+    let test_ip = create_test_ip();
+    let env = create_configured_environment_with_ip(test_ip);
+    let expected = create_expected_dto(test_ip);  // Same IP, explicit
+
+    // Act & Assert
+    assert_eq!(ConfigureDetailsData::from(&env), expected);
+}
+```
+
+**Benefits**:
+
+- ✅ **No hidden dependencies** - All inputs are explicit
+- ✅ **Single source of truth** - Test data defined once
+- ✅ **Easy to vary** - Can test different IPs without changing helpers
+- ✅ **Clear intent** - Obvious that both use the same value
+
+### Step 4: Use Derives to Simplify Assertions
+
+**Add `PartialEq` to DTOs** to enable single-line assertions:
+
+```rust
+// In production code
+#[derive(Debug, Clone, PartialEq, Serialize)]  // Add PartialEq
+pub struct ConfigureDetailsData {
+    pub environment_name: String,
+    pub instance_name: String,
+    // ...
+}
+```
+
+**Before** - Field-by-field assertions:
+
+```rust
+// ❌ Verbose: 6 separate assertions
+assert_eq!(dto.environment_name, "test-env");
+assert_eq!(dto.instance_name, "torrust-tracker-vm-test-env");
+assert_eq!(dto.provider, "lxd");
+assert_eq!(dto.state, "Configured");
+assert_eq!(dto.instance_ip, Some(test_ip));
+assert_eq!(dto.created_at, expected_created_at);
+```
+
+**After** - Single assertion:
+
+```rust
+// ✅ Concise: One assertion, better error messages
+let expected = create_expected_dto(test_ip);
+assert_eq!(dto, expected);
+```
+
+### Step 5: Organize Test Modules
+
+**Pattern**: Separate helpers from tests with clear sections:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // Imports...
+
+    // ========================================
+    // Test fixtures and helpers
+    // ========================================
+
+    fn create_test_ssh_credentials() -> SshCredentials { /* ... */ }
+    fn create_test_provider_config() -> ProviderConfig { /* ... */ }
+    fn create_configured_environment_with_ip(ip: IpAddr) -> Environment<Configured> { /* ... */ }
+
+    // ========================================
+    // Tests
+    // ========================================
+
+    #[test]
+    fn it_should_convert_configured_environment_to_dto() { /* ... */ }
+
+    #[test]
+    fn it_should_handle_none_instance_ip() { /* ... */ }
+}
+```
+
+**Benefits**:
+
+- ✅ **Clear separation** - Helpers vs actual tests
+- ✅ **Easy navigation** - Find what you need quickly
+- ✅ **Reusability** - Helper functions available to all tests in module
+
+### Step 6: Create Meaningful Assertion Helpers
+
+**Problem**: Repetitive assertion patterns make tests verbose and harder to maintain.
+
+**Pattern**: Extract repeated assertion logic into descriptive helper functions.
+
+**Anti-pattern - Multiple similar assertions** (BAD):
+
+```rust
+#[test]
+fn it_should_render_text_output() {
+    let text = render_output(&data);
+
+    // ❌ BAD: 13 repetitive assertions
+    assert!(text.contains("Environment Details:"));
+    assert!(text.contains("Name:"));
+    assert!(text.contains("test-env"));
+    assert!(text.contains("Instance:"));
+    assert!(text.contains("torrust-tracker-vm-test-env"));
+    assert!(text.contains("Provider:"));
+    assert!(text.contains("lxd"));
+    assert!(text.contains("State:"));
+    assert!(text.contains("Configured"));
+    assert!(text.contains("Instance IP:"));
+    assert!(text.contains("10.140.190.39"));
+    assert!(text.contains("Created:"));
+    assert!(text.contains("2026-02-23 10:00:00 UTC"));
+}
+```
+
+**Fixed - Single assertion helper** (GOOD):
+
+```rust
+// Test fixtures and helpers
+
+/// Helper to assert text contains all expected substrings
+fn assert_contains_all(text: &str, expected: &[&str]) {
+    for substring in expected {
+        assert!(
+            text.contains(substring),
+            "Expected text to contain '{}' but it didn't.\nActual text:\n{}",
+            substring,
+            text
+        );
+    }
+}
+
+// Tests
+
+#[test]
+fn it_should_render_text_output() {
+    let text = render_output(&data);
+
+    // ✅ GOOD: Single assertion with clear expectations
+    assert_contains_all(
+        &text,
+        &[
+            "Environment Details:",
+            "Name:",
+            "test-env",
+            "Instance:",
+            "torrust-tracker-vm-test-env",
+            "Provider:",
+            "lxd",
+            "State:",
+            "Configured",
+            "Instance IP:",
+            "10.140.190.39",
+            "Created:",
+            "2026-02-23 10:00:00 UTC",
+        ],
+    );
+}
+```
+
+**When to create assertion helpers**:
+
+- ✅ **3+ similar assertions** - Pattern emerges that can be abstracted
+- ✅ **Repeated validation logic** - Same check used across multiple tests
+- ✅ **Complex validation** - Multi-step verification that obscures test intent
+- ✅ **Error clarity matters** - Custom messages improve debugging experience
+
+**Common assertion helper patterns**:
+
+```rust
+// Pattern 1: Contains all strings
+fn assert_contains_all(text: &str, expected: &[&str]) { /* ... */ }
+
+// Pattern 2: JSON field validation
+fn assert_json_fields(json: &str, fields: &[(&str, &str)]) { /* ... */ }
+
+// Pattern 3: Collection validation
+fn assert_collection_contains<T>(collection: &[T], predicate: impl Fn(&T) -> bool) { /* ... */ }
+
+// Pattern 4: State validation
+fn assert_valid_state(obj: &MyType, expectations: &StateExpectations) { /* ... */ }
+```
+
+**Benefits**:
+
+- ✅ **Reduced verbosity** - 10+ assertions → 1 function call
+- ✅ **Better readability** - Clear list of expectations
+- ✅ **Maintainability** - Change validation logic in one place
+- ✅ **Clear error messages** - Custom messages show what failed and why
+- ✅ **Reusability** - Use same helper across multiple tests
+
+**See**: PR [#373](https://github.com/torrust/torrust-tracker-deployer/pull/373) for complete example of refactoring duplicate test code.
+
+**Commit**: `refactor: extract duplicate test code and decouple test setup`
+
+## Phase 4: Time-Dependent Tests with MockClock
+
+**When to use**: Testing code that uses `Utc::now()` or time-based logic.
+
+**Why**: Direct use of `Utc::now()` makes tests non-deterministic.
 
 **When to use**: Testing code that creates files, directories, or modifies filesystem.
 
@@ -323,7 +675,7 @@ fn bad_test_creates_real_directories() {
 
 **Commit**: `test: add filesystem tests using TempDir`
 
-## Phase 4: Parameterized Tests with rstest
+## Phase 6: Parameterized Tests with rstest
 
 **When to use**: Testing same behavior with multiple input/output combinations.
 
@@ -435,7 +787,7 @@ fn it_should_create_correct_paths_for_different_environments(
 
 **Commit**: `test: add parameterized tests for input validation`
 
-## Phase 5: Verify and Fix
+## Phase 7: Verify and Fix
 
 ### Step 1: Run Tests
 

@@ -65,6 +65,19 @@ Both production and test code must be:
 - **Readable**: Clear intent that can be understood by other developers
 - **Testable**: Designed to support comprehensive testing at all levels
 
+**Beck's Four Rules of Simple Design:**
+
+Follow Kent Beck's four rules of simple design (in priority order):
+
+1. **Passes the tests**: The code must work as intended - testing is a first-class activity
+2. **Reveals intention**: Code should be easy to understand, expressing purpose clearly
+3. **No duplication**: Apply DRY (Don't Repeat Yourself) / Once and Only Once - eliminating duplication drives out good designs
+4. **Fewest elements**: Remove anything that doesn't serve the prior three rules - avoid premature optimization for hypothetical future requirements
+
+These rules feed off each other in refining code and apply to any language or paradigm. When in conflict, empathy for the reader wins over strict technical metrics.
+
+Reference: [Beck Design Rules](https://martinfowler.com/bliki/BeckDesignRules.html)
+
 These principles should guide all development decisions, code reviews, and feature implementations.
 
 ## 🔧 Essential Rules
@@ -216,7 +229,7 @@ The project provides Agent Skills in `.github/skills/` for specialized workflows
 Available skills:
 
 | Task                         | Skill to Load                                       |
-| ---------------------------- | --------------------------------------------------- | --- | --------------------- | --------------------------------------------- | --- | --------------------------- | -------------------------------------------------- |
+| ---------------------------- | --------------------------------------------------- |
 | Adding commands              | `.github/skills/add-new-command/skill.md`           |
 | Cleaning up completed issues | `.github/skills/cleanup-completed-issues/skill.md`  |
 | Cleaning LXD environments    | `.github/skills/clean-lxd-environments/skill.md`    |
@@ -229,7 +242,9 @@ Available skills:
 | Creating feature specs       | `.github/skills/create-feature-spec/skill.md`       |
 | Creating issues              | `.github/skills/create-issue/skill.md`              |
 | Creating new skills          | `.github/skills/add-new-skill/skill.md`             |
-| Creating refactor plans      | `.github/skills/create-refactor-plan/skill.md`      |     | Regenerating CLI docs | `.github/skills/regenerate-cli-docs/skill.md` |     | Rendering tracker artifacts | `.github/skills/render-tracker-artifacts/skill.md` |
+| Creating refactor plans      | `.github/skills/create-refactor-plan/skill.md`      |
+| Regenerating CLI docs        | `.github/skills/regenerate-cli-docs/skill.md`       |
+| Rendering tracker artifacts  | `.github/skills/render-tracker-artifacts/skill.md`  |
 | Reviewing pull requests      | `.github/skills/review-pr/skill.md`                 |
 | Running linters              | `.github/skills/run-linters/skill.md`               |
 | Running local E2E tests      | `.github/skills/run-local-e2e-test/skill.md`        |
