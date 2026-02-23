@@ -175,10 +175,11 @@ pub async fn route_command(
             Ok(())
         }
         Commands::Release { environment } => {
+            let output_format = context.output_format();
             context
                 .container()
                 .create_release_controller()
-                .execute(&environment)
+                .execute(&environment, output_format)
                 .await?;
             Ok(())
         }

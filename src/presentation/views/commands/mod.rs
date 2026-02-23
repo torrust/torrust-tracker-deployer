@@ -8,6 +8,7 @@ pub mod configure;
 pub mod create;
 pub mod list;
 pub mod provision;
+pub mod release;
 pub mod run;
 pub mod shared;
 pub mod show;

@@ -12,6 +12,10 @@ use tracing::info;
 use crate::application::command_handlers::release::ReleaseCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
+use crate::domain::environment::state::Released;
+use crate::domain::environment::Environment;
+use crate::presentation::input::cli::OutputFormat;
+use crate::presentation::views::commands::release::{JsonView, ReleaseDetailsData, TextView};
 use crate::presentation::views::progress::{ProgressReporter, VerboseProgressListener};
 use crate::presentation::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -109,12 +113,16 @@ impl ReleaseCommandController {
     ///
     /// Returns `Ok(())` on success, or a `ReleaseSubcommandError` if any step fails.
     #[allow(clippy::result_large_err)]
-    pub async fn execute(&mut self, environment_name: &str) -> Result<(), ReleaseSubcommandError> {
+    pub async fn execute(
+        &mut self,
+        environment_name: &str,
+        output_format: OutputFormat,
+    ) -> Result<(), ReleaseSubcommandError> {
         let env_name = self.validate_environment_name(environment_name)?;
 
-        self.release_application(&env_name).await?;
+        let released_env = self.release_application(&env_name).await?;
 
-        self.complete_workflow(environment_name)?;
+        self.complete_workflow(&released_env, output_format)?;
 
         Ok(())
     }
@@ -151,7 +159,7 @@ impl ReleaseCommandController {
     async fn release_application(
         &mut self,
         env_name: &EnvironmentName,
-    ) -> Result<(), ReleaseSubcommandError> {
+    ) -> Result<Environment<Released>, ReleaseSubcommandError> {
         self.progress
             .start_step(ReleaseStep::ReleaseApplication.description())?;
 
@@ -162,7 +170,7 @@ impl ReleaseCommandController {
         // user-facing detail messages via UserOutput's verbosity filter.
         let listener = VerboseProgressListener::new(self.progress.output().clone());
 
-        let _released_env = handler
+        let released_env = handler
             .execute(env_name, Some(&listener))
             .await
             .map_err(|source| ReleaseSubcommandError::ApplicationLayerError { source })?;
@@ -176,17 +184,28 @@ impl ReleaseCommandController {
         self.progress
             .complete_step(Some("Application released successfully"))?;
 
-        Ok(())
+        Ok(released_env)
     }
 
-    /// Complete the workflow with success message
+    /// Complete the workflow with environment details output
     ///
-    /// Shows final success message to the user with workflow summary.
+    /// Renders the released environment details using the chosen output format
+    /// (text or JSON) and displays them to the user.
     #[allow(clippy::result_large_err)]
-    fn complete_workflow(&mut self, name: &str) -> Result<(), ReleaseSubcommandError> {
-        self.progress.complete(&format!(
-            "Release command completed successfully for '{name}'"
-        ))?;
+    fn complete_workflow(
+        &mut self,
+        released_env: &Environment<Released>,
+        output_format: OutputFormat,
+    ) -> Result<(), ReleaseSubcommandError> {
+        let details = ReleaseDetailsData::from(released_env);
+
+        let output = match output_format {
+            OutputFormat::Text => TextView::render(&details),
+            OutputFormat::Json => JsonView::render(&details),
+        };
+
+        self.progress.result(&output)?;
+
         Ok(())
     }
 }
@@ -228,7 +247,7 @@ mod tests {
 
         // Test with invalid environment name (contains underscore)
         let result = ReleaseCommandController::new(repository, clock, user_output.clone())
-            .execute("invalid_name")
+            .execute("invalid_name", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
@@ -247,7 +266,7 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = ReleaseCommandController::new(repository, clock, user_output.clone())
-            .execute("")
+            .execute("", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
@@ -267,7 +286,7 @@ mod tests {
 
         // Valid environment name but environment doesn't exist
         let result = ReleaseCommandController::new(repository, clock, user_output.clone())
-            .execute("test-env")
+            .execute("test-env", OutputFormat::Text)
             .await;
 
         // Should fail because environment doesn't exist
