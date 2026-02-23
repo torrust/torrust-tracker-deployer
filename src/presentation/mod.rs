@@ -173,6 +173,7 @@ pub mod dispatch;
 pub mod error;
 pub mod errors;
 pub mod input;
+pub mod sdk;
 pub mod views;
 
 // Re-export commonly used presentation types for convenience

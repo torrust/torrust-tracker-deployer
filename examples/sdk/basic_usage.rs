@@ -1,0 +1,101 @@
+//! Basic SDK usage example.
+//!
+//! Demonstrates how to use the Torrust Tracker Deployer SDK to:
+//! 1. Create a deployment environment from JSON
+//! 2. List all environments in the workspace
+//! 3. Show environment details
+//! 4. Purge the environment (clean up)
+//!
+//! This example only uses operations that work locally (no infrastructure
+//! required). It reads an environment config JSON, creates the local
+//! environment data, inspects it, and cleans up.
+//!
+//! # Running
+//!
+//! ```bash
+//! cargo run --example sdk_basic_usage
+//! ```
+//!
+//! The example name stays `sdk_basic_usage` (declared in `Cargo.toml`)
+//! even though the file lives at `examples/sdk/basic_usage.rs`.
+
+use std::path::PathBuf;
+
+use torrust_tracker_deployer_lib::presentation::sdk::{
+    Deployer, EnvironmentCreationConfig, EnvironmentName,
+};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let workspace = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+    // 1. Initialize the deployer SDK
+    println!("=== Torrust Tracker Deployer SDK — Basic Example ===\n");
+
+    let deployer = Deployer::builder().working_dir(&workspace).build()?;
+    println!(
+        "[OK] Deployer initialized (workspace: {})\n",
+        workspace.display()
+    );
+
+    // 2. Create an environment from a JSON config string
+    println!("--- Step 1: Create environment ---");
+    let config_json = format!(
+        r#"{{
+        "environment": {{ "name": "sdk-example" }},
+        "ssh_credentials": {{
+            "private_key_path": "{workspace}/fixtures/testing_rsa",
+            "public_key_path": "{workspace}/fixtures/testing_rsa.pub"
+        }},
+        "provider": {{
+            "provider": "lxd",
+            "profile_name": "torrust-sdk-example"
+        }},
+        "tracker": {{
+            "core": {{
+                "database": {{ "driver": "sqlite3", "database_name": "tracker.db" }},
+                "private": false
+            }},
+            "udp_trackers": [{{ "bind_address": "0.0.0.0:6969" }}],
+            "http_trackers": [{{ "bind_address": "0.0.0.0:7070" }}],
+            "http_api": {{ "bind_address": "0.0.0.0:1212", "admin_token": "MyAccessToken" }},
+            "health_check_api": {{ "bind_address": "127.0.0.1:1313" }}
+        }}
+    }}"#,
+        workspace = workspace.display()
+    );
+
+    let config: EnvironmentCreationConfig = serde_json::from_str(&config_json)?;
+    let environment = deployer.create_environment(config)?;
+    println!("  Created: {}\n", environment.name());
+
+    // 3. List all environments
+    println!("--- Step 2: List environments ---");
+    let env_list = deployer.list()?;
+    println!("  Total: {} environment(s)", env_list.total_count);
+    for summary in &env_list.environments {
+        println!(
+            "  - {} (state: {}, provider: {})",
+            summary.name, summary.state, summary.provider
+        );
+    }
+    println!();
+
+    // 4. Show environment details
+    println!("--- Step 3: Show environment details ---");
+    let env_name = EnvironmentName::new("sdk-example")?;
+    let info = deployer.show(&env_name)?;
+    println!("  Name:       {}", info.name);
+    println!("  State:      {}", info.state);
+    println!("  Provider:   {}", info.provider);
+    println!("  Created at: {}", info.created_at);
+    println!();
+
+    // 5. Clean up — purge the environment
+    println!("--- Step 4: Purge environment ---");
+    deployer.purge(&env_name)?;
+    println!("  Environment '{env_name}' purged.");
+    println!();
+
+    println!("=== Example complete ===");
+    Ok(())
+}
