@@ -487,6 +487,112 @@ mod tests {
 - ✅ **Easy navigation** - Find what you need quickly
 - ✅ **Reusability** - Helper functions available to all tests in module
 
+### Step 6: Create Meaningful Assertion Helpers
+
+**Problem**: Repetitive assertion patterns make tests verbose and harder to maintain.
+
+**Pattern**: Extract repeated assertion logic into descriptive helper functions.
+
+**Anti-pattern - Multiple similar assertions** (BAD):
+
+```rust
+#[test]
+fn it_should_render_text_output() {
+    let text = render_output(&data);
+
+    // ❌ BAD: 13 repetitive assertions
+    assert!(text.contains("Environment Details:"));
+    assert!(text.contains("Name:"));
+    assert!(text.contains("test-env"));
+    assert!(text.contains("Instance:"));
+    assert!(text.contains("torrust-tracker-vm-test-env"));
+    assert!(text.contains("Provider:"));
+    assert!(text.contains("lxd"));
+    assert!(text.contains("State:"));
+    assert!(text.contains("Configured"));
+    assert!(text.contains("Instance IP:"));
+    assert!(text.contains("10.140.190.39"));
+    assert!(text.contains("Created:"));
+    assert!(text.contains("2026-02-23 10:00:00 UTC"));
+}
+```
+
+**Fixed - Single assertion helper** (GOOD):
+
+```rust
+// Test fixtures and helpers
+
+/// Helper to assert text contains all expected substrings
+fn assert_contains_all(text: &str, expected: &[&str]) {
+    for substring in expected {
+        assert!(
+            text.contains(substring),
+            "Expected text to contain '{}' but it didn't.\nActual text:\n{}",
+            substring,
+            text
+        );
+    }
+}
+
+// Tests
+
+#[test]
+fn it_should_render_text_output() {
+    let text = render_output(&data);
+
+    // ✅ GOOD: Single assertion with clear expectations
+    assert_contains_all(
+        &text,
+        &[
+            "Environment Details:",
+            "Name:",
+            "test-env",
+            "Instance:",
+            "torrust-tracker-vm-test-env",
+            "Provider:",
+            "lxd",
+            "State:",
+            "Configured",
+            "Instance IP:",
+            "10.140.190.39",
+            "Created:",
+            "2026-02-23 10:00:00 UTC",
+        ],
+    );
+}
+```
+
+**When to create assertion helpers**:
+
+- ✅ **3+ similar assertions** - Pattern emerges that can be abstracted
+- ✅ **Repeated validation logic** - Same check used across multiple tests
+- ✅ **Complex validation** - Multi-step verification that obscures test intent
+- ✅ **Error clarity matters** - Custom messages improve debugging experience
+
+**Common assertion helper patterns**:
+
+```rust
+// Pattern 1: Contains all strings
+fn assert_contains_all(text: &str, expected: &[&str]) { /* ... */ }
+
+// Pattern 2: JSON field validation
+fn assert_json_fields(json: &str, fields: &[(&str, &str)]) { /* ... */ }
+
+// Pattern 3: Collection validation
+fn assert_collection_contains<T>(collection: &[T], predicate: impl Fn(&T) -> bool) { /* ... */ }
+
+// Pattern 4: State validation
+fn assert_valid_state(obj: &MyType, expectations: &StateExpectations) { /* ... */ }
+```
+
+**Benefits**:
+
+- ✅ **Reduced verbosity** - 10+ assertions → 1 function call
+- ✅ **Better readability** - Clear list of expectations
+- ✅ **Maintainability** - Change validation logic in one place
+- ✅ **Clear error messages** - Custom messages show what failed and why
+- ✅ **Reusability** - Use same helper across multiple tests
+
 **See**: PR [#373](https://github.com/torrust/torrust-tracker-deployer/pull/373) for complete example of refactoring duplicate test code.
 
 **Commit**: `refactor: extract duplicate test code and decouple test setup`
