@@ -138,13 +138,27 @@ jobs:
         name: Enable Job Cache
         uses: Swatinem/rust-cache@v2
 
+      - id: tools
+        name: Install Tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      - id: fetch
+        name: Download Dependencies
+        run: cargo fetch --verbose
+
+      - id: build
+        name: Build Test Binaries
+        run: cargo build --tests --benches --examples --workspace --all-targets --all-features --verbose
+
       - id: test-docs
         name: Run Documentation Tests
         run: cargo test --doc --workspace
 
       - id: test
         name: Run Unit Tests
-        run: cargo test --tests --benches --examples --workspace --all-targets --all-features
+        run: cargo nextest run --all-targets --workspace --all-features
 
       - id: verify-test-isolation
         name: Verify Test Isolation (data folder should be empty)
