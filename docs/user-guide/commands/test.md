@@ -1,43 +1,172 @@
-# `test` - Verify Infrastructure Configuration
+# `test` - Verify Deployed Services
 
-Verify that provisioned and configured infrastructure meets all requirements.
+Verify that deployed Torrust Tracker services are running and accessible from
+external clients.
 
 ## Purpose
 
-Validates infrastructure readiness by running comprehensive tests against the configured environment. This command confirms the environment is in a working state and ready for deployment.
+Performs smoke tests against a deployed environment to confirm that the Tracker
+API, HTTP Tracker, and any other configured services respond correctly. Also runs
+advisory DNS resolution checks for configured domains.
 
 ## Command Syntax
 
 ```bash
-torrust-tracker-deployer test <ENVIRONMENT>
+torrust-tracker-deployer test <ENVIRONMENT> [OPTIONS]
 ```
 
 ## Arguments
 
 - `<ENVIRONMENT>` (required) - Name of the environment to test
 
+## Options
+
+| Option            | Values         | Default           | Description                              |
+| ----------------- | -------------- | ----------------- | ---------------------------------------- |
+| `--output-format` | `text`, `json` | `text`            | Output format for test results           |
+| `--working-dir`   | path           | current dir       | Working directory containing data folder |
+| `--log-dir`       | path           | (default log dir) | Directory for log files                  |
+
 ## Prerequisites
 
-1. **Environment configured** - Must run `configure` first
-2. **VM running** - Instance must be accessible
-3. **Docker installed** - Docker and Docker Compose must be available
-4. **SSH connectivity** - Network access to VM
-
-## State Validation
-
-Tests verify the environment is in "Configured" state and all components work correctly.
+1. **Environment exists** - Must have run `create environment` first
+2. **Instance reachable** - VM must be accessible from the test runner
+3. **Services running** - The `run` command must have been executed (or services started manually)
 
 ## What Happens
 
 When you test an environment:
 
-1. **Validates environment state** - Ensures environment is configured
-2. **Checks VM connectivity** - Verifies SSH access
-3. **Tests Docker installation** - Validates Docker daemon
-4. **Tests Docker Compose** - Validates Docker Compose plugin
-5. **Verifies user permissions** - Confirms non-root Docker access
-6. **Runs infrastructure tests** - Executes comprehensive test suite
-7. **Reports results** - Provides detailed pass/fail status
+1. **Validates environment name** - Confirms the name format is valid
+2. **Creates command handler** - Prepares the application layer handler
+3. **Tests infrastructure** - Performs external health checks against deployed services:
+   - Tracker API health endpoint (required)
+   - HTTP Tracker health endpoint (required)
+   - Advisory DNS resolution checks for all configured domains
+
+> **Note**: The test command loads the environment in **any state** — it does
+> not require a specific state like "Configured" or "Released". As long as the
+> environment has an instance IP set and services are accessible, the tests will
+> pass.
+
+## Output Formats
+
+### Text Output (default)
+
+```bash
+torrust-tracker-deployer test my-environment
+```
+
+```text
+Test Results:
+  Environment:       my-environment
+  Instance IP:       10.140.190.39
+  Result:            pass
+```
+
+With DNS warnings:
+
+```text
+Test Results:
+  Environment:       my-environment
+  Instance IP:       10.140.190.39
+  Result:            pass
+
+DNS Warnings:
+  - tracker.local: tracker.local does not resolve (expected: 10.140.190.39): name resolution failed
+  - api.tracker.local: api.tracker.local resolves to [192.168.1.1] but expected 10.140.190.39
+```
+
+### JSON Output
+
+```bash
+torrust-tracker-deployer test my-environment --output-format json
+```
+
+```json
+{
+  "environment_name": "my-environment",
+  "instance_ip": "10.140.190.39",
+  "result": "pass",
+  "dns_warnings": []
+}
+```
+
+With DNS warnings:
+
+```json
+{
+  "environment_name": "my-environment",
+  "instance_ip": "10.140.190.39",
+  "result": "pass",
+  "dns_warnings": [
+    {
+      "domain": "tracker.local",
+      "expected_ip": "10.140.190.39",
+      "issue": "tracker.local does not resolve (expected: 10.140.190.39): name resolution failed"
+    },
+    {
+      "domain": "api.tracker.local",
+      "expected_ip": "10.140.190.39",
+      "issue": "api.tracker.local resolves to [192.168.1.1] but expected 10.140.190.39"
+    }
+  ]
+}
+```
+
+#### JSON Fields
+
+| Field              | Type   | Description                                           |
+| ------------------ | ------ | ----------------------------------------------------- |
+| `environment_name` | string | Name of the environment tested                        |
+| `instance_ip`      | string | IP address of the tested instance                     |
+| `result`           | string | Always `"pass"` — failures produce an error, not JSON |
+| `dns_warnings`     | array  | Advisory DNS warnings (may be empty)                  |
+
+DNS warning fields:
+
+| Field         | Type   | Description                                 |
+| ------------- | ------ | ------------------------------------------- |
+| `domain`      | string | The domain that was checked                 |
+| `expected_ip` | string | The expected IP address (instance IP)       |
+| `issue`       | string | Human-readable description of the DNS issue |
+
+## Validation Details
+
+### External Health Checks
+
+The test command validates deployed services through **external accessibility
+checks** — HTTP(S) requests from the test runner to the VM:
+
+- **Tracker API** — Health endpoint (`/api/health_check`)
+- **HTTP Tracker** — Health endpoint (`/health_check`)
+
+External checks are preferred because they are a superset of internal checks: if
+services are accessible externally, they must be running internally, and firewall
+rules are validated automatically.
+
+### HTTPS Support
+
+When services have TLS enabled via Caddy reverse proxy:
+
+- Uses HTTPS URLs with the configured domain
+- Resolves domains locally to the VM IP (no DNS dependency for testing)
+- Accepts self-signed certificates for `.local` domains
+
+### DNS Resolution Checks
+
+DNS checks are **advisory only** — they do not affect the pass/fail result:
+
+- Checks resolution for all configured service domains (API, HTTP trackers,
+  health check API, Grafana)
+- Warns when domains don't resolve or resolve to unexpected IPs
+- DNS warnings appear in both text and JSON output formats
+
+DNS failures are advisory because:
+
+- DNS propagation can take time
+- Local `.local` domains use `/etc/hosts` which may not be configured
+- Users may intentionally test without DNS
 
 ## Examples
 
@@ -46,49 +175,13 @@ When you test an environment:
 ```bash
 # Test the environment
 torrust-tracker-deployer test full-stack-docs
-
-# Output:
-# ⏳ [1/3] Validating environment...
-# ⏳   ✓ Environment name validated: full-stack-docs (took 0ms)
-# ⏳ [2/3] Creating command handler...
-# ⏳   ✓ Done (took 0ms)
-# ⏳ [3/3] Testing infrastructure...
-# ❌ Test command failed: Validation failed for environment 'full-stack-docs': Remote action failed: Action 'running-services-validation' validation failed: HTTPS request to 'https://api.example.com/api/health_check' failed: error sending request for url (https://api.example.com/api/health_check). Check that Caddy is running and port 443 is open. Domain 'api.example.com' was resolved to 10.140.190.211 for testing.
-# Tip: Check logs and try running with --log-output file-and-stderr for more details
-#
-# For detailed troubleshooting:
-# Validation Failed - Detailed Troubleshooting:
-#
-# 1. Check validation logs for specific failure:
-#    - Re-run with verbose logging:
-#      torrust-tracker-deployer test <environment-name> --log-output file-and-stderr
-#
-# 2. Common validation failures:
-#    - Cloud-init not completed: Wait for instance initialization
-#    - Docker not installed: Run configure command
-#    - Docker Compose not installed: Run configure command
-#
-# 3. Remediation steps:
-#    - If cloud-init failed: Destroy and re-provision
-#    - If Docker/Compose missing: Run configure command
-#      torrust-tracker-deployer configure <environment-name>
-#
-# 4. Check instance status:
-#    - Verify instance is running
-#    - Check SSH connectivity
-#    - Review system logs on the instance
 ```
 
-### Complete workflow
+### JSON output for automation
 
 ```bash
-# Full setup and verification
-torrust-tracker-deployer create environment -f config.json
-torrust-tracker-deployer provision my-environment
-torrust-tracker-deployer configure my-environment
-torrust-tracker-deployer test my-environment
-
-# If all tests pass, environment is ready
+# Get machine-readable results
+torrust-tracker-deployer test my-env --output-format json | jq '.result'
 ```
 
 ### CI/CD verification
@@ -103,11 +196,12 @@ ENV_NAME="ci-${BUILD_ID}"
 torrust-tracker-deployer create environment -f ci.json
 torrust-tracker-deployer provision ${ENV_NAME}
 torrust-tracker-deployer configure ${ENV_NAME}
+torrust-tracker-deployer release ${ENV_NAME}
+torrust-tracker-deployer run ${ENV_NAME}
 
 # Verify infrastructure readiness
 if torrust-tracker-deployer test ${ENV_NAME}; then
-    echo "Infrastructure ready for deployment"
-    # Deploy your application...
+    echo "Infrastructure validated successfully"
 else
     echo "Infrastructure tests failed"
     exit 1
@@ -117,258 +211,119 @@ fi
 torrust-tracker-deployer destroy ${ENV_NAME}
 ```
 
-## Test Categories
-
-### Connectivity Tests
-
-- **SSH Access** - Verifies SSH connection to VM
-- **Network Reachability** - Confirms VM can reach internet
-- **DNS Resolution** - Validates DNS configuration
-
-### Docker Tests
-
-- **Docker Daemon** - Checks Docker service is running
-- **Docker CLI** - Verifies Docker commands work
-- **Docker Info** - Validates Docker system information
-- **Docker Version** - Confirms Docker version
-
-### Docker Compose Tests
-
-- **Compose Plugin** - Verifies Docker Compose is installed
-- **Compose Version** - Confirms Docker Compose version
-- **Compose Functionality** - Tests basic Compose operations
-
-### Permission Tests
-
-- **Non-root Access** - Confirms user can run Docker without sudo
-- **Docker Group** - Verifies user is in docker group
-- **Socket Access** - Validates docker socket permissions
-
-## Output
-
-The test command provides:
-
-- **Test results** - Pass/fail status for each test
-- **Detailed logs** - Information about any failures
-- **Exit code** - 0 for success, non-zero for failure
-
-Test logs are written to:
-
-- `data/logs/test-<timestamp>.log`
-
-## Next Steps
-
-After testing:
+### Complete workflow
 
 ```bash
-# If tests pass, environment is ready
-# Deploy your application
+# Full setup and verification
+torrust-tracker-deployer create environment -f config.json
+torrust-tracker-deployer provision my-environment
+torrust-tracker-deployer configure my-environment
+torrust-tracker-deployer release my-environment
+torrust-tracker-deployer run my-environment
+torrust-tracker-deployer test my-environment
 
-# SSH into the environment
-ssh -i <private-key> torrust@<vm-ip>
-
-# Or proceed with application deployment
-# (application deployment features coming in future releases)
+# If all tests pass, environment is ready
 ```
 
 ## Troubleshooting
 
-### Environment not configured
+### Services not accessible
 
-**Problem**: Cannot test an environment that hasn't been configured
+**Problem**: Health check endpoints cannot be reached.
 
-**Solution**: Configure the environment first
+**Solution**: Verify services are running on the VM.
+
+```bash
+# SSH into the VM
+ssh -i <private-key> torrust@<vm-ip>
+
+# Check running services
+cd /opt/torrust
+docker compose ps
+
+# Check logs
+docker compose logs tracker
+```
+
+### Health check fails
+
+**Problem**: Services are running but the health endpoint returns an error.
+
+**Solution**: Check service configuration and logs.
+
+```bash
+# SSH into the VM
+ssh -i <private-key> torrust@<vm-ip>
+
+# Test health endpoint locally
+curl http://localhost:1212/api/health_check
+
+# Check tracker logs
+cd /opt/torrust
+docker compose logs tracker
+```
+
+### DNS warnings
+
+**Problem**: DNS warnings appear but all tests pass.
+
+**Solution**: DNS warnings are advisory. To resolve them:
+
+```bash
+# For local domains, add entries to /etc/hosts
+echo "10.140.190.39 tracker.local" | sudo tee -a /etc/hosts
+
+# For public domains, configure DNS A record to point to the instance IP
+# This may take time to propagate
+```
+
+### Missing instance IP
+
+**Problem**: Environment does not have an instance IP set.
+
+**Solution**: The environment must have been provisioned (or registered) to have
+an IP address.
 
 ```bash
 # Check environment state
-cat data/my-environment/state.json
+torrust-tracker-deployer show my-environment
 
-# If state is "Provisioned", configure first
-torrust-tracker-deployer configure my-environment
-```
-
-### SSH connectivity test fails
-
-**Problem**: Cannot establish SSH connection to VM
-
-**Solution**: Check VM status and network
-
-```bash
-# Verify VM is running
-lxc list
-
-# Get VM IP
-lxc list --format json | jq -r '.[].state.network.eth0.addresses[0].address'
-
-# Try manual SSH
-ssh -i <private-key> torrust@<vm-ip>
-
-# Check SSH key permissions
-ls -l <private-key>
-chmod 600 <private-key>
-```
-
-### Docker daemon test fails
-
-**Problem**: Docker service is not running
-
-**Solution**: Check Docker service status on VM
-
-```bash
-# SSH into VM
-ssh -i <private-key> torrust@<vm-ip>
-
-# Check Docker status
-sudo systemctl status docker
-
-# Start Docker if needed
-sudo systemctl start docker
-
-# Enable Docker to start on boot
-sudo systemctl enable docker
-```
-
-### Docker Compose test fails
-
-**Problem**: Docker Compose is not installed or not in PATH
-
-**Solution**: Verify Docker Compose installation
-
-```bash
-# SSH into VM
-ssh -i <private-key> torrust@<vm-ip>
-
-# Check Docker Compose
-docker compose version
-
-# If not found, reconfigure
-exit
-torrust-tracker-deployer configure my-environment
-```
-
-### Permission test fails
-
-**Problem**: User cannot run Docker without sudo
-
-**Solution**: Verify user is in docker group
-
-```bash
-# SSH into VM
-ssh -i <private-key> torrust@<vm-ip>
-
-# Check groups
-groups
-
-# If docker group missing, add it
-sudo usermod -aG docker $USER
-
-# Log out and back in
-exit
-ssh -i <private-key> torrust@<vm-ip>
-
-# Verify
-docker ps
-```
-
-### Network connectivity test fails
-
-**Problem**: VM cannot reach external networks
-
-**Solution**: Check LXD network configuration
-
-```bash
-# Check LXD network
-lxc network list
-
-# Check instance network config
-lxc config device show <instance-name>
-
-# Check VM network inside
-lxc exec <instance-name> -- ip addr
-lxc exec <instance-name> -- ping -c 3 8.8.8.8
-```
-
-## Common Use Cases
-
-### Automated validation
-
-```bash
-#!/bin/bash
-set -e
-
-# Setup infrastructure
-./scripts/setup-environment.sh my-environment
-
-# Run comprehensive tests
-if torrust-tracker-deployer test my-environment; then
-    echo "✓ Infrastructure validated successfully"
-
-    # Deploy application
-    ./scripts/deploy-app.sh my-environment
-else
-    echo "✗ Infrastructure validation failed"
-
-    # Collect diagnostics
-    ./scripts/collect-logs.sh my-environment
-
-    exit 1
-fi
-```
-
-### Development workflow
-
-```bash
-# After making infrastructure changes
-torrust-tracker-deployer configure my-environment
-
-# Verify changes didn't break anything
-torrust-tracker-deployer test my-environment
-
-# If tests pass, continue development
-```
-
-### Pre-deployment checklist
-
-```bash
-# Staging environment verification
-torrust-tracker-deployer test staging
-
-# Production environment verification
-torrust-tracker-deployer test production
-
-# Only deploy if both pass
+# If needed, provision or register the environment
+torrust-tracker-deployer provision my-environment
 ```
 
 ## Technical Details
 
 ### Test Implementation
 
-Tests are implemented using:
+The test command uses:
 
-- **SSH Client** - Remote command execution
-- **Assertions** - Validates expected outcomes
-- **Error Handling** - Provides detailed failure messages
+- **External HTTP(S) requests** — validates service accessibility from outside
+  the VM
+- **DNS resolver** — performs advisory domain resolution checks
+- **Environment repository** — loads the environment in any state
 
 ### Test Execution Flow
 
-1. **State Validation** - Checks environment JSON state
-2. **SSH Connection** - Establishes connection to VM
-3. **Docker Checks** - Runs docker commands remotely
-4. **Compose Checks** - Runs docker compose commands remotely
-5. **Permission Checks** - Validates non-root access
-6. **Result Aggregation** - Collects all test results
-7. **Reporting** - Outputs pass/fail status
+1. **Environment Loading** — Loads environment from repository (any state)
+2. **IP Extraction** — Gets instance IP from environment data
+3. **Endpoint Building** — Constructs service URLs from tracker configuration
+4. **Service Validation** — Performs external health checks against all endpoints
+5. **DNS Checks** — Advisory resolution checks for configured domains
+6. **Result Reporting** — Renders structured results (text or JSON)
 
-### Exit Codes
+### Port Discovery
 
-- **0** - All tests passed
-- **1** - One or more tests failed
-- **2** - Invalid environment state
-- **3** - SSH connection failed
+The test command extracts tracker ports from the environment's tracker
+configuration:
+
+- HTTP API port from `tracker.http_api.bind_address`
+- HTTP Tracker port from `tracker.http_trackers[0].bind_address`
 
 ## See Also
 
-- [configure](configure.md) - Configure infrastructure (prerequisite)
+- [run](run.md) - Run deployed services (prerequisite for testing)
+- [configure](configure.md) - Configure infrastructure
 - [provision](provision.md) - Provision infrastructure
+- [show](show.md) - Show environment details
 - [destroy](destroy.md) - Clean up infrastructure
-- [create](create.md) - Create environment

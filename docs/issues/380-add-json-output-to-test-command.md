@@ -19,13 +19,13 @@ The `test` command currently only outputs human-readable text progress messages 
 
 ## Goals
 
-- [ ] Add `output_format: OutputFormat` parameter to `TestCommandController::execute()`
-- [ ] Add a `TestResultData` view DTO covering the test outcome and DNS warnings
-- [ ] Implement `JsonView` for the test command — `render()` returns `String` using the list-command pattern (inline `unwrap_or_else` fallback, no `OutputFormatting` error variant)
-- [ ] Implement `TextView` to present the same data in human-readable format
-- [ ] Handle `OutputFormat::Json` and `OutputFormat::Text` branches in `complete_workflow()` using Strategy Pattern
-- [ ] Update router to pass `output_format` from context to controller
-- [ ] Add unit tests for `JsonView` and `TextView`
+- [x] Add `output_format: OutputFormat` parameter to `TestCommandController::execute()`
+- [x] Add a `TestResultData` view DTO covering the test outcome and DNS warnings
+- [x] Implement `JsonView` for the test command — `render()` returns `String` using the list-command pattern (inline `unwrap_or_else` fallback, no `OutputFormatting` error variant)
+- [x] Implement `TextView` to present the same data in human-readable format
+- [x] Handle `OutputFormat::Json` and `OutputFormat::Text` branches in `complete_workflow()` using Strategy Pattern
+- [x] Update router to pass `output_format` from context to controller
+- [x] Add unit tests for `JsonView` and `TextView`
 
 ## 🏗️ Architecture Requirements
 
@@ -44,18 +44,18 @@ The `test` command currently only outputs human-readable text progress messages 
 
 ### Module Structure Requirements
 
-- [ ] Follow the existing view module structure established in `release/` (has `view_data/`) — `test` needs `view_data/` because `TestResult` is an application layer type that must not leak into views
-- [ ] `TestResultData` is a plain presentation DTO deriving `Serialize`, `PartialEq` (not `Deserialize`) with a `From` impl converting from the application layer `TestResult` and environment metadata
-- [ ] `JsonView::render()` returns `String` — serialization errors handled inline via `unwrap_or_else` (list pattern, not provision pattern)
-- [ ] `TextView::render()` formats the same data as human-readable text and also returns `String`
-- [ ] Follow module organization conventions (`docs/contributing/module-organization.md`)
+- [x] Follow the existing view module structure established in `release/` (has `view_data/`) — `test` needs `view_data/` because `TestResult` is an application layer type that must not leak into views
+- [x] `TestResultData` is a plain presentation DTO deriving `Serialize`, `PartialEq` (not `Deserialize`) with a `new()` constructor converting from the application layer `TestResult` and environment metadata
+- [x] `JsonView::render()` returns `String` — serialization errors handled inline via `unwrap_or_else` (list pattern, not provision pattern)
+- [x] `TextView::render()` formats the same data as human-readable text and also returns `String`
+- [x] Follow module organization conventions (`docs/contributing/module-organization.md`)
 
 ### Architectural Constraints
 
-- [ ] No business logic in the presentation layer — only rendering
-- [ ] Error handling follows project conventions (`docs/contributing/error-handling.md`)
-- [ ] Output must go through `UserOutput` methods — never `println!` or `eprintln!` directly (`docs/contributing/output-handling.md`)
-- [ ] The `TestResultData` DTO must derive `serde::Serialize` (output-only — no `Deserialize` needed)
+- [x] No business logic in the presentation layer — only rendering
+- [x] Error handling follows project conventions (`docs/contributing/error-handling.md`)
+- [x] Output must go through `UserOutput` methods — never `println!` or `eprintln!` directly (`docs/contributing/output-handling.md`)
+- [x] The `TestResultData` DTO must derive `serde::Serialize` (output-only — no `Deserialize` needed)
 
 ### Anti-Patterns to Avoid
 
@@ -287,57 +287,57 @@ Option 1 is cleanest — extend `TestResult` with `instance_ip` since it's part 
 
 ### Step 1: Create View Module Structure
 
-- [ ] Create `src/presentation/views/commands/test/` directory
-- [ ] Create `mod.rs` with module declarations
-- [ ] Create `view_data/mod.rs` and `view_data/test_result_data.rs`
-- [ ] Create `views/mod.rs`, `views/text_view.rs`, and `views/json_view.rs`
+- [x] Create `src/presentation/views/commands/test/` directory
+- [x] Create `mod.rs` with module declarations
+- [x] Create `view_data/test_result_data.rs` (inline `pub mod` in `mod.rs`, no separate `view_data/mod.rs`)
+- [x] Create `views/json_view.rs` and `views/text_view.rs` (inline `pub mod` in `mod.rs`, no separate `views/mod.rs`)
 
 ### Step 2: Extend TestResult (Application Layer)
 
-- [ ] Add `instance_ip: IpAddr` field to `TestResult` in `src/application/command_handlers/test/result.rs`
-- [ ] Update `TestResult::success()` and `TestResult::with_dns_warnings()` constructors to accept `instance_ip`
-- [ ] Update handler to pass `instance_ip` when constructing `TestResult`
-- [ ] Update existing tests for `TestResult`
+- [x] Add `instance_ip: IpAddr` field to `TestResult` in `src/application/command_handlers/test/result.rs`
+- [x] Update `TestResult::success()` and `TestResult::with_dns_warnings()` constructors to accept `instance_ip`
+- [x] Update handler to pass `instance_ip` when constructing `TestResult`
+- [x] Update existing tests for `TestResult`
 
 ### Step 3: Implement DTO
 
-- [ ] Implement `TestResultData` and `DnsWarningData` structs with all required fields
-- [ ] Add `#[derive(Debug, Clone, PartialEq, Serialize)]`
-- [ ] Implement `TestResultData::new()` constructor
+- [x] Implement `TestResultData` and `DnsWarningData` structs with all required fields
+- [x] Add `#[derive(Debug, Clone, PartialEq, Serialize)]`
+- [x] Implement `TestResultData::new()` constructor (takes `&str` + `&TestResult`, gets IP from `TestResult`)
 
 ### Step 4: Implement Views
 
-- [ ] Implement `JsonView::render()` with inline error handling
-- [ ] Implement `TextView::render()` with formatted text output
-- [ ] Follow existing patterns from `release` command
+- [x] Implement `JsonView::render()` with inline error handling
+- [x] Implement `TextView::render()` with formatted text output
+- [x] Follow existing patterns from `release` command
 
 ### Step 5: Update Controller
 
-- [ ] Add `output_format: OutputFormat` parameter to `execute()`
-- [ ] Update `fixture_infrastructure()` to return `TestResult` (currently it renders DNS warnings inline and discards the result — the method needs to return it)
-- [ ] Update `complete_workflow()` to accept `TestResult` and `output_format`
-- [ ] Implement Strategy Pattern for view selection
-- [ ] Remove hardcoded success message, replace with view output
-- [ ] Decide how to handle DNS warning rendering in text mode (via `TextView` vs. progress reporter) for consistency
+- [x] Add `output_format: OutputFormat` parameter to `execute()`
+- [x] Update `fixture_infrastructure()` to return `TestResult` (previously rendered DNS warnings inline and discarded the result)
+- [x] Update `complete_workflow()` to accept `TestResult` and `output_format`
+- [x] Implement Strategy Pattern for view selection
+- [x] Replace hardcoded success message with view output via `self.progress.result()`
+- [x] DNS warnings rendered both as progress warnings (during execution) and in final view output (for structured output)
 
 ### Step 6: Update Router
 
-- [ ] Update `src/presentation/dispatch/router.rs` to pass `output_format` from context
-- [ ] Ensure `--output-format` flag is propagated to controller
+- [x] Update `src/presentation/dispatch/router.rs` to pass `output_format` from context
+- [x] Ensure `--output-format` flag is propagated to controller
 
 ### Step 7: Add Tests
 
-- [ ] Unit tests for `TestResultData::new()` (with and without DNS warnings)
-- [ ] Unit tests for `DnsWarningData` construction
-- [ ] Unit tests for `JsonView::render()` (valid JSON structure, empty warnings, with warnings)
-- [ ] Unit tests for `TextView::render()` (contains expected strings, with and without warnings)
+- [x] Unit tests for `TestResultData::new()` (with and without DNS warnings)
+- [x] Unit tests for `DnsWarningData` construction
+- [x] Unit tests for `JsonView::render()` (valid JSON structure, empty warnings, with warnings)
+- [x] Unit tests for `TextView::render()` (contains expected strings, with and without warnings)
 
 ### Step 8: Documentation
 
-- [ ] Update command documentation in `docs/user-guide/commands/test.md`
-- [ ] Add JSON output examples
+- [x] Update command documentation in `docs/user-guide/commands/test.md`
+- [x] Add JSON output examples
 - [ ] Update CLI help text if needed
-- [ ] Correct existing inaccuracies in user docs (see below)
+- [x] Correct existing inaccuracies in user docs (see below)
 
 **User docs corrections needed** (`docs/user-guide/commands/test.md`):
 
@@ -396,17 +396,17 @@ mod tests {
 
 ### Integration Tests
 
-- [ ] Test `test` command with `--output-format json`
-- [ ] Test `test` command with `--output-format text` (default)
+- [x] Test `test` command with `--output-format json` (covered by E2E pre-commit tests)
+- [x] Test `test` command with `--output-format text` (default, covered by E2E pre-commit tests)
 - [ ] Verify JSON can be parsed by external tools
 
 ## Definition of Done
 
-- [ ] All implementation steps completed
-- [ ] Unit tests pass with >80% coverage
+- [x] All implementation steps completed
+- [x] Unit tests pass with >80% coverage
 - [ ] Integration tests pass
-- [ ] Documentation updated
-- [ ] Pre-commit checks pass (linters, formatters)
+- [x] Documentation updated
+- [x] Pre-commit checks pass (linters, formatters)
 - [ ] PR approved and merged
 
 ## Related
