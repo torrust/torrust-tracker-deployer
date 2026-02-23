@@ -26,7 +26,7 @@
 //! - **After destroy**: Tests purge after destroy (normal workflow pattern)
 //! - **Complete verification**: Checks data/, build/, and registry all removed
 
-use super::super::support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
+use super::super::support::{process_runner, EnvironmentStateAssertions, TempWorkspace};
 use anyhow::Result;
 use torrust_dependency_installer::{verify_dependencies, Dependency};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::create_test_environment_config;
@@ -72,7 +72,7 @@ fn it_should_purge_destroyed_environment_successfully() {
         .expect("Failed to write config file");
 
     // Create environment in default location
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -85,7 +85,7 @@ fn it_should_purge_destroyed_environment_successfully() {
     );
 
     // Destroy environment first (normal workflow)
-    let destroy_result = ProcessRunner::new()
+    let destroy_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-purge-destroyed")
@@ -103,7 +103,7 @@ fn it_should_purge_destroyed_environment_successfully() {
     env_assertions.assert_environment_state_is("test-purge-destroyed", "Destroyed");
 
     // Act: Purge environment using purge command with --force
-    let purge_result = ProcessRunner::new()
+    let purge_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_purge_command("test-purge-destroyed")
@@ -140,7 +140,7 @@ fn it_should_fail_when_purging_nonexistent_environment() {
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
     // Act: Try to purge non-existent environment
-    let purge_result = ProcessRunner::new()
+    let purge_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_purge_command("nonexistent-env")
@@ -175,7 +175,7 @@ fn it_should_purge_with_custom_working_directory() {
         .expect("Failed to write config file");
 
     // Create environment in custom location
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -188,7 +188,7 @@ fn it_should_purge_with_custom_working_directory() {
     );
 
     // Destroy environment
-    let destroy_result = ProcessRunner::new()
+    let destroy_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-purge-custom-dir")
@@ -201,7 +201,7 @@ fn it_should_purge_with_custom_working_directory() {
     );
 
     // Act: Purge environment from custom working directory
-    let purge_result = ProcessRunner::new()
+    let purge_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_purge_command("test-purge-custom-dir")
@@ -237,7 +237,7 @@ fn it_should_complete_full_lifecycle_from_create_to_purge() {
         .expect("Failed to write config file");
 
     // Step 1: Create environment
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -254,7 +254,7 @@ fn it_should_complete_full_lifecycle_from_create_to_purge() {
     env_assertions.assert_environment_exists("test-full-lifecycle-purge");
 
     // Step 2: Destroy environment
-    let destroy_result = ProcessRunner::new()
+    let destroy_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-full-lifecycle-purge")
@@ -270,7 +270,7 @@ fn it_should_complete_full_lifecycle_from_create_to_purge() {
     env_assertions.assert_environment_state_is("test-full-lifecycle-purge", "Destroyed");
 
     // Step 3: Purge environment
-    let purge_result = ProcessRunner::new()
+    let purge_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_purge_command("test-full-lifecycle-purge")
@@ -310,7 +310,7 @@ fn it_should_remove_only_specified_environment_data() {
         .write_config_file("env1.json", &config1)
         .expect("Failed to write config file");
 
-    let create1_result = ProcessRunner::new()
+    let create1_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./env1.json")
@@ -324,7 +324,7 @@ fn it_should_remove_only_specified_environment_data() {
         .write_config_file("env2.json", &config2)
         .expect("Failed to write config file");
 
-    let create2_result = ProcessRunner::new()
+    let create2_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./env2.json")
@@ -333,7 +333,7 @@ fn it_should_remove_only_specified_environment_data() {
     assert!(create2_result.success(), "Create env2 failed");
 
     // Destroy both environments
-    let destroy1_result = ProcessRunner::new()
+    let destroy1_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-purge-env1")
@@ -341,7 +341,7 @@ fn it_should_remove_only_specified_environment_data() {
 
     assert!(destroy1_result.success(), "Destroy env1 failed");
 
-    let destroy2_result = ProcessRunner::new()
+    let destroy2_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-purge-env2")
@@ -355,7 +355,7 @@ fn it_should_remove_only_specified_environment_data() {
     env_assertions.assert_environment_exists("test-purge-env2");
 
     // Act: Purge ONLY the first environment
-    let purge_result = ProcessRunner::new()
+    let purge_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_purge_command("test-purge-env1")

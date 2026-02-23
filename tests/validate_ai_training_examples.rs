@@ -11,7 +11,7 @@ mod support;
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use support::ProcessRunner;
+use support::process_runner;
 use tempfile::TempDir;
 
 const EXAMPLES_DIR: &str = "docs/ai-training/dataset/environment-configs";
@@ -108,7 +108,7 @@ fn validate_configuration(config_path: &Path) -> Result<(), String> {
         TempDir::new().map_err(|e| format!("Failed to create temp workspace: {e}"))?;
     let log_dir = temp_workspace.path().join("logs");
 
-    let result = ProcessRunner::new()
+    let result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(&log_dir)
         .run_validate_command(config_path_str)
@@ -281,7 +281,7 @@ fn execute_render_command(
     // Create log directory in temp workspace
     let log_dir = temp_workspace.path().join("logs");
 
-    let result = ProcessRunner::new()
+    let result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(&log_dir)
         .run_render_command_with_config_file(temp_config_file_str, PLACEHOLDER_IP, output_dir_str)

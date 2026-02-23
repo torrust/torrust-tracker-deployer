@@ -20,7 +20,7 @@
 //! 4. **Invalid Values**: Validate catches domain constraint violations
 //! 5. **Valid Configuration**: Validate succeeds and shows environment details
 
-use super::super::support::{ProcessRunner, TempWorkspace};
+use super::super::support::{process_runner, TempWorkspace};
 use anyhow::Result;
 use std::fs;
 use torrust_dependency_installer::{verify_dependencies, Dependency};
@@ -55,7 +55,7 @@ fn it_should_report_file_not_found_when_configuration_file_does_not_exist() {
     let nonexistent_file = temp_workspace.path().join("nonexistent.json");
 
     // Act: Run validate command for non-existent file
-    let result = ProcessRunner::new()
+    let result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_validate_command(nonexistent_file.to_str().unwrap())
@@ -95,7 +95,7 @@ fn it_should_report_invalid_json_when_configuration_file_has_malformed_json() {
     fs::write(&config_path, invalid_json).expect("Failed to write invalid JSON");
 
     // Act: Run validate command
-    let result = ProcessRunner::new()
+    let result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_validate_command(config_path.to_str().unwrap())
@@ -145,7 +145,7 @@ fn it_should_succeed_when_configuration_file_is_valid() {
     let config_path = temp_workspace.path().join("valid.json");
 
     // Act: Run validate command
-    let result = ProcessRunner::new()
+    let result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_validate_command(config_path.to_str().unwrap())
@@ -201,7 +201,7 @@ fn it_should_validate_configuration_without_creating_deployment() {
     let config_path = temp_workspace.path().join("config.json");
 
     // Act: Run validate command
-    let result = ProcessRunner::new()
+    let result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_validate_command(config_path.to_str().unwrap())

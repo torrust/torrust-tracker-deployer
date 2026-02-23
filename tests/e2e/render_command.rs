@@ -30,7 +30,7 @@
 //! - **IP validation**: Tests verify IP address parameter is required and validated
 //! - **Dual input modes**: Tests cover both --env-name and --env-file workflows
 
-use super::super::support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
+use super::super::support::{process_runner, EnvironmentStateAssertions, TempWorkspace};
 use anyhow::Result;
 use torrust_dependency_installer::{verify_dependencies, Dependency};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::create_test_environment_config;
@@ -76,7 +76,7 @@ fn it_should_render_artifacts_using_env_name_successfully() {
         .expect("Failed to write config file");
 
     // Create environment in default location
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -95,7 +95,7 @@ fn it_should_render_artifacts_using_env_name_successfully() {
 
     // Act: Render artifacts using env-name input mode
     let output_dir = temp_workspace.path().join("render-output");
-    let render_result = ProcessRunner::new()
+    let render_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
@@ -160,7 +160,7 @@ fn it_should_render_artifacts_using_config_file_successfully() {
 
     // Act: Render artifacts directly from config file (no environment creation)
     let output_dir = temp_workspace.path().join("render-config-output");
-    let render_result = ProcessRunner::new()
+    let render_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_config_file(
@@ -218,7 +218,7 @@ fn it_should_fail_when_output_directory_already_exists() {
         .write_config_file("environment.json", &config)
         .expect("Failed to write config file");
 
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -232,7 +232,7 @@ fn it_should_fail_when_output_directory_already_exists() {
 
     // Act: Render artifacts first time
     let output_dir = temp_workspace.path().join("render-idempotent-output");
-    let render1_result = ProcessRunner::new()
+    let render1_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
@@ -249,7 +249,7 @@ fn it_should_fail_when_output_directory_already_exists() {
     );
 
     // Act: Render artifacts second time (should fail with OutputDirectoryExists error)
-    let render2_result = ProcessRunner::new()
+    let render2_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
@@ -288,7 +288,7 @@ fn it_should_fail_when_environment_not_found() {
 
     // Act: Try to render non-existent environment
     let output_dir = temp_workspace.path().join("nonexistent-output");
-    let render_result = ProcessRunner::new()
+    let render_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
@@ -322,7 +322,7 @@ fn it_should_fail_when_config_file_not_found() {
 
     // Act: Try to render with non-existent config file
     let output_dir = temp_workspace.path().join("missing-config-output");
-    let render_result = ProcessRunner::new()
+    let render_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_config_file(
@@ -361,7 +361,7 @@ fn it_should_work_with_custom_working_directory() {
         .expect("Failed to write config file");
 
     // Create environment in custom location
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -375,7 +375,7 @@ fn it_should_work_with_custom_working_directory() {
 
     // Act: Render from custom working directory
     let output_dir = temp_workspace.path().join("custom-dir-output");
-    let render_result = ProcessRunner::new()
+    let render_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(
@@ -422,7 +422,7 @@ fn it_should_complete_full_lifecycle_from_create_to_render() {
         .expect("Failed to write config file");
 
     // Step 1: Create environment
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -441,7 +441,7 @@ fn it_should_complete_full_lifecycle_from_create_to_render() {
 
     // Step 2: Render artifacts
     let output_dir = temp_workspace.path().join("lifecycle-output");
-    let render_result = ProcessRunner::new()
+    let render_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_render_command_with_env_name(

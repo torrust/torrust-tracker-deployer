@@ -18,7 +18,7 @@
 //! 2. Custom working directory: Destroy environment from temporary directory
 //! 3. Full lifecycle: Create → Destroy with custom working directory
 
-use super::super::support::{EnvironmentStateAssertions, ProcessRunner, TempWorkspace};
+use super::super::support::{process_runner, EnvironmentStateAssertions, TempWorkspace};
 use anyhow::Result;
 use torrust_dependency_installer::{verify_dependencies, Dependency};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::create_test_environment_config;
@@ -64,7 +64,7 @@ fn it_should_destroy_environment_with_default_working_directory() {
         .expect("Failed to write config file");
 
     // Create environment in default location
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -81,7 +81,7 @@ fn it_should_destroy_environment_with_default_working_directory() {
     env_assertions.assert_environment_exists("test-destroy-default");
 
     // Act: Destroy environment using destroy command
-    let destroy_result = ProcessRunner::new()
+    let destroy_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-destroy-default")
@@ -116,7 +116,7 @@ fn it_should_destroy_environment_with_custom_working_directory() {
         .expect("Failed to write config file");
 
     // Create environment in custom location
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -133,7 +133,7 @@ fn it_should_destroy_environment_with_custom_working_directory() {
     env_assertions.assert_environment_exists("test-destroy-custom");
 
     // Act: Destroy environment using same working directory
-    let destroy_result = ProcessRunner::new()
+    let destroy_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-destroy-custom")
@@ -162,7 +162,7 @@ fn it_should_fail_when_environment_not_found_in_working_directory() {
     let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
 
     // Act: Try to destroy non-existent environment
-    let destroy_result = ProcessRunner::new()
+    let destroy_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("nonexistent-environment")
@@ -196,7 +196,7 @@ fn it_should_complete_full_lifecycle_with_custom_working_directory() {
         .expect("Failed to write config file");
 
     // Act: Create environment in custom location
-    let create_result = ProcessRunner::new()
+    let create_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_create_command("./environment.json")
@@ -214,7 +214,7 @@ fn it_should_complete_full_lifecycle_with_custom_working_directory() {
     env_assertions.assert_environment_state_is("test-lifecycle", "Created");
 
     // Act: Destroy environment
-    let destroy_result = ProcessRunner::new()
+    let destroy_result = process_runner()
         .working_dir(temp_workspace.path())
         .log_dir(temp_workspace.path().join("logs"))
         .run_destroy_command("test-lifecycle")
