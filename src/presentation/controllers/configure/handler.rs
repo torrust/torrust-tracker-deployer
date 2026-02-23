@@ -13,6 +13,8 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Configured;
 use crate::domain::environment::Environment;
+use crate::presentation::input::cli::OutputFormat;
+use crate::presentation::views::commands::configure::{ConfigureDetailsData, JsonView, TextView};
 use crate::presentation::views::progress::ProgressReporter;
 use crate::presentation::views::progress::VerboseProgressListener;
 use crate::presentation::views::UserOutput;
@@ -101,11 +103,13 @@ impl ConfigureCommandController {
     /// 2. Load and validate environment state
     /// 3. Create command handler
     /// 4. Configure infrastructure
-    /// 5. Complete with success message
+    /// 5. Display results (in specified format)
+    /// 6. Complete with success message
     ///
     /// # Arguments
     ///
     /// * `environment_name` - The name of the environment to configure
+    /// * `output_format` - The output format (Text or Json)
     ///
     /// # Errors
     ///
@@ -123,6 +127,7 @@ impl ConfigureCommandController {
     pub fn execute(
         &mut self,
         environment_name: &str,
+        output_format: OutputFormat,
     ) -> Result<Environment<Configured>, ConfigureSubcommandError> {
         let env_name = self.validate_environment_name(environment_name)?;
 
@@ -131,6 +136,8 @@ impl ConfigureCommandController {
         let configured = self.configure_infrastructure(&handler, &env_name)?;
 
         self.complete_workflow(environment_name)?;
+
+        self.display_configure_results(&configured, output_format)?;
 
         Ok(configured)
     }
@@ -224,6 +231,42 @@ impl ConfigureCommandController {
             .complete(&format!("Environment '{name}' configured successfully"))?;
         Ok(())
     }
+
+    /// Display configure results in the specified format
+    ///
+    /// Uses the Strategy Pattern to render configure details in either
+    /// human-readable text or machine-readable JSON format.
+    ///
+    /// # Arguments
+    ///
+    /// * `configured` - The configured environment to display
+    /// * `output_format` - The output format (Text or Json)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Progress reporting encounters a poisoned mutex
+    ///
+    /// # Note
+    ///
+    /// JSON serialization errors are handled inline by `JsonView::render()`,
+    /// which returns a fallback error JSON string. Therefore, this method
+    /// does not propagate serialization errors.
+    #[allow(clippy::result_large_err)]
+    fn display_configure_results(
+        &mut self,
+        configured: &Environment<Configured>,
+        output_format: OutputFormat,
+    ) -> Result<(), ConfigureSubcommandError> {
+        self.progress.blank_line()?;
+        let details = ConfigureDetailsData::from(configured);
+        let output = match output_format {
+            OutputFormat::Text => TextView::render(&details),
+            OutputFormat::Json => JsonView::render(&details),
+        };
+        self.progress.result(&output)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -269,7 +312,7 @@ mod tests {
 
         // Test with invalid environment name (contains underscore)
         let result = ConfigureCommandController::new(repository, clock, user_output.clone())
-            .execute("invalid_name");
+            .execute("invalid_name", OutputFormat::Text);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -288,8 +331,8 @@ mod tests {
 
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
-        let result =
-            ConfigureCommandController::new(repository, clock, user_output.clone()).execute("");
+        let result = ConfigureCommandController::new(repository, clock, user_output.clone())
+            .execute("", OutputFormat::Text);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -310,7 +353,7 @@ mod tests {
 
         // Try to configure an environment that doesn't exist
         let result = ConfigureCommandController::new(repository, clock, user_output.clone())
-            .execute("nonexistent-env");
+            .execute("nonexistent-env", OutputFormat::Text);
 
         assert!(result.is_err());
         // After refactoring, repository NotFound error is wrapped in ConfigureOperationFailed
@@ -339,7 +382,7 @@ mod tests {
         // Valid environment name should pass validation, but will fail
         // at configure operation since we don't have a real environment setup
         let result = ConfigureCommandController::new(repository, clock, user_output.clone())
-            .execute("test-env");
+            .execute("test-env", OutputFormat::Text);
 
         // Should fail at operation, not at name validation
         if let Err(ConfigureSubcommandError::InvalidEnvironmentName { .. }) = result {

@@ -15,6 +15,7 @@ mod integration_tests {
     use crate::presentation::controllers::configure;
     use crate::presentation::controllers::configure::handler::ConfigureCommandController;
     use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
+    use crate::presentation::input::cli::OutputFormat;
     use crate::presentation::views::testing::TestUserOutput;
     use crate::presentation::views::{UserOutput, VerbosityLevel};
     use crate::shared::clock::Clock;
@@ -47,7 +48,7 @@ mod integration_tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = ConfigureCommandController::new(repository, clock, user_output.clone())
-            .execute("invalid_name_with_underscore");
+            .execute("invalid_name_with_underscore", OutputFormat::Text);
 
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -65,7 +66,7 @@ mod integration_tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = ConfigureCommandController::new(repository, clock, user_output.clone())
-            .execute("bad_name");
+            .execute("bad_name", OutputFormat::Text);
 
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -82,7 +83,7 @@ mod integration_tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = ConfigureCommandController::new(repository, clock, user_output.clone())
-            .execute("nonexistent-environment");
+            .execute("nonexistent-environment", OutputFormat::Text);
 
         assert!(result.is_err());
         // Repository will return NotFound error, wrapped in ConfigureOperationFailed

@@ -140,10 +140,11 @@ pub async fn route_command(
             Ok(())
         }
         Commands::Configure { environment } => {
+            let output_format = context.output_format();
             context
                 .container()
                 .create_configure_controller()
-                .execute(&environment)?;
+                .execute(&environment, output_format)?;
             Ok(())
         }
         Commands::Test { environment } => {

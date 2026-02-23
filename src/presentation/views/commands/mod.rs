@@ -4,6 +4,7 @@
 //! Each command has its own submodule with views for rendering
 //! command-specific output.
 
+pub mod configure;
 pub mod create;
 pub mod list;
 pub mod provision;
