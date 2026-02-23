@@ -4,11 +4,13 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-/// Errors that can occur when loading an [`super::EnvironmentCreationConfig`]
+/// Errors that can occur when loading an [`EnvironmentCreationConfig`]
 /// from a JSON string or a file.
 ///
 /// This is distinct from [`super::CreateConfigError`] which covers
 /// domain validation failures *after* parsing.
+///
+/// [`EnvironmentCreationConfig`]: crate::application::command_handlers::create::config::EnvironmentCreationConfig
 #[derive(Debug, Error)]
 pub enum ConfigLoadError {
     /// The configuration file does not exist.

@@ -21,9 +21,7 @@
 
 use std::path::PathBuf;
 
-use torrust_tracker_deployer_lib::presentation::sdk::{
-    Deployer, EnvironmentCreationConfig, EnvironmentName,
-};
+use torrust_tracker_deployer_lib::presentation::sdk::{Deployer, EnvironmentCreationConfig};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let workspace = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -37,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         workspace.display()
     );
 
-    // 2. Create an environment from a JSON config string
+    // 2. Create an environment from a JSON config string (no serde_json needed)
     println!("--- Step 1: Create environment ---");
     let config_json = format!(
         r#"{{
@@ -64,7 +62,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         workspace = workspace.display()
     );
 
-    let config: EnvironmentCreationConfig = serde_json::from_str(&config_json)?;
+    let config = EnvironmentCreationConfig::from_json(&config_json)?;
     let environment = deployer.create_environment(config)?;
     println!("  Created: {}\n", environment.name());
 
@@ -80,19 +78,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     println!();
 
-    // 4. Show environment details
+    // 4. Show environment details — reuse name from the returned environment
     println!("--- Step 3: Show environment details ---");
-    let env_name = EnvironmentName::new("sdk-example")?;
-    let info = deployer.show(&env_name)?;
+    let env_name = environment.name();
+    let info = deployer.show(env_name)?;
     println!("  Name:       {}", info.name);
     println!("  State:      {}", info.state);
     println!("  Provider:   {}", info.provider);
     println!("  Created at: {}", info.created_at);
     println!();
 
-    // 5. Clean up — purge the environment
+    // 5. Clean up — purge the environment (reuse same name)
     println!("--- Step 4: Purge environment ---");
-    deployer.purge(&env_name)?;
+    deployer.purge(env_name)?;
     println!("  Environment '{env_name}' purged.");
     println!();
 

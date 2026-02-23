@@ -44,11 +44,15 @@ use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
 
 use super::builder::DeployerBuilder;
+use super::error::CreateEnvironmentFromFileError;
 
 /// The main entry point for SDK consumers.
 ///
 /// Provides typed access to all deployer operations without requiring
 /// manual dependency wiring. Construct via [`Deployer::builder`].
+///
+/// `Deployer` is `Clone`, `Send`, and `Sync` — it can be shared across threads
+/// or stored in `Arc<Deployer>` for concurrent workflows.
 ///
 /// # Example
 ///
@@ -68,6 +72,7 @@ use super::builder::DeployerBuilder;
 ///     .expect("Validation failed");
 /// println!("Environment: {}", result.environment_name);
 /// ```
+#[derive(Clone)]
 pub struct Deployer {
     working_dir: PathBuf,
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
@@ -117,6 +122,42 @@ impl Deployer {
             Arc::clone(&self.clock),
         );
         handler.execute(config, &self.working_dir)
+    }
+
+    /// Create a new deployment environment from a JSON configuration file.
+    ///
+    /// This is a convenience wrapper that reads the file, parses the JSON, and
+    /// creates the environment in one step — mirroring the CLI's
+    /// `--env-file <path>` flag.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CreateEnvironmentFromFileError::Load`] if the file cannot be
+    /// read or is malformed, or [`CreateEnvironmentFromFileError::Create`] if
+    /// the environment creation fails.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use std::path::Path;
+    /// use torrust_tracker_deployer_lib::presentation::sdk::Deployer;
+    ///
+    /// let deployer = Deployer::builder()
+    ///     .working_dir("/path/to/workspace")
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let env = deployer
+    ///     .create_environment_from_file(Path::new("envs/my-env.json"))
+    ///     .unwrap();
+    /// println!("Created: {}", env.name());
+    /// ```
+    pub fn create_environment_from_file(
+        &self,
+        path: &Path,
+    ) -> Result<Environment<Created>, CreateEnvironmentFromFileError> {
+        let config = EnvironmentCreationConfig::from_file(path)?;
+        Ok(self.create_environment(config)?)
     }
 
     /// Show information about an existing environment.
@@ -201,5 +242,31 @@ impl Deployer {
         let handler =
             PurgeCommandHandler::new(Arc::clone(&self.repository), self.working_dir.clone());
         handler.execute(env_name)
+    }
+}
+
+/// Compile-time assertions that [`Deployer`] satisfies `Send + Sync`.
+///
+/// These fail to compile if any inner field loses thread-safety.
+const _: fn() = || {
+    fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<Deployer>();
+};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Verifies that `Deployer` implements `Clone`, `Send`, and `Sync`
+    /// so it can be shared across threads without wrapping in `Arc<Mutex<_>>`.
+    #[test]
+    fn it_should_be_clone_send_and_sync() {
+        fn assert_clone<T: Clone>() {}
+        fn assert_send<T: Send>() {}
+        fn assert_sync<T: Sync>() {}
+
+        assert_clone::<Deployer>();
+        assert_send::<Deployer>();
+        assert_sync::<Deployer>();
     }
 }

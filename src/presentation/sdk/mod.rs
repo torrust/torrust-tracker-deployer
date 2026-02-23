@@ -49,6 +49,7 @@
 
 mod builder;
 mod deployer;
+mod error;
 
 // === Core facade ===
 pub use builder::{DeployerBuildError, DeployerBuilder};
@@ -72,12 +73,14 @@ pub use crate::application::command_handlers::show::EnvironmentInfo;
 pub use crate::application::command_handlers::validate::ValidationResult;
 
 // === Error types ===
+pub use crate::application::command_handlers::create::config::ConfigLoadError;
 pub use crate::application::command_handlers::create::CreateCommandHandlerError;
 pub use crate::application::command_handlers::destroy::DestroyCommandHandlerError;
 pub use crate::application::command_handlers::list::ListCommandHandlerError;
 pub use crate::application::command_handlers::purge::errors::PurgeCommandHandlerError;
 pub use crate::application::command_handlers::show::ShowCommandHandlerError;
 pub use crate::application::command_handlers::validate::ValidateCommandHandlerError;
+pub use error::CreateEnvironmentFromFileError;
 
 // === Extension points ===
 pub use crate::application::traits::{CommandProgressListener, NullProgressListener};
