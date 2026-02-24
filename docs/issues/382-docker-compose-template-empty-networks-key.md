@@ -24,7 +24,7 @@ that catches this invalid template output.**
 - [x] Fix the template to conditionally render the `networks:` key only when networks exist
 - [x] Ensure consistency across all service blocks in the template
 - [x] Add a unit test that renders the template with a minimal config (no optional services) and validates the output
-- [ ] Validate rendered docker-compose.yml with `docker compose config --quiet` after template rendering to fail early
+- [x] Validate rendered docker-compose.yml with `docker compose config --quiet` after template rendering to fail early
 
 ## Root Cause Analysis
 
@@ -289,7 +289,9 @@ descriptive error on failure.
 - [x] Unit test covers the minimal-config rendering scenario
 - [x] Rendered docker-compose.yml is validated with `docker compose config --quiet` after template rendering
 - [x] Invalid templates produce a clear, actionable error at `configure` time (not `run` time)
-- [ ] The `run` command succeeds with the configuration that previously failed (verified once Phase 3 is done)
+- [x] The `run` command succeeds with the configuration that previously failed
+  - Verified with `envs/minimal-fix-test.json` (SQLite, no domains, no Prometheus):
+    `create → provision → configure → release → run → test` all passed ✅
 
 ## Related Documentation
 
@@ -297,6 +299,8 @@ descriptive error on failure.
 - Network derivation: `src/domain/tracker/config/mod.rs` (lines 560-585)
 - Network topology: `src/domain/topology/network.rs`
 - Template context builder: `src/infrastructure/templating/docker_compose/template/wrappers/docker_compose/context/builder.rs`
+- Local validator: `src/infrastructure/templating/docker_compose/local_validator.rs`
+- ADR: [Docker Compose Local Validation Placement](../decisions/docker-compose-local-validation-placement.md)
 
 ## Notes
 
