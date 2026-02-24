@@ -250,15 +250,19 @@ descriptive error on failure.
 
 **Implementation approach:**
 
-- [ ] After template rendering in the `configure` step (where docker-compose.yml
+- [x] After template rendering in the `configure` step (where docker-compose.yml
       is generated), run `docker compose config --quiet` on the output file
-- [ ] If validation fails, report a clear error to the user indicating the
+      (`validate_docker_compose_file()` in `local_validator.rs`, called from
+      `DockerComposeProjectGenerator::render()`)
+- [x] If validation fails, report a clear error to the user indicating the
       rendered template is invalid, including the docker-compose error output
-- [ ] This validation should run locally against the `build/<env>/docker-compose/`
+      (`DockerComposeValidationFailed` error variant with `help()` message)
+- [x] This validation should run locally against the `build/<env>/docker-compose/`
       directory before files are uploaded to the VM
-- [ ] Requires `docker` to be available on the machine running the deployer (it
+- [x] Requires `docker` to be available on the machine running the deployer (it
       already is, since Docker is a project dependency)
-- [ ] Add a unit/integration test covering the validation step
+- [x] Add a unit/integration test covering the validation step
+      (4 tests in `src/infrastructure/templating/docker_compose/local_validator.rs`)
 
 **Benefits:**
 
@@ -283,8 +287,8 @@ descriptive error on failure.
 - [x] Minimal config (SQLite, no domains, no Prometheus) produces valid docker-compose.yml
 - [x] Template guards are consistent across all service blocks
 - [x] Unit test covers the minimal-config rendering scenario
-- [ ] Rendered docker-compose.yml is validated with `docker compose config --quiet` after template rendering
-- [ ] Invalid templates produce a clear, actionable error at `configure` time (not `run` time)
+- [x] Rendered docker-compose.yml is validated with `docker compose config --quiet` after template rendering
+- [x] Invalid templates produce a clear, actionable error at `configure` time (not `run` time)
 - [ ] The `run` command succeeds with the configuration that previously failed (verified once Phase 3 is done)
 
 ## Related Documentation
