@@ -278,6 +278,6 @@ contract. See ADR
 | 8   | Progress listener in builder      | Medium     | Observability      | Done   |
 | 9   | Async operations (provision, etc) | High       | Full workflow      | Done   |
 | 10  | Error handling example            | Simple     | Documentation      |        |
-| 11  | Create-from-JSON-file example     | Simple     | Documentation      |        |
+| 11  | Create-from-JSON-file example     | Simple     | Documentation      | Done   |
 | 12  | Validate config example           | Trivial    | Documentation      |        |
 | 13  | Remove domain type leaks from SDK | Medium     | DDD correctness    | Done   |

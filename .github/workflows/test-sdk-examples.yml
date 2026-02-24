@@ -12,6 +12,8 @@ name: SDK Examples Tests
 #                           validate, destroy, purge). No infrastructure required.
 #   - sdk_error_handling  — local-only operations (create, show, list, purge).
 #                           Demonstrates error matching and SdkError.
+#   - sdk_create_from_json_file — validate → create_from_file → show → purge.
+#                           Uses a temp file; no infrastructure required.
 #
 # INCOMPATIBLE EXAMPLES (local only, not run here):
 #   - sdk_full_deployment — uses configure, release, run, and test which require
@@ -63,6 +65,10 @@ jobs:
           echo "🚀 Running SDK error handling example at $(date)"
           cargo run --example sdk_error_handling
           echo "✅ SDK error handling example completed at $(date)"
+
+          echo "🚀 Running SDK create-from-JSON-file example at $(date)"
+          cargo run --example sdk_create_from_json_file
+          echo "✅ SDK create-from-JSON-file example completed at $(date)"
 
       - name: Debug information (on failure)
         if: failure()
