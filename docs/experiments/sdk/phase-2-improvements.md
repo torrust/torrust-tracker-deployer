@@ -197,22 +197,7 @@ long-running, and some command handlers are already async.
 - Wire progress listener into each handler
 - Add an example: `examples/sdk/full_deployment.rs` (requires LXD)
 
-### Task 10: Scoped environment guard (create + auto-purge on drop)
-
-**Complexity**: Medium
-**Why**: Examples and test harnesses that create temporary environments
-need cleanup guarantees. A RAII guard prevents leaked environments.
-
-**Work**:
-
-- Create `ScopedEnvironment` struct that wraps `Environment<Created>`
-  and holds a reference to `Deployer`
-- On `Drop`, call `deployer.purge(name)`
-- Add `Deployer::scoped_environment(config) -> Result<ScopedEnvironment, ...>`
-- Handle drop errors gracefully (log, don't panic)
-- Add an example demonstrating the guard pattern
-
-### Task 11: Error handling example
+### Task 10: Error handling example
 
 **Complexity**: Simple
 **Why**: Neither current example demonstrates error recovery. They both
@@ -228,7 +213,7 @@ implement retry logic — the most common question for programmatic consumers.
 - Show retry logic for transient failures (e.g., provision timeout)
 - Register in `Cargo.toml`
 
-### Task 12: Create-from-JSON-file example
+### Task 11: Create-from-JSON-file example
 
 **Complexity**: Simple
 **Why**: `create_environment_from_file()` is the second entry point into
@@ -242,7 +227,7 @@ from the CLI will likely have JSON config files already.
 - Show validate → create → show → purge flow
 - Register in `Cargo.toml`
 
-### Task 13: Validate config example
+### Task 12: Validate config example
 
 **Complexity**: Trivial
 **Why**: The `validate()` method is useful for CI pipelines and pre-flight
@@ -255,6 +240,29 @@ checks but has no dedicated example. Demonstrates a use case distinct from
 - Validate a config file and print results
 - Show both valid and invalid config handling
 - Register in `Cargo.toml`
+
+### Task 13: Remove domain type leaks from SDK public interface
+
+**Complexity**: Medium
+**Why**: The SDK currently returns domain types (`Environment<Created>`,
+`Environment<Provisioned>`, etc.) from operations like `create_environment`,
+`provision`, `configure`, `release`, `run_services`. This leaks DDD-internal
+types through the public API, making domain internals part of the public
+contract. See ADR
+[SDK Presentation Layer Interface Design](../../decisions/sdk-presentation-layer-interface-design.md).
+
+**Work**:
+
+- Change `create_environment` → return `EnvironmentName` instead of `Environment<Created>`
+- Change `provision`, `configure`, `release`, `run_services` → return `()`
+- Remove domain state types from `sdk/mod.rs` re-exports
+  (`Created`, `Provisioned`, `Configured`, `Released`, `Running`, `Destroyed`,
+  `AnyEnvironmentState`, `Environment`, `BackupConfig`, `HetznerConfig`,
+  `LxdConfig`, `InstanceName`, `ProfileName`, `Provider`, `ProviderConfig`)
+- Keep `EnvironmentName` and `EnvironmentNameError` re-exported (simple
+  value objects used as inputs — acceptable at the SDK surface)
+- Update `full_deployment.rs` and `basic_usage.rs` examples accordingly
+- Update `SdkError` variants that wrap domain-typed errors if needed
 
 ## Summary
 
@@ -269,7 +277,7 @@ checks but has no dedicated example. Demonstrates a use case distinct from
 | 7   | EnvironmentCreationConfigBuilder  | Medium     | Ergonomics         | Done   |
 | 8   | Progress listener in builder      | Medium     | Observability      | Done   |
 | 9   | Async operations (provision, etc) | High       | Full workflow      | Done   |
-| 10  | Scoped environment guard          | Medium     | Cleanup safety     |        |
-| 11  | Error handling example            | Simple     | Documentation      |        |
-| 12  | Create-from-JSON-file example     | Simple     | Documentation      |        |
-| 13  | Validate config example           | Trivial    | Documentation      |        |
+| 10  | Error handling example            | Simple     | Documentation      |        |
+| 11  | Create-from-JSON-file example     | Simple     | Documentation      |        |
+| 12  | Validate config example           | Trivial    | Documentation      |        |
+| 13  | Remove domain type leaks from SDK | Medium     | DDD correctness    |        |
