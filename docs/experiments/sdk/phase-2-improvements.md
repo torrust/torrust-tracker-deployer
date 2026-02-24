@@ -229,6 +229,50 @@ SDK-only consumers, and cleaner public API boundaries.
 - Set up independent semver versioning
 - Publish to crates.io (or keep private, depending on project policy)
 
+### Task 12: Error handling example
+
+**Complexity**: Simple
+**Why**: Neither current example demonstrates error recovery. They both
+use `?` to propagate everything. SDK users need to see how to match on
+`SdkError` variants, handle "environment already exists" gracefully, and
+implement retry logic — the most common question for programmatic consumers.
+
+**Work**:
+
+- Create `examples/sdk/error_handling.rs`
+- Demonstrate matching on specific `SdkError` variants
+- Show recovery pattern: if environment exists, skip create
+- Show retry logic for transient failures (e.g., provision timeout)
+- Register in `Cargo.toml`
+
+### Task 13: Create-from-JSON-file example
+
+**Complexity**: Simple
+**Why**: `create_environment_from_file()` is the second entry point into
+the SDK (alongside the builder) but no example covers it. Users migrating
+from the CLI will likely have JSON config files already.
+
+**Work**:
+
+- Create `examples/sdk/create_from_json_file.rs`
+- Use `deployer.create_environment_from_file(path)` with a fixture JSON
+- Show validate → create → show → purge flow
+- Register in `Cargo.toml`
+
+### Task 14: Validate config example
+
+**Complexity**: Trivial
+**Why**: The `validate()` method is useful for CI pipelines and pre-flight
+checks but has no dedicated example. Demonstrates a use case distinct from
+"deploy everything."
+
+**Work**:
+
+- Create `examples/sdk/validate_config.rs`
+- Validate a config file and print results
+- Show both valid and invalid config handling
+- Register in `Cargo.toml`
+
 ## Summary
 
 | #   | Task                              | Complexity | Improves           | Status |
@@ -244,3 +288,6 @@ SDK-only consumers, and cleaner public API boundaries.
 | 9   | Async operations (provision, etc) | High       | Full workflow      | Done   |
 | 10  | Scoped environment guard          | Medium     | Cleanup safety     |        |
 | 11  | Extract into separate crate       | High       | API stability      |        |
+| 12  | Error handling example            | Simple     | Documentation      |        |
+| 13  | Create-from-JSON-file example     | Simple     | Documentation      |        |
+| 14  | Validate config example           | Trivial    | Documentation      |        |

@@ -69,6 +69,23 @@ The CLI has a `render` command (already async). It is useful for inspecting
 generated configuration files without actually provisioning. This could be
 added alongside the other async operations in Task 9.
 
+### Idempotent Deploy Example
+
+An `examples/sdk/idempotent_deploy.rs` that uses `exists()` + `show()` to
+check environment state before each step, skipping already-completed stages.
+Demonstrates how to build resilient automation that can resume after
+interruptions — a more advanced pattern but very practical for production
+use.
+
+### Custom Progress Listener Example
+
+An `examples/sdk/custom_progress.rs` showing a richer
+`CommandProgressListener` implementation — for example writing to a log
+file, updating a progress bar, or collecting step timings. The current
+`PrintProgressListener` in `full_deployment.rs` is minimal; a more
+realistic example would help users building UIs or dashboards on top of
+the SDK.
+
 ## Lower Priority / Future
 
 ### SDK Changelog / Migration Guide
