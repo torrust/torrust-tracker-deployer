@@ -86,6 +86,37 @@ file, updating a progress bar, or collecting step timings. The current
 realistic example would help users building UIs or dashboards on top of
 the SDK.
 
+## Future Phases (Deferred)
+
+These improvements are deliberately deferred until the SDK has proven
+real-world adoption. Implementing them before the API is stable and
+used by the community would be premature optimization.
+
+### Extract into a Separate Crate
+
+A separate `torrust-tracker-deployer-sdk` crate would enable independent
+versioning, a smaller dependency footprint for SDK-only consumers, and
+cleaner public API boundaries. However, the right time to do this is
+**after** the SDK has been adopted and the API has stabilized through
+real usage — not before.
+
+**Prerequisite signals**:
+
+- The SDK API has been stable across multiple releases without breaking changes
+- At least one external consumer (community tool, script, or integration) is
+  using the SDK in production
+- The PR/RFC for public publishing has community buy-in
+
+**Work** (when the time comes):
+
+- Create `packages/sdk/` as a workspace member
+- Move SDK types from `src/presentation/sdk/` to the new crate
+- Re-export domain types via the SDK crate's public API
+- Keep the deployer lib crate as a dependency of the SDK crate
+- Add `#[non_exhaustive]` to all public enums and structs
+- Set up independent semver versioning
+- Publish to crates.io (or keep private, depending on project policy)
+
 ## Lower Priority / Future
 
 ### SDK Changelog / Migration Guide

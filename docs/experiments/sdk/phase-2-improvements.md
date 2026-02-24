@@ -212,24 +212,7 @@ need cleanup guarantees. A RAII guard prevents leaked environments.
 - Handle drop errors gracefully (log, don't panic)
 - Add an example demonstrating the guard pattern
 
-### Task 11: Extract into a separate crate
-
-**Complexity**: High
-**Why**: Once the API stabilizes, a separate `torrust-tracker-deployer-sdk`
-crate enables independent versioning, smaller dependency footprint for
-SDK-only consumers, and cleaner public API boundaries.
-
-**Work**:
-
-- Create `packages/sdk/` as a workspace member
-- Move SDK types from `src/presentation/sdk/` to the new crate
-- Re-export domain types via the SDK crate's public API
-- Keep the deployer lib crate as a dependency of the SDK crate
-- Add `#[non_exhaustive]` to public enums and structs
-- Set up independent semver versioning
-- Publish to crates.io (or keep private, depending on project policy)
-
-### Task 12: Error handling example
+### Task 11: Error handling example
 
 **Complexity**: Simple
 **Why**: Neither current example demonstrates error recovery. They both
@@ -245,7 +228,7 @@ implement retry logic — the most common question for programmatic consumers.
 - Show retry logic for transient failures (e.g., provision timeout)
 - Register in `Cargo.toml`
 
-### Task 13: Create-from-JSON-file example
+### Task 12: Create-from-JSON-file example
 
 **Complexity**: Simple
 **Why**: `create_environment_from_file()` is the second entry point into
@@ -259,7 +242,7 @@ from the CLI will likely have JSON config files already.
 - Show validate → create → show → purge flow
 - Register in `Cargo.toml`
 
-### Task 14: Validate config example
+### Task 13: Validate config example
 
 **Complexity**: Trivial
 **Why**: The `validate()` method is useful for CI pipelines and pre-flight
@@ -287,7 +270,6 @@ checks but has no dedicated example. Demonstrates a use case distinct from
 | 8   | Progress listener in builder      | Medium     | Observability      |        |
 | 9   | Async operations (provision, etc) | High       | Full workflow      | Done   |
 | 10  | Scoped environment guard          | Medium     | Cleanup safety     |        |
-| 11  | Extract into separate crate       | High       | API stability      |        |
-| 12  | Error handling example            | Simple     | Documentation      |        |
-| 13  | Create-from-JSON-file example     | Simple     | Documentation      |        |
-| 14  | Validate config example           | Trivial    | Documentation      |        |
+| 11  | Error handling example            | Simple     | Documentation      |        |
+| 12  | Create-from-JSON-file example     | Simple     | Documentation      |        |
+| 13  | Validate config example           | Trivial    | Documentation      |        |
