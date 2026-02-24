@@ -15,7 +15,7 @@ AI agent use cases — the primary motivation for the SDK.
 
 ## Task List
 
-### Task 1: Make `Deployer` Clone + Send + Sync
+### Task 1: Make `Deployer` Clone + Send + Sync ✅
 
 **Complexity**: Trivial
 **Why**: AI agents managing multiple environments concurrently need to
@@ -28,7 +28,7 @@ so this is a one-line change.
 - Add compile-time assertions for `Send + Sync`
 - Add a unit test confirming the bounds
 
-### Task 2: Add `EnvironmentCreationConfig::from_json` helper
+### Task 2: Add `EnvironmentCreationConfig::from_json` helper ✅
 
 **Complexity**: Trivial
 **Why**: The example currently requires consumers to depend on `serde_json`
@@ -42,7 +42,7 @@ that transitive dependency.
 - Re-export both from the SDK module
 - Update the example to use `from_json` instead of `serde_json::from_str`
 
-### Task 3: Add `create_environment_from_file` to `Deployer`
+### Task 3: Add `create_environment_from_file` to `Deployer` ✅
 
 **Complexity**: Simple
 **Why**: The CLI's primary flow is `--env-file <path>`. The SDK should
@@ -56,7 +56,7 @@ mirror it. Currently consumers must read the file, parse JSON, and call
 - Return a clear error if the file doesn't exist or is malformed
 - Add a second example or extend the existing one
 
-### Task 4: Improve name reuse after `create_environment`
+### Task 4: Improve name reuse after `create_environment` ✅
 
 **Complexity**: Simple
 **Why**: After `create_environment` returns `Environment<Created>`, the
@@ -80,7 +80,7 @@ the returned environment.
   `Environment::name()` returns `&EnvironmentName`, this should
   already work — just update the example
 
-### Task 5: Add `Deployer::exists` method
+### Task 5: Add `Deployer::exists` method ✅
 
 **Complexity**: Simple
 **Why**: AI agents frequently need to check whether an environment exists
@@ -94,7 +94,7 @@ and match on the error, which is awkward.
   to `Ok(true)`, propagate other errors
 - Update the AI agent workflow example in the docs
 
-### Task 6: Introduce a unified `SdkError` enum
+### Task 6: Introduce a unified `SdkError` enum ✅
 
 **Complexity**: Medium
 **Why**: Each `Deployer` method returns a different error type. Consumers
@@ -131,7 +131,7 @@ enum enables programmatic error recovery without type erasure.
   can convert into via `.into()` or `?` with a `From` impl
 - Re-export from `sdk/mod.rs`
 
-### Task 7: Add `EnvironmentCreationConfigBuilder`
+### Task 7: Add `EnvironmentCreationConfigBuilder` ✅
 
 **Complexity**: Medium
 **Why**: The example builds config by hand-crafting a JSON string — fragile,
@@ -178,7 +178,7 @@ no way to wire one in.
 - Pass the listener to command handlers that accept one
 - Add an example showing a custom listener that prints progress
 
-### Task 9: Add async operations (provision, configure, release, run)
+### Task 9: Add async operations (provision, configure, release, run) ✅
 
 **Complexity**: High
 **Why**: These are the core deployment operations that make the SDK useful
@@ -231,16 +231,16 @@ SDK-only consumers, and cleaner public API boundaries.
 
 ## Summary
 
-| #   | Task                              | Complexity | Improves           |
-| --- | --------------------------------- | ---------- | ------------------ |
-| 1   | Make Deployer Clone+Send+Sync     | Trivial    | Concurrency        |
-| 2   | Config from_json / from_file      | Trivial    | Ergonomics         |
-| 3   | create_environment_from_file      | Simple     | Ergonomics         |
-| 4   | Improve name reuse in example     | Simple     | Ergonomics         |
-| 5   | Add exists() method               | Simple     | AI agent workflows |
-| 6   | Unified SdkError enum             | Medium     | Error handling     |
-| 7   | EnvironmentCreationConfigBuilder  | Medium     | Ergonomics         |
-| 8   | Progress listener in builder      | Medium     | Observability      |
-| 9   | Async operations (provision, etc) | High       | Full workflow      |
-| 10  | Scoped environment guard          | Medium     | Cleanup safety     |
-| 11  | Extract into separate crate       | High       | API stability      |
+| #   | Task                              | Complexity | Improves           | Status |
+| --- | --------------------------------- | ---------- | ------------------ | ------ |
+| 1   | Make Deployer Clone+Send+Sync     | Trivial    | Concurrency        | Done   |
+| 2   | Config from_json / from_file      | Trivial    | Ergonomics         | Done   |
+| 3   | create_environment_from_file      | Simple     | Ergonomics         | Done   |
+| 4   | Improve name reuse in example     | Simple     | Ergonomics         | Done   |
+| 5   | Add exists() method               | Simple     | AI agent workflows | Done   |
+| 6   | Unified SdkError enum             | Medium     | Error handling     | Done   |
+| 7   | EnvironmentCreationConfigBuilder  | Medium     | Ergonomics         | Done   |
+| 8   | Progress listener in builder      | Medium     | Observability      |        |
+| 9   | Async operations (provision, etc) | High       | Full workflow      | Done   |
+| 10  | Scoped environment guard          | Medium     | Cleanup safety     |        |
+| 11  | Extract into separate crate       | High       | API stability      |        |

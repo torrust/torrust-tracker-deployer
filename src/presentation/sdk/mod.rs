@@ -36,18 +36,23 @@
 //! which are the same handlers used by the CLI. The SDK simply provides a
 //! more ergonomic entry point for programmatic consumers.
 //!
-//! ## Available Operations (Proof of Concept)
+//! ## Available Operations
 //!
-//! | Method | Description |
-//! |--------|-------------|
-//! | [`Deployer::create_environment`] | Create a new deployment environment |
-//! | [`Deployer::create_environment_from_file`] | Create an environment from a JSON file |
-//! | [`Deployer::show`] | Show information about an environment |
-//! | [`Deployer::exists`] | Check whether a named environment exists |
-//! | [`Deployer::list`] | List all environments in the workspace |
-//! | [`Deployer::validate`] | Validate an environment configuration file |
-//! | [`Deployer::destroy`] | Destroy infrastructure for an environment |
-//! | [`Deployer::purge`] | Remove all local data for an environment |
+//! | Method | Async | Description |
+//! |--------|-------|-------------|
+//! | [`Deployer::create_environment`] | No | Create a new deployment environment |
+//! | [`Deployer::create_environment_from_file`] | No | Create an environment from a JSON file |
+//! | [`Deployer::show`] | No | Show information about an environment |
+//! | [`Deployer::exists`] | No | Check whether a named environment exists |
+//! | [`Deployer::list`] | No | List all environments in the workspace |
+//! | [`Deployer::validate`] | No | Validate an environment configuration file |
+//! | [`Deployer::destroy`] | No | Destroy infrastructure for an environment |
+//! | [`Deployer::purge`] | No | Remove all local data for an environment |
+//! | [`Deployer::provision`] | Yes | Provision infrastructure (OpenTofu + SSH) |
+//! | [`Deployer::configure`] | No | Configure a provisioned environment (Ansible) |
+//! | [`Deployer::release`] | Yes | Deploy software to a configured environment |
+//! | [`Deployer::run_services`] | No | Start services on a released environment |
+//! | [`Deployer::test`] | Yes | Test a deployed environment |
 
 mod builder;
 mod deployer;
@@ -75,15 +80,21 @@ pub use crate::application::command_handlers::create::config::{
 // === Result types ===
 pub use crate::application::command_handlers::list::EnvironmentList;
 pub use crate::application::command_handlers::show::EnvironmentInfo;
+pub use crate::application::command_handlers::test::TestResult;
 pub use crate::application::command_handlers::validate::ValidationResult;
 
 // === Error types ===
+pub use crate::application::command_handlers::configure::ConfigureCommandHandlerError;
 pub use crate::application::command_handlers::create::config::ConfigLoadError;
 pub use crate::application::command_handlers::create::CreateCommandHandlerError;
 pub use crate::application::command_handlers::destroy::DestroyCommandHandlerError;
 pub use crate::application::command_handlers::list::ListCommandHandlerError;
+pub use crate::application::command_handlers::provision::ProvisionCommandHandlerError;
 pub use crate::application::command_handlers::purge::errors::PurgeCommandHandlerError;
+pub use crate::application::command_handlers::release::ReleaseCommandHandlerError;
+pub use crate::application::command_handlers::run::RunCommandHandlerError;
 pub use crate::application::command_handlers::show::ShowCommandHandlerError;
+pub use crate::application::command_handlers::test::TestCommandHandlerError;
 pub use crate::application::command_handlers::validate::ValidateCommandHandlerError;
 pub use error::{CreateEnvironmentFromFileError, SdkError};
 

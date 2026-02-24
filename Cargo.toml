@@ -44,6 +44,10 @@ path = "src/bin/test_logging.rs"
 name = "sdk_basic_usage"
 path = "examples/sdk/basic_usage.rs"
 
+[[example]]
+name = "sdk_full_deployment"
+path = "examples/sdk/full_deployment.rs"
+
 [dependencies]
 tokio = { version = "1.0", features = [ "full" ] }
 anyhow = "1.0"

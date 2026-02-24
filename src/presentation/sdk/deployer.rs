@@ -20,6 +20,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::application::command_handlers::configure::{
+    ConfigureCommandHandler, ConfigureCommandHandlerError,
+};
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::application::command_handlers::create::CreateCommandHandlerError;
 use crate::application::command_handlers::destroy::{
@@ -28,17 +31,30 @@ use crate::application::command_handlers::destroy::{
 use crate::application::command_handlers::list::{
     EnvironmentList, ListCommandHandler, ListCommandHandlerError,
 };
+use crate::application::command_handlers::provision::{
+    ProvisionCommandHandler, ProvisionCommandHandlerError,
+};
 use crate::application::command_handlers::purge::errors::PurgeCommandHandlerError;
 use crate::application::command_handlers::purge::handler::PurgeCommandHandler;
+use crate::application::command_handlers::release::{
+    ReleaseCommandHandler, ReleaseCommandHandlerError,
+};
+use crate::application::command_handlers::run::{RunCommandHandler, RunCommandHandlerError};
 use crate::application::command_handlers::show::{
     EnvironmentInfo, ShowCommandHandler, ShowCommandHandlerError,
+};
+use crate::application::command_handlers::test::{
+    TestCommandHandler, TestCommandHandlerError, TestResult,
 };
 use crate::application::command_handlers::validate::{
     ValidateCommandHandler, ValidateCommandHandlerError, ValidationResult,
 };
+use crate::application::traits::CommandProgressListener;
 use crate::application::CreateCommandHandler;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::domain::environment::state::{Created, Destroyed};
+use crate::domain::environment::state::{
+    Configured, Created, Destroyed, Provisioned, Released, Running,
+};
 use crate::domain::{Environment, EnvironmentName};
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
@@ -280,6 +296,122 @@ impl Deployer {
         let handler =
             PurgeCommandHandler::new(Arc::clone(&self.repository), self.working_dir.clone());
         handler.execute(env_name)
+    }
+
+    // ===================================================================
+    // Async operations — require infrastructure (LXD / SSH / cloud)
+    // ===================================================================
+
+    /// Provision infrastructure for a created environment.
+    ///
+    /// Runs `OpenTofu` to create the VM instance, waits for SSH connectivity,
+    /// and transitions the environment to the `Provisioned` state.
+    ///
+    /// Equivalent to `torrust-tracker-deployer provision <name>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProvisionCommandHandlerError`] if the environment is not found,
+    /// is in the wrong state, or provisioning fails.
+    pub async fn provision(
+        &self,
+        env_name: &EnvironmentName,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
+        let handler = ProvisionCommandHandler::new(
+            Arc::clone(&self.clock),
+            self.repository.clone() as Arc<dyn EnvironmentRepository>,
+        );
+        handler.execute(env_name, listener).await
+    }
+
+    /// Configure a provisioned environment.
+    ///
+    /// Runs Ansible playbooks to install required software and configure the
+    /// VM, transitioning the environment to the `Configured` state.
+    ///
+    /// Equivalent to `torrust-tracker-deployer configure <name>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ConfigureCommandHandlerError`] if the environment is not
+    /// found, is in the wrong state, or configuration fails.
+    pub fn configure(
+        &self,
+        env_name: &EnvironmentName,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<Environment<Configured>, ConfigureCommandHandlerError> {
+        let handler = ConfigureCommandHandler::new(
+            Arc::clone(&self.clock),
+            self.repository.clone() as Arc<dyn EnvironmentRepository>,
+        );
+        handler.execute(env_name, listener)
+    }
+
+    /// Release software to a configured environment.
+    ///
+    /// Renders and deploys configuration files (Docker Compose, Caddy,
+    /// Prometheus, Grafana, etc.), transitioning the environment to the
+    /// `Released` state.
+    ///
+    /// Equivalent to `torrust-tracker-deployer release <name>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ReleaseCommandHandlerError`] if the environment is not found,
+    /// is in the wrong state, or the release operation fails.
+    pub async fn release(
+        &self,
+        env_name: &EnvironmentName,
+        listener: Option<&dyn CommandProgressListener>,
+    ) -> Result<Environment<Released>, ReleaseCommandHandlerError> {
+        let handler = ReleaseCommandHandler::new(
+            self.repository.clone() as Arc<dyn EnvironmentRepository>,
+            Arc::clone(&self.clock),
+        );
+        handler.execute(env_name, listener).await
+    }
+
+    /// Start services on a released environment.
+    ///
+    /// Runs `docker compose up` on the remote instance, transitioning the
+    /// environment to the `Running` state.
+    ///
+    /// Equivalent to `torrust-tracker-deployer run <name>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RunCommandHandlerError`] if the environment is not found,
+    /// is in the wrong state, or starting services fails.
+    #[allow(clippy::result_large_err)]
+    pub fn run_services(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<Environment<Running>, RunCommandHandlerError> {
+        let handler = RunCommandHandler::new(
+            self.repository.clone() as Arc<dyn EnvironmentRepository>,
+            Arc::clone(&self.clock),
+        );
+        handler.execute(env_name)
+    }
+
+    /// Test a deployed environment.
+    ///
+    /// Verifies connectivity and DNS resolution for the running instance.
+    ///
+    /// Equivalent to `torrust-tracker-deployer test <name>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TestCommandHandlerError`] if the environment is not found
+    /// or the test fails.
+    pub async fn test(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<TestResult, TestCommandHandlerError> {
+        let handler =
+            TestCommandHandler::new(self.repository.clone() as Arc<dyn EnvironmentRepository>);
+        handler.execute(env_name).await
     }
 }
 

@@ -5,12 +5,17 @@
 
 use thiserror::Error;
 
+use crate::application::command_handlers::configure::ConfigureCommandHandlerError;
 use crate::application::command_handlers::create::config::ConfigLoadError;
 use crate::application::command_handlers::create::CreateCommandHandlerError;
 use crate::application::command_handlers::destroy::DestroyCommandHandlerError;
 use crate::application::command_handlers::list::ListCommandHandlerError;
+use crate::application::command_handlers::provision::ProvisionCommandHandlerError;
 use crate::application::command_handlers::purge::errors::PurgeCommandHandlerError;
+use crate::application::command_handlers::release::ReleaseCommandHandlerError;
+use crate::application::command_handlers::run::RunCommandHandlerError;
 use crate::application::command_handlers::show::ShowCommandHandlerError;
+use crate::application::command_handlers::test::TestCommandHandlerError;
 use crate::application::command_handlers::validate::ValidateCommandHandlerError;
 
 use super::builder::DeployerBuildError;
@@ -83,4 +88,24 @@ pub enum SdkError {
     /// [`super::deployer::Deployer::purge`] failed.
     #[error(transparent)]
     Purge(#[from] PurgeCommandHandlerError),
+
+    /// [`super::deployer::Deployer::provision`] failed.
+    #[error(transparent)]
+    Provision(#[from] ProvisionCommandHandlerError),
+
+    /// [`super::deployer::Deployer::configure`] failed.
+    #[error(transparent)]
+    Configure(#[from] ConfigureCommandHandlerError),
+
+    /// [`super::deployer::Deployer::release`] failed.
+    #[error(transparent)]
+    Release(#[from] ReleaseCommandHandlerError),
+
+    /// [`super::deployer::Deployer::run_services`] failed.
+    #[error(transparent)]
+    Run(#[from] RunCommandHandlerError),
+
+    /// [`super::deployer::Deployer::test`] failed.
+    #[error(transparent)]
+    Test(#[from] TestCommandHandlerError),
 }
