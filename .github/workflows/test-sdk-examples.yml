@@ -8,8 +8,10 @@ name: SDK Examples Tests
 # running VM is excluded. The affected commands are: configure, release, run, test.
 #
 # COMPATIBLE EXAMPLES (can run in CI):
-#   - sdk_basic_usage  — local-only operations (create, list, show, exists,
-#                        validate, destroy, purge). No infrastructure required.
+#   - sdk_basic_usage     — local-only operations (create, list, show, exists,
+#                           validate, destroy, purge). No infrastructure required.
+#   - sdk_error_handling  — local-only operations (create, show, list, purge).
+#                           Demonstrates error matching and SdkError.
 #
 # INCOMPATIBLE EXAMPLES (local only, not run here):
 #   - sdk_full_deployment — uses configure, release, run, and test which require
@@ -57,6 +59,10 @@ jobs:
           echo "🚀 Running SDK basic usage example at $(date)"
           cargo run --example sdk_basic_usage
           echo "✅ SDK basic usage example completed at $(date)"
+
+          echo "🚀 Running SDK error handling example at $(date)"
+          cargo run --example sdk_error_handling
+          echo "✅ SDK error handling example completed at $(date)"
 
       - name: Debug information (on failure)
         if: failure()

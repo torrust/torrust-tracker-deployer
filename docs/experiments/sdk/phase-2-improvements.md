@@ -280,4 +280,4 @@ contract. See ADR
 | 10  | Error handling example            | Simple     | Documentation      |        |
 | 11  | Create-from-JSON-file example     | Simple     | Documentation      |        |
 | 12  | Validate config example           | Trivial    | Documentation      |        |
-| 13  | Remove domain type leaks from SDK | Medium     | DDD correctness    |        |
+| 13  | Remove domain type leaks from SDK | Medium     | DDD correctness    | Done   |
