@@ -161,7 +161,7 @@ for AI agent consumers.
 - Re-export the builder from `sdk/mod.rs`
 - Update the example to use the builder instead of raw JSON
 
-### Task 8: Add progress listener support to `DeployerBuilder`
+### Task 8: Add progress listener support to `DeployerBuilder` ✅
 
 **Complexity**: Medium
 **Why**: Long-running operations (provision, configure, release) produce
@@ -267,7 +267,7 @@ checks but has no dedicated example. Demonstrates a use case distinct from
 | 5   | Add exists() method               | Simple     | AI agent workflows | Done   |
 | 6   | Unified SdkError enum             | Medium     | Error handling     | Done   |
 | 7   | EnvironmentCreationConfigBuilder  | Medium     | Ergonomics         | Done   |
-| 8   | Progress listener in builder      | Medium     | Observability      |        |
+| 8   | Progress listener in builder      | Medium     | Observability      | Done   |
 | 9   | Async operations (provision, etc) | High       | Full workflow      | Done   |
 | 10  | Scoped environment guard          | Medium     | Cleanup safety     |        |
 | 11  | Error handling example            | Simple     | Documentation      |        |

@@ -21,6 +21,7 @@ use std::time::Duration;
 use thiserror::Error;
 
 use super::deployer::Deployer;
+use crate::application::traits::{CommandProgressListener, NullProgressListener};
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::SystemClock;
 
@@ -46,13 +47,17 @@ const DEFAULT_LOCK_TIMEOUT: Duration = Duration::from_secs(30);
 /// ```
 pub struct DeployerBuilder {
     working_dir: Option<PathBuf>,
+    progress_listener: Option<Arc<dyn CommandProgressListener + Send + Sync>>,
 }
 
 impl DeployerBuilder {
     /// Create a new builder with no configuration.
     #[must_use]
     pub fn new() -> Self {
-        Self { working_dir: None }
+        Self {
+            working_dir: None,
+            progress_listener: None,
+        }
     }
 
     /// Set the workspace root directory.
@@ -62,6 +67,33 @@ impl DeployerBuilder {
     #[must_use]
     pub fn working_dir(mut self, path: impl Into<PathBuf>) -> Self {
         self.working_dir = Some(path.into());
+        self
+    }
+
+    /// Set a default progress listener for all operations.
+    ///
+    /// The listener receives step-by-step progress events from long-running
+    /// operations (provision, configure, release). If not set, a
+    /// [`NullProgressListener`] is used (silent).
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use std::sync::Arc;
+    /// use torrust_tracker_deployer_lib::presentation::sdk::{Deployer, NullProgressListener};
+    ///
+    /// let deployer = Deployer::builder()
+    ///     .working_dir("/path/to/workspace")
+    ///     .progress_listener(Arc::new(NullProgressListener))
+    ///     .build()
+    ///     .unwrap();
+    /// ```
+    #[must_use]
+    pub fn progress_listener(
+        mut self,
+        listener: Arc<dyn CommandProgressListener + Send + Sync>,
+    ) -> Self {
+        self.progress_listener = Some(listener);
         self
     }
 
@@ -81,6 +113,9 @@ impl DeployerBuilder {
         let data_directory: Arc<Path> = Arc::from(data_dir.as_path());
         let repository = repository_factory.create(data_dir);
         let clock = Arc::new(SystemClock);
+        let listener = self
+            .progress_listener
+            .unwrap_or_else(|| Arc::new(NullProgressListener));
 
         Ok(Deployer::new(
             working_dir,
@@ -88,6 +123,7 @@ impl DeployerBuilder {
             repository_factory,
             clock,
             data_directory,
+            listener,
         ))
     }
 }

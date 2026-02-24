@@ -95,6 +95,7 @@ pub struct Deployer {
     repository_factory: Arc<RepositoryFactory>,
     clock: Arc<dyn Clock>,
     data_directory: Arc<Path>,
+    listener: Arc<dyn CommandProgressListener + Send + Sync>,
 }
 
 impl Deployer {
@@ -111,6 +112,7 @@ impl Deployer {
         repository_factory: Arc<RepositoryFactory>,
         clock: Arc<dyn Clock>,
         data_directory: Arc<Path>,
+        listener: Arc<dyn CommandProgressListener + Send + Sync>,
     ) -> Self {
         Self {
             working_dir,
@@ -118,6 +120,7 @@ impl Deployer {
             repository_factory,
             clock,
             data_directory,
+            listener,
         }
     }
 
@@ -316,13 +319,13 @@ impl Deployer {
     pub async fn provision(
         &self,
         env_name: &EnvironmentName,
-        listener: Option<&dyn CommandProgressListener>,
     ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
         let handler = ProvisionCommandHandler::new(
             Arc::clone(&self.clock),
             self.repository.clone() as Arc<dyn EnvironmentRepository>,
         );
-        handler.execute(env_name, listener).await
+        let listener: &dyn CommandProgressListener = &*self.listener;
+        handler.execute(env_name, Some(listener)).await
     }
 
     /// Configure a provisioned environment.
@@ -339,13 +342,13 @@ impl Deployer {
     pub fn configure(
         &self,
         env_name: &EnvironmentName,
-        listener: Option<&dyn CommandProgressListener>,
     ) -> Result<Environment<Configured>, ConfigureCommandHandlerError> {
         let handler = ConfigureCommandHandler::new(
             Arc::clone(&self.clock),
             self.repository.clone() as Arc<dyn EnvironmentRepository>,
         );
-        handler.execute(env_name, listener)
+        let listener: &dyn CommandProgressListener = &*self.listener;
+        handler.execute(env_name, Some(listener))
     }
 
     /// Release software to a configured environment.
@@ -363,13 +366,13 @@ impl Deployer {
     pub async fn release(
         &self,
         env_name: &EnvironmentName,
-        listener: Option<&dyn CommandProgressListener>,
     ) -> Result<Environment<Released>, ReleaseCommandHandlerError> {
         let handler = ReleaseCommandHandler::new(
             self.repository.clone() as Arc<dyn EnvironmentRepository>,
             Arc::clone(&self.clock),
         );
-        handler.execute(env_name, listener).await
+        let listener: &dyn CommandProgressListener = &*self.listener;
+        handler.execute(env_name, Some(listener)).await
     }
 
     /// Start services on a released environment.

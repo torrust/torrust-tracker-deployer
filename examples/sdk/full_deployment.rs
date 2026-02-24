@@ -28,6 +28,7 @@
 //! may need to clean up manually with `lxc delete --force <instance>`.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use torrust_tracker_deployer_lib::application::traits::CommandProgressListener;
 use torrust_tracker_deployer_lib::presentation::sdk::{Deployer, EnvironmentCreationConfig};
@@ -35,14 +36,16 @@ use torrust_tracker_deployer_lib::presentation::sdk::{Deployer, EnvironmentCreat
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let workspace = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let listener = PrintProgressListener;
 
     println!("=== Torrust Tracker Deployer SDK — Full LXD Deployment ===\n");
 
     // ------------------------------------------------------------------
-    // 1. Initialize the SDK
+    // 1. Initialize the SDK — attach the progress listener at build time
     // ------------------------------------------------------------------
-    let deployer = Deployer::builder().working_dir(&workspace).build()?;
+    let deployer = Deployer::builder()
+        .working_dir(&workspace)
+        .progress_listener(Arc::new(PrintProgressListener))
+        .build()?;
     let workspace_display = workspace.display();
     println!("[OK] Deployer initialized (workspace: {workspace_display})\n");
 
@@ -72,21 +75,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Provision — create the LXD VM via OpenTofu
     // ------------------------------------------------------------------
     println!("--- Step 2: Provision infrastructure ---");
-    let _provisioned = deployer.provision(&env_name, Some(&listener)).await?;
+    let _provisioned = deployer.provision(&env_name).await?;
     println!("  Provisioning complete.\n");
 
     // ------------------------------------------------------------------
     // 4. Configure — run Ansible playbooks
     // ------------------------------------------------------------------
     println!("--- Step 3: Configure environment ---");
-    let _configured = deployer.configure(&env_name, Some(&listener))?;
+    let _configured = deployer.configure(&env_name)?;
     println!("  Configuration complete.\n");
 
     // ------------------------------------------------------------------
     // 5. Release — deploy tracker files
     // ------------------------------------------------------------------
     println!("--- Step 4: Release software ---");
-    let _released = deployer.release(&env_name, Some(&listener)).await?;
+    let _released = deployer.release(&env_name).await?;
     println!("  Release complete.\n");
 
     // ------------------------------------------------------------------
