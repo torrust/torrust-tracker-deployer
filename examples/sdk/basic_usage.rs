@@ -50,8 +50,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .api("0.0.0.0:1212", "MyAccessToken")
         .build()?;
 
-    let environment = deployer.create_environment(config)?;
-    println!("  Created: {}\n", environment.name());
+    let env_name = deployer.create_environment(config)?;
+    println!("  Created: {env_name}\n");
 
     // 3. List all environments
     println!("--- Step 2: List environments ---");
@@ -65,10 +65,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     println!();
 
-    // 4. Show environment details — reuse name from the returned environment
+    // 4. Show environment details
     println!("--- Step 3: Show environment details ---");
-    let env_name = environment.name();
-    let info = deployer.show(env_name)?;
+    let info = deployer.show(&env_name)?;
     println!("  Name:       {}", info.name);
     println!("  State:      {}", info.state);
     println!("  Provider:   {}", info.provider);
@@ -77,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 5. Clean up — purge the environment (reuse same name)
     println!("--- Step 4: Purge environment ---");
-    deployer.purge(env_name)?;
+    deployer.purge(&env_name)?;
     println!("  Environment '{env_name}' purged.");
     println!();
 

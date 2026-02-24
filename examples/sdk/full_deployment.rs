@@ -67,36 +67,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .health_check("127.0.0.1:1313")
         .build()?;
 
-    let environment = deployer.create_environment(config)?;
-    let env_name = environment.name().clone();
+    let env_name = deployer.create_environment(config)?;
     println!("  Created: {env_name}\n");
 
     // ------------------------------------------------------------------
     // 3. Provision — create the LXD VM via OpenTofu
     // ------------------------------------------------------------------
     println!("--- Step 2: Provision infrastructure ---");
-    let _provisioned = deployer.provision(&env_name).await?;
+    deployer.provision(&env_name).await?;
     println!("  Provisioning complete.\n");
 
     // ------------------------------------------------------------------
     // 4. Configure — run Ansible playbooks
     // ------------------------------------------------------------------
     println!("--- Step 3: Configure environment ---");
-    let _configured = deployer.configure(&env_name)?;
+    deployer.configure(&env_name)?;
     println!("  Configuration complete.\n");
 
     // ------------------------------------------------------------------
     // 5. Release — deploy tracker files
     // ------------------------------------------------------------------
     println!("--- Step 4: Release software ---");
-    let _released = deployer.release(&env_name).await?;
+    deployer.release(&env_name).await?;
     println!("  Release complete.\n");
 
     // ------------------------------------------------------------------
     // 6. Run — start Docker Compose services
     // ------------------------------------------------------------------
     println!("--- Step 5: Run services ---");
-    let _running = deployer.run_services(&env_name)?;
+    deployer.run_services(&env_name)?;
     println!("  Services started.\n");
 
     // ------------------------------------------------------------------

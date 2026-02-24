@@ -62,14 +62,13 @@ mod error;
 pub use builder::{DeployerBuildError, DeployerBuilder};
 pub use deployer::Deployer;
 
-// === Domain types (inputs/outputs) ===
-pub use crate::domain::environment::state::{
-    Configured, Created, Destroyed, Provisioned, Released, Running,
-};
-pub use crate::domain::{
-    AnyEnvironmentState, BackupConfig, Environment, EnvironmentName, EnvironmentNameError,
-    HetznerConfig, InstanceName, LxdConfig, ProfileName, Provider, ProviderConfig,
-};
+// === Domain types (inputs only) ===
+// Only simple value objects used as inputs are re-exported here.
+// Domain state types (Created, Provisioned, …) and aggregate types
+// (Environment<S>) are internal to the domain layer and must not leak
+// through the SDK's public API — see ADR
+// docs/decisions/sdk-presentation-layer-interface-design.md.
+pub use crate::domain::{EnvironmentName, EnvironmentNameError};
 
 // === Configuration types (for create_environment) ===
 pub use crate::application::command_handlers::create::config::{

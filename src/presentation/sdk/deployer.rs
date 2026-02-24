@@ -52,10 +52,7 @@ use crate::application::command_handlers::validate::{
 use crate::application::traits::CommandProgressListener;
 use crate::application::CreateCommandHandler;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::domain::environment::state::{
-    Configured, Created, Destroyed, Provisioned, Released, Running,
-};
-use crate::domain::{Environment, EnvironmentName};
+use crate::domain::EnvironmentName;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
 
@@ -135,12 +132,14 @@ impl Deployer {
     pub fn create_environment(
         &self,
         config: EnvironmentCreationConfig,
-    ) -> Result<Environment<Created>, CreateCommandHandlerError> {
+    ) -> Result<EnvironmentName, CreateCommandHandlerError> {
         let handler = CreateCommandHandler::new(
             self.repository.clone() as Arc<dyn EnvironmentRepository>,
             Arc::clone(&self.clock),
         );
-        handler.execute(config, &self.working_dir)
+        handler
+            .execute(config, &self.working_dir)
+            .map(|env| env.name().clone())
     }
 
     /// Create a new deployment environment from a JSON configuration file.
@@ -166,15 +165,15 @@ impl Deployer {
     ///     .build()
     ///     .unwrap();
     ///
-    /// let env = deployer
+    /// let env_name = deployer
     ///     .create_environment_from_file(Path::new("envs/my-env.json"))
     ///     .unwrap();
-    /// println!("Created: {}", env.name());
+    /// println!("Created: {env_name}");
     /// ```
     pub fn create_environment_from_file(
         &self,
         path: &Path,
-    ) -> Result<Environment<Created>, CreateEnvironmentFromFileError> {
+    ) -> Result<EnvironmentName, CreateEnvironmentFromFileError> {
         let config = EnvironmentCreationConfig::from_file(path)?;
         Ok(self.create_environment(config)?)
     }
@@ -273,15 +272,12 @@ impl Deployer {
     ///
     /// Returns [`DestroyCommandHandlerError`] if the environment is not found,
     /// the destroy operation fails, or a repository error occurs.
-    pub fn destroy(
-        &self,
-        env_name: &EnvironmentName,
-    ) -> Result<Environment<Destroyed>, DestroyCommandHandlerError> {
+    pub fn destroy(&self, env_name: &EnvironmentName) -> Result<(), DestroyCommandHandlerError> {
         let handler = DestroyCommandHandler::new(
             self.repository.clone() as Arc<dyn EnvironmentRepository>,
             Arc::clone(&self.clock),
         );
-        handler.execute(env_name)
+        handler.execute(env_name).map(|_| ())
     }
 
     /// Purge all local data for an environment.
@@ -319,13 +315,13 @@ impl Deployer {
     pub async fn provision(
         &self,
         env_name: &EnvironmentName,
-    ) -> Result<Environment<Provisioned>, ProvisionCommandHandlerError> {
+    ) -> Result<(), ProvisionCommandHandlerError> {
         let handler = ProvisionCommandHandler::new(
             Arc::clone(&self.clock),
             self.repository.clone() as Arc<dyn EnvironmentRepository>,
         );
         let listener: &dyn CommandProgressListener = &*self.listener;
-        handler.execute(env_name, Some(listener)).await
+        handler.execute(env_name, Some(listener)).await.map(|_| ())
     }
 
     /// Configure a provisioned environment.
@@ -342,13 +338,13 @@ impl Deployer {
     pub fn configure(
         &self,
         env_name: &EnvironmentName,
-    ) -> Result<Environment<Configured>, ConfigureCommandHandlerError> {
+    ) -> Result<(), ConfigureCommandHandlerError> {
         let handler = ConfigureCommandHandler::new(
             Arc::clone(&self.clock),
             self.repository.clone() as Arc<dyn EnvironmentRepository>,
         );
         let listener: &dyn CommandProgressListener = &*self.listener;
-        handler.execute(env_name, Some(listener))
+        handler.execute(env_name, Some(listener)).map(|_| ())
     }
 
     /// Release software to a configured environment.
@@ -366,13 +362,13 @@ impl Deployer {
     pub async fn release(
         &self,
         env_name: &EnvironmentName,
-    ) -> Result<Environment<Released>, ReleaseCommandHandlerError> {
+    ) -> Result<(), ReleaseCommandHandlerError> {
         let handler = ReleaseCommandHandler::new(
             self.repository.clone() as Arc<dyn EnvironmentRepository>,
             Arc::clone(&self.clock),
         );
         let listener: &dyn CommandProgressListener = &*self.listener;
-        handler.execute(env_name, Some(listener)).await
+        handler.execute(env_name, Some(listener)).await.map(|_| ())
     }
 
     /// Start services on a released environment.
@@ -387,15 +383,12 @@ impl Deployer {
     /// Returns [`RunCommandHandlerError`] if the environment is not found,
     /// is in the wrong state, or starting services fails.
     #[allow(clippy::result_large_err)]
-    pub fn run_services(
-        &self,
-        env_name: &EnvironmentName,
-    ) -> Result<Environment<Running>, RunCommandHandlerError> {
+    pub fn run_services(&self, env_name: &EnvironmentName) -> Result<(), RunCommandHandlerError> {
         let handler = RunCommandHandler::new(
             self.repository.clone() as Arc<dyn EnvironmentRepository>,
             Arc::clone(&self.clock),
         );
-        handler.execute(env_name)
+        handler.execute(env_name).map(|_| ())
     }
 
     /// Test a deployed environment.

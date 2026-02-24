@@ -147,7 +147,7 @@ benefit anyway.
 
 - [Command State Return Pattern](./command-state-return-pattern.md) —
   the domain/application-layer decision to use typed state returns in
-  command handlers (this ADR intentionally does *not* mirror that pattern
+  command handlers (this ADR intentionally does _not_ mirror that pattern
   at the presentation layer)
 - [Configuration DTO Layer Placement](./configuration-dto-layer-placement.md) —
   related decision about keeping DTOs in the application layer

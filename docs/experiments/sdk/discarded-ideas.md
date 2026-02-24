@@ -26,7 +26,7 @@ local state in test harnesses and short-lived scripts.
    - A user may be passing the environment name across processes or restarts
 
 2. **The destroy vs. purge ambiguity.** A cleanup guard would need to do both
-   `destroy` (infrastructure teardown via OpenTofu) *and* `purge` (local state
+   `destroy` (infrastructure teardown via OpenTofu) _and_ `purge` (local state
    removal) in the correct order. This is not merely a cleanup — it's a
    multi-step workflow that can fail at each step, and those failures cannot
    be propagated from `Drop` (which returns `()`).
