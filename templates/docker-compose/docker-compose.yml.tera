@@ -70,10 +70,12 @@ services:
       - ./storage/caddy/etc/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./storage/caddy/data:/data     # TLS certificates (MUST persist!)
       - ./storage/caddy/config:/config
+{%- if caddy.networks | length > 0 %}
     networks:
 {%- for network in caddy.networks %}
       - {{ network }}
 {%- endfor %}
+{%- endif %}
     healthcheck:
       test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 10s
@@ -100,10 +102,12 @@ services:
       - TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER=${TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER}
       - TORRUST_TRACKER_CONFIG_TOML_PATH=${TORRUST_TRACKER_CONFIG_TOML_PATH}
       - TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN=${TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN}
+{%- if tracker.networks | length > 0 %}
     networks:
 {%- for network in tracker.networks %}
       - {{ network }}
 {%- endfor %}
+{%- endif %}
 {%- if tracker.ports | length > 0 %}
     ports:
 {%- for port in tracker.ports %}
@@ -121,10 +125,12 @@ services:
     <<: *defaults
     image: prom/prometheus:v3.5.0
     container_name: prometheus
+{%- if prometheus.networks | length > 0 %}
     networks:
 {%- for network in prometheus.networks %}
       - {{ network }}
 {%- endfor %}
+{%- endif %}
 {%- if prometheus.ports | length > 0 %}
     ports:
 {%- for port in prometheus.ports %}
@@ -151,10 +157,12 @@ services:
     <<: *defaults
     image: grafana/grafana:12.3.1
     container_name: grafana
+{%- if grafana.networks | length > 0 %}
     networks:
 {%- for network in grafana.networks %}
       - {{ network }}
 {%- endfor %}
+{%- endif %}
 {%- if grafana.ports | length > 0 %}
     ports:
 {%- for port in grafana.ports %}
@@ -189,10 +197,12 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+{%- if mysql.networks | length > 0 %}
     networks:
 {%- for network in mysql.networks %}
       - {{ network }}
 {%- endfor %}
+{%- endif %}
     # SECURITY: MySQL port is NOT exposed to the host/external network.
     # - Only the tracker container can access MySQL via Docker's internal database_network
     # - The healthcheck runs inside the container, so no external port is needed

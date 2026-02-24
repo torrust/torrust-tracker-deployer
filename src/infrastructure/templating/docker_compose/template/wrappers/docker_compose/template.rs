@@ -223,4 +223,98 @@ services:
 
         assert!(result.is_err());
     }
+
+    // Template snippet that mirrors the tracker service `networks:` block from the real template.
+    // Used to verify that the conditional guard prevents an empty `networks:` key.
+    // Only covers the environment → networks → ports transition, which is the exact
+    // sequence that previously produced invalid YAML.
+    const TRACKER_NETWORKS_TEMPLATE: &str = r#"services:
+  tracker:
+    environment:
+      - USER_ID=1000
+{%- if tracker.networks | length > 0 %}
+    networks:
+{%- for network in tracker.networks %}
+      - {{ network }}
+{%- endfor %}
+{%- endif %}
+{%- if tracker.ports | length > 0 %}
+    ports:
+{%- for port in tracker.ports %}
+      - "{{ port.binding }}"
+{%- endfor %}
+{%- endif %}
+"#;
+
+    #[test]
+    fn it_should_not_render_empty_networks_key_for_tracker_when_no_optional_services_are_configured(
+    ) {
+        // Arrange: minimal config — SQLite, no Prometheus, no Caddy, no MySQL.
+        // tracker.networks will be an empty Vec under these conditions.
+        let template_file = File::new(
+            "docker-compose.yml.tera",
+            TRACKER_NETWORKS_TEMPLATE.to_string(),
+        )
+        .unwrap();
+
+        let tracker = test_tracker_config();
+        let context = DockerComposeContext::builder(tracker).build();
+
+        // Act
+        let template = DockerComposeTemplate::new(&template_file, context).unwrap();
+
+        // Assert: an empty `networks:` key must not appear in the output.
+        // Before the fix this rendered:
+        //   networks:
+        //   ports:
+        // which is invalid YAML rejected by Docker Compose.
+        assert!(
+            !template.content.contains("    networks:"),
+            "Empty `networks:` key must not be rendered when tracker has no networks; \
+             actual output:\n{}",
+            template.content
+        );
+    }
+
+    #[test]
+    fn it_should_render_networks_key_for_tracker_when_prometheus_is_enabled() {
+        use std::num::NonZeroU32;
+
+        use crate::domain::prometheus::PrometheusConfig;
+
+        // Arrange: Prometheus enabled → tracker gets the metrics network.
+        let template_file = File::new(
+            "docker-compose.yml.tera",
+            TRACKER_NETWORKS_TEMPLATE.to_string(),
+        )
+        .unwrap();
+
+        let tracker = {
+            let domain_config = test_domain_tracker_config();
+            let enabled = EnabledServices::from(&[crate::domain::topology::Service::Prometheus]);
+            TrackerServiceContext::from_domain_config(&domain_config, &enabled)
+        };
+        let prometheus_config =
+            PrometheusConfig::new(NonZeroU32::new(15).expect("non-zero scrape interval"));
+        let context = DockerComposeContext::builder(tracker)
+            .with_prometheus(prometheus_config)
+            .build();
+
+        // Act
+        let template = DockerComposeTemplate::new(&template_file, context).unwrap();
+
+        // Assert: `networks:` must appear and list the metrics network.
+        assert!(
+            template.content.contains("    networks:"),
+            "`networks:` key must be present when tracker has networks; \
+             actual output:\n{}",
+            template.content
+        );
+        assert!(
+            template.content.contains("metrics_network"),
+            "metrics_network must appear in tracker networks; \
+             actual output:\n{}",
+            template.content
+        );
+    }
 }

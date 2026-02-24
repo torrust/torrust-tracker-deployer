@@ -6,11 +6,13 @@
 //! ## Components
 //!
 //! - `template` - Template rendering functionality for Docker Compose files
+//! - `local_validator` - Local `docker compose config` validation after rendering
 //!
 //! Note: Unlike Ansible and Tofu, Docker Compose currently only uses static templates
 //! (no Tera variable substitution). If dynamic templates are needed in the future,
 //! the template module can be extended similar to Ansible.
 
+pub mod local_validator;
 pub mod template;
 
 pub use template::{DockerComposeProjectGenerator, DockerComposeProjectGeneratorError};

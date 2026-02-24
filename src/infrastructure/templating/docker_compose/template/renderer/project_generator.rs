@@ -16,6 +16,9 @@ use std::sync::Arc;
 use thiserror::Error;
 
 use crate::domain::template::TemplateManager;
+use crate::infrastructure::templating::docker_compose::local_validator::{
+    validate_docker_compose_file, DockerComposeLocalValidationError,
+};
 use crate::infrastructure::templating::docker_compose::template::renderer::docker_compose::{
     DockerComposeRenderer, DockerComposeRendererError,
 };
@@ -48,6 +51,13 @@ pub enum DockerComposeProjectGeneratorError {
     DockerComposeRenderingFailed {
         #[source]
         source: DockerComposeRendererError,
+    },
+
+    /// Rendered docker-compose.yml failed `docker compose config --quiet` validation
+    #[error("Rendered docker-compose.yml failed local validation: {source}")]
+    DockerComposeValidationFailed {
+        #[source]
+        source: DockerComposeLocalValidationError,
     },
 }
 
@@ -132,6 +142,14 @@ impl DockerComposeProjectGenerator {
                     source,
                 },
             )?;
+
+        // Validate the rendered docker-compose.yml locally before uploading to the VM.
+        // This catches structural errors (e.g. empty `networks:` key) at render time,
+        // providing a fast failure with a clear error message rather than waiting for
+        // Docker Compose to reject the file at `run` time on the remote host.
+        validate_docker_compose_file(&build_compose_dir).map_err(|source| {
+            DockerComposeProjectGeneratorError::DockerComposeValidationFailed { source }
+        })?;
 
         tracing::debug!(
             template_type = "docker_compose",
