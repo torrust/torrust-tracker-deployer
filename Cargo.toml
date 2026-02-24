@@ -56,6 +56,10 @@ path = "examples/sdk/error_handling.rs"
 name = "sdk_create_from_json_file"
 path = "examples/sdk/create_from_json_file.rs"
 
+[[example]]
+name = "sdk_validate_config"
+path = "examples/sdk/validate_config.rs"
+
 [dependencies]
 tokio = { version = "1.0", features = [ "full" ] }
 anyhow = "1.0"
