@@ -293,4 +293,4 @@ The specification is about **what** and **why**, not **how it will be coded**:
 - **Templates**: `docs/features/TEMPLATE-README.md`, `TEMPLATE-QUESTIONS.md`, `TEMPLATE-SPECIFICATION.md`
 - **Development Principles**: `docs/development-principles.md`
 - **Contributing Guidelines**: `docs/contributing/README.md`
-- **Completing Features**: `.github/skills/complete-feature-spec/skill.md`
+- **Completing Features**: `.github/skills/dev/planning/complete-feature-spec/skill.md`

@@ -26,7 +26,7 @@ authoritative reference for the patterns this skill describes.
 - Does an application-layer `CommandHandler` for this operation already exist
   in `torrust_tracker_deployer_lib`? → yes → follow this guide.
 - Do you need a new application handler too? → create it first (see
-  `.github/skills/add-new-command/skill.md`), then return here.
+  `.github/skills/dev/cli/add-new-command/skill.md`), then return here.
 
 ---
 
@@ -137,7 +137,7 @@ Expected: library compiles; doc-tests in module-level examples pass.
 **Goal**: prove the new method works end-to-end using only the public SDK API.
 
 For full guidance on the test structure and shared helpers, load the companion
-skill: `.github/skills/sdk/write-sdk-integration-test/skill.md`.
+skill: `.github/skills/dev/sdk/write-sdk-integration-test/skill.md`.
 
 ### Quick summary
 
@@ -202,7 +202,7 @@ Fix any linting issues before committing.
 
 ## Commit
 
-Follow the commit conventions in `.github/skills/commit-changes/skill.md`.
+Follow the commit conventions in `.github/skills/dev/git-workflow/commit-changes/skill.md`.
 Typical subject line:
 
 ```text

@@ -20,7 +20,7 @@ SDK imports, and must be registered in `Cargo.toml`.
 - Demonstrating something **already possible** with the current SDK? → Follow
   this guide.
 - Demonstrating a **not-yet-implemented** feature? → Implement the feature
-  first (see `.github/skills/sdk/add-sdk-method/skill.md`), then return here.
+  first (see `.github/skills/dev/sdk/add-sdk-method/skill.md`), then return here.
 
 ---
 
@@ -152,7 +152,7 @@ missing `///` on public items) before committing.
 
 ## Commit
 
-Follow the commit conventions in `.github/skills/commit-changes/skill.md`.
+Follow the commit conventions in `.github/skills/dev/git-workflow/commit-changes/skill.md`.
 Typical subject line:
 
 ```text

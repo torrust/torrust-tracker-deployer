@@ -80,7 +80,7 @@ cargo test -p torrust-tracker-deployer-sdk create
 ```
 
 For details on writing new tests, see the
-[Write SDK Integration Test](../../../.github/skills/sdk/write-sdk-integration-test/skill.md)
+[Write SDK Integration Test](../../../.github/skills/dev/sdk/write-sdk-integration-test/skill.md)
 skill.
 
 ---

@@ -91,9 +91,9 @@ required. See [SDK Testing Strategy](../../contributing/testing/sdk/testing-stra
 
 ## Agent Skills
 
-- [Add SDK Method](../../../.github/skills/sdk/add-sdk-method/skill.md)
-- [Write SDK Integration Test](../../../.github/skills/sdk/write-sdk-integration-test/skill.md)
-- [Add SDK Example](../../../.github/skills/sdk/add-sdk-example/skill.md)
+- [Add SDK Method](../../../.github/skills/dev/sdk/add-sdk-method/skill.md)
+- [Write SDK Integration Test](../../../.github/skills/dev/sdk/write-sdk-integration-test/skill.md)
+- [Add SDK Example](../../../.github/skills/dev/sdk/add-sdk-example/skill.md)
 
 ## Status
 
