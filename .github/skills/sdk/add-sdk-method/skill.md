@@ -1,12 +1,6 @@
 ---
 name: add-sdk-method
-description: >
-  Step-by-step guide for adding a new public method to the Torrust Tracker
-  Deployer SDK `Deployer` facade, covering the delegation pattern in
-  `deployer.rs`, the required `SdkError` variant, public re-exports in
-  `lib.rs`, and a matching integration-test module. Triggers on: "add sdk
-  method", "new deployer method", "extend the sdk", "add method to deployer",
-  "implement sdk operation", "expose new operation in sdk".
+description: Guide for adding a new public method to the Deployer SDK facade, covering delegation in deployer.rs, the SdkError variant, re-exports in lib.rs, and a matching integration-test module. Triggers on "add sdk method", "new deployer method", "extend the sdk", "add method to deployer", "implement sdk operation", or "expose new operation in sdk".
 metadata:
   author: torrust
   version: "1.0"

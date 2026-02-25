@@ -1,12 +1,6 @@
 ---
 name: add-sdk-example
-description: >
-  Step-by-step guide for adding a new runnable example to the Torrust Tracker
-  Deployer SDK, covering file creation in `packages/sdk/examples/`, the
-  required `[[example]]` entry in `Cargo.toml`, public-API-only import
-  restrictions, the `sdk_` naming prefix convention, and CI verification.
-  Triggers on: "add sdk example", "sdk example", "new sdk example", "demonstrate
-  sdk usage", "sdk usage example", "add example to sdk", "show sdk in action".
+description: Guide for adding a runnable example to the Deployer SDK, covering file creation in packages/sdk/examples/, the [[example]] entry in Cargo.toml, public-API-only imports, the sdk_ naming prefix, and CI verification. Triggers on "add sdk example", "sdk example", "new sdk example", "demonstrate sdk usage", "sdk usage example", "add example to sdk", or "show sdk in action".
 metadata:
   author: torrust
   version: "1.0"

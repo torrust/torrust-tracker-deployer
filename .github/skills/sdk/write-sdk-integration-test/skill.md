@@ -1,12 +1,6 @@
 ---
 name: write-sdk-integration-test
-description: >
-  Step-by-step guide for writing integration tests for the Torrust Tracker
-  Deployer SDK, covering the module-per-command file structure, all shared
-  helpers defined in `main.rs`, the naming convention, test isolation pattern,
-  and how to register a new module. Triggers on: "sdk integration test", "write
-  sdk test", "test sdk method", "add sdk test", "integration test for sdk",
-  "test deployer method", "sdk test module".
+description: Guide for writing SDK integration tests using the module-per-command structure in packages/sdk/tests/local_operations/, covering shared helpers, the it_should_* naming convention, test isolation, and module registration. Triggers on "sdk integration test", "write sdk test", "test sdk method", "add sdk test", "integration test for sdk", "test deployer method", or "sdk test module".
 metadata:
   author: torrust
   version: "1.0"
