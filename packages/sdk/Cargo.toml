@@ -27,6 +27,7 @@ path = "examples/validate_config.rs"
 
 [dependencies]
 torrust-tracker-deployer = { path = "../.." }
+torrust-deployer-types = { path = "../deployer-types" }
 thiserror = "2.0"
 
 [dev-dependencies]

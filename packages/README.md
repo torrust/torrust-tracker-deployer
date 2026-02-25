@@ -46,6 +46,27 @@ This directory contains reusable Rust workspace packages that support the Torrus
 
 **Documentation**: See [packages/linting/README.md](./linting/README.md)
 
+### [`deployer-types/`](./deployer-types/)
+
+**Purpose**: Shared value objects and traits for the Torrust Tracker Deployer ecosystem
+
+**Key Features**:
+
+- Validated value objects: `DomainName`, `Email`, `Username`, `EnvironmentName`, `ServiceEndpoint`
+- Secret wrappers: `ApiToken` / `PlainApiToken`, `Password` / `PlainPassword` (via `secrecy`)
+- Time abstraction: `Clock` trait + `SystemClock` implementation for testability
+- Error infrastructure: `ErrorKind` enum + `Traceable` trait
+- Minimal dependencies (no tokio, no infrastructure)
+- Both the root crate and the SDK crate depend on this package
+
+**Use Cases**:
+
+- Canonical source of cross-cutting value objects shared across workspace packages
+- Enables SDK consumers to import foundational types without depending on the full root crate
+- Supports independent versioning and future publishing
+
+**Documentation**: See [packages/deployer-types/README.md](./deployer-types/README.md)
+
 ### [`sdk/`](./sdk/)
 
 **Purpose**: Programmatic Rust SDK for deploying and managing Torrust Tracker instances

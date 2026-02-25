@@ -40,7 +40,7 @@ pub use builder::{DeployerBuildError, DeployerBuilder};
 pub use deployer::Deployer;
 
 // === Domain types (inputs only) ===
-pub use torrust_tracker_deployer_lib::domain::{EnvironmentName, EnvironmentNameError};
+pub use torrust_deployer_types::{EnvironmentName, EnvironmentNameError};
 
 // === Configuration types (for create_environment) ===
 pub use torrust_tracker_deployer_lib::application::command_handlers::create::config::{

@@ -219,6 +219,7 @@ Independently versioned Cargo workspace packages in `packages/`:
 
 - ✅ `packages/linting/` - Unified linting framework (runs markdownlint, yamllint, taplo, cspell, clippy, rustfmt, shellcheck)
 - ✅ `packages/dependency-installer/` - Dependency detection and installation for development setup (OpenTofu, Ansible, LXD, cargo-machete)
+- ✅ `packages/deployer-types/` - Shared value objects and traits (`torrust-deployer-types`) — cross-cutting foundational types (e.g., `EnvironmentName`, `DomainName`, `Username`, `Clock`, `ErrorKind`) shared by the root crate and SDK
 - ✅ `packages/sdk/` - Programmatic SDK (`torrust-tracker-deployer-sdk`) — independently consumable Rust crate for deploying Torrust Tracker instances without the CLI
 
 ### Presentation Layer
