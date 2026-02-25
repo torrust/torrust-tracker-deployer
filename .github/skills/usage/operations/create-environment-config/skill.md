@@ -1,14 +1,14 @@
 ---
 name: create-environment-config
-description: Guide for creating environment configuration templates for the Torrust Tracker Deployer. Covers the structure, sections, validation rules, and common deployment patterns. Use when creating config files, generating environment templates, setting up deployment configurations, or helping users configure tracker deployments. Triggers on "create config", "environment configuration", "config template", "setup environment", or "generate config".
+description: Guide for creating environment configuration files for Torrust Tracker deployments. Covers the JSON structure, required/optional sections, common deployment patterns, and validation. Use when creating config files, generating environment templates, setting up deployment configurations, or helping users configure tracker deployments. Triggers on "create config", "environment configuration", "config template", "setup environment", or "generate config".
 metadata:
   author: torrust
   version: "1.0"
 ---
 
-# Creating Environment Configuration Templates
+# Creating Environment Configuration
 
-This skill guides you through creating environment configuration files for Torrust Tracker deployments.
+This skill guides end-users through creating environment configuration files for Torrust Tracker deployments.
 
 ## What Are Environment Configurations?
 
@@ -19,7 +19,7 @@ Environment configurations are **user input files** (JSON) that specify deployme
 - Tracker settings (database, ports, API tokens)
 - Optional services (Prometheus monitoring, Grafana dashboards, automated backups)
 
-**Storage**: User creates these in `envs/` directory (e.g., `envs/my-deployment.json`)
+**Storage**: Create these in `envs/` directory (e.g., `envs/my-deployment.json`)
 
 **Usage**: Passed to `create environment --env-file envs/my-deployment.json`
 
@@ -33,16 +33,6 @@ Environment configurations are **user input files** (JSON) that specify deployme
 | `data/`   | Application state machine | Domain model (state) | `data/manual-test-mysql/environment.json` | Application |
 
 **Rule**: You MAY create/edit files in `envs/`. You MUST NEVER create/edit files in `data/` (read-only).
-
-## Configuration Structure Reference
-
-**Authoritative sources** (in order of precedence):
-
-1. **Rust types**: `src/application/command_handlers/create/config/` - Express richer constraints than JSON schema
-2. **JSON schema**: `schemas/environment-config.json` - Basic structure for IDE autocomplete
-3. **Examples**: `docs/ai-training/dataset/environment-configs/` - 15 real-world configurations
-
-Read `src/application/command_handlers/create/config/README.md` for the complete DTO architecture guide.
 
 ## Core Configuration Sections
 
@@ -225,7 +215,7 @@ Reference `docs/ai-training/dataset/environment-configs/` for complete examples:
 - **Prometheus/Grafana** → Adds monitoring containers, valuable for production
 - **Backup** → Essential for production, cron-based schedule
 
-## Workflow: Creating a New Configuration
+## Creating a New Configuration
 
 ### Method 1: Generate from Template (Recommended)
 
@@ -241,8 +231,6 @@ torrust-tracker-deployer create template --provider hetzner envs/my-deployment.j
 # Edit and replace placeholders
 vim envs/my-deployment.json
 ```
-
-**Template includes**: Environment name, SSH credentials, provider config, tracker (with all endpoints), Prometheus, Grafana, and backup configuration. Remove optional sections you don't need.
 
 **Template placeholders to replace**:
 
@@ -264,17 +252,9 @@ cp docs/ai-training/dataset/environment-configs/01-minimal-lxd-sqlite-udp-only.j
 vim envs/my-deployment.json
 ```
 
-**Customize**:
+## Validation
 
-- Environment name (must be unique)
-- SSH key paths (use absolute paths)
-- Provider settings (profile name for LXD, API token for Hetzner)
-- Database credentials (if MySQL)
-- API tokens and passwords
-
-## Validation Methods
-
-### Method 1: Validate Command (Recommended)
+### Validate Command (Recommended)
 
 **Fast syntax and domain validation** without creating infrastructure:
 
@@ -282,86 +262,33 @@ vim envs/my-deployment.json
 torrust-tracker-deployer validate --env-file envs/my-deployment.json
 ```
 
-**Validates**:
+**Validates**: JSON syntax, environment name format, SSH key existence, ports, required fields, cross-field constraints, and domain rules.
 
-- JSON syntax and structure
-- Environment name format (`[a-z0-9-]{3,50}`)
-- SSH key file existence
-- Port numbers and IP addresses
-- Required fields and cross-field constraints
-- Domain business rules
-
-**Limitations**: Does NOT check for environment name conflicts or infrastructure availability.
-
-### Method 2: Create and Destroy
-
-**Complete validation** including infrastructure checks:
+### Create and Destroy (Full Validation)
 
 ```bash
-# Create environment (validates EVERYTHING)
 torrust-tracker-deployer create environment --env-file envs/my-deployment.json
-
-# Verify it was created successfully
 torrust-tracker-deployer show my-deployment
-
-# Destroy if not needed
 torrust-tracker-deployer destroy my-deployment
-
-# Remove all traces
 torrust-tracker-deployer purge my-deployment
 ```
 
-**Advantages**:
+### Common Validation Errors
 
-- Validates environment name uniqueness
-- Checks actual infrastructure availability
-- Verifies all domain constraints
-- Tests full creation workflow
-
-**Use when**: You want absolute certainty before production deployment.
-
-## AI Agent Workflow
-
-When helping users create configurations:
-
-1. **Ask about use case** (dev/staging/production, local/cloud)
-2. **Recommend creation method**:
-   - **New users**: Use `create template` command for fully-featured starting point
-   - **Experienced users**: Copy from AI training examples for specific patterns
-3. **Guide through customization**:
-   - Replace placeholders (if using template)
-   - Customize fields (if using examples)
-   - Use questionnaire (`docs/ai-training/questionnaire.md`) for complex decisions
-4. **Generate or document the JSON file** in `envs/` directory
-5. **Recommend validation**: Use `validate` command before proceeding
-6. **Explain validation errors** if they occur (reference Rust types for constraints)
-
-**Key points**:
-
-- Reference `create template` command for users who want a complete starting point
-- Reference AI training examples for specific deployment patterns
-- Always mention `validate` command for pre-deployment checks
-- Reference Rust types in `src/application/command_handlers/create/config/` for accurate constraints
-
-## Validation and Error Handling
-
-**Common errors**:
-
-- **"scrape_interval must be greater than 0"** → Domain type uses `NonZeroU32`
+- **"scrape_interval must be greater than 0"** → Use a positive integer
 - **"Invalid profile name format"** → Must match `[a-z0-9-]+` pattern
 - **"SSH private key does not exist"** → Path must be absolute and file must exist
 - **"Grafana requires Prometheus"** → Cannot enable Grafana without Prometheus
 - **"TLS configured but no admin_email"** → HTTPS section required when any service uses TLS
 
-**Fix strategy**: Read the Rust validation logic in `TryFrom` implementations for each DTO type.
-
 ## Related Documentation
 
-- **Create Command**: `docs/user-guide/commands/create.md` - How to generate templates and create environments
-- **Validate Command**: `docs/user-guide/commands/validate.md` - Configuration validation guide
-- **Config DTO Architecture**: `src/application/command_handlers/create/config/README.md` - Type-level constraints
-- **JSON Schema**: `schemas/README.md` - Schema generation and IDE setup
+- **Create Command**: `docs/user-guide/commands/create.md`
+- **Validate Command**: `docs/user-guide/commands/validate.md`
 - **AI Training Examples**: `docs/ai-training/README.md` - 15 pre-configured deployment patterns
-- **User Questionnaire**: `docs/ai-training/questionnaire.md` - Structured decision tree for gathering requirements
-- **ADR - Configuration Layer**: `docs/decisions/configuration-dto-layer-placement.md` - Why DTOs are in application layer
-- **ADR - TryFrom Pattern**: `docs/decisions/tryfrom-for-dto-to-domain-conversion.md` - DTO to domain conversion pattern
+- **User Questionnaire**: `docs/ai-training/questionnaire.md` - Structured decision tree
+- **JSON Schema**: `schemas/environment-config.json` - For IDE autocomplete
+
+## See Also
+
+- For **DTO architecture internals**: see the `environment-config-architecture` skill in `dev/infrastructure/`

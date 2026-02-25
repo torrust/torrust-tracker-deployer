@@ -303,8 +303,8 @@ Before completing a refactor, verify:
 - **Refactoring Overview**: `docs/refactors/README.md`
 - **Active Refactorings**: `docs/refactors/active-refactorings.md`
 - **Completed Refactorings**: `docs/refactors/completed-refactorings.md`
-- **Creating Refactor Plans**: `.github/skills/create-refactor-plan/skill.md`
-- **Committing Changes**: `.github/skills/commit-changes/skill.md`
+- **Creating Refactor Plans**: `.github/skills/dev/planning/create-refactor-plan/skill.md`
+- **Committing Changes**: `.github/skills/dev/git-workflow/commit-changes/skill.md`
 
 ## Key Reminders
 

@@ -238,7 +238,7 @@ before committing.
 
 ## Commit
 
-Follow the commit conventions in `.github/skills/commit-changes/skill.md`.
+Follow the commit conventions in `.github/skills/dev/git-workflow/commit-changes/skill.md`.
 Typical subject line:
 
 ```text

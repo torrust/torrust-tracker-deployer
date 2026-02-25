@@ -216,11 +216,45 @@ Identify what resources the skill needs:
 
 ### Step 3: Creating Directory Structure
 
-Create the skill directory in `.github/skills/`:
+#### Choosing the Right Folder
+
+Skills are organized under `.github/skills/` by **audience** and **category**:
+
+```text
+.github/skills/
+├── add-new-skill/              # Meta skill (stays at root)
+├── dev/                        # For contributors/developers
+│   ├── cli/                    # CLI commands and user output
+│   ├── git-workflow/           # Git, commits, PRs, linters
+│   ├── infrastructure/         # Templates, Ansible, Tofu, config architecture
+│   ├── planning/               # Issues, ADRs, specs, docs
+│   ├── rust-code-quality/      # Error handling, DDD, domain types
+│   ├── sdk/                    # SDK methods, examples, integration tests
+│   └── testing/                # Unit tests, E2E tests, LXD cleanup
+└── usage/                      # For end-users running the deployer
+    └── operations/             # Deployment workflows, config creation
+```
+
+**Classification decision tree** — walk through in order:
+
+1. **Is this a meta skill about skills themselves?** → `.github/skills/` (root)
+2. **Does the skill target end-users** who run the deployer (create environments, render artifacts, manage deployments)? → `usage/operations/`
+3. **Is this a developer/contributor skill?** → `dev/{category}/`
+   - CLI commands, user output → `dev/cli/`
+   - Git operations, PRs, linting → `dev/git-workflow/`
+   - Templates, Ansible, Tofu, config DTOs → `dev/infrastructure/`
+   - Issues, ADRs, specs, docs → `dev/planning/`
+   - Rust patterns, error handling, DDD → `dev/rust-code-quality/`
+   - SDK client library → `dev/sdk/`
+   - Testing strategies → `dev/testing/`
+
+**If a skill serves both audiences**, split it into two focused skills (one under `dev/`, one under `usage/`). See `create-environment-config` and `environment-config-architecture` for an example.
+
+Create the skill directory:
 
 ```bash
-mkdir -p .github/skills/skill-name/{scripts,references,assets}
-touch .github/skills/skill-name/skill.md
+mkdir -p .github/skills/dev/{category}/skill-name/{scripts,references,assets}
+touch .github/skills/dev/{category}/skill-name/skill.md
 ```
 
 **Naming convention**: Use gerund form (verb + -ing) or noun phrases:
@@ -520,15 +554,17 @@ skills-ref validate .github/skills
 
 ### Integrating with AGENTS.md
 
-Add to the "Auto-Invoke Skills" table:
+Add to the "Auto-Invoke Skills" table using the full path under `.github/skills/`:
 
 ```markdown
 ## Auto-Invoke Skills
 
-| Task               | Skill to Load                        |
-| ------------------ | ------------------------------------ |
-| [Task description] | `.github/skills/skill-name/skill.md` |
+| Task               | Skill to Load                                       |
+| ------------------ | --------------------------------------------------- |
+| [Task description] | `.github/skills/dev/{category}/skill-name/skill.md` |
 ```
+
+Keep entries alphabetically sorted by task name.
 
 ## Examples and Patterns
 
@@ -540,13 +576,13 @@ For detailed examples, see:
 
 ## Quick Reference
 
-| Task                    | Command/Action                                  |
-| ----------------------- | ----------------------------------------------- |
-| Create skill directory  | `mkdir -p .github/skills/skill-name`            |
-| Validate skill          | `skills-ref validate .github/skills/skill-name` |
-| Test with Copilot       | Enable `chat.useAgentSkills` in VS Code         |
-| Add to AGENTS.md        | Update "Auto-Invoke Skills" table               |
-| Install validation tool | `pip install agentskills`                       |
+| Task                    | Command/Action                                      |
+| ----------------------- | --------------------------------------------------- |
+| Create skill directory  | `mkdir -p .github/skills/dev/{category}/skill-name` |
+| Validate skill          | `skills-ref validate .github/skills/skill-name`     |
+| Test with Copilot       | Enable `chat.useAgentSkills` in VS Code             |
+| Add to AGENTS.md        | Update "Auto-Invoke Skills" table                   |
+| Install validation tool | `pip install agentskills`                           |
 
 ## Tips
 

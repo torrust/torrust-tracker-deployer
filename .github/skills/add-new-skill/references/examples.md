@@ -12,7 +12,7 @@ This document provides concrete examples of Agent Skills from the Torrust Tracke
 
 ### Example 1: run-linters Skill
 
-**Location**: `.github/skills/run-linters/`
+**Location**: `.github/skills/dev/git-workflow/run-linters/`
 
 **Purpose**: Guide users through running code quality checks and linters
 

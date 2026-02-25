@@ -243,8 +243,8 @@ Before completing a feature, verify:
 - **Feature Overview**: `docs/features/README.md`
 - **Active Features**: `docs/features/active-features.md`
 - **Completed Features**: `docs/features/completed-features.md`
-- **Creating Feature Specs**: `.github/skills/create-feature-spec/skill.md`
-- **Committing Changes**: `.github/skills/commit-changes/skill.md`
+- **Creating Feature Specs**: `.github/skills/dev/planning/create-feature-spec/skill.md`
+- **Committing Changes**: `.github/skills/dev/git-workflow/commit-changes/skill.md`
 
 ## Key Reminders
 
