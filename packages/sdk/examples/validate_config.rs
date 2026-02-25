@@ -19,7 +19,7 @@
 use std::io::Write as _;
 use std::path::PathBuf;
 
-use torrust_tracker_deployer_lib::presentation::sdk::Deployer;
+use torrust_tracker_deployer_sdk::Deployer;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let workspace = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

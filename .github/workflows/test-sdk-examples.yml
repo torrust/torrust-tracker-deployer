@@ -56,24 +56,24 @@ jobs:
 
       - name: Build SDK examples
         run: |
-          cargo build --examples
+          cargo build --examples -p torrust-tracker-deployer-sdk
 
       - name: Run SDK examples
         run: |
           echo "🚀 Running SDK basic usage example at $(date)"
-          cargo run --example sdk_basic_usage
+          cargo run --example sdk_basic_usage -p torrust-tracker-deployer-sdk
           echo "✅ SDK basic usage example completed at $(date)"
 
           echo "🚀 Running SDK error handling example at $(date)"
-          cargo run --example sdk_error_handling
+          cargo run --example sdk_error_handling -p torrust-tracker-deployer-sdk
           echo "✅ SDK error handling example completed at $(date)"
 
           echo "🚀 Running SDK create-from-JSON-file example at $(date)"
-          cargo run --example sdk_create_from_json_file
+          cargo run --example sdk_create_from_json_file -p torrust-tracker-deployer-sdk
           echo "✅ SDK create-from-JSON-file example completed at $(date)"
 
           echo "🚀 Running SDK validate-config example at $(date)"
-          cargo run --example sdk_validate_config
+          cargo run --example sdk_validate_config -p torrust-tracker-deployer-sdk
           echo "✅ SDK validate-config example completed at $(date)"
 
       - name: Debug information (on failure)

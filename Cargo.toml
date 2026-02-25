@@ -2,6 +2,7 @@
 members = [
   "packages/linting",
   "packages/dependency-installer",
+  "packages/sdk",
 ]
 resolver = "2"
 
@@ -39,26 +40,6 @@ path = "src/bin/linter.rs"
 [[bin]]
 name = "test_logging"
 path = "src/bin/test_logging.rs"
-
-[[example]]
-name = "sdk_basic_usage"
-path = "examples/sdk/basic_usage.rs"
-
-[[example]]
-name = "sdk_full_deployment"
-path = "examples/sdk/full_deployment.rs"
-
-[[example]]
-name = "sdk_error_handling"
-path = "examples/sdk/error_handling.rs"
-
-[[example]]
-name = "sdk_create_from_json_file"
-path = "examples/sdk/create_from_json_file.rs"
-
-[[example]]
-name = "sdk_validate_config"
-path = "examples/sdk/validate_config.rs"
 
 [dependencies]
 tokio = { version = "1.0", features = [ "full" ] }

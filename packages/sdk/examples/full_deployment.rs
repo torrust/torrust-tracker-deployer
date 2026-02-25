@@ -30,8 +30,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use torrust_tracker_deployer_lib::application::traits::CommandProgressListener;
-use torrust_tracker_deployer_lib::presentation::sdk::{Deployer, EnvironmentCreationConfig};
+use torrust_tracker_deployer_sdk::CommandProgressListener;
+use torrust_tracker_deployer_sdk::{Deployer, EnvironmentCreationConfig};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

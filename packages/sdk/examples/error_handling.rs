@@ -18,8 +18,8 @@
 
 use std::path::PathBuf;
 
-use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandlerError;
-use torrust_tracker_deployer_lib::presentation::sdk::{
+use torrust_tracker_deployer_sdk::CreateCommandHandlerError;
+use torrust_tracker_deployer_sdk::{
     Deployer, EnvironmentCreationConfig, EnvironmentName, SdkError,
 };
 
