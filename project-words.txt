@@ -348,6 +348,7 @@ schemars
 secureboot
 selectattr
 serde
+serialising
 serverurl
 shellcheck
 smallstep
@@ -404,6 +405,7 @@ tryfrom
 tulnp
 tulpn
 turbofish
+typestate
 tzdata
 tést
 ulpn

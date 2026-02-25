@@ -235,7 +235,7 @@ impl ReleaseCommandHandler {
             .repository
             .inner()
             .load(env_name)
-            .map_err(ReleaseCommandHandlerError::StatePersistence)?;
+            .map_err(|e| ReleaseCommandHandlerError::StatePersistence(e.into()))?;
 
         let any_env = any_env.ok_or_else(|| ReleaseCommandHandlerError::EnvironmentNotFound {
             name: env_name.to_string(),

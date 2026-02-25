@@ -46,6 +46,50 @@ This directory contains reusable Rust workspace packages that support the Torrus
 
 **Documentation**: See [packages/linting/README.md](./linting/README.md)
 
+### [`deployer-types/`](./deployer-types/)
+
+**Purpose**: Shared value objects and traits for the Torrust Tracker Deployer ecosystem
+
+**Key Features**:
+
+- Validated value objects: `DomainName`, `Email`, `Username`, `EnvironmentName`, `ServiceEndpoint`
+- Secret wrappers: `ApiToken` / `PlainApiToken`, `Password` / `PlainPassword` (via `secrecy`)
+- Time abstraction: `Clock` trait + `SystemClock` implementation for testability
+- Error infrastructure: `ErrorKind` enum + `Traceable` trait
+- Minimal dependencies (no tokio, no infrastructure)
+- Both the root crate and the SDK crate depend on this package
+
+**Use Cases**:
+
+- Canonical source of cross-cutting value objects shared across workspace packages
+- Enables SDK consumers to import foundational types without depending on the full root crate
+- Supports independent versioning and future publishing
+
+**Documentation**: See [packages/deployer-types/README.md](./deployer-types/README.md)
+
+### [`sdk/`](./sdk/)
+
+**Purpose**: Programmatic Rust SDK for deploying and managing Torrust Tracker instances
+
+**Key Features**:
+
+- Typed `Deployer` facade with builder pattern for configuration
+- Full lifecycle support: create, provision, configure, release, run, test, destroy, purge
+- Config validation and environment inspection (`list`, `show`, `exists`)
+- Load environment config from JSON files
+- Re-exports all domain types consumers need (`EnvironmentCreationConfig`, `EnvironmentName`, etc.)
+- Structured error types for programmatic error handling
+- Extension point: `CommandProgressListener` for progress callbacks
+
+**Use Cases**:
+
+- Programmatic deployer access without the CLI
+- Integration testing of deployment workflows
+- Building higher-level tools on top of the deployer
+- External consumers that want to depend only on the SDK without CLI modules
+
+**Documentation**: See [packages/sdk/README.md](./sdk/README.md)
+
 ## 🏗️ Package Architecture
 
 All packages in this directory:
@@ -66,6 +110,7 @@ All packages in this directory:
 [dependencies]
 torrust-linting = { path = "packages/linting" }
 torrust-dependency-installer = { path = "packages/dependency-installer" }
+torrust-tracker-deployer-sdk = { path = "packages/sdk" }
 ```
 
 ### As CLI Binaries
@@ -77,6 +122,16 @@ cargo run --bin linter all
 # Run the dependency installer
 cargo run --bin dependency-installer check
 cargo run --bin dependency-installer install
+```
+
+### SDK Examples
+
+```bash
+cargo run --example sdk_basic_usage -p torrust-tracker-deployer-sdk
+cargo run --example sdk_full_deployment -p torrust-tracker-deployer-sdk
+cargo run --example sdk_error_handling -p torrust-tracker-deployer-sdk
+cargo run --example sdk_create_from_json_file -p torrust-tracker-deployer-sdk
+cargo run --example sdk_validate_config -p torrust-tracker-deployer-sdk
 ```
 
 ## 🎯 Package Design Principles

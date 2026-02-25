@@ -157,40 +157,43 @@ The project provides Agent Skills in `.github/skills/` for specialized workflows
 
 Available skills:
 
-| Task                           | Skill to Load                                          |
-| ------------------------------ | ------------------------------------------------------ |
-| Adding Ansible playbooks       | `.github/skills/add-ansible-playbook/skill.md`         |
-| Adding commands                | `.github/skills/add-new-command/skill.md`              |
-| Adding templates               | `.github/skills/add-new-template/skill.md`             |
-| Cleaning up completed issues   | `.github/skills/cleanup-completed-issues/skill.md`     |
-| Cleaning LXD environments      | `.github/skills/clean-lxd-environments/skill.md`       |
-| Committing changes             | `.github/skills/commit-changes/skill.md`               |
-| Completing feature specs       | `.github/skills/complete-feature-spec/skill.md`        |
-| Completing refactor plans      | `.github/skills/complete-refactor-plan/skill.md`       |
-| Creating ADRs                  | `.github/skills/create-adr/skill.md`                   |
-| Creating environment configs   | `.github/skills/create-environment-config/skill.md`    |
-| Creating environment variables | `.github/skills/create-environment-variables/skill.md` |
-| Creating feature branches      | `.github/skills/create-feature-branch/skill.md`        |
-| Creating feature specs         | `.github/skills/create-feature-spec/skill.md`          |
-| Creating issues                | `.github/skills/create-issue/skill.md`                 |
-| Creating new skills            | `.github/skills/add-new-skill/skill.md`                |
-| Creating refactor plans        | `.github/skills/create-refactor-plan/skill.md`         |
-| Debugging test errors          | `.github/skills/debug-test-errors/skill.md`            |
-| Handling errors in code        | `.github/skills/handle-errors-in-code/skill.md`        |
-| Handling secrets               | `.github/skills/handle-secrets/skill.md`               |
-| Handling user output           | `.github/skills/handle-user-output/skill.md`           |
-| Implementing domain types      | `.github/skills/implement-domain-types/skill.md`       |
-| Organizing Rust modules        | `.github/skills/organize-rust-modules/skill.md`        |
-| Placing code in DDD layers     | `.github/skills/place-code-in-ddd-layers/skill.md`     |
-| Regenerating CLI docs          | `.github/skills/regenerate-cli-docs/skill.md`          |
-| Rendering tracker artifacts    | `.github/skills/render-tracker-artifacts/skill.md`     |
-| Reviewing pull requests        | `.github/skills/review-pr/skill.md`                    |
-| Running linters                | `.github/skills/run-linters/skill.md`                  |
-| Running local E2E tests        | `.github/skills/run-local-e2e-test/skill.md`           |
-| Running pre-commit checks      | `.github/skills/run-pre-commit-checks/skill.md`        |
-| Working with Tera templates    | `.github/skills/work-with-tera-templates/skill.md`     |
-| Writing Markdown docs          | `.github/skills/write-markdown-docs/skill.md`          |
-| Writing unit tests             | `.github/skills/write-unit-test/skill.md`              |
+| Task                           | Skill to Load                                            |
+| ------------------------------ | -------------------------------------------------------- |
+| Adding Ansible playbooks       | `.github/skills/add-ansible-playbook/skill.md`           |
+| Adding commands                | `.github/skills/add-new-command/skill.md`                |
+| Adding SDK examples            | `.github/skills/sdk/add-sdk-example/skill.md`            |
+| Adding SDK methods             | `.github/skills/sdk/add-sdk-method/skill.md`             |
+| Adding templates               | `.github/skills/add-new-template/skill.md`               |
+| Cleaning up completed issues   | `.github/skills/cleanup-completed-issues/skill.md`       |
+| Cleaning LXD environments      | `.github/skills/clean-lxd-environments/skill.md`         |
+| Committing changes             | `.github/skills/commit-changes/skill.md`                 |
+| Completing feature specs       | `.github/skills/complete-feature-spec/skill.md`          |
+| Completing refactor plans      | `.github/skills/complete-refactor-plan/skill.md`         |
+| Creating ADRs                  | `.github/skills/create-adr/skill.md`                     |
+| Creating environment configs   | `.github/skills/create-environment-config/skill.md`      |
+| Creating environment variables | `.github/skills/create-environment-variables/skill.md`   |
+| Creating feature branches      | `.github/skills/create-feature-branch/skill.md`          |
+| Creating feature specs         | `.github/skills/create-feature-spec/skill.md`            |
+| Creating issues                | `.github/skills/create-issue/skill.md`                   |
+| Creating new skills            | `.github/skills/add-new-skill/skill.md`                  |
+| Creating refactor plans        | `.github/skills/create-refactor-plan/skill.md`           |
+| Debugging test errors          | `.github/skills/debug-test-errors/skill.md`              |
+| Handling errors in code        | `.github/skills/handle-errors-in-code/skill.md`          |
+| Handling secrets               | `.github/skills/handle-secrets/skill.md`                 |
+| Handling user output           | `.github/skills/handle-user-output/skill.md`             |
+| Implementing domain types      | `.github/skills/implement-domain-types/skill.md`         |
+| Organizing Rust modules        | `.github/skills/organize-rust-modules/skill.md`          |
+| Placing code in DDD layers     | `.github/skills/place-code-in-ddd-layers/skill.md`       |
+| Regenerating CLI docs          | `.github/skills/regenerate-cli-docs/skill.md`            |
+| Rendering tracker artifacts    | `.github/skills/render-tracker-artifacts/skill.md`       |
+| Reviewing pull requests        | `.github/skills/review-pr/skill.md`                      |
+| Running linters                | `.github/skills/run-linters/skill.md`                    |
+| Running local E2E tests        | `.github/skills/run-local-e2e-test/skill.md`             |
+| Running pre-commit checks      | `.github/skills/run-pre-commit-checks/skill.md`          |
+| Working with Tera templates    | `.github/skills/work-with-tera-templates/skill.md`       |
+| Writing Markdown docs          | `.github/skills/write-markdown-docs/skill.md`            |
+| Writing SDK integration tests  | `.github/skills/sdk/write-sdk-integration-test/skill.md` |
+| Writing unit tests             | `.github/skills/write-unit-test/skill.md`                |
 
 Skills supplement (not replace) the rules in this file. Rules apply always; skills activate when their workflows are needed.
 

@@ -1,0 +1,40 @@
+[package]
+name = "torrust-tracker-deployer-sdk"
+version = "0.1.0"
+edition = "2021"
+description = "Programmatic SDK for the Torrust Tracker Deployer"
+license = "MIT"
+
+[[example]]
+name = "sdk_basic_usage"
+path = "examples/basic_usage.rs"
+
+[[example]]
+name = "sdk_full_deployment"
+path = "examples/full_deployment.rs"
+
+[[example]]
+name = "sdk_error_handling"
+path = "examples/error_handling.rs"
+
+[[example]]
+name = "sdk_create_from_json_file"
+path = "examples/create_from_json_file.rs"
+
+[[example]]
+name = "sdk_validate_config"
+path = "examples/validate_config.rs"
+
+[dependencies]
+torrust-tracker-deployer = { path = "../.." }
+torrust-deployer-types = { path = "../deployer-types" }
+thiserror = "2.0"
+
+[dev-dependencies]
+tokio = { version = "1.0", features = [ "full" ] }
+tempfile = "3.0"
+
+# cargo-machete false positive: the root crate's library is named
+# `torrust_tracker_deployer_lib` in code, so machete doesn't detect it.
+[package.metadata.cargo-machete]
+ignored = [ "torrust-tracker-deployer" ]

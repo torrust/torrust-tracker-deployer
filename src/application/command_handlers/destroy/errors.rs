@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use crate::adapters::tofu::client::OpenTofuError;
-use crate::domain::environment::state::StateTypeError;
+use crate::application::errors::{InvalidStateError, PersistenceError};
 use crate::shared::command::CommandError;
 
 /// Comprehensive error type for the `DestroyCommandHandler`
@@ -23,10 +23,10 @@ pub enum DestroyCommandHandlerError {
     Command(#[from] CommandError),
 
     #[error("Failed to persist environment state: {0}")]
-    StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
+    StatePersistence(#[from] PersistenceError),
 
     #[error("Invalid state transition: {0}")]
-    StateTransition(#[from] StateTypeError),
+    StateTransition(#[from] InvalidStateError),
 
     #[error("Failed to clean up state files at '{path}': {source}")]
     StateCleanupFailed {
@@ -34,6 +34,18 @@ pub enum DestroyCommandHandlerError {
         #[source]
         source: std::io::Error,
     },
+}
+
+impl From<crate::domain::environment::repository::RepositoryError> for DestroyCommandHandlerError {
+    fn from(e: crate::domain::environment::repository::RepositoryError) -> Self {
+        Self::StatePersistence(e.into())
+    }
+}
+
+impl From<crate::domain::environment::state::StateTypeError> for DestroyCommandHandlerError {
+    fn from(e: crate::domain::environment::state::StateTypeError) -> Self {
+        Self::StateTransition(e.into())
+    }
 }
 
 impl crate::shared::Traceable for DestroyCommandHandlerError {
@@ -242,8 +254,6 @@ If the problem persists, report it with full system details."
 mod tests {
     use super::*;
     use crate::adapters::tofu::client::OpenTofuError;
-    use crate::domain::environment::repository::RepositoryError;
-    use crate::domain::environment::state::StateTypeError;
     use crate::shared::command::CommandError;
     use std::path::PathBuf;
 
@@ -284,7 +294,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_state_persistence() {
-        let error = DestroyCommandHandlerError::StatePersistence(RepositoryError::NotFound);
+        let error = DestroyCommandHandlerError::StatePersistence(PersistenceError::NotFound);
 
         let help = error.help();
         assert!(help.contains("State Persistence"));
@@ -294,8 +304,8 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_state_transition() {
-        let error = DestroyCommandHandlerError::StateTransition(StateTypeError::UnexpectedState {
-            expected: "Provisioned",
+        let error = DestroyCommandHandlerError::StateTransition(InvalidStateError {
+            expected: "Provisioned".to_string(),
             actual: "Created".to_string(),
         });
 
@@ -350,9 +360,9 @@ mod tests {
                 stdout: String::new(),
                 stderr: "error".to_string(),
             }),
-            DestroyCommandHandlerError::StatePersistence(RepositoryError::NotFound),
-            DestroyCommandHandlerError::StateTransition(StateTypeError::UnexpectedState {
-                expected: "Provisioned",
+            DestroyCommandHandlerError::StatePersistence(PersistenceError::NotFound),
+            DestroyCommandHandlerError::StateTransition(InvalidStateError {
+                expected: "Provisioned".to_string(),
                 actual: "Created".to_string(),
             }),
             DestroyCommandHandlerError::StateCleanupFailed {

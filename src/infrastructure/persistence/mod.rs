@@ -3,5 +3,5 @@
 //! This module provides infrastructure components for data persistence,
 //! including repositories and file-based storage implementations.
 
+pub mod file_repository_factory;
 pub mod filesystem;
-pub mod repository_factory;

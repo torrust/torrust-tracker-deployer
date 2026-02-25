@@ -1,0 +1,90 @@
+---
+name: SDK Examples Tests
+
+# This workflow runs SDK examples that are compatible with GitHub-hosted runners.
+#
+# RUNNER LIMITATION: LXD VMs created on GitHub runners have no internal network
+# connectivity. As a result, any example that requires communication with a
+# running VM is excluded. The affected commands are: configure, release, run, test.
+#
+# COMPATIBLE EXAMPLES (can run in CI):
+#   - sdk_basic_usage     — local-only operations (create, list, show, exists,
+#                           validate, destroy, purge). No infrastructure required.
+#   - sdk_error_handling  — local-only operations (create, show, list, purge).
+#                           Demonstrates error matching and SdkError.
+#   - sdk_create_from_json_file — validate → create_from_file → show → purge.
+#                           Uses a temp file; no infrastructure required.
+#   - sdk_validate_config     — validate good/malformed/incomplete configs.
+#                           No environment creation; no infrastructure required.
+#
+# INCOMPATIBLE EXAMPLES (local only, not run here):
+#   - sdk_full_deployment — uses configure, release, run, and test which require
+#                           VM network connectivity unavailable on GitHub runners.
+#
+# When new examples that only use compatible operations are added, register them
+# in the "Run SDK examples" step below.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  sdk-examples:
+    name: SDK Examples
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Set SSH key permissions
+        run: |
+          # SSH requires private key files to have restrictive permissions (0600).
+          # Git checkout does not preserve file permissions, so we set them manually.
+          chmod 600 fixtures/testing_rsa
+          ls -la fixtures/testing_rsa
+
+      - name: Build SDK examples
+        run: |
+          cargo build --examples -p torrust-tracker-deployer-sdk
+
+      - name: Run SDK examples
+        run: |
+          echo "🚀 Running SDK basic usage example at $(date)"
+          cargo run --example sdk_basic_usage -p torrust-tracker-deployer-sdk
+          echo "✅ SDK basic usage example completed at $(date)"
+
+          echo "🚀 Running SDK error handling example at $(date)"
+          cargo run --example sdk_error_handling -p torrust-tracker-deployer-sdk
+          echo "✅ SDK error handling example completed at $(date)"
+
+          echo "🚀 Running SDK create-from-JSON-file example at $(date)"
+          cargo run --example sdk_create_from_json_file -p torrust-tracker-deployer-sdk
+          echo "✅ SDK create-from-JSON-file example completed at $(date)"
+
+          echo "🚀 Running SDK validate-config example at $(date)"
+          cargo run --example sdk_validate_config -p torrust-tracker-deployer-sdk
+          echo "✅ SDK validate-config example completed at $(date)"
+
+      - name: Debug information (on failure)
+        if: failure()
+        run: |
+          echo "=== Workspace contents ==="
+          ls -la
+
+          echo "=== Build directory ==="
+          ls -la build/ 2>/dev/null || echo "No build directory found"
+
+          echo "=== System resources ==="
+          df -h
+          free -h

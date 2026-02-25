@@ -213,6 +213,15 @@ Application initialization and lifecycle management:
 - ✅ `src/bin/e2e-infrastructure-lifecycle-tests.rs` - E2E infrastructure lifecycle tests
 - ✅ `src/bin/e2e-complete-workflow-tests.rs` - Complete E2E workflow test suite
 
+### Workspace Packages
+
+Independently versioned Cargo workspace packages in `packages/`:
+
+- ✅ `packages/linting/` - Unified linting framework (runs markdownlint, yamllint, taplo, cspell, clippy, rustfmt, shellcheck)
+- ✅ `packages/dependency-installer/` - Dependency detection and installation for development setup (OpenTofu, Ansible, LXD, cargo-machete)
+- ✅ `packages/deployer-types/` - Shared value objects and traits (`torrust-deployer-types`) — cross-cutting foundational types (e.g., `EnvironmentName`, `DomainName`, `Username`, `Clock`, `ErrorKind`) shared by the root crate and SDK
+- ✅ `packages/sdk/` - Programmatic SDK (`torrust-tracker-deployer-sdk`) — independently consumable Rust crate for deploying Torrust Tracker instances without the CLI
+
 ### Presentation Layer
 
 **CLI Interface and User Interaction:**
@@ -231,6 +240,14 @@ Application initialization and lifecycle management:
 - ✅ `src/presentation/dispatch/` - Command routing and execution context
 - ✅ `src/presentation/views/` - User output formatting and message rendering
 - ✅ `src/presentation/errors.rs` - Unified error types with tiered help system
+
+**SDK Interface (Programmatic API):**
+
+- ✅ `src/presentation/sdk/mod.rs` - SDK module root with re-exports (kept for backward compatibility)
+- ✅ `src/presentation/sdk/builder.rs` - `DeployerBuilder` typed configuration builder
+- ✅ `src/presentation/sdk/deployer.rs` - `Deployer` facade (main SDK entry point)
+- ✅ `src/presentation/sdk/error.rs` - SDK-specific error types
+- → See `packages/sdk/` for the independently consumable SDK workspace package
 
 ### Domain Layer
 

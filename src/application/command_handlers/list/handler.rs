@@ -32,10 +32,10 @@ use tracing::{instrument, warn};
 
 use super::errors::ListCommandHandlerError;
 use super::info::{EnvironmentList, EnvironmentSummary};
+use crate::application::traits::RepositoryProvider;
 use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::AnyEnvironmentState;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 
 /// `ListCommandHandler` scans and lists all environments
 ///
@@ -51,16 +51,19 @@ use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 /// - **Per-environment errors**: Collected and reported, don't stop listing
 /// - **Fatal errors**: Directory not found, permission denied
 pub struct ListCommandHandler {
-    repository_factory: Arc<RepositoryFactory>,
+    file_repository_factory: Arc<dyn RepositoryProvider>,
     data_directory: Arc<Path>,
 }
 
 impl ListCommandHandler {
     /// Create a new `ListCommandHandler`
     #[must_use]
-    pub fn new(repository_factory: Arc<RepositoryFactory>, data_directory: Arc<Path>) -> Self {
+    pub fn new(
+        file_repository_factory: Arc<dyn RepositoryProvider>,
+        data_directory: Arc<Path>,
+    ) -> Self {
         Self {
-            repository_factory,
+            file_repository_factory,
             data_directory,
         }
     }
@@ -191,7 +194,7 @@ impl ListCommandHandler {
         // Create repository for the base data directory
         // (repository internally handles {base_dir}/{env_name}/environment.json)
         let repository = self
-            .repository_factory
+            .file_repository_factory
             .create(self.data_directory.to_path_buf());
 
         // Load environment from repository

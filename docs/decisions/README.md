@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                                  | Summary                                                                                    |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ✅ Accepted   | 2026-02-24 | [SDK Presentation Layer Interface Design](./sdk-presentation-layer-interface-design.md)                   | Return () from SDK operations; no domain types or typestate pattern in the SDK public API  |
 | ✅ Accepted   | 2026-02-24 | [Docker Compose Local Validation Placement](./docker-compose-local-validation-placement.md)               | Validate rendered docker-compose.yml in the infrastructure generator, not the app layer    |
 | ✅ Accepted   | 2026-02-17 | [Application-Layer Progress Reporting Trait](./application-layer-progress-reporting-trait.md)             | Use trait-based progress reporting with Dependency Inversion for testable, reusable design |
 | ✅ Accepted   | 2026-02-13 | [Concurrent Docker Image Builds in Tests](./concurrent-docker-image-builds-in-tests.md)                   | Treat "already exists" tagging error as success when parallel tests build same image       |

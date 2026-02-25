@@ -288,7 +288,7 @@ impl RunCommandHandler {
             .repository
             .inner()
             .load(env_name)
-            .map_err(RunCommandHandlerError::StatePersistence)?;
+            .map_err(|e| RunCommandHandlerError::StatePersistence(e.into()))?;
 
         let any_env = any_env.ok_or_else(|| RunCommandHandlerError::EnvironmentNotFound {
             name: env_name.to_string(),

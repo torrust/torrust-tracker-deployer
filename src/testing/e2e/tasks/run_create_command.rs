@@ -13,7 +13,7 @@
 //! ## Integration
 //!
 //! This is a generic task that works with the command handler pattern:
-//! - Uses the `RepositoryFactory` to create repositories
+//! - Uses the `FileRepositoryFactory` to create repositories
 //! - Creates `EnvironmentCreationConfig` from test parameters
 //! - Integrates with the existing `CreateCommandHandler` workflow
 
@@ -31,7 +31,7 @@ use crate::application::command_handlers::create::{
 };
 use crate::domain::environment::Created;
 use crate::domain::Environment;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 use crate::shared::Clock;
 
 /// Create a new environment using the `CreateCommandHandler`
@@ -42,7 +42,7 @@ use crate::shared::Clock;
 ///
 /// # Arguments
 ///
-/// * `repository_factory` - Repository factory for creating environment repositories
+/// * `file_repository_factory` - Repository factory for creating environment repositories
 /// * `clock` - Clock service for timestamp generation
 /// * `working_dir` - Working directory for environment storage
 /// * `environment_name` - Name of the environment to create
@@ -63,7 +63,7 @@ use crate::shared::Clock;
 /// - Repository operations fail
 #[allow(clippy::too_many_arguments)]
 pub fn run_create_command(
-    repository_factory: &RepositoryFactory,
+    file_repository_factory: &FileRepositoryFactory,
     clock: Arc<dyn Clock>,
     working_dir: &std::path::Path,
     environment_name: &str,
@@ -77,9 +77,9 @@ pub fn run_create_command(
         "Creating environment via CreateCommandHandler"
     );
 
-    // Create repository using RepositoryFactory with data directory
+    // Create repository using FileRepositoryFactory with data directory
     let data_dir = working_dir.join("data");
-    let repository = repository_factory.create(data_dir);
+    let repository = file_repository_factory.create(data_dir);
 
     // Create the command handler
     let create_command = CreateCommandHandler::new(repository, clock);

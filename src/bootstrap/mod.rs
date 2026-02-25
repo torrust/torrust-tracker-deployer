@@ -14,6 +14,7 @@ pub mod app;
 pub mod container;
 pub mod help;
 pub mod logging;
+pub mod sdk;
 
 // Re-export commonly used types for convenience
 pub use container::Container;

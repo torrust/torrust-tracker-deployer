@@ -12,6 +12,7 @@
 //! - `steps` - Workflow orchestration and business process coordination
 
 pub mod command_handlers;
+pub mod errors;
 pub mod services;
 pub mod steps;
 pub mod traits;

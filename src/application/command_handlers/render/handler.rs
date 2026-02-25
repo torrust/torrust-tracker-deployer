@@ -482,11 +482,12 @@ mod tests {
     use super::*;
     use std::net::{Ipv4Addr, Ipv6Addr};
 
-    use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+    use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 
     fn create_test_repository() -> Arc<dyn EnvironmentRepository> {
-        let repository_factory = RepositoryFactory::new(std::time::Duration::from_secs(30));
-        repository_factory.create(PathBuf::from("."))
+        let file_repository_factory =
+            FileRepositoryFactory::new(std::time::Duration::from_secs(30));
+        file_repository_factory.create(PathBuf::from("."))
     }
 
     #[test]

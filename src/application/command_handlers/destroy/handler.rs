@@ -379,7 +379,7 @@ impl DestroyCommandHandler {
             .repository
             .inner()
             .load(env_name)
-            .map_err(DestroyCommandHandlerError::StatePersistence)?;
+            .map_err(|e| DestroyCommandHandlerError::StatePersistence(e.into()))?;
 
         any_env.ok_or_else(|| DestroyCommandHandlerError::EnvironmentNotFound {
             name: env_name.to_string(),

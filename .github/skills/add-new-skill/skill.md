@@ -235,15 +235,14 @@ touch .github/skills/skill-name/skill.md
 ```yaml
 ---
 name: skill-name
-description: |
-  What this skill does AND when to use it. Include trigger phrases here because
-  the body is only loaded AFTER the skill is triggered. Example: "Use when user
-  asks about X, Y, or Z" or "Triggers on 'keyword1', 'keyword2', 'keyword3'."
+description: What this skill does AND when to use it. Include trigger phrases here because the body is only loaded AFTER the skill is triggered. Triggers on "keyword1", "keyword2", "keyword3".
 metadata:
   author: torrust
   version: "1.0"
 ---
 ```
+
+> **Important**: `description` must be a plain single-line string. Do **not** use YAML block scalars (`|`) or folded scalars (`>`). The IDE skill-file parser treats multi-line forms as unexpected indentation and reports unsupported attributes, causing the skill to fail to load.
 
 **Critical**: The `description` must include:
 
@@ -343,6 +342,7 @@ skills-ref validate .github/skills/skill-name
 **description** (required):
 
 - Non-empty, maximum 1024 characters
+- **Must be a plain single-line string** — never use YAML block (`|`) or folded (`>`) scalars
 - Include WHAT the skill does
 - Include WHEN to use it
 - List trigger phrases/keywords

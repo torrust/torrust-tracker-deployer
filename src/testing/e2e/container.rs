@@ -27,7 +27,7 @@ use crate::config::Config;
 use crate::domain::provider::ProviderConfig;
 use crate::domain::template::TemplateManager;
 use crate::domain::InstanceName;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 use crate::infrastructure::templating::ansible::AnsibleProjectGenerator;
 use crate::infrastructure::templating::ansible::ANSIBLE_SUBFOLDER;
 use crate::infrastructure::templating::tofu::TofuProjectGenerator;
@@ -63,7 +63,7 @@ pub struct Services {
 
     // Persistence layer
     /// Factory for creating environment-specific repositories
-    pub repository_factory: Arc<RepositoryFactory>,
+    pub file_repository_factory: Arc<FileRepositoryFactory>,
 }
 
 impl Services {
@@ -105,8 +105,8 @@ impl Services {
             AnsibleProjectGenerator::new(config.build_dir.clone(), template_manager.clone());
 
         // Create repository factory
-        let repository_factory =
-            RepositoryFactory::new(Duration::from_secs(REPOSITORY_LOCK_TIMEOUT_SECS));
+        let file_repository_factory =
+            FileRepositoryFactory::new(Duration::from_secs(REPOSITORY_LOCK_TIMEOUT_SECS));
 
         // Create clock service (production implementation uses system time)
         let clock: Arc<dyn Clock> = Arc::new(crate::shared::SystemClock);
@@ -126,7 +126,7 @@ impl Services {
             clock,
 
             // Persistence layer
-            repository_factory: Arc::new(repository_factory),
+            file_repository_factory: Arc::new(file_repository_factory),
         }
     }
 }

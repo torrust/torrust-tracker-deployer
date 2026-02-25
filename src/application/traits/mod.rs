@@ -12,6 +12,8 @@
 //! - `progress` - Progress reporting trait for command workflows
 
 pub mod progress;
+pub mod repository_provider;
 
 // Re-export main types for convenience
 pub use progress::{CommandProgressListener, NullProgressListener};
+pub use repository_provider::RepositoryProvider;

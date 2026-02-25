@@ -1,7 +1,6 @@
 //! Error types for test command handler
 
-use crate::domain::environment::repository::RepositoryError;
-use crate::domain::environment::state::StateTypeError;
+use crate::application::errors::{InvalidStateError, PersistenceError};
 use crate::infrastructure::remote_actions::RemoteActionError;
 use crate::shared::command::CommandError;
 
@@ -24,10 +23,22 @@ pub enum TestCommandHandlerError {
     InvalidTrackerConfiguration { message: String },
 
     #[error("Invalid state transition: {0}")]
-    StateTransition(#[from] StateTypeError),
+    StateTransition(#[from] InvalidStateError),
 
     #[error("State persistence error: {0}")]
-    StatePersistence(#[from] RepositoryError),
+    StatePersistence(#[from] PersistenceError),
+}
+
+impl From<crate::domain::environment::repository::RepositoryError> for TestCommandHandlerError {
+    fn from(e: crate::domain::environment::repository::RepositoryError) -> Self {
+        Self::StatePersistence(e.into())
+    }
+}
+
+impl From<crate::domain::environment::state::StateTypeError> for TestCommandHandlerError {
+    fn from(e: crate::domain::environment::state::StateTypeError) -> Self {
+        Self::StateTransition(e.into())
+    }
 }
 
 impl crate::shared::Traceable for TestCommandHandlerError {
@@ -219,8 +230,6 @@ mod tests {
 
     #[test]
     fn it_should_have_help_for_all_error_variants() {
-        use crate::domain::environment::repository::RepositoryError;
-        use crate::domain::environment::state::StateTypeError;
         use crate::shared::command::CommandError;
 
         let errors: Vec<TestCommandHandlerError> = vec![
@@ -239,11 +248,11 @@ mod tests {
             TestCommandHandlerError::InvalidTrackerConfiguration {
                 message: "Invalid bind address".to_string(),
             },
-            TestCommandHandlerError::StateTransition(StateTypeError::UnexpectedState {
-                expected: "Provisioned",
+            TestCommandHandlerError::StateTransition(InvalidStateError {
+                expected: "Provisioned".to_string(),
                 actual: "Created".to_string(),
             }),
-            TestCommandHandlerError::StatePersistence(RepositoryError::NotFound),
+            TestCommandHandlerError::StatePersistence(PersistenceError::NotFound),
         ];
 
         for error in errors {

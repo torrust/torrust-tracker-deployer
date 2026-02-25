@@ -1,6 +1,6 @@
 //! Error types for show command handler
 
-use crate::domain::environment::repository::RepositoryError;
+use crate::application::errors::PersistenceError;
 use crate::shared::error::kind::ErrorKind;
 use crate::shared::error::traceable::Traceable;
 
@@ -11,7 +11,13 @@ pub enum ShowCommandHandlerError {
     EnvironmentNotFound { name: String },
 
     #[error("Failed to load environment: {0}")]
-    LoadError(#[from] RepositoryError),
+    LoadError(#[from] PersistenceError),
+}
+
+impl From<crate::domain::environment::repository::RepositoryError> for ShowCommandHandlerError {
+    fn from(e: crate::domain::environment::repository::RepositoryError) -> Self {
+        Self::LoadError(e.into())
+    }
 }
 
 impl Traceable for ShowCommandHandlerError {
