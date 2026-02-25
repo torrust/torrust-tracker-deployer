@@ -19,11 +19,11 @@
 //!
 //! ```rust
 //! use torrust_tracker_deployer_lib::presentation::cli::controllers::constants::{DEFAULT_LOCK_TIMEOUT, DEFAULT_VERBOSITY};
-//! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+//! use torrust_tracker_deployer_lib::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 //! use torrust_tracker_deployer_lib::presentation::cli::views::UserOutput;
 //!
 //! // Use default lock timeout for repository operations
-//! let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+//! let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
 //!
 //! // Use default verbosity for user output
 //! let mut output = UserOutput::new(DEFAULT_VERBOSITY);

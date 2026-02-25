@@ -10,7 +10,7 @@ use parking_lot::ReentrantMutex;
 use tempfile::TempDir;
 
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 use crate::presentation::cli::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 use crate::presentation::cli::controllers::release::handler::ReleaseCommandController;
 use crate::presentation::cli::input::cli::OutputFormat;
@@ -30,8 +30,8 @@ fn create_test_dependencies(
 ) {
     let (user_output, _, _) = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
     let data_dir = temp_dir.path().join("data");
-    let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-    let repository = repository_factory.create(data_dir);
+    let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+    let repository = file_repository_factory.create(data_dir);
     let clock = Arc::new(SystemClock);
 
     (user_output, repository, clock)

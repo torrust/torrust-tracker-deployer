@@ -70,16 +70,16 @@ impl ListCommandController {
     ///
     /// # Arguments
     ///
-    /// * `repository_factory` - Factory for creating environment repositories
+    /// * `file_repository_factory` - Factory for creating environment repositories
     /// * `data_directory` - Path to the data directory
     /// * `user_output` - Shared output service for user feedback
     #[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
     pub fn new(
-        repository_factory: Arc<dyn RepositoryProvider>,
+        file_repository_factory: Arc<dyn RepositoryProvider>,
         data_directory: Arc<Path>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {
-        let handler = ListCommandHandler::new(repository_factory, data_directory);
+        let handler = ListCommandHandler::new(file_repository_factory, data_directory);
         let progress = ProgressReporter::new(user_output, ListStep::count());
 
         Self { handler, progress }

@@ -18,7 +18,7 @@ use crate::application::command_handlers::create::CreateCommandHandler;
 use crate::domain::environment::{Environment, EnvironmentName};
 use crate::domain::provider::{LxdConfig, ProviderConfig};
 use crate::domain::ProfileName;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 use crate::shared::Clock;
 use crate::testing::MockClock;
 
@@ -171,8 +171,9 @@ impl CreateCommandHandlerTestBuilder {
         let clock: Arc<dyn Clock> = Arc::new(MockClock::new(clock_time));
 
         // Create repository with file-based persistence
-        let repository_factory = RepositoryFactory::new(std::time::Duration::from_secs(30));
-        let repository = repository_factory.create(base_dir.clone());
+        let file_repository_factory =
+            FileRepositoryFactory::new(std::time::Duration::from_secs(30));
+        let repository = file_repository_factory.create(base_dir.clone());
 
         // Pre-create existing environments if specified
         for env_name in &self.existing_environments {

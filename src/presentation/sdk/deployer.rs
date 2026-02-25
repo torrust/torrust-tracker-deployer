@@ -89,7 +89,7 @@ use super::error::CreateEnvironmentFromFileError;
 pub struct Deployer {
     working_dir: PathBuf,
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-    repository_factory: Arc<dyn RepositoryProvider>,
+    file_repository_factory: Arc<dyn RepositoryProvider>,
     clock: Arc<dyn Clock>,
     data_directory: Arc<Path>,
     listener: Arc<dyn CommandProgressListener + Send + Sync>,
@@ -106,7 +106,7 @@ impl Deployer {
     pub(crate) fn new(
         working_dir: PathBuf,
         repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-        repository_factory: Arc<dyn RepositoryProvider>,
+        file_repository_factory: Arc<dyn RepositoryProvider>,
         clock: Arc<dyn Clock>,
         data_directory: Arc<Path>,
         listener: Arc<dyn CommandProgressListener + Send + Sync>,
@@ -114,7 +114,7 @@ impl Deployer {
         Self {
             working_dir,
             repository,
-            repository_factory,
+            file_repository_factory,
             clock,
             data_directory,
             listener,
@@ -242,7 +242,7 @@ impl Deployer {
     /// Returns [`ListCommandHandlerError`] if a repository error occurs.
     pub fn list(&self) -> Result<EnvironmentList, ListCommandHandlerError> {
         let handler = ListCommandHandler::new(
-            Arc::clone(&self.repository_factory),
+            Arc::clone(&self.file_repository_factory),
             Arc::clone(&self.data_directory),
         );
         handler.execute()

@@ -34,11 +34,11 @@ impl ConfigureCommandHandlerTestBuilder {
     pub fn build(self) -> (ConfigureCommandHandler, TempDir) {
         let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
 
-        let repository_factory =
-            crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
+        let file_repository_factory =
+            crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory::new(
                 std::time::Duration::from_secs(30),
             );
-        let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
+        let repository = file_repository_factory.create(self.temp_dir.path().to_path_buf());
 
         let command_handler = ConfigureCommandHandler::new(clock, repository);
 

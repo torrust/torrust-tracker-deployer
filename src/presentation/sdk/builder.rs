@@ -103,10 +103,10 @@ impl DeployerBuilder {
             .working_dir
             .ok_or(DeployerBuildError::MissingWorkingDir)?;
 
-        let repository_factory = default_repository_provider(DEFAULT_SDK_LOCK_TIMEOUT);
+        let file_repository_factory = default_repository_provider(DEFAULT_SDK_LOCK_TIMEOUT);
         let data_dir = working_dir.join("data");
         let data_directory: Arc<Path> = Arc::from(data_dir.as_path());
-        let repository = repository_factory.create(data_dir.clone());
+        let repository = file_repository_factory.create(data_dir.clone());
         let clock = default_clock();
         let listener = self
             .progress_listener
@@ -115,7 +115,7 @@ impl DeployerBuilder {
         Ok(Deployer::new(
             working_dir,
             repository,
-            repository_factory,
+            file_repository_factory,
             clock,
             data_directory,
             listener,

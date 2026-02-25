@@ -307,12 +307,12 @@ mod tests {
         Arc<dyn EnvironmentRepository + Send + Sync>,
         Arc<dyn Clock>,
     ) {
-        use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+        use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
         let data_dir = temp_dir.path().join("data");
-        let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-        let repository = repository_factory.create(data_dir);
+        let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+        let repository = file_repository_factory.create(data_dir);
         let clock = Arc::new(SystemClock);
 
         (user_output, repository, clock)

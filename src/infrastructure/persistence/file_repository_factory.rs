@@ -18,10 +18,10 @@
 //! ```rust,no_run
 //! use std::time::Duration;
 //! use std::path::PathBuf;
-//! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+//! use torrust_tracker_deployer_lib::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 //!
 //! // Create factory at application startup
-//! let factory = RepositoryFactory::new(Duration::from_secs(30));
+//! let factory = FileRepositoryFactory::new(Duration::from_secs(30));
 //!
 //! // Create environment-specific repository at runtime
 //! let data_dir = PathBuf::from("data/production");
@@ -41,12 +41,12 @@ use crate::infrastructure::persistence::filesystem::file_environment_repository:
 /// The factory is configured once at application startup with settings like lock timeout,
 /// then used to create environment-specific repositories at runtime.
 #[derive(Clone)]
-pub struct RepositoryFactory {
+pub struct FileRepositoryFactory {
     /// Lock acquisition timeout for all repositories created by this factory
     lock_timeout: Duration,
 }
 
-impl RepositoryFactory {
+impl FileRepositoryFactory {
     /// Create a new repository factory with the specified lock timeout
     ///
     /// # Arguments
@@ -57,9 +57,9 @@ impl RepositoryFactory {
     ///
     /// ```rust
     /// use std::time::Duration;
-    /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+    /// use torrust_tracker_deployer_lib::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
     ///
-    /// let factory = RepositoryFactory::new(Duration::from_secs(30));
+    /// let factory = FileRepositoryFactory::new(Duration::from_secs(30));
     /// ```
     #[must_use]
     pub fn new(lock_timeout: Duration) -> Self {
@@ -81,9 +81,9 @@ impl RepositoryFactory {
     /// ```rust
     /// use std::time::Duration;
     /// use std::path::PathBuf;
-    /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+    /// use torrust_tracker_deployer_lib::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
     ///
-    /// let factory = RepositoryFactory::new(Duration::from_secs(30));
+    /// let factory = FileRepositoryFactory::new(Duration::from_secs(30));
     /// let repo = factory.create(PathBuf::from("data/production"));
     /// ```
     #[must_use]
@@ -94,10 +94,10 @@ impl RepositoryFactory {
     }
 }
 
-impl RepositoryProvider for RepositoryFactory {
+impl RepositoryProvider for FileRepositoryFactory {
     fn create(&self, data_dir: PathBuf) -> Arc<dyn EnvironmentRepository + Send + Sync> {
         // Delegate to the existing method — no duplication.
-        RepositoryFactory::create(self, data_dir)
+        FileRepositoryFactory::create(self, data_dir)
     }
 }
 
@@ -107,9 +107,9 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn it_should_create_repository_factory_with_timeout() {
+    fn it_should_create_file_repository_factory_with_timeout() {
         let timeout = Duration::from_secs(30);
-        let factory = RepositoryFactory::new(timeout);
+        let factory = FileRepositoryFactory::new(timeout);
 
         // Verify factory was created (we can't directly inspect timeout, but creation succeeds)
         assert_eq!(factory.lock_timeout, timeout);
@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn it_should_create_repository_with_specific_data_dir() {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let factory = RepositoryFactory::new(Duration::from_secs(10));
+        let factory = FileRepositoryFactory::new(Duration::from_secs(10));
 
         let data_dir = temp_dir.path().join("production");
         let _repo = factory.create(data_dir);
@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn it_should_create_multiple_repositories_from_same_factory() {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let factory = RepositoryFactory::new(Duration::from_secs(10));
+        let factory = FileRepositoryFactory::new(Duration::from_secs(10));
 
         let prod_dir = temp_dir.path().join("production");
         let staging_dir = temp_dir.path().join("staging");
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn it_should_be_clonable() {
-        let factory = RepositoryFactory::new(Duration::from_secs(30));
+        let factory = FileRepositoryFactory::new(Duration::from_secs(30));
         let factory_clone = factory.clone();
 
         assert_eq!(factory.lock_timeout, factory_clone.lock_timeout);
@@ -159,7 +159,7 @@ mod tests {
         use crate::shared::Username;
 
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let factory = RepositoryFactory::new(Duration::from_secs(10));
+        let factory = FileRepositoryFactory::new(Duration::from_secs(10));
 
         // Create an environment
         let env_name =

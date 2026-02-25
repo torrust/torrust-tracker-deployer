@@ -147,7 +147,7 @@ pub async fn run_provision_command(
     let base_data_dir = std::path::PathBuf::from("data");
     let repository = test_context
         .services
-        .repository_factory
+        .file_repository_factory
         .create(base_data_dir);
 
     // Use the new ProvisionCommandHandler to handle all infrastructure provisioning steps

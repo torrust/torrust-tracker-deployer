@@ -454,7 +454,7 @@ impl TestContext {
         // The repository will add the environment name subdirectory automatically
         // e.g., "{project_root}/data" + "e2e-provision" = "{project_root}/data/e2e-provision/environment.json"
         let base_data_dir = self.config.project_root.join("data");
-        self.services.repository_factory.create(base_data_dir)
+        self.services.file_repository_factory.create(base_data_dir)
     }
 }
 

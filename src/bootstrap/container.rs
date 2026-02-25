@@ -12,7 +12,7 @@ use parking_lot::ReentrantMutex;
 use crate::application::command_handlers::PurgeCommandHandler;
 use crate::application::traits::RepositoryProvider;
 use crate::domain::environment::repository::EnvironmentRepository;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 use crate::presentation::cli::controllers::configure::ConfigureCommandController;
 use crate::presentation::cli::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 use crate::presentation::cli::controllers::create::subcommands::environment::CreateEnvironmentCommandController;
@@ -55,7 +55,7 @@ use crate::shared::SystemClock;
 #[derive(Clone)]
 pub struct Container {
     user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
-    repository_factory: Arc<RepositoryFactory>,
+    file_repository_factory: Arc<FileRepositoryFactory>,
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
     clock: Arc<dyn Clock>,
     data_directory: Arc<Path>,
@@ -66,7 +66,7 @@ impl Container {
     ///
     /// Initializes all services with specified verbosity level and working directory:
     /// - `UserOutput` with provided `verbosity_level`
-    /// - `RepositoryFactory` with `DEFAULT_LOCK_TIMEOUT`
+    /// - `FileRepositoryFactory` with `DEFAULT_LOCK_TIMEOUT`
     /// - `EnvironmentRepository` using `working_dir/data` as base directory
     /// - `SystemClock` for time operations
     ///
@@ -93,18 +93,18 @@ impl Container {
         let user_output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(
             verbosity_level,
         ))));
-        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+        let file_repository_factory = Arc::new(FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
 
         // Create repository once for the entire application
         let data_dir = working_dir.join("data");
         let data_directory: Arc<Path> = Arc::from(data_dir.as_path());
-        let repository = repository_factory.create(data_dir);
+        let repository = file_repository_factory.create(data_dir);
 
         let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 
         Self {
             user_output,
-            repository_factory,
+            file_repository_factory,
             repository,
             clock,
             data_directory,
@@ -136,7 +136,7 @@ impl Container {
 
     /// Get shared reference to repository factory service
     ///
-    /// Returns an `Arc<RepositoryFactory>` that can be cheaply cloned and shared
+    /// Returns an `Arc<FileRepositoryFactory>` that can be cheaply cloned and shared
     /// across threads and function calls.
     ///
     /// # Example
@@ -147,12 +147,12 @@ impl Container {
     /// use torrust_tracker_deployer_lib::presentation::cli::views::VerbosityLevel;
     ///
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
-    /// let repository_factory = container.repository_factory();
-    /// // Use repository_factory to create repositories
+    /// let file_repository_factory = container.file_repository_factory();
+    /// // Use file_repository_factory to create repositories
     /// ```
     #[must_use]
-    pub fn repository_factory(&self) -> Arc<RepositoryFactory> {
-        Arc::clone(&self.repository_factory)
+    pub fn file_repository_factory(&self) -> Arc<FileRepositoryFactory> {
+        Arc::clone(&self.file_repository_factory)
     }
 
     /// Get shared reference to repository provider
@@ -161,7 +161,7 @@ impl Container {
     /// handlers without exposing the concrete infrastructure type.
     #[must_use]
     pub fn repository_provider(&self) -> Arc<dyn RepositoryProvider> {
-        Arc::clone(&self.repository_factory) as Arc<dyn RepositoryProvider>
+        Arc::clone(&self.file_repository_factory) as Arc<dyn RepositoryProvider>
     }
 
     /// Get shared reference to environment repository
@@ -341,24 +341,24 @@ mod tests {
 
         // Verify we can get all services
         let user_output = container.user_output();
-        let repository_factory = container.repository_factory();
+        let file_repository_factory = container.file_repository_factory();
         let repository = container.repository();
         let clock = container.clock();
 
         assert!(Arc::strong_count(&user_output) >= 1);
-        assert!(Arc::strong_count(&repository_factory) >= 1);
+        assert!(Arc::strong_count(&file_repository_factory) >= 1);
         assert!(Arc::strong_count(&repository) >= 1);
         assert!(Arc::strong_count(&clock) >= 1);
     }
 
     #[test]
-    fn it_should_return_cloned_arc_on_repository_factory_access() {
+    fn it_should_return_cloned_arc_on_file_repository_factory_access() {
         let temp_dir = TempDir::new().unwrap();
         let container = Container::new(VerbosityLevel::Normal, temp_dir.path());
-        let factory1 = container.repository_factory();
-        let factory2 = container.repository_factory();
+        let factory1 = container.file_repository_factory();
+        let factory2 = container.file_repository_factory();
 
-        // Both should point to the same RepositoryFactory instance
+        // Both should point to the same FileRepositoryFactory instance
         assert!(Arc::ptr_eq(&factory1, &factory2));
     }
 
@@ -406,8 +406,8 @@ mod tests {
         let user_output2 = container2.user_output();
         assert!(Arc::ptr_eq(&user_output1, &user_output2));
 
-        let factory1 = container1.repository_factory();
-        let factory2 = container2.repository_factory();
+        let factory1 = container1.file_repository_factory();
+        let factory2 = container2.file_repository_factory();
         assert!(Arc::ptr_eq(&factory1, &factory2));
 
         let repo1 = container1.repository();
@@ -426,12 +426,12 @@ mod tests {
 
         // All services should be available
         let user_output = container.user_output();
-        let repository_factory = container.repository_factory();
+        let file_repository_factory = container.file_repository_factory();
         let repository = container.repository();
         let clock = container.clock();
 
         assert!(Arc::strong_count(&user_output) >= 1);
-        assert!(Arc::strong_count(&repository_factory) >= 1);
+        assert!(Arc::strong_count(&file_repository_factory) >= 1);
         assert!(Arc::strong_count(&repository) >= 1);
         assert!(Arc::strong_count(&clock) >= 1);
 
@@ -458,12 +458,12 @@ mod tests {
 
             // All services should be available regardless of verbosity level
             let user_output = container.user_output();
-            let repository_factory = container.repository_factory();
+            let file_repository_factory = container.file_repository_factory();
             let repository = container.repository();
             let clock = container.clock();
 
             assert!(Arc::strong_count(&user_output) >= 1);
-            assert!(Arc::strong_count(&repository_factory) >= 1);
+            assert!(Arc::strong_count(&file_repository_factory) >= 1);
             assert!(Arc::strong_count(&repository) >= 1);
             assert!(Arc::strong_count(&clock) >= 1);
         }

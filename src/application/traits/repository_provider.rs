@@ -3,7 +3,7 @@
 //! Defines the port that the application layer uses to create environment repositories
 //! without depending on any concrete infrastructure type.
 //!
-//! The infrastructure layer implements this trait for `RepositoryFactory`.
+//! The infrastructure layer implements this trait for `FileRepositoryFactory`.
 //! The bootstrap layer creates the concrete implementation and injects it.
 
 use std::path::PathBuf;
@@ -13,13 +13,13 @@ use crate::domain::environment::repository::EnvironmentRepository;
 
 /// Application-layer trait for creating environment repositories.
 ///
-/// This trait abstracts over the concrete `RepositoryFactory` from the
+/// This trait abstracts over the concrete `FileRepositoryFactory` from the
 /// infrastructure layer, allowing the application layer and SDK to hold a
 /// `Arc<dyn RepositoryProvider>` without a compile-time dependency on any
 /// infrastructure type.
 ///
 /// The bootstrap layer provides the default implementation via
-/// `crate::infrastructure::persistence::repository_factory::RepositoryFactory`.
+/// `crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory`.
 ///
 /// # Examples
 ///

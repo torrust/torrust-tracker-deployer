@@ -8,7 +8,7 @@
 //! The `ListCommandHandler` implements the Command Pattern and uses Dependency Injection
 //! to interact with infrastructure services through interfaces:
 //!
-//! - **Repository Pattern**: Scans data directory via `RepositoryFactory`
+//! - **Repository Pattern**: Scans data directory via `FileRepositoryFactory`
 //! - **Domain-Driven Design**: Uses domain objects from `domain::environment`
 //!
 //! ## Design Principles

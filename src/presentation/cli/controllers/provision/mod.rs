@@ -77,15 +77,15 @@
 //! use std::cell::RefCell;
 //! use torrust_tracker_deployer_lib::presentation::cli::controllers::provision::handler::ProvisionCommandController;
 //! use torrust_tracker_deployer_lib::presentation::cli::views::{UserOutput, VerbosityLevel};
-//! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+//! use torrust_tracker_deployer_lib::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 //! use torrust_tracker_deployer_lib::shared::clock::SystemClock;
 //!
 //! # #[tokio::main]
 //! # async fn main() {
 //! let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
 //! let data_dir = PathBuf::from("./data");
-//! let repository_factory = RepositoryFactory::new(Duration::from_secs(30));
-//! let repository = repository_factory.create(data_dir);
+//! let file_repository_factory = FileRepositoryFactory::new(Duration::from_secs(30));
+//! let repository = file_repository_factory.create(data_dir);
 //! let clock = Arc::new(SystemClock);
 //! if let Err(e) = ProvisionCommandController::new(repository, clock, output).execute("test-env").await {
 //!     eprintln!("Provision failed: {e}");

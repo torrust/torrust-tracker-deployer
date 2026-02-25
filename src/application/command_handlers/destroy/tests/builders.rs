@@ -33,11 +33,11 @@ impl DestroyCommandHandlerTestBuilder {
     /// Returns: (`command_handler`, `temp_dir`)
     /// The `temp_dir` must be kept alive for the duration of the test.
     pub fn build(self) -> (DestroyCommandHandler, TempDir) {
-        let repository_factory =
-            crate::infrastructure::persistence::repository_factory::RepositoryFactory::new(
+        let file_repository_factory =
+            crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory::new(
                 std::time::Duration::from_secs(30),
             );
-        let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
+        let repository = file_repository_factory.create(self.temp_dir.path().to_path_buf());
 
         // Create a system clock for testing
         let clock = Arc::new(crate::shared::SystemClock);

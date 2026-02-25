@@ -6,7 +6,7 @@
 use std::fs;
 use std::sync::Arc;
 
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 use crate::presentation::cli::controllers::constants::DEFAULT_LOCK_TIMEOUT;
 use crate::presentation::cli::controllers::destroy::handler::DestroyCommandController;
 use crate::presentation::cli::controllers::destroy::DestroySubcommandError;
@@ -30,8 +30,8 @@ async fn it_should_reject_invalid_environment_names() {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Silent).into_reentrant_wrapped();
         let data_dir = context.working_dir().join("data");
-        let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-        let repository = repository_factory.create(data_dir);
+        let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+        let repository = file_repository_factory.create(data_dir);
         let clock = Arc::new(SystemClock);
         let result = DestroyCommandController::new(repository, clock, user_output.clone())
             .execute(name)
@@ -53,8 +53,8 @@ async fn it_should_reject_invalid_environment_names() {
     let too_long_name = "a".repeat(64);
     let (user_output, _, _) = TestUserOutput::new(VerbosityLevel::Silent).into_reentrant_wrapped();
     let data_dir = context.working_dir().join("data");
-    let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-    let repository = repository_factory.create(data_dir);
+    let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+    let repository = file_repository_factory.create(data_dir);
     let clock = Arc::new(SystemClock);
     let result = DestroyCommandController::new(repository, clock, user_output.clone())
         .execute(&too_long_name)
@@ -80,8 +80,8 @@ async fn it_should_accept_valid_environment_names() {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
         let data_dir = context.working_dir().join("data");
-        let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-        let repository = repository_factory.create(data_dir);
+        let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+        let repository = file_repository_factory.create(data_dir);
         let clock = Arc::new(SystemClock);
         let result = DestroyCommandController::new(repository, clock, user_output.clone())
             .execute(name)
@@ -99,8 +99,8 @@ async fn it_should_accept_valid_environment_names() {
     let max_length_name = "a".repeat(63);
     let (user_output, _, _) = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
     let data_dir = context.working_dir().join("data");
-    let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-    let repository = repository_factory.create(data_dir);
+    let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+    let repository = file_repository_factory.create(data_dir);
     let clock = Arc::new(SystemClock);
     let result = DestroyCommandController::new(repository, clock, user_output.clone())
         .execute(&max_length_name)
@@ -116,8 +116,8 @@ async fn it_should_fail_for_nonexistent_environment() {
     let context = TestContext::new();
     let (user_output, _, _) = TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
     let data_dir = context.working_dir().join("data");
-    let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-    let repository = repository_factory.create(data_dir);
+    let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+    let repository = file_repository_factory.create(data_dir);
     let clock = Arc::new(SystemClock);
 
     let result = DestroyCommandController::new(repository, clock, user_output.clone())
@@ -137,8 +137,8 @@ async fn it_should_fail_for_nonexistent_environment() {
 async fn it_should_provide_help_for_errors() {
     let context = TestContext::new();
     let data_dir = context.working_dir().join("data");
-    let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-    let repository = repository_factory.create(data_dir);
+    let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+    let repository = file_repository_factory.create(data_dir);
     let clock = Arc::new(SystemClock);
 
     let result = DestroyCommandController::new(repository, clock, context.user_output().clone())
@@ -163,8 +163,8 @@ async fn it_should_work_with_custom_working_directory() {
     fs::create_dir(&custom_working_dir).unwrap();
 
     let data_dir = context.working_dir().join("data");
-    let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-    let repository = repository_factory.create(data_dir);
+    let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+    let repository = file_repository_factory.create(data_dir);
     let clock = Arc::new(SystemClock);
 
     // Try to destroy from custom directory

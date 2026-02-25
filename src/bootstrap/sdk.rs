@@ -12,14 +12,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::application::traits::RepositoryProvider;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 use crate::shared::SystemClock;
 use torrust_deployer_types::Clock;
 
 /// The default file-lock timeout used by the SDK when no custom value is provided.
 pub const DEFAULT_SDK_LOCK_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// Create the default repository provider backed by the file-based `RepositoryFactory`.
+/// Create the default repository provider backed by the file-based `FileRepositoryFactory`.
 ///
 /// The SDK builder calls this to construct its provider without importing any
 /// infrastructure type directly.
@@ -29,7 +29,7 @@ pub const DEFAULT_SDK_LOCK_TIMEOUT: Duration = Duration::from_secs(30);
 /// * `lock_timeout` — How long the repository factory waits to acquire a file lock.
 #[must_use]
 pub fn default_repository_provider(lock_timeout: Duration) -> Arc<dyn RepositoryProvider> {
-    Arc::new(RepositoryFactory::new(lock_timeout))
+    Arc::new(FileRepositoryFactory::new(lock_timeout))
 }
 
 /// Create the default system clock.

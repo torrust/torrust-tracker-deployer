@@ -48,12 +48,12 @@ use super::errors::CreateCommandHandlerError;
 ///     SshCredentialsConfig,
 /// };
 /// use torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::TrackerSection;
-/// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+/// use torrust_tracker_deployer_lib::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 /// use torrust_tracker_deployer_lib::shared::{SystemClock, Clock};
 ///
 /// // Setup dependencies
-/// let repository_factory = RepositoryFactory::new(std::time::Duration::from_secs(30));
-/// let repository = repository_factory.create(std::path::PathBuf::from("."));
+/// let file_repository_factory = FileRepositoryFactory::new(std::time::Duration::from_secs(30));
+/// let repository = file_repository_factory.create(std::path::PathBuf::from("."));
 /// let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 ///
 /// // Create command
@@ -109,11 +109,11 @@ impl CreateCommandHandler {
     /// ```rust,no_run
     /// use std::sync::Arc;
     /// use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandler;
-    /// use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+    /// use torrust_tracker_deployer_lib::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
     /// use torrust_tracker_deployer_lib::shared::{SystemClock, Clock};
     ///
-    /// let repository_factory = RepositoryFactory::new(std::time::Duration::from_secs(30));
-    /// let repository = repository_factory.create(std::path::PathBuf::from("."));
+    /// let file_repository_factory = FileRepositoryFactory::new(std::time::Duration::from_secs(30));
+    /// let repository = file_repository_factory.create(std::path::PathBuf::from("."));
     /// let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     ///
     /// let command = CreateCommandHandler::new(repository, clock);
@@ -260,13 +260,14 @@ mod tests {
 
     #[test]
     fn it_should_create_create_command_with_dependencies() {
-        use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+        use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
         use crate::shared::SystemClock;
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
-        let repository_factory = RepositoryFactory::new(std::time::Duration::from_secs(30));
-        let repository = repository_factory.create(temp_dir.path().to_path_buf());
+        let file_repository_factory =
+            FileRepositoryFactory::new(std::time::Duration::from_secs(30));
+        let repository = file_repository_factory.create(temp_dir.path().to_path_buf());
         let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 
         let command = CreateCommandHandler::new(repository, clock);

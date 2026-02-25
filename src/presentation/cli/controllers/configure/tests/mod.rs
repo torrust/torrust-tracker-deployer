@@ -11,7 +11,7 @@ mod integration_tests {
     use parking_lot::ReentrantMutex;
 
     use crate::domain::environment::repository::EnvironmentRepository;
-    use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+    use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
     use crate::presentation::cli::controllers::configure;
     use crate::presentation::cli::controllers::configure::handler::ConfigureCommandController;
     use crate::presentation::cli::controllers::constants::DEFAULT_LOCK_TIMEOUT;
@@ -33,8 +33,8 @@ mod integration_tests {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
         let data_dir = temp_dir.path().join("data");
-        let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-        let repository = repository_factory.create(data_dir);
+        let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+        let repository = file_repository_factory.create(data_dir);
         let clock = Arc::new(SystemClock);
 
         (user_output, repository, clock)

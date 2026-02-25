@@ -30,12 +30,12 @@
 //!     SshCredentialsConfig,
 //! };
 //! use torrust_tracker_deployer_lib::application::command_handlers::create::config::tracker::TrackerSection;
-//! use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
+//! use torrust_tracker_deployer_lib::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 //! use torrust_tracker_deployer_lib::shared::{SystemClock, Clock};
 //!
 //! // Setup dependencies
-//! let repository_factory = RepositoryFactory::new(std::time::Duration::from_secs(30));
-//! let repository = repository_factory.create(std::path::PathBuf::from("."));
+//! let file_repository_factory = FileRepositoryFactory::new(std::time::Duration::from_secs(30));
+//! let repository = file_repository_factory.create(std::path::PathBuf::from("."));
 //! let clock: Arc<dyn Clock> = Arc::new(SystemClock);
 //!
 //! // Create command

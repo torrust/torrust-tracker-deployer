@@ -9,7 +9,7 @@ use tempfile::TempDir;
 
 use crate::adapters::ssh::SshCredentials;
 use crate::application::command_handlers::provision::ProvisionCommandHandler;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 use crate::shared::Username;
 
 /// Test builder for `ProvisionCommandHandler` that manages dependencies and lifecycle
@@ -62,8 +62,9 @@ impl ProvisionCommandHandlerTestBuilder {
 
         let clock: Arc<dyn crate::shared::Clock> = Arc::new(crate::shared::SystemClock);
 
-        let repository_factory = RepositoryFactory::new(std::time::Duration::from_secs(30));
-        let repository = repository_factory.create(self.temp_dir.path().to_path_buf());
+        let file_repository_factory =
+            FileRepositoryFactory::new(std::time::Duration::from_secs(30));
+        let repository = file_repository_factory.create(self.temp_dir.path().to_path_buf());
 
         let command_handler = ProvisionCommandHandler::new(clock, repository);
 

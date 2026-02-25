@@ -50,7 +50,7 @@ use std::sync::Arc;
 use parking_lot::ReentrantMutex;
 
 use crate::bootstrap::Container;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 use crate::presentation::cli::input::cli::args::GlobalArgs;
 use crate::presentation::cli::input::cli::OutputFormat;
 use crate::presentation::cli::views::UserOutput;
@@ -202,14 +202,14 @@ impl ExecutionContext {
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let context = ExecutionContext::new(Arc::new(container), global_args);
     ///
-    /// let repository_factory = context.repository_factory();
-    /// // Use repository_factory to create repositories
+    /// let file_repository_factory = context.file_repository_factory();
+    /// // Use file_repository_factory to create repositories
     /// # Ok(())
     /// # }
     /// ```
     #[must_use]
-    pub fn repository_factory(&self) -> Arc<RepositoryFactory> {
-        self.container.repository_factory()
+    pub fn file_repository_factory(&self) -> Arc<FileRepositoryFactory> {
+        self.container.file_repository_factory()
     }
 
     /// Get shared reference to environment repository

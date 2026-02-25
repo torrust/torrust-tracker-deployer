@@ -221,7 +221,7 @@ impl DestroyCommandController {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+    use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
     use crate::presentation::cli::controllers::constants::DEFAULT_LOCK_TIMEOUT;
     use crate::presentation::cli::views::testing::TestUserOutput;
     use crate::presentation::cli::views::VerbosityLevel;
@@ -246,8 +246,8 @@ mod tests {
         let (user_output, _, _) =
             TestUserOutput::new(VerbosityLevel::Normal).into_reentrant_wrapped();
         let data_dir = temp_dir.path().join("data");
-        let repository_factory = RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
-        let repository = repository_factory.create(data_dir);
+        let file_repository_factory = FileRepositoryFactory::new(DEFAULT_LOCK_TIMEOUT);
+        let repository = file_repository_factory.create(data_dir);
         let clock = Arc::new(SystemClock);
 
         (user_output, repository, clock)
