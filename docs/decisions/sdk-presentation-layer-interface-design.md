@@ -117,7 +117,7 @@ async fn provision(&self, env: SdkEnvironment<Created>)
    awkward compared to working with plain names.
 
 Full reasoning in
-[`docs/experiments/sdk/discarded-ideas.md`](../experiments/sdk/discarded-ideas.md).
+[SDK Discarded: Typestate at SDK Layer](sdk-discarded-typestate-at-sdk-layer.md).
 
 ### Fluent Interface
 
@@ -130,7 +130,7 @@ deployer.provision(&name)?.configure(&name)?.release(&name)?;
 **Rejected because:** provides no compile-time safety benefit while adding
 ergonomic constraints. Ordering errors still surface at runtime. Full
 reasoning in
-[`docs/experiments/sdk/discarded-ideas.md`](../experiments/sdk/discarded-ideas.md).
+[SDK Discarded: Fluent Interface](sdk-discarded-fluent-interface.md).
 
 ### Return Domain `Environment<State>` Types
 
@@ -154,6 +154,8 @@ benefit anyway.
 
 ## References
 
-- [`src/presentation/sdk/`](../../src/presentation/sdk/) — SDK implementation
-- [`docs/experiments/sdk/phase-2-improvements.md`](../experiments/sdk/phase-2-improvements.md) — Phase 2 task list
-- [`docs/experiments/sdk/discarded-ideas.md`](../experiments/sdk/discarded-ideas.md) — Full catalogue of discarded SDK design ideas
+- [`packages/sdk/`](../../packages/sdk/) — SDK implementation
+- [SDK Feature](../features/sdk/README.md) — Feature overview, design decisions, future work
+- [SDK Discarded: Scoped Environment Guard](sdk-discarded-scoped-environment-guard.md)
+- [SDK Discarded: Typestate at SDK Layer](sdk-discarded-typestate-at-sdk-layer.md)
+- [SDK Discarded: Fluent Interface](sdk-discarded-fluent-interface.md)

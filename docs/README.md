@@ -179,6 +179,7 @@ Feature specs, templates, 5 active features
 - Linter Parallel Execution (deferred)
 - Environment State Management (refactoring)
 - Progress Reporting in Application Layer
+- SDK — Programmatic Deployer Access (completed)
 
 See [`features/README.md`](features/README.md) for complete list and templates.
 
