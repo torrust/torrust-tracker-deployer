@@ -12,24 +12,24 @@ use parking_lot::ReentrantMutex;
 use crate::application::command_handlers::PurgeCommandHandler;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
-use crate::presentation::controllers::configure::ConfigureCommandController;
-use crate::presentation::controllers::constants::DEFAULT_LOCK_TIMEOUT;
-use crate::presentation::controllers::create::subcommands::environment::CreateEnvironmentCommandController;
-use crate::presentation::controllers::create::subcommands::schema::CreateSchemaCommandController;
-use crate::presentation::controllers::create::subcommands::template::CreateTemplateCommandController;
-use crate::presentation::controllers::destroy::DestroyCommandController;
-use crate::presentation::controllers::docs::DocsCommandController;
-use crate::presentation::controllers::list::ListCommandController;
-use crate::presentation::controllers::provision::ProvisionCommandController;
-use crate::presentation::controllers::purge::PurgeCommandController;
-use crate::presentation::controllers::register::RegisterCommandController;
-use crate::presentation::controllers::release::ReleaseCommandController;
-use crate::presentation::controllers::render::RenderCommandController;
-use crate::presentation::controllers::run::RunCommandController;
-use crate::presentation::controllers::show::ShowCommandController;
-use crate::presentation::controllers::test::handler::TestCommandController;
-use crate::presentation::controllers::validate::ValidateCommandController;
-use crate::presentation::views::{UserOutput, VerbosityLevel};
+use crate::presentation::cli::controllers::configure::ConfigureCommandController;
+use crate::presentation::cli::controllers::constants::DEFAULT_LOCK_TIMEOUT;
+use crate::presentation::cli::controllers::create::subcommands::environment::CreateEnvironmentCommandController;
+use crate::presentation::cli::controllers::create::subcommands::schema::CreateSchemaCommandController;
+use crate::presentation::cli::controllers::create::subcommands::template::CreateTemplateCommandController;
+use crate::presentation::cli::controllers::destroy::DestroyCommandController;
+use crate::presentation::cli::controllers::docs::DocsCommandController;
+use crate::presentation::cli::controllers::list::ListCommandController;
+use crate::presentation::cli::controllers::provision::ProvisionCommandController;
+use crate::presentation::cli::controllers::purge::PurgeCommandController;
+use crate::presentation::cli::controllers::register::RegisterCommandController;
+use crate::presentation::cli::controllers::release::ReleaseCommandController;
+use crate::presentation::cli::controllers::render::RenderCommandController;
+use crate::presentation::cli::controllers::run::RunCommandController;
+use crate::presentation::cli::controllers::show::ShowCommandController;
+use crate::presentation::cli::controllers::test::handler::TestCommandController;
+use crate::presentation::cli::controllers::validate::ValidateCommandController;
+use crate::presentation::cli::views::{UserOutput, VerbosityLevel};
 use crate::shared::clock::Clock;
 use crate::shared::SystemClock;
 
@@ -44,7 +44,7 @@ use crate::shared::SystemClock;
 /// ```rust
 /// use std::path::Path;
 /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-/// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+/// use torrust_tracker_deployer_lib::presentation::cli::views::VerbosityLevel;
 ///
 /// let working_dir = Path::new(".");
 /// let container = Container::new(VerbosityLevel::Normal, working_dir);
@@ -79,7 +79,7 @@ impl Container {
     /// ```rust
     /// use std::path::Path;
     /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::cli::views::VerbosityLevel;
     ///
     /// // For normal application use
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
@@ -122,7 +122,7 @@ impl Container {
     /// ```rust
     /// use std::path::Path;
     /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::cli::views::VerbosityLevel;
     ///
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let user_output = container.user_output();
@@ -143,7 +143,7 @@ impl Container {
     /// ```rust
     /// use std::path::Path;
     /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::cli::views::VerbosityLevel;
     ///
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let repository_factory = container.repository_factory();
@@ -165,7 +165,7 @@ impl Container {
     /// ```rust
     /// use std::path::Path;
     /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::cli::views::VerbosityLevel;
     ///
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let repository = container.repository();
@@ -186,7 +186,7 @@ impl Container {
     /// ```rust
     /// use std::path::Path;
     /// use torrust_tracker_deployer_lib::bootstrap::container::Container;
-    /// use torrust_tracker_deployer_lib::presentation::views::VerbosityLevel;
+    /// use torrust_tracker_deployer_lib::presentation::cli::views::VerbosityLevel;
     ///
     /// let container = Container::new(VerbosityLevel::Normal, Path::new("."));
     /// let clock = container.clock();

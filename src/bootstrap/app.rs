@@ -22,7 +22,11 @@ use std::sync::Arc;
 use clap::Parser;
 use tracing::info;
 
-use crate::{bootstrap, presentation};
+use crate::bootstrap;
+use crate::presentation::cli::dispatch::route_command;
+use crate::presentation::cli::dispatch::ExecutionContext;
+use crate::presentation::cli::error::handle_error;
+use crate::presentation::cli::Cli;
 
 /// Main application entry point
 ///
@@ -41,7 +45,7 @@ use crate::{bootstrap, presentation};
 ///
 /// Both panics are intentional as logging is critical for observability.
 pub async fn run() {
-    let cli = presentation::Cli::parse();
+    let cli = Cli::parse();
 
     let logging_config = cli.global.logging_config();
 
@@ -62,15 +66,12 @@ pub async fn run() {
         cli.global.verbosity_level(),
         &cli.global.working_dir,
     ));
-    let context = presentation::dispatch::ExecutionContext::new(container, cli.global.clone());
+    let context = ExecutionContext::new(container, cli.global.clone());
 
     match cli.command {
         Some(command) => {
-            if let Err(e) =
-                presentation::dispatch::route_command(command, &cli.global.working_dir, &context)
-                    .await
-            {
-                presentation::error::handle_error(&e, &context.user_output());
+            if let Err(e) = route_command(command, &cli.global.working_dir, &context).await {
+                handle_error(&e, &context.user_output());
                 std::process::exit(1);
             }
         }

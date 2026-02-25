@@ -41,13 +41,13 @@ This is the first step in a 4-part incremental plan to extract the SDK into its 
 **Total Active Proposals**: 1
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 0
+**Completed**: 1
 **In Progress**: 0
-**Not Started**: 1
+**Not Started**: 0
 
 ### Phase Summary
 
-- **Phase 0 - Directory Reorganization (High Impact, Medium Effort)**: ⏳ 0/1 completed (0%)
+- **Phase 0 - Directory Reorganization (High Impact, Medium Effort)**: ✅ 1/1 completed (100%)
 
 ### Discarded Proposals
 
@@ -86,13 +86,13 @@ The SDK and CLI are independent today (the SDK has zero imports from CLI modules
 
 ### Proposal #0: Move CLI Modules into an Explicit `cli/` Sub-Tree
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Complete
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵🔵 Medium
 **Priority**: P0
 **Depends On**: None
-**Completed**: -
-**Commit**: -
+**Completed**: 2026-02-25
+**Commit**: (this commit)
 
 #### Problem
 
@@ -138,18 +138,18 @@ The top-level `presentation/mod.rs` becomes minimal — it declares the two sub-
 
 #### Implementation Checklist
 
-- [ ] Create `src/presentation/cli/` directory
-- [ ] Move `controllers/`, `dispatch/`, `input/`, `views/`, `error.rs`, `errors.rs`, `tests/` into `presentation/cli/`
-- [ ] Create `src/presentation/cli/mod.rs` with the same module declarations and re-exports currently in `presentation/mod.rs` (minus `sdk`)
-- [ ] Update `src/presentation/mod.rs` to declare only `pub mod cli;` and `pub mod sdk;` (plus backward-compat re-exports if needed)
-- [ ] Update all `use crate::presentation::controllers::...` imports across the codebase to `use crate::presentation::cli::controllers::...`
-- [ ] Update all `use crate::presentation::views::...` imports to `use crate::presentation::cli::views::...`
-- [ ] Update all `use crate::presentation::dispatch::...`, `use crate::presentation::input::...`, `use crate::presentation::error*` imports similarly
-- [ ] Update `src/main.rs` and `src/bootstrap/` imports
-- [ ] Verify the SDK module has zero imports from `crate::presentation::cli`
-- [ ] Update the `presentation/mod.rs` module documentation
-- [ ] Verify all tests pass (`cargo test`)
-- [ ] Run linter and fix any issues
+- [x] Create `src/presentation/cli/` directory
+- [x] Move `controllers/`, `dispatch/`, `input/`, `views/`, `error.rs`, `errors.rs`, `tests/` into `presentation/cli/`
+- [x] Create `src/presentation/cli/mod.rs` with the same module declarations and re-exports currently in `presentation/mod.rs` (minus `sdk`)
+- [x] Update `src/presentation/mod.rs` to declare only `pub mod cli;` and `pub mod sdk;` (plus backward-compat re-exports)
+- [x] Update all `use crate::presentation::controllers::...` imports across the codebase to `use crate::presentation::cli::controllers::...`
+- [x] Update all `use crate::presentation::views::...` imports to `use crate::presentation::cli::views::...`
+- [x] Update all `use crate::presentation::dispatch::...`, `use crate::presentation::input::...`, `use crate::presentation::error*` imports similarly
+- [x] Update `src/main.rs` and `src/bootstrap/` imports
+- [x] Verify the SDK module has zero imports from `crate::presentation::cli`
+- [x] Update the `presentation/mod.rs` module documentation
+- [x] Verify all tests pass (`cargo test`)
+- [x] Run linter and fix any issues
 
 #### Testing Strategy
 
@@ -195,5 +195,5 @@ The top-level `presentation/mod.rs` becomes minimal — it declares the two sub-
 ---
 
 **Created**: 2026-02-24
-**Last Updated**: 2026-02-24
-**Status**: 📋 Planning
+**Last Updated**: 2026-02-25
+**Status**: ✅ Complete
