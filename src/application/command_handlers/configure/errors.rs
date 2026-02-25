@@ -1,6 +1,6 @@
 //! Error types for the Configure command handler
 
-use crate::domain::environment::state::StateTypeError;
+use crate::application::errors::{InvalidStateError, PersistenceError};
 use crate::shared::command::CommandError;
 
 /// Comprehensive error type for the `ConfigureCommandHandler`
@@ -17,10 +17,24 @@ pub enum ConfigureCommandHandlerError {
     Command(#[from] CommandError),
 
     #[error("Failed to persist environment state: {0}")]
-    StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
+    StatePersistence(#[from] PersistenceError),
 
     #[error("Environment is in an invalid state for configuration: {0}")]
-    InvalidState(#[from] StateTypeError),
+    InvalidState(#[from] InvalidStateError),
+}
+
+impl From<crate::domain::environment::repository::RepositoryError>
+    for ConfigureCommandHandlerError
+{
+    fn from(e: crate::domain::environment::repository::RepositoryError) -> Self {
+        Self::StatePersistence(e.into())
+    }
+}
+
+impl From<crate::domain::environment::state::StateTypeError> for ConfigureCommandHandlerError {
+    fn from(e: crate::domain::environment::state::StateTypeError) -> Self {
+        Self::InvalidState(e.into())
+    }
 }
 
 impl crate::shared::Traceable for ConfigureCommandHandlerError {
@@ -178,7 +192,6 @@ see the documentation on environment lifecycle management."
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::environment::repository::RepositoryError;
     use crate::shared::command::CommandError;
 
     #[test]
@@ -209,7 +222,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_state_persistence() {
-        let error = ConfigureCommandHandlerError::StatePersistence(RepositoryError::NotFound);
+        let error = ConfigureCommandHandlerError::StatePersistence(PersistenceError::NotFound);
 
         let help = error.help();
         assert!(help.contains("State Persistence"));
@@ -219,8 +232,8 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_invalid_state() {
-        let error = ConfigureCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
-            expected: "provisioned",
+        let error = ConfigureCommandHandlerError::InvalidState(InvalidStateError {
+            expected: "provisioned".to_string(),
             actual: "created".to_string(),
         });
 
@@ -242,9 +255,9 @@ mod tests {
                 stdout: String::new(),
                 stderr: "error".to_string(),
             }),
-            ConfigureCommandHandlerError::StatePersistence(RepositoryError::NotFound),
-            ConfigureCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
-                expected: "provisioned",
+            ConfigureCommandHandlerError::StatePersistence(PersistenceError::NotFound),
+            ConfigureCommandHandlerError::InvalidState(InvalidStateError {
+                expected: "provisioned".to_string(),
                 actual: "created".to_string(),
             }),
         ];

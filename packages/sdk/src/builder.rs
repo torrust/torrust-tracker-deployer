@@ -16,7 +16,6 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
 
 use thiserror::Error;
 
@@ -24,11 +23,9 @@ use super::deployer::Deployer;
 use torrust_tracker_deployer_lib::application::traits::{
     CommandProgressListener, NullProgressListener,
 };
-use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
-use torrust_tracker_deployer_lib::shared::SystemClock;
-
-/// Default timeout for file lock operations (matches CLI default).
-const DEFAULT_LOCK_TIMEOUT: Duration = Duration::from_secs(30);
+use torrust_tracker_deployer_lib::bootstrap::sdk::{
+    default_clock, default_repository_provider, DEFAULT_SDK_LOCK_TIMEOUT,
+};
 
 /// Builder for constructing a [`Deployer`] instance.
 ///
@@ -110,11 +107,11 @@ impl DeployerBuilder {
             .working_dir
             .ok_or(DeployerBuildError::MissingWorkingDir)?;
 
-        let repository_factory = Arc::new(RepositoryFactory::new(DEFAULT_LOCK_TIMEOUT));
+        let repository_factory = default_repository_provider(DEFAULT_SDK_LOCK_TIMEOUT);
         let data_dir = working_dir.join("data");
         let data_directory: Arc<Path> = Arc::from(data_dir.as_path());
-        let repository = repository_factory.create(data_dir);
-        let clock = Arc::new(SystemClock);
+        let repository = repository_factory.create(data_dir.clone());
+        let clock = default_clock();
         let listener = self
             .progress_listener
             .unwrap_or_else(|| Arc::new(NullProgressListener));

@@ -11,7 +11,7 @@ use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::list::info::EnvironmentList;
 use crate::application::command_handlers::list::{ListCommandHandler, ListCommandHandlerError};
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
+use crate::application::traits::RepositoryProvider;
 use crate::presentation::cli::input::cli::output_format::OutputFormat;
 use crate::presentation::cli::views::commands::list::{JsonView, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
@@ -75,7 +75,7 @@ impl ListCommandController {
     /// * `user_output` - Shared output service for user feedback
     #[allow(clippy::needless_pass_by_value)] // Arc parameters are moved to constructor for ownership
     pub fn new(
-        repository_factory: Arc<RepositoryFactory>,
+        repository_factory: Arc<dyn RepositoryProvider>,
         data_directory: Arc<Path>,
         user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
     ) -> Self {

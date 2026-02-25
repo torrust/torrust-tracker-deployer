@@ -2,9 +2,9 @@
 
 use crate::adapters::ssh::SshError;
 use crate::adapters::tofu::client::OpenTofuError;
+use crate::application::errors::{InvalidStateError, PersistenceError};
 use crate::application::services::rendering::AnsibleTemplateRenderingServiceError;
 use crate::application::steps::RenderAnsibleTemplatesError;
-use crate::domain::environment::state::StateTypeError;
 use crate::infrastructure::templating::tofu::TofuProjectGeneratorError;
 use crate::shared::command::CommandError;
 
@@ -33,15 +33,29 @@ pub enum ProvisionCommandHandlerError {
     SshConnectivity(#[from] SshError),
 
     #[error("Failed to persist environment state: {0}")]
-    StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
+    StatePersistence(#[from] PersistenceError),
 
     #[error("Invalid state transition: {0}")]
-    StateTransition(#[from] StateTypeError),
+    StateTransition(#[from] InvalidStateError),
 }
 
 impl From<AnsibleTemplateRenderingServiceError> for ProvisionCommandHandlerError {
     fn from(error: AnsibleTemplateRenderingServiceError) -> Self {
         Self::TemplateRendering(error.to_string())
+    }
+}
+
+impl From<crate::domain::environment::repository::RepositoryError>
+    for ProvisionCommandHandlerError
+{
+    fn from(e: crate::domain::environment::repository::RepositoryError) -> Self {
+        Self::StatePersistence(e.into())
+    }
+}
+
+impl From<crate::domain::environment::state::StateTypeError> for ProvisionCommandHandlerError {
+    fn from(e: crate::domain::environment::state::StateTypeError) -> Self {
+        Self::StateTransition(e.into())
     }
 }
 
@@ -280,7 +294,6 @@ For workflow details, see docs/deployment-overview.md"
 mod tests {
     use super::*;
     use crate::adapters::tofu::client::OpenTofuError;
-    use crate::domain::environment::repository::RepositoryError;
 
     #[test]
     fn it_should_provide_help_for_opentofu_template_rendering() {
@@ -372,7 +385,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_state_persistence() {
-        let error = ProvisionCommandHandlerError::StatePersistence(RepositoryError::NotFound);
+        let error = ProvisionCommandHandlerError::StatePersistence(PersistenceError::NotFound);
 
         let help = error.help();
         assert!(help.contains("State Persistence"));
@@ -434,7 +447,7 @@ mod tests {
                 attempts: 5,
                 timeout_seconds: 30,
             }),
-            ProvisionCommandHandlerError::StatePersistence(RepositoryError::NotFound),
+            ProvisionCommandHandlerError::StatePersistence(PersistenceError::NotFound),
         ];
 
         for error in errors {

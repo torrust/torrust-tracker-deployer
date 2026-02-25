@@ -1,7 +1,7 @@
 //! Error types for the Run command handler
 
+use crate::application::errors::{InvalidStateError, PersistenceError};
 use crate::application::steps::application::StartServicesStepError;
-use crate::domain::environment::state::StateTypeError;
 use crate::shared::error::{ErrorKind, Traceable};
 
 /// Comprehensive error type for the `RunCommandHandler`
@@ -30,11 +30,11 @@ pub enum RunCommandHandlerError {
 
     /// Environment is in an invalid state for running
     #[error("Environment is in an invalid state for running: {0}")]
-    InvalidState(#[from] StateTypeError),
+    InvalidState(#[from] InvalidStateError),
 
     /// Failed to persist environment state
     #[error("Failed to persist environment state: {0}")]
-    StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
+    StatePersistence(#[from] PersistenceError),
 
     /// Starting services on remote host failed
     #[error("Starting services failed: {message}")]
@@ -54,6 +54,18 @@ pub enum RunCommandHandlerError {
         /// Description of the failure
         message: String,
     },
+}
+
+impl From<crate::domain::environment::repository::RepositoryError> for RunCommandHandlerError {
+    fn from(e: crate::domain::environment::repository::RepositoryError) -> Self {
+        Self::StatePersistence(e.into())
+    }
+}
+
+impl From<crate::domain::environment::state::StateTypeError> for RunCommandHandlerError {
+    fn from(e: crate::domain::environment::state::StateTypeError) -> Self {
+        Self::InvalidState(e.into())
+    }
 }
 
 impl Traceable for RunCommandHandlerError {
@@ -234,8 +246,6 @@ For more information, see docs/user-guide/commands.md"
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::environment::repository::RepositoryError;
-    use crate::domain::environment::state::StateTypeError;
     use crate::shared::command::CommandError;
 
     #[test]
@@ -262,8 +272,8 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_invalid_state() {
-        let error = RunCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
-            expected: "Released",
+        let error = RunCommandHandlerError::InvalidState(InvalidStateError {
+            expected: "Released".to_string(),
             actual: "Configured".to_string(),
         });
 
@@ -274,7 +284,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_state_persistence() {
-        let error = RunCommandHandlerError::StatePersistence(RepositoryError::NotFound);
+        let error = RunCommandHandlerError::StatePersistence(PersistenceError::NotFound);
 
         let help = error.help();
         assert!(help.contains("State Persistence"));
@@ -329,11 +339,11 @@ mod tests {
             RunCommandHandlerError::MissingInstanceIp {
                 name: "test".to_string(),
             },
-            RunCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
-                expected: "Released",
+            RunCommandHandlerError::InvalidState(InvalidStateError {
+                expected: "Released".to_string(),
                 actual: "Configured".to_string(),
             }),
-            RunCommandHandlerError::StatePersistence(RepositoryError::NotFound),
+            RunCommandHandlerError::StatePersistence(PersistenceError::NotFound),
             RunCommandHandlerError::StartServicesFailed {
                 message: "test".to_string(),
                 source: StartServicesStepError::AnsiblePlaybookFailed {

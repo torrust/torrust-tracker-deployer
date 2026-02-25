@@ -32,6 +32,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::application::traits::RepositoryProvider;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::infrastructure::persistence::filesystem::file_environment_repository::FileEnvironmentRepository;
 
@@ -90,6 +91,13 @@ impl RepositoryFactory {
         let repository =
             FileEnvironmentRepository::new(data_dir).with_lock_timeout(self.lock_timeout);
         Arc::new(repository)
+    }
+}
+
+impl RepositoryProvider for RepositoryFactory {
+    fn create(&self, data_dir: PathBuf) -> Arc<dyn EnvironmentRepository + Send + Sync> {
+        // Delegate to the existing method — no duplication.
+        RepositoryFactory::create(self, data_dir)
     }
 }
 

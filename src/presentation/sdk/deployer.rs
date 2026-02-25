@@ -50,10 +50,10 @@ use crate::application::command_handlers::validate::{
     ValidateCommandHandler, ValidateCommandHandlerError, ValidationResult,
 };
 use crate::application::traits::CommandProgressListener;
+use crate::application::traits::RepositoryProvider;
 use crate::application::CreateCommandHandler;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::EnvironmentName;
-use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::shared::Clock;
 
 use super::builder::DeployerBuilder;
@@ -89,7 +89,7 @@ use super::error::CreateEnvironmentFromFileError;
 pub struct Deployer {
     working_dir: PathBuf,
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-    repository_factory: Arc<RepositoryFactory>,
+    repository_factory: Arc<dyn RepositoryProvider>,
     clock: Arc<dyn Clock>,
     data_directory: Arc<Path>,
     listener: Arc<dyn CommandProgressListener + Send + Sync>,
@@ -106,7 +106,7 @@ impl Deployer {
     pub(crate) fn new(
         working_dir: PathBuf,
         repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-        repository_factory: Arc<RepositoryFactory>,
+        repository_factory: Arc<dyn RepositoryProvider>,
         clock: Arc<dyn Clock>,
         data_directory: Arc<Path>,
         listener: Arc<dyn CommandProgressListener + Send + Sync>,

@@ -97,7 +97,7 @@ async fn render_templates(
             ReleaseCommandHandlerError::RenderBackupTemplatesFailed {
                 message: e.to_string(),
                 source: Box::new(e),
-                step: current_step,
+                step: current_step.into(),
             },
             current_step,
         )
@@ -148,7 +148,7 @@ fn create_storage(
                 ReleaseCommandHandlerError::CreateBackupStorageFailed {
                     message: e.to_string(),
                     source: Box::new(e),
-                    step: current_step,
+                    step: current_step.into(),
                 },
                 current_step,
             )
@@ -195,7 +195,7 @@ fn deploy_config_to_remote(
                 ReleaseCommandHandlerError::DeployBackupConfigFailed {
                     message: e.to_string(),
                     source: Box::new(e),
-                    step: current_step,
+                    step: current_step.into(),
                 },
                 current_step,
             )
@@ -245,7 +245,7 @@ fn install_crontab(
                 ReleaseCommandHandlerError::InstallBackupCrontabFailed {
                     message: e.to_string(),
                     source: Box::new(e),
-                    step: current_step,
+                    step: current_step.into(),
                 },
                 current_step,
             )

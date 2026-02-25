@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+use crate::application::errors::PersistenceError;
 use crate::shared::ErrorKind;
 
 /// Comprehensive error type for the `PurgeCommandHandler`
@@ -36,7 +37,13 @@ pub enum PurgeCommandHandlerError {
 
     /// Failed to remove environment from repository after purge
     #[error("Failed to remove environment from repository: {0}")]
-    RepositoryRemovalFailed(#[from] crate::domain::environment::repository::RepositoryError),
+    RepositoryRemovalFailed(#[from] PersistenceError),
+}
+
+impl From<crate::domain::environment::repository::RepositoryError> for PurgeCommandHandlerError {
+    fn from(e: crate::domain::environment::repository::RepositoryError) -> Self {
+        Self::RepositoryRemovalFailed(e.into())
+    }
 }
 
 impl crate::shared::Traceable for PurgeCommandHandlerError {

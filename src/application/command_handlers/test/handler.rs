@@ -246,7 +246,7 @@ impl TestCommandHandler {
             .repository
             .inner()
             .load(env_name)
-            .map_err(TestCommandHandlerError::StatePersistence)?;
+            .map_err(|e| TestCommandHandlerError::StatePersistence(e.into()))?;
 
         any_env.ok_or_else(|| TestCommandHandlerError::EnvironmentNotFound {
             name: env_name.to_string(),

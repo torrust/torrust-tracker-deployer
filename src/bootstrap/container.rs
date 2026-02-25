@@ -10,6 +10,7 @@ use std::sync::Arc;
 use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::PurgeCommandHandler;
+use crate::application::traits::RepositoryProvider;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::infrastructure::persistence::repository_factory::RepositoryFactory;
 use crate::presentation::cli::controllers::configure::ConfigureCommandController;
@@ -152,6 +153,15 @@ impl Container {
     #[must_use]
     pub fn repository_factory(&self) -> Arc<RepositoryFactory> {
         Arc::clone(&self.repository_factory)
+    }
+
+    /// Get shared reference to repository provider
+    ///
+    /// Returns an `Arc<dyn RepositoryProvider>` that can be passed to application-layer
+    /// handlers without exposing the concrete infrastructure type.
+    #[must_use]
+    pub fn repository_provider(&self) -> Arc<dyn RepositoryProvider> {
+        Arc::clone(&self.repository_factory) as Arc<dyn RepositoryProvider>
     }
 
     /// Get shared reference to environment repository
@@ -297,7 +307,7 @@ impl Container {
     #[must_use]
     pub fn create_list_controller(&self) -> ListCommandController {
         ListCommandController::new(
-            self.repository_factory(),
+            self.repository_provider(),
             self.data_directory(),
             self.user_output(),
         )

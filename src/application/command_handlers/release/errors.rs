@@ -24,7 +24,7 @@
 //! **Preferred pattern**: In cases where there are fewer, well-defined error sources,
 //! prefer using concrete types with `#[source]` for better type safety and traceability.
 
-use crate::domain::environment::state::{ReleaseStep, StateTypeError};
+use crate::application::errors::{InvalidStateError, PersistenceError, ReleaseWorkflowStep};
 use crate::shared::error::{ErrorKind, Traceable};
 
 /// Type alias for boxed step errors to reduce verbosity
@@ -56,11 +56,11 @@ pub enum ReleaseCommandHandlerError {
 
     /// Environment is in an invalid state for release
     #[error("Environment is in an invalid state for release: {0}")]
-    InvalidState(#[from] StateTypeError),
+    InvalidState(#[from] InvalidStateError),
 
     /// Failed to persist environment state
     #[error("Failed to persist environment state: {0}")]
-    StatePersistence(#[from] crate::domain::environment::repository::RepositoryError),
+    StatePersistence(#[from] PersistenceError),
 
     /// Template rendering failed
     #[error("Template rendering failed: {message}")]
@@ -131,7 +131,7 @@ pub enum ReleaseCommandHandlerError {
         #[source]
         source: BoxedStepError,
         /// The release step that failed
-        step: ReleaseStep,
+        step: ReleaseWorkflowStep,
     },
 
     /// Backup configuration deployment failed
@@ -143,7 +143,7 @@ pub enum ReleaseCommandHandlerError {
         #[source]
         source: BoxedStepError,
         /// The release step that failed
-        step: ReleaseStep,
+        step: ReleaseWorkflowStep,
     },
 
     /// Backup crontab installation failed
@@ -155,7 +155,7 @@ pub enum ReleaseCommandHandlerError {
         #[source]
         source: BoxedStepError,
         /// The release step that failed
-        step: ReleaseStep,
+        step: ReleaseWorkflowStep,
     },
 
     /// Backup storage directory creation failed
@@ -167,7 +167,7 @@ pub enum ReleaseCommandHandlerError {
         #[source]
         source: BoxedStepError,
         /// The release step that failed
-        step: ReleaseStep,
+        step: ReleaseWorkflowStep,
     },
 
     /// Caddy configuration deployment failed
@@ -228,6 +228,18 @@ pub enum ReleaseCommandHandlerError {
         /// Description of the failure
         message: String,
     },
+}
+
+impl From<crate::domain::environment::repository::RepositoryError> for ReleaseCommandHandlerError {
+    fn from(e: crate::domain::environment::repository::RepositoryError) -> Self {
+        Self::StatePersistence(e.into())
+    }
+}
+
+impl From<crate::domain::environment::state::StateTypeError> for ReleaseCommandHandlerError {
+    fn from(e: crate::domain::environment::state::StateTypeError) -> Self {
+        Self::InvalidState(e.into())
+    }
 }
 
 impl Traceable for ReleaseCommandHandlerError {
@@ -830,8 +842,6 @@ For more information, see docs/user-guide/commands.md"
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::environment::repository::RepositoryError;
-    use crate::domain::environment::state::StateTypeError;
     use std::io;
 
     /// Helper function to create a boxed error for testing
@@ -852,8 +862,8 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_invalid_state() {
-        let error = ReleaseCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
-            expected: "configured",
+        let error = ReleaseCommandHandlerError::InvalidState(InvalidStateError {
+            expected: "configured".to_string(),
             actual: "created".to_string(),
         });
 
@@ -864,7 +874,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_state_persistence() {
-        let error = ReleaseCommandHandlerError::StatePersistence(RepositoryError::NotFound);
+        let error = ReleaseCommandHandlerError::StatePersistence(PersistenceError::NotFound);
 
         let help = error.help();
         assert!(help.contains("State Persistence"));
@@ -915,11 +925,11 @@ mod tests {
             ReleaseCommandHandlerError::MissingInstanceIp {
                 name: "test".to_string(),
             },
-            ReleaseCommandHandlerError::InvalidState(StateTypeError::UnexpectedState {
-                expected: "configured",
+            ReleaseCommandHandlerError::InvalidState(InvalidStateError {
+                expected: "configured".to_string(),
                 actual: "created".to_string(),
             }),
-            ReleaseCommandHandlerError::StatePersistence(RepositoryError::NotFound),
+            ReleaseCommandHandlerError::StatePersistence(PersistenceError::NotFound),
             ReleaseCommandHandlerError::TemplateRendering {
                 message: "test".to_string(),
                 source: make_boxed_error("test"),

@@ -52,10 +52,10 @@ use torrust_tracker_deployer_lib::application::command_handlers::validate::{
     ValidateCommandHandler, ValidateCommandHandlerError, ValidationResult,
 };
 use torrust_tracker_deployer_lib::application::traits::CommandProgressListener;
+use torrust_tracker_deployer_lib::application::traits::RepositoryProvider;
 use torrust_tracker_deployer_lib::application::CreateCommandHandler;
 use torrust_tracker_deployer_lib::domain::environment::repository::EnvironmentRepository;
 use torrust_tracker_deployer_lib::domain::EnvironmentName;
-use torrust_tracker_deployer_lib::infrastructure::persistence::repository_factory::RepositoryFactory;
 use torrust_tracker_deployer_lib::shared::Clock;
 
 use super::builder::DeployerBuilder;
@@ -91,7 +91,7 @@ use super::error::CreateEnvironmentFromFileError;
 pub struct Deployer {
     working_dir: PathBuf,
     repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-    repository_factory: Arc<RepositoryFactory>,
+    repository_factory: Arc<dyn RepositoryProvider>,
     clock: Arc<dyn Clock>,
     data_directory: Arc<Path>,
     listener: Arc<dyn CommandProgressListener + Send + Sync>,
@@ -108,7 +108,7 @@ impl Deployer {
     pub(crate) fn new(
         working_dir: PathBuf,
         repository: Arc<dyn EnvironmentRepository + Send + Sync>,
-        repository_factory: Arc<RepositoryFactory>,
+        repository_factory: Arc<dyn RepositoryProvider>,
         clock: Arc<dyn Clock>,
         data_directory: Arc<Path>,
         listener: Arc<dyn CommandProgressListener + Send + Sync>,

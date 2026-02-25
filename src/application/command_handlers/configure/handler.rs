@@ -306,7 +306,7 @@ impl ConfigureCommandHandler {
             .repository
             .inner()
             .load(env_name)
-            .map_err(ConfigureCommandHandlerError::StatePersistence)?;
+            .map_err(|e| ConfigureCommandHandlerError::StatePersistence(e.into()))?;
 
         let any_env = any_env.ok_or_else(|| ConfigureCommandHandlerError::EnvironmentNotFound {
             name: env_name.to_string(),

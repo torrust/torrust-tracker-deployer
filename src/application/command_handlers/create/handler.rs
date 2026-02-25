@@ -229,7 +229,7 @@ impl CreateCommandHandler {
         if self
             .environment_repository
             .exists(&params.environment_name)
-            .map_err(CreateCommandHandlerError::RepositoryError)?
+            .map_err(|e| CreateCommandHandlerError::RepositoryError(e.into()))?
         {
             return Err(CreateCommandHandlerError::EnvironmentAlreadyExists {
                 name: params.environment_name.as_str().to_string(),
@@ -242,7 +242,7 @@ impl CreateCommandHandler {
 
         self.environment_repository
             .save(&environment.clone().into_any())
-            .map_err(CreateCommandHandlerError::RepositoryError)?;
+            .map_err(|e| CreateCommandHandlerError::RepositoryError(e.into()))?;
 
         info!(
             command = "create",

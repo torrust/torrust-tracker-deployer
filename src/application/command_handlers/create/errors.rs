@@ -7,7 +7,7 @@
 use thiserror::Error;
 
 use crate::application::command_handlers::create::config::CreateConfigError;
-use crate::domain::environment::repository::RepositoryError;
+use crate::application::errors::PersistenceError;
 
 /// Errors that can occur during environment creation command execution
 ///
@@ -25,7 +25,7 @@ pub enum CreateCommandHandlerError {
 
     /// Repository operation failed
     #[error("Repository operation failed")]
-    RepositoryError(#[source] RepositoryError),
+    RepositoryError(#[source] PersistenceError),
 }
 
 impl CreateCommandHandlerError {
@@ -146,7 +146,7 @@ mod tests {
 
     #[test]
     fn it_should_provide_help_for_repository_error() {
-        let repo_error = RepositoryError::NotFound;
+        let repo_error = PersistenceError::NotFound;
         let error = CreateCommandHandlerError::RepositoryError(repo_error);
 
         let help = error.help();
@@ -170,7 +170,7 @@ mod tests {
             CreateCommandHandlerError::EnvironmentAlreadyExists {
                 name: "test".to_string(),
             },
-            CreateCommandHandlerError::RepositoryError(RepositoryError::NotFound),
+            CreateCommandHandlerError::RepositoryError(PersistenceError::NotFound),
         ];
 
         for error in errors {

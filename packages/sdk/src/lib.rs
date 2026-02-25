@@ -68,6 +68,9 @@ pub use torrust_tracker_deployer_lib::application::command_handlers::run::RunCom
 pub use torrust_tracker_deployer_lib::application::command_handlers::show::ShowCommandHandlerError;
 pub use torrust_tracker_deployer_lib::application::command_handlers::test::TestCommandHandlerError;
 pub use torrust_tracker_deployer_lib::application::command_handlers::validate::ValidateCommandHandlerError;
+pub use torrust_tracker_deployer_lib::application::errors::{
+    InvalidStateError, PersistenceError, ReleaseWorkflowStep,
+};
 
 // === Extension points ===
 pub use torrust_tracker_deployer_lib::application::traits::{

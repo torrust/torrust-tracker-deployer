@@ -8,16 +8,13 @@
 //!
 //! ```text
 //! presentation/
-//! ├── cli/   # CLI delivery mechanism (Clap-based command-line interface)
-//! ├── sdk/   # SDK delivery mechanism (programmatic Rust API)
-//! └── mod.rs # This file - declares both delivery mechanisms
+//! └── cli/   # CLI delivery mechanism (Clap-based command-line interface)
 //! ```
 //!
-//! The two delivery mechanisms are independent — neither should import from the other.
-//! Each sub-module handles its own input parsing, routing, and output formatting.
+//! The SDK delivery mechanism has been extracted into the `torrust-tracker-deployer-sdk`
+//! workspace package (`packages/sdk/`).
 
 pub mod cli;
-pub mod sdk;
 
 // Re-export commonly used CLI types for backward compatibility.
 // External consumers can use either `presentation::Cli` or `presentation::cli::Cli`.
