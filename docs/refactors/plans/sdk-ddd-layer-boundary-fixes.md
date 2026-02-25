@@ -43,14 +43,14 @@ This is the fourth and final step in a 4-part incremental plan:
 **Total Active Proposals**: 2
 **Total Postponed**: 0
 **Total Discarded**: 1
-**Completed**: 0
+**Completed**: 2
 **In Progress**: 0
-**Not Started**: 2
+**Not Started**: 0
 
 ### Phase Summary
 
-- **Phase 0 - Core Fix: Error Wrappers (High Impact, Medium Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 1 - Infrastructure Decoupling (High Impact, Medium Effort)**: ⏳ 0/1 completed (0%)
+- **Phase 0 - Core Fix: Error Wrappers (High Impact, Medium Effort)**: ✅ 1/1 completed (100%)
+- **Phase 1 - Infrastructure Decoupling (High Impact, Medium Effort)**: ✅ 1/1 completed (100%)
 
 ### Discarded Proposals
 
@@ -106,13 +106,13 @@ This phase eliminates domain types from the public surface of all 9 affected app
 
 ### Proposal #0: Introduce Application-Layer Wrapper Types for Domain Errors
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵🔵 Medium
 **Priority**: P0
 **Depends On**: [Extract SDK Workspace Package](extract-sdk-workspace-package.md) (Plan 2)
-**Completed**: -
-**Commit**: -
+**Completed**: 2026-02-25
+**Commit**: `6f3028f4`
 
 #### Problem
 
@@ -239,23 +239,23 @@ impl From<crate::domain::environment::state::StateTypeError> for InvalidStateErr
 
 #### Implementation Checklist
 
-- [ ] Create `src/application/errors.rs` with `PersistenceError`, `InvalidStateError`, and `ReleaseWorkflowStep`
-- [ ] Implement `From<RepositoryError>` for `PersistenceError`
-- [ ] Implement `From<StateTypeError>` for `InvalidStateError`
-- [ ] Implement `From<ReleaseStep>` for `ReleaseWorkflowStep`
-- [ ] Update `ProvisionCommandHandlerError` to use `PersistenceError` and `InvalidStateError`
-- [ ] Update `ConfigureCommandHandlerError` to use `PersistenceError` and `InvalidStateError`
-- [ ] Update `DestroyCommandHandlerError` to use `PersistenceError` and `InvalidStateError`
-- [ ] Update `ReleaseCommandHandlerError` to use `PersistenceError`, `InvalidStateError`, and `ReleaseWorkflowStep`
-- [ ] Update `RunCommandHandlerError` to use `PersistenceError` and `InvalidStateError`
-- [ ] Update `TestCommandHandlerError` to use `PersistenceError` and `InvalidStateError`
-- [ ] Update `CreateCommandHandlerError` to use `PersistenceError`
-- [ ] Update `ShowCommandHandlerError` to use `PersistenceError`
-- [ ] Update `PurgeCommandHandlerError` to use `PersistenceError`
-- [ ] Update CLI controller error handling if it pattern-matches on the old domain types
-- [ ] Re-export `PersistenceError`, `InvalidStateError`, and `ReleaseWorkflowStep` from the SDK's public API
-- [ ] Verify all tests pass
-- [ ] Run linter and fix any issues
+- [x] Create `src/application/errors.rs` with `PersistenceError`, `InvalidStateError`, and `ReleaseWorkflowStep`
+- [x] Implement `From<RepositoryError>` for `PersistenceError`
+- [x] Implement `From<StateTypeError>` for `InvalidStateError`
+- [x] Implement `From<ReleaseStep>` for `ReleaseWorkflowStep`
+- [x] Update `ProvisionCommandHandlerError` to use `PersistenceError` and `InvalidStateError`
+- [x] Update `ConfigureCommandHandlerError` to use `PersistenceError` and `InvalidStateError`
+- [x] Update `DestroyCommandHandlerError` to use `PersistenceError` and `InvalidStateError`
+- [x] Update `ReleaseCommandHandlerError` to use `PersistenceError`, `InvalidStateError`, and `ReleaseWorkflowStep`
+- [x] Update `RunCommandHandlerError` to use `PersistenceError` and `InvalidStateError`
+- [x] Update `TestCommandHandlerError` to use `PersistenceError` and `InvalidStateError`
+- [x] Update `CreateCommandHandlerError` to use `PersistenceError`
+- [x] Update `ShowCommandHandlerError` to use `PersistenceError`
+- [x] Update `PurgeCommandHandlerError` to use `PersistenceError`
+- [x] Update CLI controller error handling if it pattern-matches on the old domain types
+- [x] Re-export `PersistenceError`, `InvalidStateError`, and `ReleaseWorkflowStep` from the SDK's public API
+- [x] Verify all tests pass
+- [x] Run linter and fix any issues
 
 #### Testing Strategy
 
@@ -270,13 +270,15 @@ impl From<crate::domain::environment::state::StateTypeError> for InvalidStateErr
 
 ### Proposal #1: Move Infrastructure Wiring from `DeployerBuilder` to Bootstrap Layer
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵🔵 Medium
 **Priority**: P1
 **Depends On**: [Extract SDK Workspace Package](extract-sdk-workspace-package.md) (Plan 2). Can be done in parallel with Proposal #0.
-**Completed**: -
-**Commit**: -
+**Completed**: 2026-02-25
+**Commit**: `6f3028f4`
+
+**Additional**: `RepositoryFactory` was also renamed to `FileRepositoryFactory` (and the file to `file_repository_factory.rs`) for clarity — the naming now clearly distinguishes the concrete struct from the `RepositoryProvider` trait. Commit: `52628329`.
 
 #### Problem
 
@@ -397,17 +399,17 @@ pub fn repository_provider(mut self, provider: Arc<dyn RepositoryProvider>) -> S
 
 #### Implementation Checklist
 
-- [ ] Add `RepositoryProvider` trait to `src/application/traits.rs` (or a new file)
-- [ ] Implement `RepositoryProvider` for `RepositoryFactory` in the infrastructure layer
-- [ ] Create `src/bootstrap/sdk.rs` with `default_repository_provider()` and `default_clock()`
-- [ ] Register `sdk` module in `src/bootstrap/mod.rs`
-- [ ] Replace `Arc<RepositoryFactory>` with `Arc<dyn RepositoryProvider>` in `Deployer` struct
-- [ ] Update `DeployerBuilder::build()` to use bootstrap helpers instead of direct infrastructure imports
-- [ ] Remove infrastructure imports (`RepositoryFactory`, `SystemClock`) from `builder.rs` and `deployer.rs`
-- [ ] Optionally: add `repository_provider()` builder method for dependency injection
-- [ ] Verify all tests pass
-- [ ] Verify all SDK examples compile
-- [ ] Run linter and fix any issues
+- [x] Add `RepositoryProvider` trait to `src/application/traits/repository_provider.rs`
+- [x] Implement `RepositoryProvider` for `FileRepositoryFactory` in the infrastructure layer
+- [x] Create `src/bootstrap/sdk.rs` with `default_repository_provider()` and `default_clock()`
+- [x] Register `sdk` module in `src/bootstrap/mod.rs`
+- [x] Replace `Arc<FileRepositoryFactory>` with `Arc<dyn RepositoryProvider>` in `Deployer` struct
+- [x] Update `DeployerBuilder::build()` to use bootstrap helpers instead of direct infrastructure imports
+- [x] Remove infrastructure imports (`FileRepositoryFactory`, `SystemClock`) from `builder.rs` and `deployer.rs`
+- [x] Delete orphaned `src/presentation/sdk/` directory (leftover from Plan 2)
+- [x] Verify all tests pass
+- [x] Verify all SDK examples compile
+- [x] Run linter and fix any issues
 
 #### Testing Strategy
 
@@ -419,28 +421,28 @@ pub fn repository_provider(mut self, provider: Arc<dyn RepositoryProvider>) -> S
 
 ## 📈 Timeline
 
-- **Start Date**: TBD (after Plans 1–3 are complete)
-- **Actual Completion**: TBD
+- **Start Date**: 2026-02-25
+- **Actual Completion**: 2026-02-25
 
 ## 🔍 Review Process
 
 ### Approval Criteria
 
-- [ ] Technical feasibility validated
-- [ ] Aligns with [Development Principles](../../development-principles.md)
-- [ ] Aligns with [SDK Interface Design ADR](../../decisions/sdk-presentation-layer-interface-design.md)
-- [ ] Implementation plan is clear and actionable
+- [x] Technical feasibility validated
+- [x] Aligns with [Development Principles](../../development-principles.md)
+- [x] Aligns with [SDK Interface Design ADR](../../decisions/sdk-presentation-layer-interface-design.md)
+- [x] Implementation plan is clear and actionable
 
 ### Completion Criteria
 
-- [ ] Both proposals implemented
-- [ ] All tests passing (`cargo test --workspace`)
-- [ ] All linters passing (`cargo run --bin linter all`)
-- [ ] SDK examples compile without importing any `crate::domain` or `crate::infrastructure` type
-- [ ] No domain types (`RepositoryError`, `StateTypeError`, `ReleaseStep`) in the SDK's public error surface
-- [ ] No infrastructure imports (`RepositoryFactory`) in the SDK package
+- [x] Both proposals implemented
+- [x] All tests passing (`cargo test --workspace`)
+- [x] All linters passing (`cargo run --bin linter all`)
+- [x] SDK examples compile without importing any `crate::domain` or `crate::infrastructure` type
+- [x] No domain types (`RepositoryError`, `StateTypeError`, `ReleaseStep`) in the SDK's public error surface
+- [x] No infrastructure imports (`FileRepositoryFactory`) in the SDK package
 - [ ] ADR updated to reflect the fixes
-- [ ] Changes committed and pushed
+- [x] Changes committed and pushed
 
 ## 📚 Related Documentation
 
@@ -464,5 +466,5 @@ pub fn repository_provider(mut self, provider: Arc<dyn RepositoryProvider>) -> S
 ---
 
 **Created**: 2026-02-24
-**Last Updated**: 2026-02-24
-**Status**: 📋 Planning
+**Last Updated**: 2026-02-25
+**Status**: ✅ Completed
