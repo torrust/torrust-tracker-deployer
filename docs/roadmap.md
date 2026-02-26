@@ -306,11 +306,11 @@ Once all commands have JSON output implemented (Phase 2 complete), the default o
   - Rationale: Contains the list of deployed artifacts and their remote paths on the VM
   - Allows automation to verify all files were correctly transferred before running
 
-- [ ] **12.8** Add JSON output to `test` command [Issue #380](https://github.com/torrust/torrust-tracker-deployer/issues/380)
+- [x] **12.8** Add JSON output to `test` command ✅ Completed - [Issue #380](https://github.com/torrust/torrust-tracker-deployer/issues/380), [PR #383](https://github.com/torrust/torrust-tracker-deployer/pull/383)
   - Rationale: Contains test results for each verified component (cloud-init, Docker, Docker Compose)
   - Structured pass/fail per component enables CI/CD pipelines to gate on specific checks
 
-- [ ] **12.9** Add JSON output to `destroy` command [Issue #386](https://github.com/torrust/torrust-tracker-deployer/issues/386)
+- [x] **12.9** Add JSON output to `destroy` command ✅ Completed - [Issue #386](https://github.com/torrust/torrust-tracker-deployer/issues/386), [PR #387](https://github.com/torrust/torrust-tracker-deployer/pull/387)
   - Rationale: Confirms which resources were destroyed and the final environment state
   - Enables automation to verify cleanup before proceeding
 
