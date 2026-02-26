@@ -260,6 +260,7 @@ nameof
 namespacing
 nanos
 netfilter
+networkd
 newgrp
 newtype
 newtypes

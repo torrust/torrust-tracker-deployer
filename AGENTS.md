@@ -193,6 +193,7 @@ Available skills:
 | Running linters                | `.github/skills/dev/git-workflow/run-linters/skill.md`                       |
 | Running local E2E tests        | `.github/skills/dev/testing/run-local-e2e-test/skill.md`                     |
 | Running pre-commit checks      | `.github/skills/dev/git-workflow/run-pre-commit-checks/skill.md`             |
+| Troubleshooting LXD instances  | `.github/skills/dev/testing/troubleshoot-lxd-instances/skill.md`             |
 | Verifying template changes     | `.github/skills/dev/infrastructure/verify-template-changes/skill.md`         |
 | Working with Tera templates    | `.github/skills/dev/infrastructure/work-with-tera-templates/skill.md`        |
 | Writing Markdown docs          | `.github/skills/dev/planning/write-markdown-docs/skill.md`                   |
