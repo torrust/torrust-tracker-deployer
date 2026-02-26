@@ -10,7 +10,7 @@ This directory documents recurring issues encountered when running our CI/CD wor
 
 ## 📄 Templates
 
-- [Issue Template](./issue-template.md) - Standard template for documenting new GitHub Actions issues
+- [Issue Template](./ISSUE-TEMPLATE.md) - Standard template for documenting new GitHub Actions issues
 
 ## 🔍 Troubleshooting Guide
 
@@ -34,4 +34,4 @@ When documenting a new issue:
 
 ## 🏷️ Issue Template
 
-Use the [issue template](./issue-template.md) as a starting point when documenting new GitHub Actions issues. Copy the template content to create a new issue documentation file.
+Use the [issue template](./ISSUE-TEMPLATE.md) as a starting point when documenting new GitHub Actions issues. Copy the template content to create a new issue documentation file.
