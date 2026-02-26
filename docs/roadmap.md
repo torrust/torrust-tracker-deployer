@@ -314,7 +314,7 @@ Once all commands have JSON output implemented (Phase 2 complete), the default o
   - Rationale: Confirms which resources were destroyed and the final environment state
   - Enables automation to verify cleanup before proceeding
 
-- [ ] **12.10** Add JSON output to `validate` command
+- [ ] **12.10** Add JSON output to `validate` command - Issue #390
   - Rationale: Contains validation results per field with error details
   - Allows automation and AI agents to surface configuration errors programmatically
 
