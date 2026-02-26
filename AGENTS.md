@@ -184,6 +184,7 @@ Available skills:
 | Handling secrets               | `.github/skills/dev/rust-code-quality/handle-secrets/skill.md`               |
 | Handling user output           | `.github/skills/dev/cli/handle-user-output/skill.md`                         |
 | Implementing domain types      | `.github/skills/dev/rust-code-quality/implement-domain-types/skill.md`       |
+| Installing system dependencies | `.github/skills/usage/operations/install-system-dependencies/skill.md`       |
 | Organizing Rust modules        | `.github/skills/dev/rust-code-quality/organize-rust-modules/skill.md`        |
 | Placing code in DDD layers     | `.github/skills/dev/rust-code-quality/place-code-in-ddd-layers/skill.md`     |
 | Regenerating CLI docs          | `.github/skills/dev/cli/regenerate-cli-docs/skill.md`                        |
