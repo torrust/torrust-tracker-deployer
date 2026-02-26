@@ -117,7 +117,7 @@ impl DestroySubcommandError {
     /// if let Err(e) = context
     ///     .container()
     ///     .create_destroy_controller()
-    ///     .execute("test-env")
+    ///     .execute("test-env", output_format)
     ///     .await
     /// {
     ///     eprintln!("Error: {e}");
@@ -146,7 +146,7 @@ impl DestroySubcommandError {
     /// let file_repository_factory = FileRepositoryFactory::new(Duration::from_secs(30));
     /// let repository = file_repository_factory.create(data_dir);
     /// let clock = Arc::new(SystemClock);
-    /// if let Err(e) = DestroyCommandController::new(repository, clock, output).execute("test-env").await {
+    /// if let Err(e) = DestroyCommandController::new(repository, clock, output).execute("test-env", output_format).await {
     ///     eprintln!("Error: {e}");
     ///     eprintln!("\nTroubleshooting:\n{}", e.help());
     /// }

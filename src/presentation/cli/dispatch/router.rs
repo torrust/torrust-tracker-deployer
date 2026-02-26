@@ -115,10 +115,11 @@ pub async fn route_command(
             Ok(())
         }
         Commands::Destroy { environment } => {
+            let output_format = context.output_format();
             context
                 .container()
                 .create_destroy_controller()
-                .execute(&environment)
+                .execute(&environment, output_format)
                 .await?;
             Ok(())
         }

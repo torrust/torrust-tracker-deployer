@@ -15,6 +15,9 @@ torrust-tracker-deployer destroy <ENVIRONMENT>
 **Options**:
 
 - `--help` - Display help information
+- `--output-format <FORMAT>` - Output format for results (default: `text`)
+  - `text`: Human-readable output for terminal use
+  - `json`: Machine-readable JSON output for automation and scripting
 - `--log-output <OUTPUT>` - Logging output mode (default: `file-only`)
   - `file-only`: Write logs to file only (production mode)
   - `file-and-stderr`: Write logs to both file and stderr (development/testing mode)
@@ -36,26 +39,75 @@ Destroy an environment:
 torrust-tracker-deployer destroy my-environment
 ```
 
-**Output**:
-
-```text
-⏳ [1/3] Validating environment...
-⏳   ✓ Environment name validated: full-stack-docs (took 0ms)
-⏳ [2/3] Creating command handler...
-⏳   ✓ Done (took 0ms)
-⏳ [3/3] Tearing down infrastructure...
-⏳   ✓ Infrastructure torn down (took 2.6s)
-✅ Environment 'full-stack-docs' destroyed successfully
-
-💡 Local data preserved for debugging. To completely remove and reuse the name:
-   torrust-tracker-deployer purge full-stack-docs --force
-```
+See [Output Formats](#output-formats) for example output in text and JSON formats.
 
 With verbose logging to see progress:
 
 ```bash
 torrust-tracker-deployer destroy my-environment --log-output file-and-stderr
 ```
+
+## Output Formats
+
+### Text Output (default)
+
+```bash
+torrust-tracker-deployer destroy my-environment
+```
+
+```text
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: my-environment (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Tearing down infrastructure...
+⏳   ✓ Infrastructure torn down (took 2.6s)
+✅ Environment 'my-environment' destroyed successfully
+
+💡 Local data preserved for debugging. To completely remove and reuse the name:
+   torrust-tracker-deployer purge my-environment --force
+```
+
+### JSON Output
+
+```bash
+torrust-tracker-deployer destroy my-environment --output-format json
+```
+
+```json
+{
+  "environment_name": "my-environment",
+  "instance_name": "torrust-tracker-vm-my-environment",
+  "provider": "lxd",
+  "state": "Destroyed",
+  "instance_ip": "10.140.190.39",
+  "created_at": "2026-02-23T10:00:00Z"
+}
+```
+
+For environments destroyed before provisioning (no IP was ever assigned):
+
+```json
+{
+  "environment_name": "my-environment",
+  "instance_name": "torrust-tracker-vm-my-environment",
+  "provider": "lxd",
+  "state": "Destroyed",
+  "instance_ip": null,
+  "created_at": "2026-02-23T10:00:00Z"
+}
+```
+
+#### JSON Fields
+
+| Field              | Type              | Description                                                |
+| ------------------ | ----------------- | ---------------------------------------------------------- |
+| `environment_name` | string            | Name of the destroyed environment                          |
+| `instance_name`    | string            | Name of the LXD/VM instance                                |
+| `provider`         | string            | Infrastructure provider (e.g. `lxd`)                       |
+| `state`            | string            | Always `"Destroyed"`                                       |
+| `instance_ip`      | string \| null    | IP address of the instance, or `null` if never provisioned |
+| `created_at`       | string (ISO 8601) | Timestamp when the environment was originally created      |
 
 ## What Gets Destroyed
 
