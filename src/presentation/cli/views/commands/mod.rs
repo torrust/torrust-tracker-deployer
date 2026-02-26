@@ -10,6 +10,7 @@ pub mod destroy;
 pub mod list;
 pub mod provision;
 pub mod release;
+pub mod render;
 pub mod run;
 pub mod shared;
 pub mod show;
