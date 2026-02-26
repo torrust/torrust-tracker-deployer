@@ -310,7 +310,7 @@ Once all commands have JSON output implemented (Phase 2 complete), the default o
   - Rationale: Contains test results for each verified component (cloud-init, Docker, Docker Compose)
   - Structured pass/fail per component enables CI/CD pipelines to gate on specific checks
 
-- [ ] **12.9** Add JSON output to `destroy` command
+- [ ] **12.9** Add JSON output to `destroy` command [Issue #386](https://github.com/torrust/torrust-tracker-deployer/issues/386)
   - Rationale: Confirms which resources were destroyed and the final environment state
   - Enables automation to verify cleanup before proceeding
 
