@@ -314,11 +314,11 @@ Once all commands have JSON output implemented (Phase 2 complete), the default o
   - Rationale: Confirms which resources were destroyed and the final environment state
   - Enables automation to verify cleanup before proceeding
 
-- [ ] **12.10** Add JSON output to `validate` command - Issue #390
+- [x] **12.10** Add JSON output to `validate` command ✅ Completed - [Issue #390](https://github.com/torrust/torrust-tracker-deployer/issues/390), [PR #391](https://github.com/torrust/torrust-tracker-deployer/pull/391)
   - Rationale: Contains validation results per field with error details
   - Allows automation and AI agents to surface configuration errors programmatically
 
-- [ ] **12.11** Add JSON output to `render` command
+- [ ] **12.11** Add JSON output to `render` command - [Issue #392](https://github.com/torrust/torrust-tracker-deployer/issues/392)
   - Rationale: Contains the list of generated artifact paths and their destinations
   - Enables automation to locate and process the generated files
 
