@@ -202,6 +202,34 @@ The render command generates artifacts in the specified output directory:
 - **Docker Compose** - Complete service stack definition
 - **Configuration files** - All service configurations rendered
 
+### JSON Output
+
+Use `--output-format json` (or `-o json`) to get machine-readable output. Progress messages go to stderr; the JSON result goes to stdout.
+
+```bash
+torrust-tracker-deployer render \
+  --env-file envs/my-environment.json \
+  --instance-ip 192.168.1.100 \
+  --output-dir /tmp/build/my-environment \
+  --output-format json 2>/dev/null
+```
+
+```json
+{
+  "environment_name": "my-environment",
+  "config_source": "Config file: envs/my-environment.json",
+  "target_ip": "192.168.1.100",
+  "output_dir": "/tmp/build/my-environment"
+}
+```
+
+| Field              | Type   | Description                                                       |
+| ------------------ | ------ | ----------------------------------------------------------------- |
+| `environment_name` | string | Name of the environment whose artifacts were generated            |
+| `config_source`    | string | Description of the configuration source (env name or config file) |
+| `target_ip`        | string | IP address used in artifact generation                            |
+| `output_dir`       | string | Path to the directory containing generated artifacts              |
+
 ## Use Cases
 
 ### 1. Preview Before Provisioning

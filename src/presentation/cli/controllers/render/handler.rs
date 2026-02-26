@@ -10,9 +10,13 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
-use crate::application::command_handlers::render::{RenderCommandHandler, RenderInputMode};
+use crate::application::command_handlers::render::{
+    RenderCommandHandler, RenderInputMode, RenderResult,
+};
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::EnvironmentName;
+use crate::presentation::cli::input::cli::OutputFormat;
+use crate::presentation::cli::views::commands::render::{JsonView, RenderDetailsData, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
 use crate::presentation::cli::views::UserOutput;
 
@@ -70,7 +74,6 @@ impl RenderStep {
 pub struct RenderCommandController {
     handler: RenderCommandHandler,
     progress: ProgressReporter,
-    user_output: Arc<ReentrantMutex<RefCell<UserOutput>>>,
 }
 
 impl RenderCommandController {
@@ -85,8 +88,7 @@ impl RenderCommandController {
     ) -> Self {
         Self {
             handler: RenderCommandHandler::new(repository),
-            progress: ProgressReporter::new(Arc::clone(&user_output), RenderStep::count()),
-            user_output,
+            progress: ProgressReporter::new(user_output, RenderStep::count()),
         }
     }
 
@@ -102,6 +104,7 @@ impl RenderCommandController {
     /// * `output_dir` - Output directory for generated artifacts (required)
     /// * `force` - Whether to overwrite existing output directory
     /// * `working_dir` - Working directory for environment data (from --working-dir global arg)
+    /// * `output_format` - Output format (text or JSON)
     ///
     /// # Returns
     ///
@@ -117,6 +120,7 @@ impl RenderCommandController {
     /// - Config file doesn't exist
     /// - Environment not found
     /// - Template rendering fails
+    #[allow(clippy::too_many_arguments)] // Required parameters for render workflow - all are necessary
     pub async fn execute(
         &mut self,
         env_name: Option<&str>,
@@ -125,6 +129,7 @@ impl RenderCommandController {
         output_dir: &Path,
         force: bool,
         working_dir: &Path,
+        output_format: OutputFormat,
     ) -> Result<(), RenderCommandError> {
         // Step 1: Validate input
         self.progress
@@ -136,7 +141,7 @@ impl RenderCommandController {
             .map_err(|_| RenderCommandError::InvalidIpAddress { ip: ip.to_string() })?;
 
         // Determine input mode and prepare handler parameters
-        let (input_mode, source_desc) = match (env_name, env_file) {
+        let input_mode = match (env_name, env_file) {
             (Some(name), None) => {
                 let env_name = EnvironmentName::new(name).map_err(|e| {
                     RenderCommandError::InvalidEnvironmentName {
@@ -144,10 +149,7 @@ impl RenderCommandController {
                         reason: e.to_string(),
                     }
                 })?;
-                (
-                    RenderInputMode::EnvironmentName(env_name.clone()),
-                    format!("Environment: {env_name}"),
-                )
+                RenderInputMode::EnvironmentName(env_name)
             }
             (None, Some(path)) => {
                 // Validate file exists
@@ -156,10 +158,7 @@ impl RenderCommandController {
                         path: path.to_path_buf(),
                     });
                 }
-                (
-                    RenderInputMode::ConfigFile(path.to_path_buf()),
-                    format!("Config file: {}", path.display()),
-                )
+                RenderInputMode::ConfigFile(path.to_path_buf())
             }
             (None, None) => return Err(RenderCommandError::NoInputMode),
             (Some(_), Some(_)) => unreachable!("Clap ensures mutual exclusivity"),
@@ -189,31 +188,33 @@ impl RenderCommandController {
 
         self.progress.complete_step(None)?;
 
-        // Show success message
-        self.show_success(
-            &source_desc,
-            &result.target_ip.to_string(),
-            &result.output_dir,
-        );
+        // Render and display results
+        self.complete_workflow(&result, output_format)?;
 
         Ok(())
     }
 
-    /// Show success message to user
-    fn show_success(&mut self, source: &str, target_ip: &str, output_dir: &Path) {
-        let output = self.user_output.lock();
-        let mut output_ref = output.borrow_mut();
+    /// Complete the workflow with render details output
+    ///
+    /// Renders the artifact generation summary using the chosen output format
+    /// (text or JSON) and displays it to the user.
+    fn complete_workflow(
+        &mut self,
+        result: &RenderResult,
+        output_format: OutputFormat,
+    ) -> Result<(), RenderCommandError> {
+        let data = RenderDetailsData::from_result(result);
 
-        output_ref.success(&format!(
-            "\nDeployment artifacts generated successfully!\n\n  \
-             Source: {source}\n  \
-             Target IP: {target_ip}\n  \
-             Output: {}\n\n\
-             Next steps:\n  \
-             - Review artifacts in the output directory\n  \
-             - Use 'provision' command to deploy infrastructure\n  \
-             - Or use artifacts manually with your deployment tools",
-            output_dir.display()
-        ));
+        match output_format {
+            OutputFormat::Text => {
+                self.progress.blank_line()?;
+                self.progress.complete(&TextView::render(&data))?;
+            }
+            OutputFormat::Json => {
+                self.progress.result(&JsonView::render(&data))?;
+            }
+        }
+
+        Ok(())
     }
 }

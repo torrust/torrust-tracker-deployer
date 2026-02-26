@@ -193,6 +193,7 @@ pub async fn route_command(
             output_dir,
             force,
         } => {
+            let output_format = context.output_format();
             context
                 .container()
                 .create_render_controller()
@@ -203,6 +204,7 @@ pub async fn route_command(
                     output_dir.as_path(),
                     force,
                     context.working_dir(),
+                    output_format,
                 )
                 .await?;
             Ok(())
