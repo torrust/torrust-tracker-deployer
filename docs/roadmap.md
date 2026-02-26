@@ -318,11 +318,11 @@ Once all commands have JSON output implemented (Phase 2 complete), the default o
   - Rationale: Contains validation results per field with error details
   - Allows automation and AI agents to surface configuration errors programmatically
 
-- [ ] **12.11** Add JSON output to `render` command - [Issue #392](https://github.com/torrust/torrust-tracker-deployer/issues/392)
+- [x] **12.11** Add JSON output to `render` command ✅ Completed - [Issue #392](https://github.com/torrust/torrust-tracker-deployer/issues/392), [PR #393](https://github.com/torrust/torrust-tracker-deployer/pull/393)
   - Rationale: Contains the list of generated artifact paths and their destinations
   - Enables automation to locate and process the generated files
 
-- [ ] **12.12** Add JSON output to `purge` command
+- [ ] **12.12** Add JSON output to `purge` command - [Issue #394](https://github.com/torrust/torrust-tracker-deployer/issues/394)
   - Rationale: Lists the directories and files that were removed
   - Provides a machine-readable record of what was cleaned up
 
