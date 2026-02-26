@@ -158,10 +158,11 @@ pub async fn route_command(
             Ok(())
         }
         Commands::Validate { env_file } => {
+            let output_format = context.output_format();
             context
                 .container()
                 .create_validate_controller()
-                .execute(&env_file)?;
+                .execute(&env_file, output_format)?;
             Ok(())
         }
         Commands::Register {

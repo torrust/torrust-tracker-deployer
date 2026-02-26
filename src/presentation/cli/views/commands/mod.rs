@@ -14,3 +14,4 @@ pub mod run;
 pub mod shared;
 pub mod show;
 pub mod test;
+pub mod validate;
