@@ -95,13 +95,13 @@ When the environment was never provisioned (e.g., destroyed from `Created` state
 
 Fields:
 
-| Field              | Type            | Description                                                     |
-| ------------------ | --------------- | --------------------------------------------------------------- |
-| `environment_name` | string          | Name of the destroyed environment                               |
-| `instance_name`    | string          | Name of the VM instance                                         |
-| `provider`         | string          | Infrastructure provider (lowercase: `"lxd"`, `"hetzner"`, etc.) |
-| `state`            | string          | Always `"Destroyed"` for this command                           |
-| `instance_ip`      | string \| null  | IP address of the instance, or `null` if never provisioned      |
+| Field              | Type              | Description                                                     |
+| ------------------ | ----------------- | --------------------------------------------------------------- |
+| `environment_name` | string            | Name of the destroyed environment                               |
+| `instance_name`    | string            | Name of the VM instance                                         |
+| `provider`         | string            | Infrastructure provider (lowercase: `"lxd"`, `"hetzner"`, etc.) |
+| `state`            | string            | Always `"Destroyed"` for this command                           |
+| `instance_ip`      | string \| null    | IP address of the instance, or `null` if never provisioned      |
 | `created_at`       | string (ISO 8601) | Timestamp when the environment was originally created           |
 
 ### `DestroyDetailsData` DTO
@@ -270,7 +270,7 @@ fn complete_workflow(
 
 ### Step 7: Documentation
 
-- [ ] Update command documentation in `docs/user-guide/commands/destroy.md` if it exists
+- [x] Update command documentation in `docs/user-guide/commands/destroy.md` if it exists
 - [ ] Add JSON output examples
 
 ## Testing Strategy

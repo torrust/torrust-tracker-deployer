@@ -13,6 +13,8 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Destroyed;
 use crate::domain::environment::Environment;
+use crate::presentation::cli::input::cli::OutputFormat;
+use crate::presentation::cli::views::commands::destroy::{DestroyDetailsData, JsonView, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
 use crate::presentation::cli::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -121,16 +123,17 @@ impl DestroyCommandController {
     pub async fn execute(
         &mut self,
         environment_name: &str,
-    ) -> Result<Environment<Destroyed>, DestroySubcommandError> {
+        output_format: OutputFormat,
+    ) -> Result<(), DestroySubcommandError> {
         let env_name = self.validate_environment_name(environment_name)?;
 
         let handler = self.create_command_handler()?;
 
         let destroyed = self.tear_down_infrastructure(&handler, &env_name)?;
 
-        self.complete_workflow(environment_name)?;
+        self.complete_workflow(environment_name, &destroyed, output_format)?;
 
-        Ok(destroyed)
+        Ok(())
     }
 
     /// Validate the environment name format
@@ -197,22 +200,34 @@ impl DestroyCommandController {
         Ok(destroyed)
     }
 
-    /// Complete the workflow with success message
+    /// Complete the workflow with environment details output
     ///
-    /// Shows final success message to the user with workflow summary
-    /// and hints about purge command for complete cleanup.
+    /// Renders the destroyed environment details using the chosen output format
+    /// (text or JSON) and displays them to the user. In text mode, also shows
+    /// a hint about the purge command for complete cleanup.
     #[allow(clippy::result_large_err)]
-    fn complete_workflow(&mut self, name: &str) -> Result<(), DestroySubcommandError> {
-        self.progress
-            .complete(&format!("Environment '{name}' destroyed successfully"))?;
+    fn complete_workflow(
+        &mut self,
+        name: &str,
+        destroyed: &Environment<Destroyed>,
+        output_format: OutputFormat,
+    ) -> Result<(), DestroySubcommandError> {
+        let details = DestroyDetailsData::from(destroyed);
 
-        // Add blank line for readability
-        self.progress.blank_line()?;
+        let output = match output_format {
+            OutputFormat::Text => TextView::render(&details),
+            OutputFormat::Json => JsonView::render(&details),
+        };
 
-        // Hint about purge command for complete cleanup
-        self.progress.output().lock().borrow_mut().result(&format!(
-            "💡 Local data preserved for debugging. To completely remove and reuse the name:\n   torrust-tracker-deployer purge {name} --force"
-        ));
+        self.progress.result(&output)?;
+
+        // Purge hint is only shown in text mode — JSON consumers don't need human-readable hints
+        if matches!(output_format, OutputFormat::Text) {
+            self.progress.blank_line()?;
+            self.progress.output().lock().borrow_mut().result(&format!(
+                "💡 Local data preserved for debugging. To completely remove and reuse the name:\n   torrust-tracker-deployer purge {name} --force"
+            ));
+        }
 
         Ok(())
     }
@@ -261,7 +276,7 @@ mod tests {
 
         // Test with invalid environment name (contains underscore)
         let result = DestroyCommandController::new(repository, clock, user_output.clone())
-            .execute("invalid_name")
+            .execute("invalid_name", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
@@ -280,7 +295,7 @@ mod tests {
         let (user_output, repository, clock) = create_test_dependencies(&temp_dir);
 
         let result = DestroyCommandController::new(repository, clock, user_output.clone())
-            .execute("")
+            .execute("", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
@@ -300,7 +315,7 @@ mod tests {
 
         // Try to destroy an environment that doesn't exist
         let result = DestroyCommandController::new(repository, clock, user_output.clone())
-            .execute("nonexistent-env")
+            .execute("nonexistent-env", OutputFormat::Text)
             .await;
 
         assert!(result.is_err());
@@ -327,7 +342,7 @@ mod tests {
         // Valid environment name should pass validation, but will fail
         // at destroy operation since we don't have a real environment setup
         let result = DestroyCommandController::new(repository, clock, user_output.clone())
-            .execute("test-env")
+            .execute("test-env", OutputFormat::Text)
             .await;
 
         // Should fail at operation, not at name validation
