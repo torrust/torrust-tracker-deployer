@@ -45,7 +45,7 @@ async fn it_should_reject_invalid_environment_names() {
             DestroySubcommandError::InvalidEnvironmentName { .. } => {
                 // Expected error type
             }
-            other => panic!("Expected InvalidEnvironmentName for '{name}', got: {other:?}",),
+            other => panic!("Expected InvalidEnvironmentName for '{name}', got: {other:?}"),
         }
     }
 
