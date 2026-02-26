@@ -10,6 +10,10 @@ use std::sync::Arc;
 use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::validate::{ValidateCommandHandler, ValidationResult};
+use crate::presentation::cli::input::cli::OutputFormat;
+use crate::presentation::cli::views::commands::validate::{
+    JsonView, TextView, ValidateDetailsData,
+};
 use crate::presentation::cli::views::progress::ProgressReporter;
 use crate::presentation::cli::views::UserOutput;
 
@@ -101,7 +105,11 @@ impl ValidateCommandController {
     /// - File path does not exist
     /// - File is not readable
     /// - Configuration validation fails
-    pub fn execute(&mut self, env_file: &Path) -> Result<(), ValidateSubcommandError> {
+    pub fn execute(
+        &mut self,
+        env_file: &Path,
+        output_format: OutputFormat,
+    ) -> Result<(), ValidateSubcommandError> {
         // Step 1: Load Configuration (file existence check)
         self.progress
             .start_step(ValidateStep::LoadConfiguration.description())?;
@@ -131,7 +139,7 @@ impl ValidateCommandController {
             .complete_step(Some("Field validation passed"))?;
 
         // Complete workflow with detailed results
-        self.complete_workflow(env_file, &result)?;
+        self.complete_workflow(env_file, &result, output_format)?;
 
         Ok(())
     }
@@ -153,46 +161,28 @@ impl ValidateCommandController {
         Ok(())
     }
 
-    /// Complete the workflow with success message and validation details
+    /// Complete the workflow with validation details output
+    ///
+    /// Renders the validation details using the chosen output format
+    /// (text or JSON) and displays them to the user.
     fn complete_workflow(
         &mut self,
         env_file: &Path,
         result: &ValidationResult,
+        output_format: OutputFormat,
     ) -> Result<(), ValidateSubcommandError> {
-        self.progress.blank_line()?;
-        self.progress.complete(&format!(
-            "Configuration file '{}' is valid\n\n\
-            Environment Details:\n\
-              • Name: {}\n\
-              • Provider: {}\n\
-              • Prometheus: {}\n\
-              • Grafana: {}\n\
-              • HTTPS: {}\n\
-              • Backups: {}",
-            env_file.display(),
-            result.environment_name,
-            result.provider,
-            if result.has_prometheus {
-                "Enabled"
-            } else {
-                "Disabled"
-            },
-            if result.has_grafana {
-                "Enabled"
-            } else {
-                "Disabled"
-            },
-            if result.has_https {
-                "Enabled"
-            } else {
-                "Disabled"
-            },
-            if result.has_backup {
-                "Enabled"
-            } else {
-                "Disabled"
+        let data = ValidateDetailsData::from_result(env_file, result);
+
+        match output_format {
+            OutputFormat::Text => {
+                self.progress.blank_line()?;
+                self.progress.complete(&TextView::render(&data))?;
             }
-        ))?;
+            OutputFormat::Json => {
+                self.progress.result(&JsonView::render(&data))?;
+            }
+        }
+
         Ok(())
     }
 }

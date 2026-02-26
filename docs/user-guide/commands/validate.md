@@ -77,6 +77,38 @@ Environment Details:
 • Backups: Enabled
 ```
 
+### JSON Output
+
+Use `--output-format json` (or `-o json`) to get machine-readable output. Progress messages go to stderr; the JSON result goes to stdout.
+
+```bash
+torrust-tracker-deployer validate --env-file envs/my-environment.json --output-format json 2>/dev/null
+```
+
+```json
+{
+  "environment_name": "my-environment",
+  "config_file": "envs/my-environment.json",
+  "provider": "lxd",
+  "is_valid": true,
+  "has_prometheus": true,
+  "has_grafana": true,
+  "has_https": false,
+  "has_backup": false
+}
+```
+
+| Field              | Type    | Description                                                     |
+| ------------------ | ------- | --------------------------------------------------------------- |
+| `environment_name` | string  | Name of the validated environment                               |
+| `config_file`      | string  | Path to the validated configuration file                        |
+| `provider`         | string  | Infrastructure provider (lowercase: `"lxd"`, `"hetzner"`, etc.) |
+| `is_valid`         | boolean | Always `true` when the command succeeds                         |
+| `has_prometheus`   | boolean | Whether Prometheus monitoring is configured                     |
+| `has_grafana`      | boolean | Whether Grafana dashboard is configured                         |
+| `has_https`        | boolean | Whether HTTPS is configured                                     |
+| `has_backup`       | boolean | Whether backups are configured                                  |
+
 ### Error Output Examples
 
 **File Not Found**:
