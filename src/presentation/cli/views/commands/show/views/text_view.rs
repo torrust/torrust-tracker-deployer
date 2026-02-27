@@ -24,6 +24,7 @@ use super::prometheus::PrometheusView;
 use super::tracker_services::TrackerServicesView;
 
 use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering environment information
 ///
@@ -148,6 +149,12 @@ impl TextView {
         lines.extend(NextStepGuidanceView::render(&info.state_name));
 
         lines.join("\n")
+    }
+}
+
+impl Render<EnvironmentInfo> for TextView {
+    fn render(data: &EnvironmentInfo) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 

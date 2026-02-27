@@ -10,6 +10,7 @@
 //! The output includes test result status and any advisory DNS warnings.
 
 use crate::presentation::cli::views::commands::test::TestResultData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering test results as JSON
 ///
@@ -73,6 +74,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<TestResultData> for JsonView {
+    fn render(data: &TestResultData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

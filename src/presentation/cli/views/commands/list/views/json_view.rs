@@ -10,6 +10,7 @@
 //! The output includes environment summaries, failed environments, and metadata.
 
 use crate::presentation::cli::views::commands::list::view_data::EnvironmentList;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering environment list as JSON
 ///
@@ -107,6 +108,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<EnvironmentList> for JsonView {
+    fn render(data: &EnvironmentList) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

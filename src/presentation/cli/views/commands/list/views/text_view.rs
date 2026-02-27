@@ -5,6 +5,7 @@
 //! (human-readable text table) for environment lists.
 
 use crate::presentation::cli::views::commands::list::view_data::EnvironmentList;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// Text view for rendering environment list
 ///
@@ -153,6 +154,12 @@ impl TextView {
         } else {
             s[..max_len].to_string()
         }
+    }
+}
+
+impl Render<EnvironmentList> for TextView {
+    fn render(data: &EnvironmentList) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 

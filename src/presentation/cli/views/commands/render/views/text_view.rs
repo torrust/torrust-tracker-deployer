@@ -11,6 +11,7 @@
 //! output format produced before the Strategy Pattern was introduced.
 
 use crate::presentation::cli::views::commands::render::RenderDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering render details as human-readable text
 ///
@@ -109,6 +110,12 @@ impl TextView {
              \x20\x20- Or use artifacts manually with your deployment tools",
             data.config_source, data.target_ip, data.output_dir,
         )
+    }
+}
+
+impl Render<RenderDetailsData> for TextView {
+    fn render(data: &RenderDetailsData) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 

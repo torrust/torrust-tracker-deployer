@@ -11,6 +11,7 @@
 //! and output directory for the generated artifacts.
 
 use crate::presentation::cli::views::commands::render::RenderDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering render details as JSON
 ///
@@ -94,6 +95,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<RenderDetailsData> for JsonView {
+    fn render(data: &RenderDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

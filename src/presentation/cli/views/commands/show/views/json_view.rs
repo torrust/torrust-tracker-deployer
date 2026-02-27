@@ -11,6 +11,7 @@
 //! purposes and contains all necessary information in a well-structured format.
 
 use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering environment information as JSON
 ///
@@ -102,6 +103,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<EnvironmentInfo> for JsonView {
+    fn render(data: &EnvironmentInfo) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

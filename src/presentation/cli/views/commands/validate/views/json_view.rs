@@ -11,6 +11,7 @@
 //! and feature flags for the validated configuration.
 
 use crate::presentation::cli::views::commands::validate::ValidateDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering validate details as JSON
 ///
@@ -106,6 +107,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<ValidateDetailsData> for JsonView {
+    fn render(data: &ValidateDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

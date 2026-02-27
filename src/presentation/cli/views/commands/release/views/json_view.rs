@@ -10,6 +10,7 @@
 //! The output includes environment details and release state.
 
 use crate::presentation::cli::views::commands::release::ReleaseDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering release details as JSON
 ///
@@ -103,6 +104,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<ReleaseDetailsData> for JsonView {
+    fn render(data: &ReleaseDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

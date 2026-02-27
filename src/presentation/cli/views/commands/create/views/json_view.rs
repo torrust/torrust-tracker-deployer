@@ -4,6 +4,7 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (machine-readable JSON) for environment details.
 
+use crate::presentation::cli::views::{Render, ViewRenderError};
 use super::super::EnvironmentDetailsData;
 
 /// JSON view for rendering environment creation details
@@ -78,6 +79,12 @@ impl JsonView {
     /// would indicate a bug in the serialization implementation).
     pub fn render(data: &EnvironmentDetailsData) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(data)
+    }
+}
+
+impl Render<EnvironmentDetailsData> for JsonView {
+    fn render(data: &EnvironmentDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

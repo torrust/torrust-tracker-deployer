@@ -11,6 +11,7 @@
 //! confirming the registration.
 
 use crate::presentation::cli::views::commands::register::RegisterDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering register details as JSON
 ///
@@ -98,6 +99,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<RegisterDetailsData> for JsonView {
+    fn render(data: &RegisterDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

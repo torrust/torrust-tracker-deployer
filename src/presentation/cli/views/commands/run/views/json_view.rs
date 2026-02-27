@@ -11,6 +11,7 @@
 //! service information from the existing DTOs.
 
 use crate::presentation::cli::views::commands::run::view_data::RunDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering run command output as JSON
 ///
@@ -113,6 +114,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<RunDetailsData> for JsonView {
+    fn render(data: &RunDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

@@ -11,6 +11,7 @@
 //! output format produced before the Strategy Pattern was introduced.
 
 use crate::presentation::cli::views::commands::validate::ValidateDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering validate details as human-readable text
 ///
@@ -136,6 +137,12 @@ impl TextView {
                 "Disabled"
             }
         )
+    }
+}
+
+impl Render<ValidateDetailsData> for TextView {
+    fn render(data: &ValidateDetailsData) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 

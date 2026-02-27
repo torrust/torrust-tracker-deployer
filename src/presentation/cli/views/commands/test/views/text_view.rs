@@ -13,6 +13,7 @@
 use std::fmt::Write;
 
 use crate::presentation::cli::views::commands::test::TestResultData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering test results as human-readable text
 ///
@@ -86,6 +87,12 @@ impl TextView {
         }
 
         output
+    }
+}
+
+impl Render<TestResultData> for TextView {
+    fn render(data: &TestResultData) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 

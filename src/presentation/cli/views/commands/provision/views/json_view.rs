@@ -4,6 +4,7 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (machine-readable JSON) for provision details.
 
+use crate::presentation::cli::views::{Render, ViewRenderError};
 use super::super::ProvisionDetailsData;
 
 /// JSON view for rendering provision details
@@ -92,6 +93,12 @@ impl JsonView {
     /// would indicate a bug in the serialization implementation).
     pub fn render(data: &ProvisionDetailsData) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(data)
+    }
+}
+
+impl Render<ProvisionDetailsData> for JsonView {
+    fn render(data: &ProvisionDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

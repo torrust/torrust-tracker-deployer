@@ -10,6 +10,7 @@
 //! for terminal display and direct user consumption.
 
 use crate::presentation::cli::views::commands::destroy::DestroyDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering destroy details as human-readable text
 ///
@@ -116,6 +117,12 @@ impl TextView {
             instance_ip,
             data.created_at.format("%Y-%m-%d %H:%M:%S UTC")
         )
+    }
+}
+
+impl Render<DestroyDetailsData> for TextView {
+    fn render(data: &DestroyDetailsData) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 

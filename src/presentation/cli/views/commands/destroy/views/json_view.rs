@@ -10,6 +10,7 @@
 //! The output includes environment details and destroyed state.
 
 use crate::presentation::cli::views::commands::destroy::DestroyDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering destroy details as JSON
 ///
@@ -103,6 +104,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<DestroyDetailsData> for JsonView {
+    fn render(data: &DestroyDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

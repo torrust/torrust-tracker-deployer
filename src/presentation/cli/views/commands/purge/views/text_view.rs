@@ -11,6 +11,7 @@
 //! output format produced before the Strategy Pattern was introduced.
 
 use crate::presentation::cli::views::commands::purge::PurgeDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering purge details as human-readable text
 ///
@@ -68,6 +69,12 @@ impl TextView {
             "Environment '{}' purged successfully",
             data.environment_name
         )
+    }
+}
+
+impl Render<PurgeDetailsData> for TextView {
+    fn render(data: &PurgeDetailsData) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 

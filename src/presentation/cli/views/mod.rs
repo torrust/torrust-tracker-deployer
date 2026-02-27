@@ -80,6 +80,10 @@ pub use traits::{FormatterOverride, OutputMessage, OutputSink};
 pub use user_output::UserOutput;
 pub use verbosity::VerbosityLevel;
 
+// Render trait and error type
+pub mod render;
+pub use render::{Render, ViewRenderError};
+
 // Internal modules
 mod channel;
 mod formatters;

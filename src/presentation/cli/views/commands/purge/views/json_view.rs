@@ -10,6 +10,7 @@
 //! The output includes the environment name and a boolean confirming the purge.
 
 use crate::presentation::cli::views::commands::purge::PurgeDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering purge details as JSON
 ///
@@ -81,6 +82,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<PurgeDetailsData> for JsonView {
+    fn render(data: &PurgeDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

@@ -11,6 +11,7 @@
 //! output format produced before the Strategy Pattern was introduced.
 
 use crate::presentation::cli::views::commands::register::RegisterDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering register details as human-readable text
 ///
@@ -78,6 +79,12 @@ impl TextView {
             "Instance registered successfully with environment '{}'",
             data.environment_name
         )
+    }
+}
+
+impl Render<RegisterDetailsData> for TextView {
+    fn render(data: &RegisterDetailsData) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 

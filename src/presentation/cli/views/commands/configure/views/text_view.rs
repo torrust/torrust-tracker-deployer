@@ -10,6 +10,7 @@
 //! for terminal display and direct user consumption.
 
 use crate::presentation::cli::views::commands::configure::ConfigureDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering configure details as human-readable text
 ///
@@ -116,6 +117,12 @@ impl TextView {
             instance_ip,
             data.created_at.format("%Y-%m-%d %H:%M:%S UTC")
         )
+    }
+}
+
+impl Render<ConfigureDetailsData> for TextView {
+    fn render(data: &ConfigureDetailsData) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 

@@ -10,6 +10,7 @@
 //! The output includes environment details and configuration state.
 
 use crate::presentation::cli::views::commands::configure::ConfigureDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering configure details as JSON
 ///
@@ -103,6 +104,12 @@ impl JsonView {
                 .to_string()
             })
         })
+    }
+}
+
+impl Render<ConfigureDetailsData> for JsonView {
+    fn render(data: &ConfigureDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 

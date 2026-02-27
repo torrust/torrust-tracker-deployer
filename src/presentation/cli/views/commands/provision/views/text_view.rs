@@ -4,6 +4,7 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (human-readable text) for provision details.
 
+use crate::presentation::cli::views::{Render, ViewRenderError};
 use super::super::ProvisionDetailsData;
 
 /// Text view for rendering provision details
@@ -140,6 +141,12 @@ impl TextView {
         }
 
         lines.join("\n")
+    }
+}
+
+impl Render<ProvisionDetailsData> for TextView {
+    fn render(data: &ProvisionDetailsData) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 

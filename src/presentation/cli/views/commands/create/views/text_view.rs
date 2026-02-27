@@ -4,6 +4,7 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (human-readable text) for environment details.
 
+use crate::presentation::cli::views::{Render, ViewRenderError};
 use super::super::EnvironmentDetailsData;
 
 /// Text view for rendering environment creation details
@@ -82,6 +83,12 @@ impl TextView {
         lines.push(format!("4. Build directory: {}", data.build_dir.display()));
 
         lines.join("\n")
+    }
+}
+
+impl Render<EnvironmentDetailsData> for TextView {
+    fn render(data: &EnvironmentDetailsData) -> Result<String, ViewRenderError> {
+        Ok(TextView::render(data))
     }
 }
 
