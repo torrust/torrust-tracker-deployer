@@ -322,11 +322,11 @@ Once all commands have JSON output implemented (Phase 2 complete), the default o
   - Rationale: Contains the list of generated artifact paths and their destinations
   - Enables automation to locate and process the generated files
 
-- [ ] **12.12** Add JSON output to `purge` command - [Issue #394](https://github.com/torrust/torrust-tracker-deployer/issues/394)
+- [x] **12.12** Add JSON output to `purge` command ✅ Completed - [Issue #394](https://github.com/torrust/torrust-tracker-deployer/issues/394), [PR #395](https://github.com/torrust/torrust-tracker-deployer/pull/395)
   - Rationale: Lists the directories and files that were removed
   - Provides a machine-readable record of what was cleaned up
 
-- [ ] **12.13** Add JSON output to `register` command
+- [ ] **12.13** Add JSON output to `register` command - [Issue #396](https://github.com/torrust/torrust-tracker-deployer/issues/396)
   - Rationale: Confirms the registered instance details (IP, SSH port, state transition)
   - Enables automation to verify successful registration before proceeding to configure
 
