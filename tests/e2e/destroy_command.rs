@@ -232,3 +232,54 @@ fn it_should_complete_full_lifecycle_with_custom_working_directory() {
     env_assertions.assert_environment_exists("test-lifecycle");
     env_assertions.assert_environment_state_is("test-lifecycle", "Destroyed");
 }
+
+#[test]
+fn it_should_produce_json_by_default() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
+    // Arrange: Create environment first so destroy has something to remove
+    let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
+    let config = create_test_environment_config("test-destroy-json-default");
+    temp_workspace
+        .write_config_file("environment.json", &config)
+        .expect("Failed to write config file");
+    let config_path = temp_workspace.path().join("environment.json");
+
+    let create_result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_create_command(config_path.to_str().unwrap())
+        .expect("Failed to run create command");
+
+    assert!(
+        create_result.success(),
+        "Pre-condition: create must succeed, stderr: {}",
+        create_result.stderr()
+    );
+
+    // Act: Run destroy command without --output-format
+    let result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_destroy_command("test-destroy-json-default")
+        .expect("Failed to run destroy command");
+
+    // Assert: Command succeeds
+    assert!(
+        result.success(),
+        "Destroy command should succeed for an existing environment, stderr: {}",
+        result.stderr()
+    );
+
+    // Assert: stdout is valid JSON
+    let stdout = result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Destroy command default output must be valid JSON");
+
+    // Assert: Expected field is present
+    assert!(
+        json.get("environment_name").is_some(),
+        "Expected `environment_name` field in destroy JSON output, got: {stdout}"
+    );
+}

@@ -217,3 +217,42 @@ fn it_should_validate_configuration_without_creating_deployment() {
         "Validate command should not create environment data directory"
     );
 }
+
+#[test]
+fn it_should_produce_json_by_default() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
+    // Arrange: Create a valid environment config file in a temp workspace
+    let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
+    let config = create_test_environment_config("test-validate-json-default");
+    temp_workspace
+        .write_config_file("environment.json", &config)
+        .expect("Failed to write config file");
+    let config_path = temp_workspace.path().join("environment.json");
+
+    // Act: Run validate command without --output-format
+    let result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_validate_command(config_path.to_str().unwrap())
+        .expect("Failed to run validate command");
+
+    // Assert: Command succeeds
+    assert!(
+        result.success(),
+        "Validate command should succeed with a valid config, stderr: {}",
+        result.stderr()
+    );
+
+    // Assert: stdout is valid JSON
+    let stdout = result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Validate command default output must be valid JSON");
+
+    // Assert: Expected field indicates valid configuration
+    assert_eq!(
+        json["is_valid"], true,
+        "Expected `is_valid: true` in validate JSON output, got: {stdout}"
+    );
+}

@@ -203,3 +203,55 @@ fn it_should_list_multiple_environments() {
         "Expected environment name 'test-list-second' in output, got: {stdout}"
     );
 }
+
+#[test]
+fn it_should_produce_json_by_default() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
+    // Arrange: Create an environment first so the data directory exists and
+    // `list` can succeed (it fails on empty workspaces with no data directory).
+    let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
+    let config_json = create_test_environment_config("test-list-json-default");
+    temp_workspace
+        .write_config_file("environment.json", &config_json)
+        .expect("Failed to write config file");
+    let config_path = temp_workspace.path().join("environment.json");
+
+    let create_result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_create_command(config_path.to_str().unwrap())
+        .expect("Failed to run create command");
+
+    assert!(
+        create_result.success(),
+        "Pre-condition: create must succeed, stderr: {}",
+        create_result.stderr()
+    );
+
+    // Act: Run list command without --output-format
+    let result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_list_command()
+        .expect("Failed to run list command");
+
+    // Assert: Command succeeds
+    assert!(
+        result.success(),
+        "List command should succeed when at least one environment exists, stderr: {}",
+        result.stderr()
+    );
+
+    // Assert: stdout is valid JSON
+    let stdout = result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("List command default output must be valid JSON");
+
+    // Assert: Expected top-level key is present
+    assert!(
+        json.get("total_count").is_some(),
+        "Expected `total_count` field in list JSON output, got: {stdout}"
+    );
+}

@@ -123,11 +123,13 @@ fn it_should_purge_destroyed_environment_successfully() {
     env_assertions.assert_data_directory_not_exists("test-purge-destroyed");
     env_assertions.assert_build_directory_not_exists("test-purge-destroyed");
 
-    // Assert: Verify success message in output (check both stdout and stderr)
-    let output = format!("{}{}", purge_result.stdout(), purge_result.stderr());
-    assert!(
-        output.contains("purged successfully"),
-        "Output should contain success message. Combined output: {output}"
+    // Assert: Verify the JSON result is on stdout (not stderr)
+    let stdout = purge_result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Purge output must be valid JSON on stdout");
+    assert_eq!(
+        json["purged"], true,
+        "Output should contain JSON success field. Got stdout: {stdout}"
     );
 }
 
@@ -288,11 +290,13 @@ fn it_should_complete_full_lifecycle_from_create_to_purge() {
     env_assertions.assert_data_directory_not_exists("test-full-lifecycle-purge");
     env_assertions.assert_build_directory_not_exists("test-full-lifecycle-purge");
 
-    // Verify purge output indicates success (check both stdout and stderr)
-    let output = format!("{}{}", purge_result.stdout(), purge_result.stderr());
-    assert!(
-        output.contains("purged successfully"),
-        "Output should contain success message. Combined output: {output}"
+    // Verify the JSON result is on stdout (not stderr)
+    let stdout = purge_result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Purge output must be valid JSON on stdout");
+    assert_eq!(
+        json["purged"], true,
+        "Output should contain JSON success field. Got stdout: {stdout}"
     );
 }
 
@@ -375,4 +379,55 @@ fn it_should_remove_only_specified_environment_data() {
     // env2 should still exist
     env_assertions.assert_environment_exists("test-purge-env2");
     env_assertions.assert_environment_state_is("test-purge-env2", "Destroyed");
+}
+
+#[test]
+fn it_should_produce_json_by_default() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
+    // Arrange: Create environment first so purge has something to remove
+    let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
+    let config = create_test_environment_config("test-purge-json-default");
+    temp_workspace
+        .write_config_file("environment.json", &config)
+        .expect("Failed to write config file");
+    let config_path = temp_workspace.path().join("environment.json");
+
+    let create_result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_create_command(config_path.to_str().unwrap())
+        .expect("Failed to run create command");
+
+    assert!(
+        create_result.success(),
+        "Pre-condition: create must succeed, stderr: {}",
+        create_result.stderr()
+    );
+
+    // Act: Run purge command without --output-format
+    let result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_purge_command("test-purge-json-default")
+        .expect("Failed to run purge command");
+
+    // Assert: Command succeeds
+    assert!(
+        result.success(),
+        "Purge command should succeed for an existing environment, stderr: {}",
+        result.stderr()
+    );
+
+    // Assert: stdout is valid JSON
+    let stdout = result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Purge command default output must be valid JSON");
+
+    // Assert: Expected field confirms environment was purged
+    assert_eq!(
+        json["purged"], true,
+        "Expected `purged: true` in purge JSON output, got: {stdout}"
+    );
 }

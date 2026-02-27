@@ -14,16 +14,16 @@
 /// ```rust
 /// use torrust_tracker_deployer_lib::presentation::cli::input::cli::OutputFormat;
 ///
-/// // Default is text format
+/// // Default is JSON format
 /// let format = OutputFormat::default();
-/// assert!(matches!(format, OutputFormat::Text));
+/// assert!(matches!(format, OutputFormat::Json));
 ///
-/// // JSON format for automation
-/// let json_format = OutputFormat::Json;
+/// // Text format for human-readable output
+/// let text_format = OutputFormat::Text;
 /// ```
 #[derive(Clone, Copy, Debug, Default, clap::ValueEnum)]
 pub enum OutputFormat {
-    /// Human-readable text output (default)
+    /// Human-readable text output
     ///
     /// Produces formatted text with tables, sections, and visual elements
     /// optimized for terminal display and human consumption.
@@ -38,10 +38,9 @@ pub enum OutputFormat {
     /// 3. Data directory: ./data/my-env
     /// 4. Build directory: ./build/my-env
     /// ```
-    #[default]
     Text,
 
-    /// JSON output for automation and programmatic parsing
+    /// JSON output for automation and programmatic parsing (default)
     ///
     /// Produces machine-readable JSON objects that can be parsed by tools
     /// like jq, scripts, and AI agents for programmatic extraction of data.
@@ -56,5 +55,6 @@ pub enum OutputFormat {
     ///   "created_at": "2026-02-16T14:30:00Z"
     /// }
     /// ```
+    #[default]
     Json,
 }

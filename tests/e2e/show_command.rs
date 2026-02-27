@@ -228,3 +228,54 @@ fn it_should_show_provider_information() {
         "Expected provider information in output, got: {stdout}"
     );
 }
+
+#[test]
+fn it_should_produce_json_by_default() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
+    // Arrange: Create environment first so show has something to display
+    let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
+    let config = create_test_environment_config("test-show-json-default");
+    temp_workspace
+        .write_config_file("environment.json", &config)
+        .expect("Failed to write config file");
+    let config_path = temp_workspace.path().join("environment.json");
+
+    let create_result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_create_command(config_path.to_str().unwrap())
+        .expect("Failed to run create command");
+
+    assert!(
+        create_result.success(),
+        "Pre-condition: create must succeed, stderr: {}",
+        create_result.stderr()
+    );
+
+    // Act: Run show command without --output-format
+    let result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_show_command("test-show-json-default")
+        .expect("Failed to run show command");
+
+    // Assert: Command succeeds
+    assert!(
+        result.success(),
+        "Show command should succeed for an existing environment, stderr: {}",
+        result.stderr()
+    );
+
+    // Assert: stdout is valid JSON
+    let stdout = result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Show command default output must be valid JSON");
+
+    // Assert: Expected field is present
+    assert!(
+        json.get("name").is_some(),
+        "Expected `name` field in show JSON output, got: {stdout}"
+    );
+}

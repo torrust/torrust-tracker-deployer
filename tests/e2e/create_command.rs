@@ -197,3 +197,42 @@ fn it_should_fail_when_environment_already_exists() {
         "Error message should mention environment already exists, got: {stderr}"
     );
 }
+
+#[test]
+fn it_should_produce_json_by_default() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
+    // Arrange: Create a valid environment config file in a temp workspace
+    let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
+    let config = create_test_environment_config("test-create-json-default");
+    temp_workspace
+        .write_config_file("environment.json", &config)
+        .expect("Failed to write config file");
+    let config_path = temp_workspace.path().join("environment.json");
+
+    // Act: Run create command without --output-format
+    let result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_create_command(config_path.to_str().unwrap())
+        .expect("Failed to run create command");
+
+    // Assert: Command succeeds
+    assert!(
+        result.success(),
+        "Create command should succeed with a valid config, stderr: {}",
+        result.stderr()
+    );
+
+    // Assert: stdout is valid JSON
+    let stdout = result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Create command default output must be valid JSON");
+
+    // Assert: Expected field is present
+    assert!(
+        json.get("environment_name").is_some(),
+        "Expected `environment_name` field in create JSON output, got: {stdout}"
+    );
+}

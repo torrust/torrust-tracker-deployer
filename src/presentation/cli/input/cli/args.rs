@@ -72,20 +72,22 @@ pub struct GlobalArgs {
     #[arg(long, default_value = ".", global = true)]
     pub working_dir: PathBuf,
 
-    /// Output format for command results (default: text)
+    /// Output format for command results (default: json)
     ///
-    /// Controls the format of user-facing output (stdout channel).
-    /// - text: Human-readable formatted output with tables and sections (default)
-    /// - json: Machine-readable JSON for automation, scripts, and AI agents
+    /// Controls the format of result data written to stdout. Progress messages,
+    /// warnings, and status updates are always written to stderr regardless of
+    /// this setting.
+    /// - json: Machine-readable JSON for automation, scripts, and AI agents (default)
+    /// - text: Human-readable formatted output with tables and sections
     ///
     /// This is independent of logging format (--log-file-format, --log-stderr-format)
     /// which controls stderr/file output.
     ///
     /// Examples:
-    /// - Default: Text format for human consumption
-    /// - Automation: JSON format for programmatic parsing
+    /// - Default: JSON format for automation and AI agents
+    /// - Human output: Pass --output-format text for human-readable display
     /// - CI/CD: JSON piped to jq for field extraction
-    #[arg(long, value_enum, default_value = "text", global = true)]
+    #[arg(long, value_enum, default_value = "json", global = true)]
     pub output_format: OutputFormat,
 
     /// Increase verbosity of user-facing output
