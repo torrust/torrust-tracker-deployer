@@ -122,8 +122,18 @@ impl JsonView {
             grafana,
         };
 
-        serde_json::to_string_pretty(&output)
-            .unwrap_or_else(|e| format!(r#"{{"error": "Failed to serialize: {e}"}}"#))
+        serde_json::to_string_pretty(&output).unwrap_or_else(|e| {
+            serde_json::to_string_pretty(&serde_json::json!({
+                "error": "Failed to serialize run details",
+                "message": e.to_string(),
+            }))
+            .unwrap_or_else(|_| {
+                r#"{
+  "error": "Failed to serialize error message"
+}"#
+                .to_string()
+            })
+        })
     }
 }
 

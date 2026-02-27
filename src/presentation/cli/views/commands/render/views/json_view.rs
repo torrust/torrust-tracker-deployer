@@ -83,12 +83,16 @@ impl JsonView {
     #[must_use]
     pub fn render(data: &RenderDetailsData) -> String {
         serde_json::to_string_pretty(data).unwrap_or_else(|e| {
-            format!(
-                r#"{{
-  "error": "Failed to serialize render details",
-  "message": "{e}"
-}}"#
-            )
+            serde_json::to_string_pretty(&serde_json::json!({
+                "error": "Failed to serialize render details",
+                "message": e.to_string(),
+            }))
+            .unwrap_or_else(|_| {
+                r#"{
+  "error": "Failed to serialize error message"
+}"#
+                .to_string()
+            })
         })
     }
 }
