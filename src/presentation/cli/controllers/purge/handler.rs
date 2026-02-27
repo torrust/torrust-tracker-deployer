@@ -10,6 +10,8 @@ use parking_lot::ReentrantMutex;
 
 use crate::application::command_handlers::purge::handler::PurgeCommandHandler;
 use crate::domain::environment::name::EnvironmentName;
+use crate::presentation::cli::input::cli::OutputFormat;
+use crate::presentation::cli::views::commands::purge::{JsonView, PurgeDetailsData, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
 use crate::presentation::cli::views::UserOutput;
 
@@ -96,6 +98,7 @@ impl PurgeCommandController {
     ///
     /// * `environment_name` - The name of the environment to purge
     /// * `force` - Skip confirmation prompt if true
+    /// * `output_format` - Output format (text or JSON)
     ///
     /// # Errors
     ///
@@ -115,6 +118,7 @@ impl PurgeCommandController {
         &mut self,
         environment_name: &str,
         force: bool,
+        output_format: OutputFormat,
     ) -> Result<(), PurgeSubcommandError> {
         let env_name = self.validate_environment_name(environment_name)?;
 
@@ -146,7 +150,7 @@ impl PurgeCommandController {
         })?;
         self.progress.complete_step(None)?;
 
-        self.complete_workflow(environment_name)?;
+        self.complete_workflow(environment_name, output_format)?;
 
         Ok(())
     }
@@ -178,11 +182,22 @@ impl PurgeCommandController {
     /// Complete the workflow with success message
     ///
     /// Shows final success message to the user with workflow summary.
+    /// Dispatches to `TextView` or `JsonView` based on `output_format`.
     #[allow(clippy::result_large_err)]
-    fn complete_workflow(&mut self, environment_name: &str) -> Result<(), PurgeSubcommandError> {
-        self.progress.complete(&format!(
-            "Environment '{environment_name}' purged successfully"
-        ))?;
+    fn complete_workflow(
+        &mut self,
+        environment_name: &str,
+        output_format: OutputFormat,
+    ) -> Result<(), PurgeSubcommandError> {
+        let data = PurgeDetailsData::from_environment_name(environment_name);
+        match output_format {
+            OutputFormat::Text => {
+                self.progress.complete(&TextView::render(&data))?;
+            }
+            OutputFormat::Json => {
+                self.progress.result(&JsonView::render(&data))?;
+            }
+        }
         Ok(())
     }
 
