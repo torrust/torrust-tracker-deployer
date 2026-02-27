@@ -152,6 +152,7 @@ certbot
 certonly
 chatbots
 chdir
+checkmark
 checkmarks
 checkpointed
 checkpointing

@@ -21,6 +21,7 @@
 //! ```rust
 //! use std::path::Path;
 //! use torrust_tracker_deployer_lib::bootstrap::Container;
+//! use torrust_tracker_deployer_lib::presentation::cli::input::cli::OutputFormat;
 //! use torrust_tracker_deployer_lib::presentation::cli::views::VerbosityLevel;
 //!
 //! # #[tokio::main]
@@ -28,7 +29,7 @@
 //! let container = Container::new(VerbosityLevel::Normal, Path::new("."));
 //! if let Err(e) = container
 //!     .create_purge_controller()
-//!     .execute("test-env", false)
+//!     .execute("test-env", false, OutputFormat::Text)
 //!     .await
 //! {
 //!     eprintln!("Purge failed: {e}");
@@ -47,6 +48,7 @@
 //! use std::cell::RefCell;
 //! use torrust_tracker_deployer_lib::application::command_handlers::purge::handler::PurgeCommandHandler;
 //! use torrust_tracker_deployer_lib::presentation::cli::controllers::purge::handler::PurgeCommandController;
+//! use torrust_tracker_deployer_lib::presentation::cli::input::cli::OutputFormat;
 //! use torrust_tracker_deployer_lib::presentation::cli::views::{UserOutput, VerbosityLevel};
 //! use torrust_tracker_deployer_lib::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 //!
@@ -57,7 +59,7 @@
 //! let file_repository_factory = FileRepositoryFactory::new(Duration::from_secs(30));
 //! let repository = file_repository_factory.create(data_dir.clone());
 //! let handler = PurgeCommandHandler::new(repository, data_dir);
-//! if let Err(e) = PurgeCommandController::new(handler, output).execute("test-env", false).await {
+//! if let Err(e) = PurgeCommandController::new(handler, output).execute("test-env", false, OutputFormat::Text).await {
 //!     eprintln!("Purge failed: {e}");
 //!     eprintln!("\n{}", e.help());
 //! }

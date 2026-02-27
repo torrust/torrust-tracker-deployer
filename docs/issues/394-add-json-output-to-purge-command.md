@@ -21,13 +21,13 @@ The application-layer `PurgeCommandHandler::execute()` returns `()` on success �
 
 ## Goals
 
-- [ ] Add `output_format: OutputFormat` parameter to `PurgeCommandController::execute()`
-- [ ] Add a `PurgeDetailsData` view DTO
-- [ ] Implement `JsonView` for the purge command — `render()` returns `String` using the list-command pattern (inline `unwrap_or_else` fallback)
-- [ ] Implement `TextView` to present the same data in human-readable format (preserving current `complete_workflow` output)
-- [ ] Handle `OutputFormat::Json` and `OutputFormat::Text` branches in `complete_workflow()` using Strategy Pattern
-- [ ] Update router to pass `output_format` from context to controller
-- [ ] Add unit tests for `JsonView` and `TextView`
+- [x] Add `output_format: OutputFormat` parameter to `PurgeCommandController::execute()`
+- [x] Add a `PurgeDetailsData` view DTO
+- [x] Implement `JsonView` for the purge command — `render()` returns `String` using the list-command pattern (inline `unwrap_or_else` fallback)
+- [x] Implement `TextView` to present the same data in human-readable format (preserving current `complete_workflow` output)
+- [x] Handle `OutputFormat::Json` and `OutputFormat::Text` branches in `complete_workflow()` using Strategy Pattern
+- [x] Update router to pass `output_format` from context to controller
+- [x] Add unit tests for `JsonView` and `TextView`
 
 ## 🏗️ Architecture Requirements
 
@@ -46,18 +46,18 @@ The application-layer `PurgeCommandHandler::execute()` returns `()` on success �
 
 ### Module Structure Requirements
 
-- [ ] Follow the existing view module structure established in `render/` and `validate/` (has `view_data/`)
-- [ ] `PurgeDetailsData` is a plain presentation DTO deriving `Serialize`, `PartialEq` (not `Deserialize`) with a named constructor `from_environment_name` — built from just the environment name string since purge returns no result struct
-- [ ] `JsonView::render()` returns `String` — serialization errors handled inline via `unwrap_or_else`
-- [ ] `TextView::render()` formats the same data as human-readable text and also returns `String` (preserving existing output)
-- [ ] Follow module organization conventions (`docs/contributing/module-organization.md`)
+- [x] Follow the existing view module structure established in `render/` and `validate/` (has `view_data/`)
+- [x] `PurgeDetailsData` is a plain presentation DTO deriving `Serialize`, `PartialEq` (not `Deserialize`) with a named constructor `from_environment_name` — built from just the environment name string since purge returns no result struct
+- [x] `JsonView::render()` returns `String` — serialization errors handled inline via `unwrap_or_else`
+- [x] `TextView::render()` formats the same data as human-readable text and also returns `String` (preserving existing output)
+- [x] Follow module organization conventions (`docs/contributing/module-organization.md`)
 
 ### Architectural Constraints
 
-- [ ] No business logic in the presentation layer — only rendering
-- [ ] Error handling follows project conventions (`docs/contributing/error-handling.md`)
-- [ ] Output must go through `UserOutput` methods — never `println!` or `eprintln!` directly (`docs/contributing/output-handling.md`)
-- [ ] The `PurgeDetailsData` DTO must derive `serde::Serialize` (output-only — no `Deserialize` needed)
+- [x] No business logic in the presentation layer — only rendering
+- [x] Error handling follows project conventions (`docs/contributing/error-handling.md`)
+- [x] Output must go through `UserOutput` methods — never `println!` or `eprintln!` directly (`docs/contributing/output-handling.md`)
+- [x] The `PurgeDetailsData` DTO must derive `serde::Serialize` (output-only — no `Deserialize` needed)
 
 ### Anti-Patterns to Avoid
 
@@ -182,29 +182,28 @@ Commands::Purge { environment, force } => {
 
 ### Phase 1 — View Module
 
-- [ ] Create `src/presentation/cli/views/commands/purge/mod.rs`
-- [ ] Create `src/presentation/cli/views/commands/purge/view_data/purge_details.rs` with `PurgeDetailsData`
-- [ ] Create `src/presentation/cli/views/commands/purge/views/mod.rs`
-- [ ] Create `src/presentation/cli/views/commands/purge/views/json_view.rs` with `JsonView`
-- [ ] Create `src/presentation/cli/views/commands/purge/views/text_view.rs` with `TextView`
-- [ ] Register `purge` in `src/presentation/cli/views/commands/mod.rs`
+- [x] Create `src/presentation/cli/views/commands/purge/mod.rs`
+- [x] Create `src/presentation/cli/views/commands/purge/view_data/purge_details.rs` with `PurgeDetailsData`
+- [x] Create `src/presentation/cli/views/commands/purge/views/json_view.rs` with `JsonView`
+- [x] Create `src/presentation/cli/views/commands/purge/views/text_view.rs` with `TextView`
+- [x] Register `purge` in `src/presentation/cli/views/commands/mod.rs`
 
 ### Phase 2 — Controller Changes
 
-- [ ] Add `output_format: OutputFormat` parameter to `PurgeCommandController::execute()`
-- [ ] Update `complete_workflow()` to accept and dispatch on `output_format`
-- [ ] Import and use `PurgeDetailsData`, `JsonView`, `TextView`, `OutputFormat`
+- [x] Add `output_format: OutputFormat` parameter to `PurgeCommandController::execute()`
+- [x] Update `complete_workflow()` to accept and dispatch on `output_format`
+- [x] Import and use `PurgeDetailsData`, `JsonView`, `TextView`, `OutputFormat`
 
 ### Phase 3 — Router Changes
 
-- [ ] Add `let output_format = context.output_format();` in `Commands::Purge` arm
-- [ ] Pass `output_format` as new argument to `execute()`
+- [x] Add `let output_format = context.output_format();` in `Commands::Purge` arm
+- [x] Pass `output_format` as new argument to `execute()`
 
 ### Phase 4 — Tests
 
-- [ ] Unit tests for `JsonView::render()` — assert serialized JSON matches expected
-- [ ] Unit tests for `TextView::render()` — assert formatted string matches expected
-- [ ] Verify existing tests still pass (`cargo test`)
+- [x] Unit tests for `JsonView::render()` — assert serialized JSON matches expected
+- [x] Unit tests for `TextView::render()` — assert formatted string matches expected
+- [x] Verify existing tests still pass (`cargo test`)
 
 ### Phase 5 — Manual Output Verification
 
@@ -243,9 +242,9 @@ Expected:
 
 ### Phase 6 — Lint & Documentation
 
-- [ ] `cargo run --bin linter all` passes (stable + nightly)
-- [ ] `cargo machete` passes (no unused dependencies)
-- [ ] Update `docs/user-guide/commands/purge.md` — add JSON output section
+- [x] `cargo run --bin linter all` passes (stable + nightly)
+- [x] `cargo machete` passes (no unused dependencies)
+- [x] Update `docs/user-guide/commands/purge.md` — add JSON output section
 
 ## Testing Strategy
 

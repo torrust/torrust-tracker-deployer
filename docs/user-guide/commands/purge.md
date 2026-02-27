@@ -79,6 +79,52 @@ See detailed progress during purge:
 torrust-tracker-deployer purge my-environment --force --log-output file-and-stderr
 ```
 
+## JSON Output
+
+The purge command supports machine-readable JSON output via the `--output-format json` flag. This is useful for automation, scripts, and AI agent workflows.
+
+### JSON Format
+
+```bash
+torrust-tracker-deployer purge my-environment --force --output-format json
+```
+
+**Output** (stdout):
+
+```json
+{
+  "environment_name": "my-environment",
+  "purged": true
+}
+```
+
+| Field              | Type    | Description                                       |
+| ------------------ | ------- | ------------------------------------------------- |
+| `environment_name` | string  | Name of the environment that was purged           |
+| `purged`           | boolean | Always `true` when the command exits successfully |
+
+### Notes on JSON Mode
+
+- `purged` is always `true` on the success path — purge failures exit with a non-zero code and produce no JSON
+- Progress lines (step counters) are written to stderr; only the JSON result is written to stdout
+- When using JSON mode in automation, always pass `--force` to skip the interactive confirmation prompt:
+
+  ```bash
+  torrust-tracker-deployer purge my-environment --force --output-format json
+  ```
+
+### Using JSON Output in Scripts
+
+Extract the environment name from the JSON output:
+
+```bash
+result=$(torrust-tracker-deployer purge my-environment --force --output-format json 2>/dev/null)
+env_name=$(echo "$result" | jq -r '.environment_name')
+purged=$(echo "$result" | jq -r '.purged')
+
+echo "Purged: $env_name (success=$purged)"
+```
+
 ## What Gets Purged
 
 The purge command removes:

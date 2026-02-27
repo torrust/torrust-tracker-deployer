@@ -124,10 +124,11 @@ pub async fn route_command(
             Ok(())
         }
         Commands::Purge { environment, force } => {
+            let output_format = context.output_format();
             context
                 .container()
                 .create_purge_controller()
-                .execute(&environment, force)
+                .execute(&environment, force, output_format)
                 .await?;
             Ok(())
         }
