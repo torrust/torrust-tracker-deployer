@@ -171,10 +171,11 @@ pub async fn route_command(
             instance_ip,
             ssh_port,
         } => {
+            let output_format = context.output_format();
             context
                 .container()
                 .create_register_controller()
-                .execute(&environment, &instance_ip, ssh_port)
+                .execute(&environment, &instance_ip, ssh_port, output_format)
                 .await?;
             Ok(())
         }
