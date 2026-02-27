@@ -74,7 +74,9 @@ pub struct GlobalArgs {
 
     /// Output format for command results (default: json)
     ///
-    /// Controls the format of user-facing output (stdout channel).
+    /// Controls the format of result data written to stdout. Progress messages,
+    /// warnings, and status updates are always written to stderr regardless of
+    /// this setting.
     /// - json: Machine-readable JSON for automation, scripts, and AI agents (default)
     /// - text: Human-readable formatted output with tables and sections
     ///

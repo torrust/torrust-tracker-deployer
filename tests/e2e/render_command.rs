@@ -128,11 +128,13 @@ fn it_should_render_artifacts_using_env_name_successfully() {
         tofu_dir.display()
     );
 
-    // Assert: Verify success output (check both stdout and stderr)
-    let output = format!("{}{}", render_result.stdout(), render_result.stderr());
+    // Assert: Verify the JSON result is on stdout (not stderr)
+    let stdout = render_result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Render output must be valid JSON on stdout");
     assert!(
-        output.contains("\"output_dir\""),
-        "Output should contain JSON output_dir field. Combined output: {output}"
+        json.get("output_dir").is_some(),
+        "Output should contain JSON output_dir field. Got stdout: {stdout}"
     );
 }
 
@@ -197,11 +199,13 @@ fn it_should_render_artifacts_using_config_file_successfully() {
         tofu_dir.display()
     );
 
-    // Assert: Verify success output
-    let output = format!("{}{}", render_result.stdout(), render_result.stderr());
+    // Assert: Verify the JSON result is on stdout (not stderr)
+    let stdout = render_result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Render output must be valid JSON on stdout");
     assert!(
-        output.contains("\"output_dir\""),
-        "Output should contain JSON output_dir field. Combined output: {output}"
+        json.get("output_dir").is_some(),
+        "Output should contain JSON output_dir field. Got stdout: {stdout}"
     );
 }
 
@@ -474,11 +478,13 @@ fn it_should_complete_full_lifecycle_from_create_to_render() {
     // Verify environment remains in Created state (render doesn't change state)
     env_assertions.assert_environment_state_is("test-full-lifecycle-render", "Created");
 
-    // Verify render output indicates success (check both stdout and stderr)
-    let output = format!("{}{}", render_result.stdout(), render_result.stderr());
+    // Verify the JSON result is on stdout (not stderr)
+    let stdout = render_result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Render output must be valid JSON on stdout");
     assert!(
-        output.contains("\"output_dir\""),
-        "Output should contain JSON output_dir field. Combined output: {output}"
+        json.get("output_dir").is_some(),
+        "Output should contain JSON output_dir field. Got stdout: {stdout}"
     );
 }
 

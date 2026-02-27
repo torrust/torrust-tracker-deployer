@@ -123,11 +123,13 @@ fn it_should_purge_destroyed_environment_successfully() {
     env_assertions.assert_data_directory_not_exists("test-purge-destroyed");
     env_assertions.assert_build_directory_not_exists("test-purge-destroyed");
 
-    // Assert: Verify success output (check both stdout and stderr)
-    let output = format!("{}{}", purge_result.stdout(), purge_result.stderr());
-    assert!(
-        output.contains("\"purged\": true"),
-        "Output should contain JSON success field. Combined output: {output}"
+    // Assert: Verify the JSON result is on stdout (not stderr)
+    let stdout = purge_result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Purge output must be valid JSON on stdout");
+    assert_eq!(
+        json["purged"], true,
+        "Output should contain JSON success field. Got stdout: {stdout}"
     );
 }
 
@@ -288,11 +290,13 @@ fn it_should_complete_full_lifecycle_from_create_to_purge() {
     env_assertions.assert_data_directory_not_exists("test-full-lifecycle-purge");
     env_assertions.assert_build_directory_not_exists("test-full-lifecycle-purge");
 
-    // Verify purge output indicates success (check both stdout and stderr)
-    let output = format!("{}{}", purge_result.stdout(), purge_result.stderr());
-    assert!(
-        output.contains("\"purged\": true"),
-        "Output should contain JSON success field. Combined output: {output}"
+    // Verify the JSON result is on stdout (not stderr)
+    let stdout = purge_result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Purge output must be valid JSON on stdout");
+    assert_eq!(
+        json["purged"], true,
+        "Output should contain JSON success field. Got stdout: {stdout}"
     );
 }
 
