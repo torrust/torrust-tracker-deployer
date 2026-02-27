@@ -14,6 +14,10 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::Provisioned;
 use crate::domain::environment::Environment;
+use crate::presentation::cli::input::cli::OutputFormat;
+use crate::presentation::cli::views::commands::register::{
+    JsonView, RegisterDetailsData, TextView,
+};
 use crate::presentation::cli::views::progress::ProgressReporter;
 use crate::presentation::cli::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -105,6 +109,7 @@ impl RegisterCommandController {
     /// * `environment_name` - The name of the environment to register the instance with
     /// * `instance_ip_str` - The IP address string of the existing instance
     /// * `ssh_port` - Optional SSH port (overrides environment config if provided)
+    /// * `output_format` - Output format (text or JSON)
     ///
     /// # Errors
     ///
@@ -119,6 +124,7 @@ impl RegisterCommandController {
         environment_name: &str,
         instance_ip_str: &str,
         ssh_port: Option<u16>,
+        output_format: OutputFormat,
     ) -> Result<Environment<Provisioned>, RegisterSubcommandError> {
         let (env_name, instance_ip) = self.validate_input(environment_name, instance_ip_str)?;
 
@@ -128,7 +134,7 @@ impl RegisterCommandController {
             .register_instance(&handler, &env_name, instance_ip, ssh_port)
             .await?;
 
-        self.complete_workflow(environment_name)?;
+        self.complete_workflow(&provisioned, output_format)?;
 
         Ok(provisioned)
     }
@@ -206,12 +212,23 @@ impl RegisterCommandController {
     }
 
     /// Complete the workflow with success message
+    ///
+    /// Dispatches to `TextView` or `JsonView` based on `output_format`.
     #[allow(clippy::result_large_err)]
-    fn complete_workflow(&mut self, environment_name: &str) -> Result<(), RegisterSubcommandError> {
-        self.progress.complete(&format!(
-            "Instance registered successfully with environment '{environment_name}'"
-        ))?;
-
+    fn complete_workflow(
+        &mut self,
+        provisioned: &Environment<Provisioned>,
+        output_format: OutputFormat,
+    ) -> Result<(), RegisterSubcommandError> {
+        let data = RegisterDetailsData::from_environment(provisioned);
+        match output_format {
+            OutputFormat::Text => {
+                self.progress.complete(&TextView::render(&data))?;
+            }
+            OutputFormat::Json => {
+                self.progress.result(&JsonView::render(&data))?;
+            }
+        }
         Ok(())
     }
 }
