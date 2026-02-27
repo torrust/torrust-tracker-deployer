@@ -14,7 +14,7 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::AnyEnvironmentState;
 use crate::presentation::cli::input::cli::OutputFormat;
-use crate::presentation::cli::views::commands::run::{JsonView, TextView};
+use crate::presentation::cli::views::commands::run::{JsonView, RunDetailsData, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
 use crate::presentation::cli::views::UserOutput;
 use crate::shared::clock::Clock;
@@ -266,17 +266,15 @@ impl RunCommandController {
             let grafana =
                 grafana_config.map(|config| GrafanaInfo::from_config(config, instance_ip));
 
+            let data = RunDetailsData::new(any_env.name().to_string(), services, grafana);
+
             // Render using appropriate view based on output format (Strategy Pattern)
             let output = match output_format {
-                OutputFormat::Text => {
-                    TextView::render(any_env.name().as_str(), &services, grafana.as_ref())
-                }
-                OutputFormat::Json => {
-                    JsonView::render(any_env.name().as_str(), &services, grafana.as_ref())
-                }
+                OutputFormat::Text => TextView::render(&data),
+                OutputFormat::Json => JsonView::render(&data),
             };
 
-            // Pipeline: ServiceInfo + GrafanaInfo → render → output to stdout
+            // Pipeline: RunDetailsData → render → output to stdout
             self.progress.result(&output)?;
         }
 

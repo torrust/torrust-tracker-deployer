@@ -3,7 +3,7 @@
 //! This module provides a view for rendering tracker service endpoints
 //! including UDP trackers, HTTP trackers (HTTPS and direct), API, and health check.
 
-use crate::application::command_handlers::show::info::ServiceInfo;
+use crate::presentation::cli::views::commands::show::view_data::ServiceInfo;
 
 /// View for rendering tracker service information
 ///
@@ -112,7 +112,9 @@ impl TrackerServicesView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::application::command_handlers::show::info::{LocalhostServiceInfo, TlsDomainInfo};
+    use crate::presentation::cli::views::commands::show::view_data::{
+        LocalhostServiceInfo, TlsDomainInfo,
+    };
 
     fn sample_http_only_services() -> ServiceInfo {
         ServiceInfo::new(

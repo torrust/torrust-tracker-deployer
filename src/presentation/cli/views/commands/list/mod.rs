@@ -14,6 +14,7 @@
 //!   - `text_view.rs`: Human-readable table rendering
 //!   - `json_view.rs`: JSON output for automation workflows
 
+pub mod view_data;
 pub mod views {
     pub mod json_view;
     pub mod text_view;
@@ -24,4 +25,5 @@ pub mod views {
 }
 
 // Re-export everything at the module level for backward compatibility
+pub use view_data::EnvironmentList;
 pub use views::{JsonView, TextView};

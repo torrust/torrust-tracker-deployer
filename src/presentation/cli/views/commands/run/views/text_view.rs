@@ -3,7 +3,7 @@
 //! This module provides human-readable text rendering for the run command.
 //! It displays service URLs, DNS hints, and helpful tips after services are started.
 
-use crate::application::command_handlers::show::info::{GrafanaInfo, ServiceInfo};
+use crate::presentation::cli::views::commands::run::view_data::RunDetailsData;
 use crate::presentation::cli::views::commands::shared::service_urls::{
     CompactServiceUrlsView, DnsHintView,
 };
@@ -18,7 +18,7 @@ use crate::presentation::cli::views::commands::shared::service_urls::{
 ///
 /// ```rust
 /// use torrust_tracker_deployer_lib::application::command_handlers::show::info::ServiceInfo;
-/// use torrust_tracker_deployer_lib::presentation::cli::views::commands::run::TextView;
+/// use torrust_tracker_deployer_lib::presentation::cli::views::commands::run::{TextView, RunDetailsData};
 ///
 /// let services = ServiceInfo::new(
 ///     vec!["udp://10.0.0.1:6969/announce".to_string()],
@@ -34,7 +34,8 @@ use crate::presentation::cli::views::commands::shared::service_urls::{
 ///     vec![],
 /// );
 ///
-/// let output = TextView::render("my-env", &services, None);
+/// let data = RunDetailsData::new("my-env".to_string(), services, None);
+/// let output = TextView::render(&data);
 /// assert!(output.contains("Services are now accessible:"));
 /// assert!(output.contains("Tip:"));
 /// ```
@@ -45,32 +46,33 @@ impl TextView {
     ///
     /// # Arguments
     ///
-    /// * `env_name` - Name of the environment
-    /// * `services` - Service information containing tracker endpoints
-    /// * `grafana` - Optional Grafana service information
+    /// * `data` - Run details DTO containing environment name, service endpoints,
+    ///   and optional Grafana information
     ///
     /// # Returns
     ///
     /// A formatted string with service URLs, DNS hints (if applicable),
     /// and a tip about using the show command for more details.
     #[must_use]
-    pub fn render(env_name: &str, services: &ServiceInfo, grafana: Option<&GrafanaInfo>) -> String {
+    pub fn render(data: &RunDetailsData) -> String {
         let mut output = Vec::new();
 
         // Render service URLs (only public services)
-        let service_urls_output = CompactServiceUrlsView::render(services, grafana);
+        let service_urls_output =
+            CompactServiceUrlsView::render(&data.services, data.grafana.as_ref());
         if !service_urls_output.is_empty() {
             output.push(format!("\n{service_urls_output}"));
         }
 
         // Show DNS hint if HTTPS services are configured
-        if let Some(dns_hint) = DnsHintView::render(services) {
+        if let Some(dns_hint) = DnsHintView::render(&data.services) {
             output.push(format!("\n{dns_hint}"));
         }
 
         // Show tip about show command
         output.push(format!(
-            "\nTip: Run 'torrust-tracker-deployer show {env_name}' for full details\n"
+            "\nTip: Run 'torrust-tracker-deployer show {}' for full details\n",
+            data.environment_name
         ));
 
         output.join("")
@@ -80,9 +82,10 @@ impl TextView {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::application::command_handlers::show::info::ServiceInfo;
 
-    fn sample_basic_services() -> ServiceInfo {
-        ServiceInfo::new(
+    fn sample_data() -> RunDetailsData {
+        let services = ServiceInfo::new(
             vec!["udp://udp.tracker.local:6969/announce".to_string()],
             vec![],
             vec!["http://10.140.190.133:7070/announce".to_string()],
@@ -94,35 +97,45 @@ mod tests {
             false,
             false,
             vec![],
-        )
+        );
+        RunDetailsData::new("test-env".to_string(), services, None)
     }
 
     #[test]
     fn it_should_render_basic_output() {
-        let services = sample_basic_services();
-        let output = TextView::render("test-env", &services, None);
+        let data = sample_data();
+        let output = TextView::render(&data);
 
-        // Should contain service URLs
         assert!(output.contains("Services are now accessible:"));
         assert!(output.contains("udp://udp.tracker.local:6969/announce"));
         assert!(output.contains("http://10.140.190.133:7070/announce"));
         assert!(output.contains("http://10.140.190.133:1212/api"));
-
-        // Should contain tip
         assert!(output.contains("Tip: Run 'torrust-tracker-deployer show test-env'"));
-
-        // Should NOT contain DNS hint (no HTTPS)
         assert!(!output.contains("DNS"));
     }
 
     #[test]
     fn it_should_include_grafana_when_provided() {
+        use crate::application::command_handlers::show::info::GrafanaInfo;
         use url::Url;
 
-        let services = sample_basic_services();
+        let services = ServiceInfo::new(
+            vec!["udp://udp.tracker.local:6969/announce".to_string()],
+            vec![],
+            vec!["http://10.140.190.133:7070/announce".to_string()],
+            vec![],
+            "http://10.140.190.133:1212/api".to_string(),
+            false,
+            false,
+            "http://10.140.190.133:1313/health_check".to_string(),
+            false,
+            false,
+            vec![],
+        );
         let grafana = GrafanaInfo::new(Url::parse("http://10.140.190.133:3000").unwrap(), false);
+        let data = RunDetailsData::new("test-env".to_string(), services, Some(grafana));
 
-        let output = TextView::render("test-env", &services, Some(&grafana));
+        let output = TextView::render(&data);
 
         assert!(output.contains("Grafana:"));
         assert!(output.contains("http://10.140.190.133:3000"));
@@ -148,17 +161,31 @@ mod tests {
                 TlsDomainInfo::new("api.tracker.local".to_string(), 1212),
             ],
         );
+        let data = RunDetailsData::new("test-env".to_string(), services, None);
 
-        let output = TextView::render("test-env", &services, None);
+        let output = TextView::render(&data);
 
-        // Should contain DNS hint
         assert!(output.contains("Note: HTTPS services require DNS configuration"));
     }
 
     #[test]
     fn it_should_always_include_tip() {
-        let services = sample_basic_services();
-        let output = TextView::render("my-environment", &services, None);
+        let services = ServiceInfo::new(
+            vec!["udp://udp.tracker.local:6969/announce".to_string()],
+            vec![],
+            vec!["http://10.140.190.133:7070/announce".to_string()],
+            vec![],
+            "http://10.140.190.133:1212/api".to_string(),
+            false,
+            false,
+            "http://10.140.190.133:1313/health_check".to_string(),
+            false,
+            false,
+            vec![],
+        );
+        let data = RunDetailsData::new("my-environment".to_string(), services, None);
+
+        let output = TextView::render(&data);
 
         assert!(output.contains("Tip: Run 'torrust-tracker-deployer show my-environment'"));
     }

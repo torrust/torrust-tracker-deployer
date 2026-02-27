@@ -9,7 +9,7 @@
 //! The `JsonView` serializes environment list information to JSON using `serde_json`.
 //! The output includes environment summaries, failed environments, and metadata.
 
-use crate::application::command_handlers::list::info::EnvironmentList;
+use crate::presentation::cli::views::commands::list::view_data::EnvironmentList;
 
 /// View for rendering environment list as JSON
 ///
@@ -115,7 +115,7 @@ mod tests {
     use serde_json::Value;
 
     use super::*;
-    use crate::application::command_handlers::list::info::EnvironmentSummary;
+    use crate::presentation::cli::views::commands::list::view_data::EnvironmentSummary;
 
     #[test]
     fn it_should_render_empty_environment_list_as_json() {

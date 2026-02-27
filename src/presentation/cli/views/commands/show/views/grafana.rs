@@ -2,7 +2,7 @@
 //!
 //! This module provides a view for rendering Grafana visualization service information.
 
-use crate::application::command_handlers::show::info::GrafanaInfo;
+use crate::presentation::cli::views::commands::show::view_data::GrafanaInfo;
 
 /// View for rendering Grafana service information
 ///

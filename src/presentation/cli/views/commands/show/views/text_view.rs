@@ -23,7 +23,7 @@ use super::next_step::NextStepGuidanceView;
 use super::prometheus::PrometheusView;
 use super::tracker_services::TrackerServicesView;
 
-use crate::application::command_handlers::show::info::EnvironmentInfo;
+use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
 
 /// View for rendering environment information
 ///
@@ -158,7 +158,7 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use super::*;
-    use crate::application::command_handlers::show::info::{
+    use crate::presentation::cli::views::commands::show::view_data::{
         InfrastructureInfo, ServiceInfo, TlsDomainInfo,
     };
 

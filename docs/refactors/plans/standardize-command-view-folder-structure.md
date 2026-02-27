@@ -61,14 +61,14 @@ harder to review (logic changes + file moves mixed). The correct order is:
 **Total Active Proposals**: 3
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 0
+**Completed**: 3
 **In Progress**: 0
-**Not Started**: 3
+**Not Started**: 0
 
 ### Phase Summary
 
-- **Phase 0 - Fix `run` module layout (High Impact, Low Effort)**: ⏳ 0/2 completed (0%)
-- **Phase 1 - Fix `list` and `show` module layout (Medium Impact, Low Effort)**: ⏳ 0/1 completed (0%)
+- **Phase 0 - Fix `run` module layout (High Impact, Low Effort)**: ✅ 2/2 completed (100%)
+- **Phase 1 - Fix `list` and `show` module layout (Medium Impact, Low Effort)**: ✅ 1/1 completed (100%)
 
 ### Discarded Proposals
 
@@ -134,13 +134,13 @@ For `list` and `show`, this means creating thin wrapper or re-export modules in
 
 ### Proposal #1: Move `run` View Files Into `views/` Subfolder
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵 Low
 **Priority**: P0
 **Depends On**: None
-**Completed**: -
-**Commit**: -
+**Completed**: 2026-02-28
+**Commit**: `8e3f8a41`
 
 #### Problem
 
@@ -193,13 +193,13 @@ All public exports from `run/mod.rs` remain the same — callers are unaffected.
 
 #### Implementation Checklist
 
-- [ ] Create directory `src/presentation/cli/views/commands/run/views/`
-- [ ] Move `run/json_view.rs` to `run/views/json_view.rs`
-- [ ] Move `run/text_view.rs` to `run/views/text_view.rs`
-- [ ] Create `run/views/mod.rs` exporting `JsonView` and `TextView`
-- [ ] Update `run/mod.rs` to use `mod views` and re-export through it
-- [ ] Verify all tests pass
-- [ ] Run `cargo run --bin linter all` and fix issues
+- [x] Create directory `src/presentation/cli/views/commands/run/views/`
+- [x] Move `run/json_view.rs` to `run/views/json_view.rs`
+- [x] Move `run/text_view.rs` to `run/views/text_view.rs`
+- [x] Create `run/views/mod.rs` exporting `JsonView` and `TextView`
+- [x] Update `run/mod.rs` to use `mod views` and re-export through it
+- [x] Verify all tests pass
+- [x] Run `cargo run --bin linter all` and fix issues
 
 #### Testing Strategy
 
@@ -210,13 +210,13 @@ E2E tests must pass unchanged.
 
 ### Proposal #2: Extract `run` Inline DTO to `view_data/`
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢 Medium
 **Effort**: 🔵 Low
 **Priority**: P0
 **Depends On**: Proposal #1
-**Completed**: -
-**Commit**: -
+**Completed**: 2026-02-28
+**Commit**: `ff0c6d7b`
 
 #### Problem
 
@@ -279,14 +279,14 @@ in other commands (e.g., `ConfigureDetailsData`, `DestroyDetailsData`).
 
 #### Implementation Checklist
 
-- [ ] Create `src/presentation/cli/views/commands/run/view_data/run_details.rs` with `RunDetailsData`
-- [ ] Create `src/presentation/cli/views/commands/run/view_data/mod.rs`
-- [ ] Update `run/mod.rs` to declare `pub mod view_data`
-- [ ] Update `run/views/json_view.rs` to use `RunDetailsData` from `super::super::view_data`
+- [x] Create `src/presentation/cli/views/commands/run/view_data/run_details.rs` with `RunDetailsData`
+- [x] Create `src/presentation/cli/views/commands/run/view_data/mod.rs`
+- [x] Update `run/mod.rs` to declare `pub mod view_data`
+- [x] Update `run/views/json_view.rs` to use `RunDetailsData` from `super::super::view_data`
       (or the crate-level path) and remove the inline struct
-- [ ] Update all call sites constructing the old inline struct to construct `RunDetailsData`
-- [ ] Verify all tests pass
-- [ ] Run `cargo run --bin linter all` and fix issues
+- [x] Update all call sites constructing the old inline struct to construct `RunDetailsData`
+- [x] Verify all tests pass
+- [x] Run `cargo run --bin linter all` and fix issues
 
 #### Testing Strategy
 
@@ -299,13 +299,13 @@ old struct. Observable JSON output is unaffected (field names do not change).
 
 ### Proposal #3: Add `view_data/` to `list` and `show`
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢 Medium
 **Effort**: 🔵 Low
 **Priority**: P1
 **Depends On**: None (can be parallel with Phase 0)
-**Completed**: -
-**Commit**: -
+**Completed**: 2026-02-28
+**Commit**: `3d63edc6`
 
 #### Problem
 
@@ -379,17 +379,17 @@ file in the command.
 
 #### Implementation Checklist
 
-- [ ] Create `src/presentation/cli/views/commands/list/view_data/list_details.rs`
-- [ ] Create `src/presentation/cli/views/commands/list/view_data/mod.rs`
-- [ ] Update `list/mod.rs` to declare `pub mod view_data`
-- [ ] Update imports in `list/views/json_view.rs` and `list/views/text_view.rs`
-- [ ] Create `src/presentation/cli/views/commands/show/view_data/show_details.rs`
-- [ ] Create `src/presentation/cli/views/commands/show/view_data/mod.rs`
-- [ ] Update `show/mod.rs` to declare `pub mod view_data`
-- [ ] Update imports in `show/views/json_view.rs`, `show/views/text_view.rs`,
+- [x] Create `src/presentation/cli/views/commands/list/view_data/list_details.rs`
+- [x] Create `src/presentation/cli/views/commands/list/view_data/mod.rs`
+- [x] Update `list/mod.rs` to declare `pub mod view_data`
+- [x] Update imports in `list/views/json_view.rs` and `list/views/text_view.rs`
+- [x] Create `src/presentation/cli/views/commands/show/view_data/show_details.rs`
+- [x] Create `src/presentation/cli/views/commands/show/view_data/mod.rs`
+- [x] Update `show/mod.rs` to declare `pub mod view_data`
+- [x] Update imports in `show/views/json_view.rs`, `show/views/text_view.rs`,
       and all other files under `show/views/` that import application-layer types
-- [ ] Verify all tests pass
-- [ ] Run `cargo run --bin linter all` and fix issues
+- [x] Verify all tests pass
+- [x] Run `cargo run --bin linter all` and fix issues
 
 #### Testing Strategy
 
@@ -406,18 +406,18 @@ Pure import path changes. Compilation is the primary test. No behavior changes.
 
 ### Approval Criteria
 
-- [ ] Technical feasibility validated
-- [ ] Aligns with [Development Principles](../development-principles.md)
-- [ ] Implementation plan is clear and actionable
-- [ ] Priorities are correct (high-impact/low-effort first)
+- [x] Technical feasibility validated
+- [x] Aligns with [Development Principles](../development-principles.md)
+- [x] Implementation plan is clear and actionable
+- [x] Priorities are correct (high-impact/low-effort first)
 
 ### Completion Criteria
 
-- [ ] All active proposals implemented
-- [ ] All tests passing
-- [ ] All linters passing
-- [ ] Documentation updated
-- [ ] Changes merged to main branch
+- [x] All active proposals implemented
+- [x] All tests passing
+- [x] All linters passing
+- [x] Documentation updated
+- [x] Changes merged to main branch
 
 ## 📚 Related Documentation
 
@@ -442,5 +442,5 @@ The `show` command's `views/` subfolder already contains multiple sub-views
 ---
 
 **Created**: 2026-02-27
-**Last Updated**: 2026-02-27
-**Status**: 📋 Planning
+**Last Updated**: 2026-02-28
+**Status**: ✅ Completed

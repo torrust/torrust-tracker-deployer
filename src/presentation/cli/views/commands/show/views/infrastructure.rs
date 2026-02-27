@@ -3,7 +3,7 @@
 //! This module provides a view for rendering infrastructure details
 //! including IP address, SSH credentials, and connection commands.
 
-use crate::application::command_handlers::show::info::InfrastructureInfo;
+use crate::presentation::cli::views::commands::show::view_data::InfrastructureInfo;
 
 /// View for rendering infrastructure information
 ///
