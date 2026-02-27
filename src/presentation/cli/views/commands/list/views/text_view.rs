@@ -4,7 +4,7 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (human-readable text table) for environment lists.
 
-use crate::application::command_handlers::list::info::EnvironmentList;
+use crate::presentation::cli::views::commands::list::view_data::EnvironmentList;
 
 /// Text view for rendering environment list
 ///
@@ -159,7 +159,7 @@ impl TextView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::application::command_handlers::list::info::EnvironmentSummary;
+    use crate::presentation::cli::views::commands::list::view_data::EnvironmentSummary;
 
     #[test]
     fn it_should_render_empty_workspace() {

@@ -2,7 +2,7 @@
 //!
 //! This module provides a view for rendering Prometheus metrics service information.
 
-use crate::application::command_handlers::show::info::PrometheusInfo;
+use crate::presentation::cli::views::commands::show::view_data::PrometheusInfo;
 
 /// View for rendering Prometheus service information
 ///

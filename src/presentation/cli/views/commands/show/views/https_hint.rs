@@ -5,7 +5,7 @@
 
 use std::net::IpAddr;
 
-use crate::application::command_handlers::show::info::ServiceInfo;
+use crate::presentation::cli::views::commands::show::view_data::ServiceInfo;
 
 /// View for rendering HTTPS configuration hints
 ///
@@ -70,7 +70,7 @@ mod tests {
     use std::net::Ipv4Addr;
 
     use super::*;
-    use crate::application::command_handlers::show::info::TlsDomainInfo;
+    use crate::presentation::cli::views::commands::show::view_data::TlsDomainInfo;
 
     fn services_without_tls() -> ServiceInfo {
         ServiceInfo::new(

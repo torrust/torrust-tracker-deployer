@@ -15,7 +15,9 @@
 //!   - `json_view.rs`: Main `JsonView` for JSON serialization
 //!   - Helper views: basic, infrastructure, `tracker_services`, prometheus, grafana, `https_hint`, `next_step`
 
+pub mod view_data;
 pub mod views;
 
 // Re-export main types for convenience
+pub use view_data::EnvironmentInfo;
 pub use views::{JsonView, TextView};

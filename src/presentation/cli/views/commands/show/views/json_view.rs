@@ -10,7 +10,7 @@
 //! No transformation is needed since the DTO structure is already designed for display
 //! purposes and contains all necessary information in a well-structured format.
 
-use crate::application::command_handlers::show::info::EnvironmentInfo;
+use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
 
 /// View for rendering environment information as JSON
 ///
@@ -112,7 +112,7 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use super::*;
-    use crate::application::command_handlers::show::info::InfrastructureInfo;
+    use crate::presentation::cli::views::commands::show::view_data::InfrastructureInfo;
 
     #[test]
     fn it_should_render_created_state_as_json() {
