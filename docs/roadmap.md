@@ -326,11 +326,11 @@ Once all commands have JSON output implemented (Phase 2 complete), the default o
   - Rationale: Lists the directories and files that were removed
   - Provides a machine-readable record of what was cleaned up
 
-- [ ] **12.13** Add JSON output to `register` command - [Issue #396](https://github.com/torrust/torrust-tracker-deployer/issues/396)
+- [x] **12.13** Add JSON output to `register` command ✅ Completed - [Issue #396](https://github.com/torrust/torrust-tracker-deployer/issues/396), [PR #397](https://github.com/torrust/torrust-tracker-deployer/pull/397)
   - Rationale: Confirms the registered instance details (IP, SSH port, state transition)
   - Enables automation to verify successful registration before proceeding to configure
 
-- [ ] **12.14** Switch default output format from `text` to `json` (after 12.6–12.13 complete)
+- [ ] **12.14** Switch default output format from `text` to `json` (after 12.6–12.13 complete) - [Issue #398](https://github.com/torrust/torrust-tracker-deployer/issues/398)
   - Prerequisite: All commands must have JSON output implemented to avoid panics
   - Change `#[default]` in `OutputFormat` enum from `Text` to `Json`
   - Update `default_value = "text"` to `default_value = "json"` in CLI args
