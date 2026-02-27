@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::process::Command;
+use std::time::Instant;
 use tracing::{error, info};
 
 use crate::utils::{install_npm_tool, is_command_available};
@@ -17,6 +18,7 @@ pub fn run_cspell_linter() -> Result<()> {
     }
 
     // Run the spell checker
+    let t = Instant::now();
     info!(target: "cspell", "Running spell check on all files...");
 
     // Run cspell on the entire project (it will use cspell.json configuration)
@@ -27,7 +29,7 @@ pub fn run_cspell_linter() -> Result<()> {
     let output = cmd.output()?;
 
     if output.status.success() {
-        info!(target: "cspell", "All files passed spell checking!");
+        info!(target: "cspell", "All files passed spell checking! ({:.3}s)", t.elapsed().as_secs_f64());
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -48,7 +50,7 @@ pub fn run_cspell_linter() -> Result<()> {
         println!("  3. Use cspell suggestions: cspell --show-suggestions <file>");
         println!();
 
-        error!(target: "cspell", "Spell checking failed. Please fix the issues above.");
+        error!(target: "cspell", "Spell checking failed. Please fix the issues above. ({:.3}s)", t.elapsed().as_secs_f64());
         Err(anyhow::anyhow!("Spell checking failed"))
     }
 }

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::env;
 use std::process::Command;
+use std::time::Instant;
 use tracing::{error, info};
 
 use crate::utils::{install_npm_tool, is_command_available};
@@ -22,6 +23,7 @@ pub fn run_markdown_linter() -> Result<()> {
     let config_path = repo_root.join(".markdownlint.json");
 
     // Run the linter
+    let t = Instant::now();
     info!(target: "markdown", "Scanning markdown files...");
 
     // Find all markdown files, excluding terraform and target directories
@@ -60,7 +62,7 @@ pub fn run_markdown_linter() -> Result<()> {
     let output = cmd.output()?;
 
     if output.status.success() {
-        info!(target: "markdown", "All markdown files passed linting!");
+        info!(target: "markdown", "All markdown files passed linting! ({:.3}s)", t.elapsed().as_secs_f64());
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -75,7 +77,7 @@ pub fn run_markdown_linter() -> Result<()> {
         }
 
         println!();
-        error!(target: "markdown", "Markdown linting failed. Please fix the issues above.");
+        error!(target: "markdown", "Markdown linting failed. Please fix the issues above. ({:.3}s)", t.elapsed().as_secs_f64());
         Err(anyhow::anyhow!("Markdown linting failed"))
     }
 }

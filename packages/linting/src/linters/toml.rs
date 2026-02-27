@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::process::Command;
+use std::time::Instant;
 use tracing::{error, info};
 
 use crate::utils::is_command_available;
@@ -44,6 +45,7 @@ pub fn run_toml_linter() -> Result<()> {
         install_taplo()?;
     }
 
+    let t = Instant::now();
     info!(target: "toml", "Scanning TOML files...");
 
     // Run taplo check with recursive glob pattern
@@ -64,7 +66,7 @@ pub fn run_toml_linter() -> Result<()> {
         }
 
         println!();
-        error!(target: "toml", "TOML linting failed. Please fix the issues above.");
+        error!(target: "toml", "TOML linting failed. Please fix the issues above. ({:.3}s)", t.elapsed().as_secs_f64());
         return Err(anyhow::anyhow!("TOML linting failed"));
     }
 
@@ -74,7 +76,7 @@ pub fn run_toml_linter() -> Result<()> {
         .output()?;
 
     if format_output.status.success() {
-        info!(target: "toml", "All TOML files passed linting and formatting checks!");
+        info!(target: "toml", "All TOML files passed linting and formatting checks! ({:.3}s)", t.elapsed().as_secs_f64());
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&format_output.stderr);
@@ -89,7 +91,7 @@ pub fn run_toml_linter() -> Result<()> {
         }
 
         println!();
-        error!(target: "toml", "TOML formatting failed. Please fix the issues above.");
+        error!(target: "toml", "TOML formatting failed. Please fix the issues above. ({:.3}s)", t.elapsed().as_secs_f64());
         error!(target: "toml", "Run 'taplo fmt **/*.toml' to auto-fix formatting issues.");
         Err(anyhow::anyhow!("TOML formatting failed"))
     }
