@@ -4,8 +4,7 @@
 //! Following the Strategy Pattern, each view (`TextView`, `JsonView`) implements
 //! a different output format for the same underlying data (`ServiceInfo` and `GrafanaInfo` DTOs).
 
-mod json_view;
-mod text_view;
+mod views;
 
-pub use json_view::JsonView;
-pub use text_view::TextView;
+pub use views::JsonView;
+pub use views::TextView;
