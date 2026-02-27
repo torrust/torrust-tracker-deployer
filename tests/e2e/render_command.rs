@@ -481,3 +481,59 @@ fn it_should_complete_full_lifecycle_from_create_to_render() {
         "Output should contain JSON output_dir field. Combined output: {output}"
     );
 }
+
+#[test]
+fn it_should_produce_json_by_default() {
+    // Verify dependencies before running tests
+    verify_required_dependencies().expect("Dependency verification failed");
+
+    // Arrange: Create environment first so render has something to work with
+    let temp_workspace = TempWorkspace::new().expect("Failed to create temp workspace");
+    let config = create_test_environment_config("test-render-json-default");
+    temp_workspace
+        .write_config_file("environment.json", &config)
+        .expect("Failed to write config file");
+    let config_path = temp_workspace.path().join("environment.json");
+
+    let create_result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_create_command(config_path.to_str().unwrap())
+        .expect("Failed to run create command");
+
+    assert!(
+        create_result.success(),
+        "Pre-condition: create must succeed, stderr: {}",
+        create_result.stderr()
+    );
+
+    // Act: Run render command without --output-format
+    let output_dir = temp_workspace.path().join("render-output");
+    let result = process_runner()
+        .working_dir(temp_workspace.path())
+        .log_dir(temp_workspace.path().join("logs"))
+        .run_render_command_with_env_name(
+            "test-render-json-default",
+            "192.168.1.100",
+            output_dir.to_str().unwrap(),
+        )
+        .expect("Failed to run render command");
+
+    // Assert: Command succeeds
+    assert!(
+        result.success(),
+        "Render command should succeed for an existing environment, stderr: {}",
+        result.stderr()
+    );
+
+    // Assert: stdout is valid JSON
+    let stdout = result.stdout();
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Render command default output must be valid JSON");
+
+    // Assert: Expected field is present
+    assert!(
+        json.get("output_dir").is_some(),
+        "Expected `output_dir` field in render JSON output, got: {stdout}"
+    );
+}
