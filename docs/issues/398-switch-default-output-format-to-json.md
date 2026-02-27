@@ -102,7 +102,7 @@ Any other tests or examples that construct `Args::default()` and expect `output_
 
 ## Specifications
 
-### Expected Behaviour After Change
+### Expected Behavior After Change
 
 Running any command **without `--output-format`** produces JSON output:
 
