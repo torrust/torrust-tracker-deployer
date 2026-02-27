@@ -261,7 +261,7 @@ Add features and documentation that make the use of AI agents to operate the dep
   - **Deliverables**: Questionnaire template (494 lines), 15 validated example configs, comprehensive README (469 lines), integration test suite
   - **Components**: `docs/ai-training/questionnaire.md`, `docs/ai-training/dataset/environment-configs/*.json`, `docs/ai-training/README.md`, `tests/validate_ai_training_examples.rs`
 
-### 12. Add JSON output format support
+### 12. Add JSON output format support ✅ COMPLETED
 
 **Epic Issue**: [#348 - Add JSON output format support](https://github.com/torrust/torrust-tracker-deployer/issues/348)
 
@@ -330,11 +330,11 @@ Once all commands have JSON output implemented (Phase 2 complete), the default o
   - Rationale: Confirms the registered instance details (IP, SSH port, state transition)
   - Enables automation to verify successful registration before proceeding to configure
 
-- [ ] **12.14** Switch default output format from `text` to `json` (after 12.6–12.13 complete) - [Issue #398](https://github.com/torrust/torrust-tracker-deployer/issues/398)
-  - Prerequisite: All commands must have JSON output implemented to avoid panics
-  - Change `#[default]` in `OutputFormat` enum from `Text` to `Json`
-  - Update `default_value = "text"` to `default_value = "json"` in CLI args
-  - Update all doctests and documentation referencing the old default
+- [x] **12.14** Switch default output format from `text` to `json` ✅ Completed - [Issue #398](https://github.com/torrust/torrust-tracker-deployer/issues/398), [PR #399](https://github.com/torrust/torrust-tracker-deployer/pull/399)
+  - Changed `#[default]` in `OutputFormat` enum from `Text` to `Json`
+  - Updated `default_value = "text"` to `default_value = "json"` in CLI args
+  - Updated all doctests referencing the old default
+  - Added per-command `it_should_produce_json_by_default` E2E tests for all commands
   - Rationale: Prioritize AI agent UX — JSON is easier for agents to parse than human-readable text
 
 ---
