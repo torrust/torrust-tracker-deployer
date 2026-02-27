@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::process::Command;
+use std::time::Instant;
 use tracing::{error, info, warn};
 
 use crate::utils::is_command_available;
@@ -124,6 +125,7 @@ fn find_shell_scripts() -> Result<Vec<String>> {
 /// Returns an error if shellcheck is not available, cannot be installed,
 /// or if the linting fails.
 pub fn run_shellcheck_linter() -> Result<()> {
+    let t = Instant::now();
     info!(target: "shellcheck", "Running ShellCheck on shell scripts...");
 
     // Check if shellcheck is installed
@@ -136,7 +138,7 @@ pub fn run_shellcheck_linter() -> Result<()> {
     let shell_files = find_shell_scripts()?;
 
     if shell_files.is_empty() {
-        warn!(target: "shellcheck", "No shell scripts found");
+        warn!(target: "shellcheck", "No shell scripts found ({:.3}s)", t.elapsed().as_secs_f64());
         return Ok(());
     }
 
@@ -150,7 +152,7 @@ pub fn run_shellcheck_linter() -> Result<()> {
     let output = cmd.output()?;
 
     if output.status.success() {
-        info!(target: "shellcheck", "shellcheck passed");
+        info!(target: "shellcheck", "shellcheck passed ({:.3}s)", t.elapsed().as_secs_f64());
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -165,7 +167,7 @@ pub fn run_shellcheck_linter() -> Result<()> {
         }
 
         println!();
-        error!(target: "shellcheck", "shellcheck failed");
+        error!(target: "shellcheck", "shellcheck failed ({:.3}s)", t.elapsed().as_secs_f64());
         Err(anyhow::anyhow!("shellcheck failed"))
     }
 }

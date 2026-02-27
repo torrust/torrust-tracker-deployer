@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::process::Command;
+use std::time::Instant;
 use tracing::{error, info, warn};
 
 use crate::utils::is_command_available;
@@ -74,6 +75,7 @@ pub fn run_yaml_linter() -> Result<()> {
     }
 
     // Run the linter with the configuration file
+    let t = Instant::now();
     info!(target: "yaml", "Scanning YAML files...");
 
     let output = Command::new("yamllint")
@@ -81,7 +83,7 @@ pub fn run_yaml_linter() -> Result<()> {
         .output()?;
 
     if output.status.success() {
-        info!(target: "yaml", "All YAML files passed linting!");
+        info!(target: "yaml", "All YAML files passed linting! ({:.3}s)", t.elapsed().as_secs_f64());
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -96,7 +98,7 @@ pub fn run_yaml_linter() -> Result<()> {
         }
 
         println!();
-        error!(target: "yaml", "YAML linting failed. Please fix the issues above.");
+        error!(target: "yaml", "YAML linting failed. Please fix the issues above. ({:.3}s)", t.elapsed().as_secs_f64());
         Err(anyhow::anyhow!("YAML linting failed"))
     }
 }
