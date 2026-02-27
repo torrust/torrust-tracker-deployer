@@ -123,11 +123,11 @@ fn it_should_purge_destroyed_environment_successfully() {
     env_assertions.assert_data_directory_not_exists("test-purge-destroyed");
     env_assertions.assert_build_directory_not_exists("test-purge-destroyed");
 
-    // Assert: Verify success message in output (check both stdout and stderr)
+    // Assert: Verify success output (check both stdout and stderr)
     let output = format!("{}{}", purge_result.stdout(), purge_result.stderr());
     assert!(
-        output.contains("purged successfully"),
-        "Output should contain success message. Combined output: {output}"
+        output.contains("\"purged\": true"),
+        "Output should contain JSON success field. Combined output: {output}"
     );
 }
 
@@ -291,8 +291,8 @@ fn it_should_complete_full_lifecycle_from_create_to_purge() {
     // Verify purge output indicates success (check both stdout and stderr)
     let output = format!("{}{}", purge_result.stdout(), purge_result.stderr());
     assert!(
-        output.contains("purged successfully"),
-        "Output should contain success message. Combined output: {output}"
+        output.contains("\"purged\": true"),
+        "Output should contain JSON success field. Combined output: {output}"
     );
 }
 

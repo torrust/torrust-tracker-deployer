@@ -128,11 +128,11 @@ fn it_should_render_artifacts_using_env_name_successfully() {
         tofu_dir.display()
     );
 
-    // Assert: Verify success message in output (check both stdout and stderr)
+    // Assert: Verify success output (check both stdout and stderr)
     let output = format!("{}{}", render_result.stdout(), render_result.stderr());
     assert!(
-        output.contains("generated successfully"),
-        "Output should contain success message. Combined output: {output}"
+        output.contains("\"output_dir\""),
+        "Output should contain JSON output_dir field. Combined output: {output}"
     );
 }
 
@@ -197,11 +197,11 @@ fn it_should_render_artifacts_using_config_file_successfully() {
         tofu_dir.display()
     );
 
-    // Assert: Verify success message in output
+    // Assert: Verify success output
     let output = format!("{}{}", render_result.stdout(), render_result.stderr());
     assert!(
-        output.contains("generated successfully"),
-        "Output should contain success message. Combined output: {output}"
+        output.contains("\"output_dir\""),
+        "Output should contain JSON output_dir field. Combined output: {output}"
     );
 }
 
@@ -477,7 +477,7 @@ fn it_should_complete_full_lifecycle_from_create_to_render() {
     // Verify render output indicates success (check both stdout and stderr)
     let output = format!("{}{}", render_result.stdout(), render_result.stderr());
     assert!(
-        output.contains("generated successfully"),
-        "Output should contain success message. Combined output: {output}"
+        output.contains("\"output_dir\""),
+        "Output should contain JSON output_dir field. Combined output: {output}"
     );
 }
