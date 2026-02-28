@@ -434,64 +434,64 @@ Errors in this project are organized following Domain-Driven Design layers. Each
 
 ### Unwrap and Expect Usage
 
-The use of `unwrap()` is generally **discouraged** in this project. While it may make sense in certain contexts, we prefer alternatives that align with our principles of observability, traceability, and user-friendliness.
-
 #### General Rule
 
-**Prefer `expect()` over `unwrap()`** - Even in cases where panicking is acceptable, use `expect()` to provide meaningful context that aids debugging and aligns with our observability principles.
+| Context                | `.unwrap()`   | `.expect("msg")`                             | `?` / `Result` |
+| ---------------------- | ------------- | -------------------------------------------- | -------------- |
+| Production code        | ❌ Never      | ✅ Only when failure is logically impossible | ✅ Default     |
+| Tests and doc examples | ✅ Acceptable | ✅ Preferred when message adds clarity       | —              |
+
+In **production code**, always propagate errors with `?` or explicit `map_err`. Use `.expect()` only for operations where failure is truly logically impossible given the surrounding code's invariants. Never use `.unwrap()` — it provides no context when it panics.
+
+In **tests and doc examples**, `.unwrap()` is acceptable. Prefer `.expect("message")` when the message would meaningfully help diagnose a test failure, but it is not required.
 
 #### When Unwrap/Expect is Acceptable
 
-##### Tests
+##### Tests and Doc Examples
 
-In test code, panicking on unexpected failures is acceptable and even desired. However, **prefer `expect()` with descriptive messages** to make test failures easier to understand.
+In test code and doc examples, panicking on unexpected failures is acceptable and even desired. `.unwrap()` is fine. Prefer `.expect("message")` when the message would help diagnose a failure, but it is not required.
 
 ```rust
-// ✅ Good: Tests with expect() providing context
+// ✅ Acceptable: plain unwrap() in tests
 #[test]
 fn it_should_parse_valid_config() {
     let config_str = r#"{"name": "test", "port": 8080}"#;
-    let config: Config = serde_json::from_str(config_str)
-        .expect("Failed to parse valid test configuration - this indicates a parsing bug");
+    let config: Config = serde_json::from_str(config_str).unwrap();
 
     assert_eq!(config.name, "test");
 }
 
-// ✅ Also acceptable in tests with clear context
+// ✅ Also good: expect() adds useful context when a test fails
 #[test]
 fn it_should_create_temp_directory() {
     let temp_dir = TempDir::new()
         .expect("Failed to create temporary directory for test - check filesystem permissions");
     // ... rest of test
 }
-
-// ❌ Avoid: Unwrap without context
-#[test]
-fn it_should_parse_valid_config() {
-    let config_str = r#"{"name": "test", "port": 8080}"#;
-    let config: Config = serde_json::from_str(config_str).unwrap();  // What failed? Why?
-
-    assert_eq!(config.name, "test");
-}
 ```
 
-##### Infallible Operations
+##### Infallible Operations in Production
 
-Use `expect()` (not `unwrap()`) for operations that are logically infallible but return `Result` or `Option` due to API design.
+Use `.expect()` (never `.unwrap()`) for operations that are logically infallible — where the code's own invariants make failure impossible. The `.expect()` message must explain _why_ failure is impossible.
 
 ```rust
-// ✅ Good: expect() with clear reasoning
-let port: u16 = env::var("PORT")
-    .expect("PORT environment variable must be set during application initialization")
-    .parse()
-    .expect("PORT must be a valid u16 number - validated during configuration loading");
+// ✅ Correct: expect() because the literal always contains '='
+let pair = "key=value";
+let (k, v) = pair.split_once('=')
+    .expect("split on '=' always succeeds: the string literal contains '='");
 
-// ✅ Good: Mutex operations that should never fail
+// ✅ Correct: Mutex poisoning means a prior panic occurred — acceptable to surface that
 let data = self.state.lock()
     .expect("State mutex poisoned - indicates a panic occurred while holding the lock");
 
-// ❌ Avoid: unwrap() without explanation
+// ❌ Wrong: unwrap() in production code — never acceptable
 let port: u16 = env::var("PORT").unwrap().parse().unwrap();
+
+// ✅ Correct production alternative: propagate as a domain error
+let port: u16 = env::var("PORT")
+    .map_err(|_| ConfigError::MissingEnvVar { name: "PORT" })?
+    .parse()
+    .map_err(|_| ConfigError::InvalidPort { raw: env::var("PORT").unwrap_or_default() })?;
 ```
 
 #### When to Use Proper Error Handling Instead
@@ -550,10 +550,10 @@ let config = CONFIG.get().unwrap();
 
 #### Summary
 
-- **Default**: Use proper error handling with `Result` and specific error types
-- **Tests**: Use `expect()` with descriptive messages explaining what failed
-- **Infallible operations**: Use `expect()` with clear reasoning about why failure is impossible
-- **Never**: Use `unwrap()` without a very good reason (prefer `expect()` even in those cases)
+- **Default (production)**: Use proper error handling with `Result`, `?`, and specific error types
+- **Infallible operations (production)**: Use `.expect("reason")` — only when failure is logically impossible; the message must explain why
+- **Never (production)**: Use `.unwrap()` — it provides no context and masks errors
+- **Tests and doc examples**: `.unwrap()` is acceptable; prefer `.expect("message")` when the message adds diagnostic value
 
 This approach ensures that even panic messages provide valuable debugging context, maintaining our commitment to observability and traceability throughout the codebase.
 
@@ -886,7 +886,7 @@ When reviewing error handling code, verify:
 - [ ] **Thiserror Usage**: Are enum errors using `thiserror` with proper `#[error]` attributes?
 - [ ] **Source Preservation**: Are source errors preserved with `#[source]` for traceability?
 - [ ] **Pattern Matching**: Can callers handle different error cases appropriately?
-- [ ] **Unwrap/Expect**: Is `unwrap()` avoided in favor of `expect()` with descriptive messages?
+- [ ] **Unwrap/Expect**: Is `unwrap()` absent from production code? (Tests and doc examples may use `.unwrap()`; production code uses `?` or `.expect("reason")` for logically-impossible failures only)
 - [ ] **Consistency**: Does the error follow project conventions?
 - [ ] **Error Grouping**: Are related errors grouped with section comments?
 - [ ] **Box Wrapping**: Are large nested errors wrapped with `Box<T>` to avoid enum bloat?
@@ -915,7 +915,7 @@ Look for error handling examples in:
 2. **Use enums by default**: Only use `anyhow` when justified
 3. **Include context**: Always provide enough information for diagnosis
 4. **Make errors actionable**: Tell users how to fix the problem
-5. **Prefer `expect()` over `unwrap()`**: Provide meaningful context even when panicking
+5. **Never `unwrap()` in production**: Use `?` to propagate or `.expect("reason")` only for logically-impossible failures; `.unwrap()` is acceptable in tests
 6. **Test error paths**: Write tests for error scenarios
 7. **Document error types**: Document when and why specific errors occur
 
