@@ -308,7 +308,7 @@ impl CreateEnvironmentCommandController {
 
         // Render using appropriate view based on output format (Strategy Pattern)
         let output = match output_format {
-            OutputFormat::Text => TextView::render(&details),
+            OutputFormat::Text => TextView::render(&details)?,
             OutputFormat::Json => JsonView::render(&details).map_err(|e| {
                 CreateEnvironmentCommandError::OutputFormatting {
                     reason: format!("Failed to serialize environment details as JSON: {e}"),

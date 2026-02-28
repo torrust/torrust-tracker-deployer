@@ -262,7 +262,7 @@ impl ConfigureCommandController {
         self.progress.blank_line()?;
         let details = ConfigureDetailsData::from(configured);
         let output = match output_format {
-            OutputFormat::Text => TextView::render(&details),
+            OutputFormat::Text => TextView::render(&details)?,
             OutputFormat::Json => JsonView::render(&details)?,
         };
         self.progress.result(&output)?;

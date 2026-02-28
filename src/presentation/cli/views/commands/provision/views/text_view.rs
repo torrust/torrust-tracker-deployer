@@ -22,6 +22,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use std::net::{IpAddr, Ipv4Addr};
 /// use std::path::PathBuf;
 /// use chrono::{TimeZone, Utc};
@@ -42,50 +43,14 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 ///     domains: vec!["tracker.example.com".to_string()],
 /// };
 ///
-/// let output = TextView::render(&data);
+/// let output = TextView::render(&data).unwrap();
 /// assert!(output.contains("Instance Connection Details:"));
 /// assert!(output.contains("10.140.190.39"));
 /// ```
 pub struct TextView;
 
-impl TextView {
-    /// Render provision details as human-readable formatted text
-    ///
-    /// Takes provision data and produces a human-readable output
-    /// suitable for displaying to users via stdout.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Provision details to render
-    ///
-    /// # Returns
-    ///
-    /// A formatted string containing:
-    /// - Instance Connection Details section with IP, SSH port, private key path, username
-    /// - SSH connection command (if IP is available)
-    /// - DNS setup reminder (if domains are configured)
-    ///
-    /// # Format
-    ///
-    /// The output follows this structure:
-    /// ```text
-    /// Instance Connection Details:
-    ///   IP Address:        <ip>
-    ///   SSH Port:          <port>
-    ///   SSH Private Key:   <path>
-    ///   SSH Username:      <username>
-    ///
-    /// Connect using:
-    ///   ssh -i <path> <username>@<ip> -p <port>
-    ///
-    /// ⚠️  DNS Setup Required:
-    ///   Your configuration uses custom domains...
-    ///   Configured domains:
-    ///     - <domain1>
-    ///     - <domain2>
-    /// ```
-    #[must_use]
-    pub fn render(data: &ProvisionDetailsData) -> String {
+impl Render<ProvisionDetailsData> for TextView {
+    fn render(data: &ProvisionDetailsData) -> Result<String, ViewRenderError> {
         let mut lines = Vec::new();
 
         // Connection details section
@@ -140,13 +105,7 @@ impl TextView {
             }
         }
 
-        lines.join("\n")
-    }
-}
-
-impl Render<ProvisionDetailsData> for TextView {
-    fn render(data: &ProvisionDetailsData) -> Result<String, ViewRenderError> {
-        Ok(TextView::render(data))
+        Ok(lines.join("\n"))
     }
 }
 
@@ -187,7 +146,7 @@ mod tests {
         };
 
         // When
-        let output = TextView::render(&data);
+        let output = TextView::render(&data).unwrap();
 
         // Then
         assert!(output.contains("Instance Connection Details:"));
@@ -218,7 +177,7 @@ mod tests {
         };
 
         // When
-        let output = TextView::render(&data);
+        let output = TextView::render(&data).unwrap();
 
         // Then
         assert!(output.contains("Instance Connection Details:"));
@@ -244,7 +203,7 @@ mod tests {
         };
 
         // When
-        let output = TextView::render(&data);
+        let output = TextView::render(&data).unwrap();
 
         // Then
         assert!(output.contains("IP Address:        <not available>"));

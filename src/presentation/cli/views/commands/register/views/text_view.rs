@@ -24,6 +24,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::register::{
 ///     RegisterDetailsData, TextView,
 /// };
@@ -35,56 +36,17 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 ///     registered: true,
 /// };
 ///
-/// let output = TextView::render(&data);
+/// let output = TextView::render(&data).unwrap();
 /// assert!(output.contains("Instance registered successfully with environment 'my-env'"));
 /// ```
 pub struct TextView;
 
-impl TextView {
-    /// Render register details as human-readable text
-    ///
-    /// Takes register details and produces a human-readable output
-    /// intended to be wrapped by `ProgressReporter::complete()`.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Register details to render
-    ///
-    /// # Returns
-    ///
-    /// A formatted string: `"Instance registered successfully with environment '<name>'"`.
-    /// The `✅` prefix is added by `ProgressReporter::complete()`, not here.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::register::{
-    ///     RegisterDetailsData, TextView,
-    /// };
-    ///
-    /// let data = RegisterDetailsData {
-    ///     environment_name: "prod-tracker".to_string(),
-    ///     instance_ip: "10.0.0.1".to_string(),
-    ///     ssh_port: 22,
-    ///     registered: true,
-    /// };
-    ///
-    /// let text = TextView::render(&data);
-    ///
-    /// assert!(text.contains("Instance registered successfully with environment 'prod-tracker'"));
-    /// ```
-    #[must_use]
-    pub fn render(data: &RegisterDetailsData) -> String {
-        format!(
-            "Instance registered successfully with environment '{}'",
-            data.environment_name
-        )
-    }
-}
-
 impl Render<RegisterDetailsData> for TextView {
     fn render(data: &RegisterDetailsData) -> Result<String, ViewRenderError> {
-        Ok(TextView::render(data))
+        Ok(format!(
+            "Instance registered successfully with environment '{}'",
+            data.environment_name
+        ))
     }
 }
 
@@ -107,7 +69,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert_eq!(
@@ -127,7 +89,7 @@ mod tests {
         };
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert!(
@@ -142,7 +104,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert!(

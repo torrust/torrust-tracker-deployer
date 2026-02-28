@@ -205,7 +205,7 @@ impl ShowCommandController {
 
         // Render using appropriate view based on output format (Strategy Pattern)
         let output = match output_format {
-            OutputFormat::Text => TextView::render(env_info),
+            OutputFormat::Text => TextView::render(env_info)?,
             OutputFormat::Json => JsonView::render(env_info)?,
         };
 

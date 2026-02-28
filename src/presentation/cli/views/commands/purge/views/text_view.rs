@@ -24,57 +24,24 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::purge::{
 ///     PurgeDetailsData, TextView,
 /// };
 ///
 /// let data = PurgeDetailsData::from_environment_name("my-env");
 ///
-/// let output = TextView::render(&data);
+/// let output = TextView::render(&data).unwrap();
 /// assert!(output.contains("Environment 'my-env' purged successfully"));
 /// ```
 pub struct TextView;
 
-impl TextView {
-    /// Render purge details as human-readable text
-    ///
-    /// Takes purge details and produces a human-readable output
-    /// intended to be wrapped by `ProgressReporter::complete()`.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Purge details to render
-    ///
-    /// # Returns
-    ///
-    /// A formatted string: `"Environment '<name>' purged successfully"`.
-    /// The `✅` prefix is added by `ProgressReporter::complete()`, not here.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::purge::{
-    ///     PurgeDetailsData, TextView,
-    /// };
-    ///
-    /// let data = PurgeDetailsData::from_environment_name("prod-tracker");
-    ///
-    /// let text = TextView::render(&data);
-    ///
-    /// assert!(text.contains("Environment 'prod-tracker' purged successfully"));
-    /// ```
-    #[must_use]
-    pub fn render(data: &PurgeDetailsData) -> String {
-        format!(
-            "Environment '{}' purged successfully",
-            data.environment_name
-        )
-    }
-}
-
 impl Render<PurgeDetailsData> for TextView {
     fn render(data: &PurgeDetailsData) -> Result<String, ViewRenderError> {
-        Ok(TextView::render(data))
+        Ok(format!(
+            "Environment '{}' purged successfully",
+            data.environment_name
+        ))
     }
 }
 
@@ -88,7 +55,7 @@ mod tests {
         let data = PurgeDetailsData::from_environment_name("test-env");
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert_eq!(text, "Environment 'test-env' purged successfully");
@@ -100,7 +67,7 @@ mod tests {
         let data = PurgeDetailsData::from_environment_name("my-production-env");
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert!(
@@ -115,7 +82,7 @@ mod tests {
         let data = PurgeDetailsData::from_environment_name("test-env");
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert!(

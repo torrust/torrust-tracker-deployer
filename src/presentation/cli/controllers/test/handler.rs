@@ -231,7 +231,7 @@ impl TestCommandController {
         let data = TestResultData::new(environment_name, result);
 
         let output = match output_format {
-            OutputFormat::Text => TextView::render(&data),
+            OutputFormat::Text => TextView::render(&data)?,
             OutputFormat::Json => JsonView::render(&data)?,
         };
 

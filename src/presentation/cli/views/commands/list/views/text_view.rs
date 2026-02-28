@@ -22,6 +22,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::application::command_handlers::list::info::{
 ///     EnvironmentList, EnvironmentSummary,
 /// };
@@ -37,71 +38,13 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// ];
 ///
 /// let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
-/// let output = TextView::render(&list);
+/// let output = TextView::render(&list).unwrap();
 /// assert!(output.contains("my-production"));
 /// assert!(output.contains("Running"));
 /// ```
 pub struct TextView;
 
 impl TextView {
-    /// Render environment list as a formatted string
-    ///
-    /// Takes the environment list and produces a human-readable table output
-    /// suitable for displaying to users via stdout.
-    ///
-    /// # Arguments
-    ///
-    /// * `list` - Environment list to render
-    ///
-    /// # Returns
-    ///
-    /// A formatted string containing:
-    /// - Header with count
-    /// - Table with environment summaries
-    /// - Warnings for failed environments (if any)
-    /// - Help text for empty workspaces
-    #[must_use]
-    pub fn render(list: &EnvironmentList) -> String {
-        let mut lines = Vec::new();
-
-        if list.is_empty() {
-            return Self::render_empty(list);
-        }
-
-        // Header with count
-        lines.push(String::new());
-        lines.push(format!("Environments ({} found):", list.total_count));
-        lines.push(String::new());
-
-        // Table header
-        lines.push(Self::render_table_header());
-        lines.push(Self::render_table_separator());
-
-        // Table rows
-        for env in &list.environments {
-            lines.push(Self::render_table_row(env));
-        }
-
-        // Partial failure warnings
-        if list.has_failures() {
-            lines.push(String::new());
-            lines.push("Warning: Failed to load the following environments:".to_string());
-            for (name, error) in &list.failed_environments {
-                lines.push(format!("  - {name}: {error}"));
-            }
-            lines.push(String::new());
-            lines.push("For troubleshooting, see docs/user-guide/commands.md".to_string());
-        }
-
-        // Hint about purge command
-        lines.push(String::new());
-        lines.push(
-            "Hint: Use 'purge' command to completely remove destroyed environments.".to_string(),
-        );
-
-        lines.join("\n")
-    }
-
     /// Render empty workspace message
     fn render_empty(list: &EnvironmentList) -> String {
         let mut lines = Vec::new();
@@ -158,8 +101,45 @@ impl TextView {
 }
 
 impl Render<EnvironmentList> for TextView {
-    fn render(data: &EnvironmentList) -> Result<String, ViewRenderError> {
-        Ok(TextView::render(data))
+    fn render(list: &EnvironmentList) -> Result<String, ViewRenderError> {
+        let mut lines = Vec::new();
+
+        if list.is_empty() {
+            return Ok(Self::render_empty(list));
+        }
+
+        // Header with count
+        lines.push(String::new());
+        lines.push(format!("Environments ({} found):", list.total_count));
+        lines.push(String::new());
+
+        // Table header
+        lines.push(Self::render_table_header());
+        lines.push(Self::render_table_separator());
+
+        // Table rows
+        for env in &list.environments {
+            lines.push(Self::render_table_row(env));
+        }
+
+        // Partial failure warnings
+        if list.has_failures() {
+            lines.push(String::new());
+            lines.push("Warning: Failed to load the following environments:".to_string());
+            for (name, error) in &list.failed_environments {
+                lines.push(format!("  - {name}: {error}"));
+            }
+            lines.push(String::new());
+            lines.push("For troubleshooting, see docs/user-guide/commands.md".to_string());
+        }
+
+        // Hint about purge command
+        lines.push(String::new());
+        lines.push(
+            "Hint: Use 'purge' command to completely remove destroyed environments.".to_string(),
+        );
+
+        Ok(lines.join("\n"))
     }
 }
 
@@ -172,7 +152,7 @@ mod tests {
     fn it_should_render_empty_workspace() {
         let list = EnvironmentList::new(vec![], vec![], "/path/to/data".to_string());
 
-        let output = TextView::render(&list);
+        let output = TextView::render(&list).unwrap();
 
         assert!(output.contains("No environments found in: /path/to/data"));
         assert!(output.contains("create environment --env-file"));
@@ -189,7 +169,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
 
-        let output = TextView::render(&list);
+        let output = TextView::render(&list).unwrap();
 
         assert!(output.contains("Environments (1 found):"));
         assert!(output.contains("Name"));
@@ -219,7 +199,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
 
-        let output = TextView::render(&list);
+        let output = TextView::render(&list).unwrap();
 
         assert!(output.contains("production"));
         assert!(output.contains("Running"));
@@ -247,7 +227,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, failures, "/path/to/data".to_string());
 
-        let output = TextView::render(&list);
+        let output = TextView::render(&list).unwrap();
 
         assert!(output.contains("Warning: Failed to load the following environments:"));
         assert!(output.contains("broken-env: Invalid JSON"));
@@ -267,7 +247,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
 
-        let output = TextView::render(&list);
+        let output = TextView::render(&list).unwrap();
 
         // Should truncate the long name at 50 characters
         assert!(output.contains("very-long-environment-name-that-exceeds-column-..."));
@@ -300,7 +280,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
 
-        let output = TextView::render(&list);
+        let output = TextView::render(&list).unwrap();
 
         assert!(output.contains("Environments (3 found):"));
         assert!(output.contains("env1"));

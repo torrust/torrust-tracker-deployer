@@ -161,7 +161,7 @@ impl ListCommandController {
         // Pipeline: EnvironmentList → render → output to stdout
         // Use Strategy Pattern to select view based on output format
         let output = match output_format {
-            OutputFormat::Text => TextView::render(env_list),
+            OutputFormat::Text => TextView::render(env_list)?,
             OutputFormat::Json => JsonView::render(env_list)?,
         };
 

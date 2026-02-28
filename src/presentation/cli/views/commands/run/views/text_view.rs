@@ -18,6 +18,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::application::command_handlers::show::info::ServiceInfo;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::run::{TextView, RunDetailsData};
 ///
@@ -36,26 +37,14 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// );
 ///
 /// let data = RunDetailsData::new("my-env".to_string(), services, None);
-/// let output = TextView::render(&data);
+/// let output = TextView::render(&data).unwrap();
 /// assert!(output.contains("Services are now accessible:"));
 /// assert!(output.contains("Tip:"));
 /// ```
 pub struct TextView;
 
-impl TextView {
-    /// Render run command output as human-readable text
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Run details DTO containing environment name, service endpoints,
-    ///   and optional Grafana information
-    ///
-    /// # Returns
-    ///
-    /// A formatted string with service URLs, DNS hints (if applicable),
-    /// and a tip about using the show command for more details.
-    #[must_use]
-    pub fn render(data: &RunDetailsData) -> String {
+impl Render<RunDetailsData> for TextView {
+    fn render(data: &RunDetailsData) -> Result<String, ViewRenderError> {
         let mut output = Vec::new();
 
         // Render service URLs (only public services)
@@ -76,13 +65,7 @@ impl TextView {
             data.environment_name
         ));
 
-        output.join("")
-    }
-}
-
-impl Render<RunDetailsData> for TextView {
-    fn render(data: &RunDetailsData) -> Result<String, ViewRenderError> {
-        Ok(TextView::render(data))
+        Ok(output.join(""))
     }
 }
 
@@ -111,7 +94,7 @@ mod tests {
     #[test]
     fn it_should_render_basic_output() {
         let data = sample_data();
-        let output = TextView::render(&data);
+        let output = TextView::render(&data).unwrap();
 
         assert!(output.contains("Services are now accessible:"));
         assert!(output.contains("udp://udp.tracker.local:6969/announce"));
@@ -142,7 +125,7 @@ mod tests {
         let grafana = GrafanaInfo::new(Url::parse("http://10.140.190.133:3000").unwrap(), false);
         let data = RunDetailsData::new("test-env".to_string(), services, Some(grafana));
 
-        let output = TextView::render(&data);
+        let output = TextView::render(&data).unwrap();
 
         assert!(output.contains("Grafana:"));
         assert!(output.contains("http://10.140.190.133:3000"));
@@ -170,7 +153,7 @@ mod tests {
         );
         let data = RunDetailsData::new("test-env".to_string(), services, None);
 
-        let output = TextView::render(&data);
+        let output = TextView::render(&data).unwrap();
 
         assert!(output.contains("Note: HTTPS services require DNS configuration"));
     }
@@ -192,7 +175,7 @@ mod tests {
         );
         let data = RunDetailsData::new("my-environment".to_string(), services, None);
 
-        let output = TextView::render(&data);
+        let output = TextView::render(&data).unwrap();
 
         assert!(output.contains("Tip: Run 'torrust-tracker-deployer show my-environment'"));
     }

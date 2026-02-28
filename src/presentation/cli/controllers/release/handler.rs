@@ -201,7 +201,7 @@ impl ReleaseCommandController {
         let details = ReleaseDetailsData::from(released_env);
 
         let output = match output_format {
-            OutputFormat::Text => TextView::render(&details),
+            OutputFormat::Text => TextView::render(&details)?,
             OutputFormat::Json => JsonView::render(&details)?,
         };
 

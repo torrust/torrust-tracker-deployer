@@ -22,6 +22,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use std::path::PathBuf;
 /// use chrono::{TimeZone, Utc};
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::create::{
@@ -36,44 +37,14 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 ///     created_at: Utc.with_ymd_and_hms(2026, 2, 16, 14, 30, 0).unwrap(),
 /// };
 ///
-/// let output = TextView::render(&data);
+/// let output = TextView::render(&data).unwrap();
 /// assert!(output.contains("Environment Details:"));
 /// assert!(output.contains("my-env"));
 /// ```
 pub struct TextView;
 
-impl TextView {
-    /// Render environment details as human-readable formatted text
-    ///
-    /// Takes environment creation data and produces a human-readable output
-    /// suitable for displaying to users via stdout.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Environment details to render
-    ///
-    /// # Returns
-    ///
-    /// A formatted string containing:
-    /// - Section header ("Environment Details:")
-    /// - Numbered list of environment information
-    /// - Environment name
-    /// - Instance name
-    /// - Data directory path
-    /// - Build directory path
-    ///
-    /// # Format
-    ///
-    /// The output follows this structure:
-    /// ```text
-    /// Environment Details:
-    /// 1. Environment name: <name>
-    /// 2. Instance name: <instance-name>
-    /// 3. Data directory: <path>
-    /// 4. Build directory: <path>
-    /// ```
-    #[must_use]
-    pub fn render(data: &EnvironmentDetailsData) -> String {
+impl Render<EnvironmentDetailsData> for TextView {
+    fn render(data: &EnvironmentDetailsData) -> Result<String, ViewRenderError> {
         let mut lines = Vec::new();
 
         lines.push("Environment Details:".to_string());
@@ -82,13 +53,7 @@ impl TextView {
         lines.push(format!("3. Data directory: {}", data.data_dir.display()));
         lines.push(format!("4. Build directory: {}", data.build_dir.display()));
 
-        lines.join("\n")
-    }
-}
-
-impl Render<EnvironmentDetailsData> for TextView {
-    fn render(data: &EnvironmentDetailsData) -> Result<String, ViewRenderError> {
-        Ok(TextView::render(data))
+        Ok(lines.join("\n"))
     }
 }
 
@@ -118,7 +83,7 @@ mod tests {
         };
 
         // When
-        let output = TextView::render(&data);
+        let output = TextView::render(&data).unwrap();
 
         // Then
         assert!(output.contains("Environment Details:"));
@@ -143,7 +108,7 @@ mod tests {
         };
 
         // When
-        let output = TextView::render(&data);
+        let output = TextView::render(&data).unwrap();
         let lines: Vec<&str> = output.lines().collect();
 
         // Then
@@ -167,7 +132,7 @@ mod tests {
         };
 
         // When
-        let output = TextView::render(&data);
+        let output = TextView::render(&data).unwrap();
 
         // Then
         assert!(output.contains("/absolute/path/data/my-env"));

@@ -9,6 +9,7 @@ use thiserror::Error;
 
 use crate::application::command_handlers::create::CreateCommandHandlerError;
 use crate::presentation::cli::views::progress::ProgressReporterError;
+use crate::presentation::cli::views::ViewRenderError;
 
 /// Format of configuration file
 #[derive(Debug, Clone, Copy)]
@@ -151,6 +152,14 @@ Tip: This is likely a bug - please report it with full logs using --log-output f
 impl From<ProgressReporterError> for CreateEnvironmentCommandError {
     fn from(source: ProgressReporterError) -> Self {
         Self::ProgressReportingFailed { source }
+    }
+}
+
+impl From<ViewRenderError> for CreateEnvironmentCommandError {
+    fn from(e: ViewRenderError) -> Self {
+        Self::OutputFormatting {
+            reason: e.to_string(),
+        }
     }
 }
 

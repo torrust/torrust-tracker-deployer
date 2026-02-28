@@ -271,7 +271,7 @@ impl RunCommandController {
 
             // Render using appropriate view based on output format (Strategy Pattern)
             let output = match output_format {
-                OutputFormat::Text => TextView::render(&data),
+                OutputFormat::Text => TextView::render(&data)?,
                 OutputFormat::Json => JsonView::render(&data)?,
             };
 

@@ -209,7 +209,7 @@ impl RenderCommandController {
         match output_format {
             OutputFormat::Text => {
                 self.progress.blank_line()?;
-                self.progress.complete(&TextView::render(&data))?;
+                self.progress.complete(&TextView::render(&data)?)?;
             }
             OutputFormat::Json => {
                 self.progress.result(&JsonView::render(&data)?)?;
