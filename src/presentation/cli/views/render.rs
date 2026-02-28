@@ -21,10 +21,10 @@
 //! # Error handling
 //!
 //! Text renderers always return `Ok` — they do pure string formatting and never fail.
-//! JSON renderers call `serde_json::to_string_pretty` which is infallible on plain
-//! `#[derive(Serialize)]` types, but the `Result` return type models the theoretical
-//! failure path and is consistent with the `create` and `provision` commands that already
-//! return `Result`.
+//! JSON renderers call `serde_json::to_string_pretty`, which is expected to succeed for
+//! the plain `#[derive(Serialize)]` DTOs used in this project, but serialization errors
+//! are still possible (e.g. non-finite floats, non-string map keys, custom `Serialize`
+//! impls) and are propagated as [`ViewRenderError`].
 
 /// Error produced by a [`Render`] implementation.
 ///
@@ -41,7 +41,7 @@ pub enum ViewRenderError {
 /// Trait for rendering command output data into a string.
 ///
 /// Implementors transform a DTO (`T`) into a displayable or parseable string.
-/// The `Result` return type is required even for infallible renderers (e.g., [`TextView`](super::commands::configure::views::text_view))
+/// The `Result` return type is required even for infallible renderers (e.g., [`TextView`](super::commands::configure::views::text_view::TextView))
 /// so that all renderers share a uniform interface and callers can use `?` unconditionally.
 ///
 /// # Examples
