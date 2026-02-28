@@ -85,6 +85,38 @@ impl ProvisionError {
 }
 ```
 
+## Unwrap and Expect Policy
+
+| Context                | `.unwrap()`   | `.expect("msg")`                             | `?` / `Result` |
+| ---------------------- | ------------- | -------------------------------------------- | -------------- |
+| Production code        | ❌ Never      | ✅ Only when failure is logically impossible | ✅ Default     |
+| Tests and doc examples | ✅ Acceptable | ✅ Preferred when message adds clarity       | —              |
+
+```rust
+// ✅ Production: propagate errors with ?
+fn load_config(path: &Path) -> Result<Config, ConfigError> {
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| ConfigError::FileAccess { path: path.to_path_buf(), source: e })?;
+    serde_json::from_str(&content)
+        .map_err(|e| ConfigError::InvalidJson { path: path.to_path_buf(), source: e })
+}
+
+// ✅ Production: expect() only when failure is a code invariant violation
+let pair = "key=value";
+let (k, v) = pair.split_once('=')
+    .expect("split on '=' always succeeds: the string literal contains '='");
+
+// ❌ Production: never unwrap()
+let value = some_result.unwrap();
+
+// ✅ Tests and doc examples: unwrap() is fine
+#[test]
+fn it_should_parse_valid_config() {
+    let config: Config = serde_json::from_str(VALID_JSON).unwrap();
+    assert_eq!(config.name, "test");
+}
+```
+
 ## Quick Checklist
 
 - [ ] Error type uses `thiserror::Error` derive
@@ -92,6 +124,7 @@ impl ProvisionError {
 - [ ] Error message includes fix instructions where possible
 - [ ] Prefer `enum` over `Box<dyn Error>` or `anyhow`
 - [ ] No vague messages like "invalid input" or "error occurred"
+- [ ] No `.unwrap()` in production code (tests and doc examples are fine)
 
 ## Reference
 

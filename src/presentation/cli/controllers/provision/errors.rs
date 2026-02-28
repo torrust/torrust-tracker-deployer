@@ -9,6 +9,7 @@ use thiserror::Error;
 use crate::application::command_handlers::provision::errors::ProvisionCommandHandlerError;
 use crate::domain::environment::name::EnvironmentNameError;
 use crate::presentation::cli::views::progress::ProgressReporterError;
+use crate::presentation::cli::views::ViewRenderError;
 
 /// Provision command specific errors
 ///
@@ -108,6 +109,14 @@ Tip: This is a critical bug - please report it with full logs using --log-output
 impl From<ProgressReporterError> for ProvisionSubcommandError {
     fn from(source: ProgressReporterError) -> Self {
         Self::ProgressReportingFailed { source }
+    }
+}
+
+impl From<ViewRenderError> for ProvisionSubcommandError {
+    fn from(e: ViewRenderError) -> Self {
+        Self::OutputFormatting {
+            reason: e.to_string(),
+        }
     }
 }
 

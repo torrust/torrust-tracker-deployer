@@ -11,6 +11,7 @@
 //! output format produced before the Strategy Pattern was introduced.
 
 use crate::presentation::cli::views::commands::render::RenderDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering render details as human-readable text
 ///
@@ -24,6 +25,7 @@ use crate::presentation::cli::views::commands::render::RenderDetailsData;
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::render::{
 ///     RenderDetailsData, TextView,
 /// };
@@ -35,70 +37,16 @@ use crate::presentation::cli::views::commands::render::RenderDetailsData;
 ///     output_dir: "/tmp/build/my-env".to_string(),
 /// };
 ///
-/// let output = TextView::render(&data);
+/// let output = TextView::render(&data).unwrap();
 /// assert!(output.contains("Deployment artifacts generated successfully!"));
 /// assert!(output.contains("192.168.1.100"));
 /// assert!(output.contains("/tmp/build/my-env"));
 /// ```
 pub struct TextView;
 
-impl TextView {
-    /// Render render details as human-readable formatted text
-    ///
-    /// Takes render details and produces a human-readable output
-    /// intended to be wrapped by `ProgressReporter::complete()`.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Render details to render
-    ///
-    /// # Returns
-    ///
-    /// A formatted string containing:
-    /// - "Deployment artifacts generated successfully!"
-    /// - Source, Target IP, and Output path
-    /// - Next steps section with guidance
-    ///
-    /// # Format
-    ///
-    /// The output follows this structure:
-    ///
-    /// ```text
-    /// Deployment artifacts generated successfully!
-    ///
-    ///   Source: <config_source>
-    ///   Target IP: <target_ip>
-    ///   Output: <output_dir>
-    ///
-    /// Next steps:
-    ///   - Review artifacts in the output directory
-    ///   - Use 'provision' command to deploy infrastructure
-    ///   - Or use artifacts manually with your deployment tools
-    /// ```
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::render::{
-    ///     RenderDetailsData, TextView,
-    /// };
-    ///
-    /// let data = RenderDetailsData {
-    ///     environment_name: "prod-tracker".to_string(),
-    ///     config_source: "Config file: envs/prod-tracker.json".to_string(),
-    ///     target_ip: "10.0.0.1".to_string(),
-    ///     output_dir: "/tmp/build/prod-tracker".to_string(),
-    /// };
-    ///
-    /// let text = TextView::render(&data);
-    ///
-    /// assert!(text.contains("Deployment artifacts generated successfully!"));
-    /// assert!(text.contains("10.0.0.1"));
-    /// assert!(text.contains("Next steps:"));
-    /// ```
-    #[must_use]
-    pub fn render(data: &RenderDetailsData) -> String {
-        format!(
+impl Render<RenderDetailsData> for TextView {
+    fn render(data: &RenderDetailsData) -> Result<String, ViewRenderError> {
+        Ok(format!(
             "Deployment artifacts generated successfully!\n\n\
              \x20\x20Source: {}\n\
              \x20\x20Target IP: {}\n\
@@ -108,7 +56,7 @@ impl TextView {
              \x20\x20- Use 'provision' command to deploy infrastructure\n\
              \x20\x20- Or use artifacts manually with your deployment tools",
             data.config_source, data.target_ip, data.output_dir,
-        )
+        ))
     }
 }
 
@@ -145,7 +93,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert_contains_all(
@@ -166,7 +114,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert - each significant data point appears in the output
         assert_contains_all(
@@ -185,7 +133,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert - next steps section is present
         assert_contains_all(&text, &["Next steps:", "Review artifacts", "provision"]);
@@ -202,7 +150,7 @@ mod tests {
         };
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert_contains_all(

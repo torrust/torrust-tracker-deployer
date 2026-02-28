@@ -19,6 +19,7 @@ use crate::presentation::cli::views::commands::register::{
     JsonView, RegisterDetailsData, TextView,
 };
 use crate::presentation::cli::views::progress::ProgressReporter;
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 use crate::shared::clock::Clock;
 
@@ -223,10 +224,10 @@ impl RegisterCommandController {
         let data = RegisterDetailsData::from_environment(provisioned);
         match output_format {
             OutputFormat::Text => {
-                self.progress.complete(&TextView::render(&data))?;
+                self.progress.complete(&TextView::render(&data)?)?;
             }
             OutputFormat::Json => {
-                self.progress.result(&JsonView::render(&data))?;
+                self.progress.result(&JsonView::render(&data)?)?;
             }
         }
         Ok(())

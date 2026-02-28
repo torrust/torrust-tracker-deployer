@@ -16,6 +16,7 @@ use crate::domain::environment::state::AnyEnvironmentState;
 use crate::presentation::cli::input::cli::OutputFormat;
 use crate::presentation::cli::views::commands::run::{JsonView, RunDetailsData, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 use crate::shared::clock::Clock;
 
@@ -270,8 +271,8 @@ impl RunCommandController {
 
             // Render using appropriate view based on output format (Strategy Pattern)
             let output = match output_format {
-                OutputFormat::Text => TextView::render(&data),
-                OutputFormat::Json => JsonView::render(&data),
+                OutputFormat::Text => TextView::render(&data)?,
+                OutputFormat::Json => JsonView::render(&data)?,
             };
 
             // Pipeline: RunDetailsData → render → output to stdout

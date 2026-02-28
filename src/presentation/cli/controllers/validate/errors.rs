@@ -7,6 +7,7 @@ use thiserror::Error;
 
 use crate::application::command_handlers::validate::ValidateCommandHandlerError;
 use crate::presentation::cli::views::progress::ProgressReporterError;
+use crate::presentation::cli::views::ViewRenderError;
 
 /// Errors that can occur during validate command execution
 #[derive(Error, Debug)]
@@ -45,6 +46,12 @@ pub enum ValidateSubcommandError {
     /// Progress reporter error
     #[error("Progress display error: {0}")]
     ProgressError(String),
+    /// Output formatting failed (JSON serialization error).
+    /// This indicates an internal error in data serialization.
+    #[error(
+        "Failed to format output: {reason}\nTip: This is a critical bug - please report it with full logs using --log-output file-and-stderr"
+    )]
+    OutputFormatting { reason: String },
 }
 
 impl ValidateSubcommandError {
@@ -71,6 +78,9 @@ impl ValidateSubcommandError {
             )),
             Self::ValidationFailed { source, .. } => Some(source.help()),
             Self::ProgressError(_) => None,
+            Self::OutputFormatting { reason } => Some(format!(
+                "Output Formatting Failed - Critical Internal Error:\n\nThis is a critical internal error: {reason}\n\nPlease report this bug with full logs.",
+            )),
         }
     }
 }
@@ -78,5 +88,12 @@ impl ValidateSubcommandError {
 impl From<ProgressReporterError> for ValidateSubcommandError {
     fn from(err: ProgressReporterError) -> Self {
         Self::ProgressError(err.to_string())
+    }
+}
+impl From<ViewRenderError> for ValidateSubcommandError {
+    fn from(e: ViewRenderError) -> Self {
+        Self::OutputFormatting {
+            reason: e.to_string(),
+        }
     }
 }

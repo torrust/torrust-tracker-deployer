@@ -24,6 +24,7 @@ use super::prometheus::PrometheusView;
 use super::tracker_services::TrackerServicesView;
 
 use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering environment information
 ///
@@ -41,6 +42,7 @@ use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::application::command_handlers::show::info::EnvironmentInfo;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::show::TextView;
 /// use chrono::{TimeZone, Utc};
@@ -54,60 +56,14 @@ use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
 ///     "created".to_string(),
 /// );
 ///
-/// let output = TextView::render(&info);
+/// let output = TextView::render(&info).unwrap();
 /// assert!(output.contains("Environment: my-env"));
 /// assert!(output.contains("State: Created"));
 /// ```
 pub struct TextView;
 
-impl TextView {
-    /// Render environment information as a formatted string
-    ///
-    /// Takes environment info and produces a human-readable output suitable
-    /// for displaying to users via stdout. Uses composition to delegate
-    /// rendering to specialized child views.
-    ///
-    /// # Arguments
-    ///
-    /// * `info` - Environment information to render
-    ///
-    /// # Returns
-    ///
-    /// A formatted string containing:
-    /// - Basic information (name, state, provider)
-    /// - Infrastructure details (if available)
-    /// - Service information (if available, for Released/Running states)
-    /// - Next step guidance
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::application::command_handlers::show::info::{
-    ///     EnvironmentInfo, InfrastructureInfo,
-    /// };
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::show::TextView;
-    /// use std::net::{IpAddr, Ipv4Addr};
-    /// use chrono::Utc;
-    ///
-    /// let info = EnvironmentInfo::new(
-    ///     "prod-env".to_string(),
-    ///     "Provisioned".to_string(),
-    ///     "LXD".to_string(),
-    ///     Utc::now(),
-    ///     "provisioned".to_string(),
-    /// ).with_infrastructure(InfrastructureInfo::new(
-    ///     IpAddr::V4(Ipv4Addr::new(10, 140, 190, 171)),
-    ///     22,
-    ///     "torrust".to_string(),
-    ///     "~/.ssh/id_rsa".to_string(),
-    /// ));
-    ///
-    /// let output = TextView::render(&info);
-    /// assert!(output.contains("10.140.190.171"));
-    /// assert!(output.contains("ssh -i"));
-    /// ```
-    #[must_use]
-    pub fn render(info: &EnvironmentInfo) -> String {
+impl Render<EnvironmentInfo> for TextView {
+    fn render(info: &EnvironmentInfo) -> Result<String, ViewRenderError> {
         let mut lines = Vec::new();
 
         // Basic information (always present)
@@ -147,7 +103,7 @@ impl TextView {
         // Next step guidance (always present)
         lines.extend(NextStepGuidanceView::render(&info.state_name));
 
-        lines.join("\n")
+        Ok(lines.join("\n"))
     }
 }
 
@@ -177,7 +133,7 @@ mod tests {
             "created".to_string(),
         );
 
-        let output = TextView::render(&info);
+        let output = TextView::render(&info).unwrap();
 
         assert!(output.contains("Environment: test-env"));
         assert!(output.contains("State: Created"));
@@ -202,7 +158,7 @@ mod tests {
             "~/.ssh/id_rsa".to_string(),
         ));
 
-        let output = TextView::render(&info);
+        let output = TextView::render(&info).unwrap();
 
         assert!(output.contains("Infrastructure:"));
         assert!(output.contains("Instance IP: 10.140.190.171"));
@@ -236,7 +192,7 @@ mod tests {
             vec![],                                            // No TLS domains
         ));
 
-        let output = TextView::render(&info);
+        let output = TextView::render(&info).unwrap();
 
         assert!(output.contains("Tracker Services:"));
         assert!(output.contains("UDP Trackers:"));
@@ -278,7 +234,7 @@ mod tests {
             vec![],
         ));
 
-        let output = TextView::render(&info);
+        let output = TextView::render(&info).unwrap();
 
         // Should have all sections
         assert!(output.contains("Environment: full-env"));
@@ -327,7 +283,7 @@ mod tests {
             ],
         ));
 
-        let output = TextView::render(&info);
+        let output = TextView::render(&info).unwrap();
 
         // Check HTTPS trackers section
         assert!(output.contains("HTTP Trackers (HTTPS via Caddy):"));
@@ -371,7 +327,7 @@ mod tests {
             "/key".to_string(),
         ));
 
-        let output = TextView::render(&info);
+        let output = TextView::render(&info).unwrap();
 
         assert!(output.contains("-p 2222"));
     }

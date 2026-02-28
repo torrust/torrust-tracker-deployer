@@ -13,6 +13,7 @@ use crate::domain::environment::name::EnvironmentName;
 use crate::presentation::cli::input::cli::OutputFormat;
 use crate::presentation::cli::views::commands::purge::{JsonView, PurgeDetailsData, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 
 use super::errors::PurgeSubcommandError;
@@ -192,10 +193,10 @@ impl PurgeCommandController {
         let data = PurgeDetailsData::from_environment_name(environment_name);
         match output_format {
             OutputFormat::Text => {
-                self.progress.complete(&TextView::render(&data))?;
+                self.progress.complete(&TextView::render(&data)?)?;
             }
             OutputFormat::Json => {
-                self.progress.result(&JsonView::render(&data))?;
+                self.progress.result(&JsonView::render(&data)?)?;
             }
         }
         Ok(())

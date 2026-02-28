@@ -11,6 +11,7 @@
 //! and output directory for the generated artifacts.
 
 use crate::presentation::cli::views::commands::render::RenderDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering render details as JSON
 ///
@@ -21,6 +22,7 @@ use crate::presentation::cli::views::commands::render::RenderDetailsData;
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::render::{
 ///     RenderDetailsData, JsonView,
 /// };
@@ -32,7 +34,7 @@ use crate::presentation::cli::views::commands::render::RenderDetailsData;
 ///     output_dir: "/tmp/build/my-env".to_string(),
 /// };
 ///
-/// let output = JsonView::render(&data);
+/// let output = JsonView::render(&data).unwrap();
 ///
 /// // Verify it's valid JSON
 /// let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
@@ -41,65 +43,16 @@ use crate::presentation::cli::views::commands::render::RenderDetailsData;
 /// ```
 pub struct JsonView;
 
-impl JsonView {
-    /// Render render details as JSON
-    ///
-    /// Serializes the render details to pretty-printed JSON format.
-    /// The JSON structure matches the DTO structure exactly:
-    /// - `environment_name`: Name of the environment
-    /// - `config_source`: Description of the configuration source
-    /// - `target_ip`: IP address used in artifact generation
-    /// - `output_dir`: Path to the generated artifacts directory
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Render details to render
-    ///
-    /// # Returns
-    ///
-    /// A JSON string containing the serialized render details.
-    /// If serialization fails (which should never happen with valid data),
-    /// returns an error JSON object with the serialization error message.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::render::{
-    ///     RenderDetailsData, JsonView,
-    /// };
-    ///
-    /// let data = RenderDetailsData {
-    ///     environment_name: "prod-tracker".to_string(),
-    ///     config_source: "Config file: envs/prod-tracker.json".to_string(),
-    ///     target_ip: "10.0.0.1".to_string(),
-    ///     output_dir: "/tmp/build/prod-tracker".to_string(),
-    /// };
-    ///
-    /// let json = JsonView::render(&data);
-    ///
-    /// assert!(json.contains("\"environment_name\": \"prod-tracker\""));
-    /// assert!(json.contains("\"target_ip\": \"10.0.0.1\""));
-    /// ```
-    #[must_use]
-    pub fn render(data: &RenderDetailsData) -> String {
-        serde_json::to_string_pretty(data).unwrap_or_else(|e| {
-            serde_json::to_string_pretty(&serde_json::json!({
-                "error": "Failed to serialize render details",
-                "message": e.to_string(),
-            }))
-            .unwrap_or_else(|_| {
-                r#"{
-  "error": "Failed to serialize error message"
-}"#
-                .to_string()
-            })
-        })
+impl Render<RenderDetailsData> for JsonView {
+    fn render(data: &RenderDetailsData) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::cli::views::Render;
 
     // Test fixtures
 
@@ -143,7 +96,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert - verify it's valid JSON with expected string field values
         assert_json_str_fields_eq(
@@ -163,7 +116,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert - every documented field must be present
         assert_json_has_fields(
@@ -183,7 +136,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert
         let result = serde_json::from_str::<serde_json::Value>(&json);
@@ -201,7 +154,7 @@ mod tests {
         };
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert
         assert_json_str_fields_eq(&json, &[("config_source", "Environment: my-env")]);
@@ -213,7 +166,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert - pretty-printed JSON has newlines and indentation
         assert!(

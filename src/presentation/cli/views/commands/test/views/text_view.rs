@@ -13,6 +13,7 @@
 use std::fmt::Write;
 
 use crate::presentation::cli::views::commands::test::TestResultData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering test results as human-readable text
 ///
@@ -23,6 +24,7 @@ use crate::presentation::cli::views::commands::test::TestResultData;
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::test::{
 ///     TestResultData, TextView,
 /// };
@@ -34,42 +36,14 @@ use crate::presentation::cli::views::commands::test::TestResultData;
 ///     dns_warnings: vec![],
 /// };
 ///
-/// let output = TextView::render(&data);
+/// let output = TextView::render(&data).unwrap();
 /// assert!(output.contains("Test Results:"));
 /// assert!(output.contains("my-env"));
 /// ```
 pub struct TextView;
 
-impl TextView {
-    /// Render test results as human-readable formatted text
-    ///
-    /// Takes test results and produces human-readable output suitable for
-    /// displaying to users via stdout.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Test result data to render
-    ///
-    /// # Returns
-    ///
-    /// A formatted string containing:
-    /// - Test Results section with environment name, instance IP, and result
-    /// - DNS Warnings section (only if warnings are present)
-    ///
-    /// # Format
-    ///
-    /// The output follows this structure:
-    /// ```text
-    /// Test Results:
-    ///   Environment:       <environment_name>
-    ///   Instance IP:       <instance_ip>
-    ///   Result:            <result>
-    ///
-    /// DNS Warnings:         (only if warnings exist)
-    ///   - <domain>: <issue>
-    /// ```
-    #[must_use]
-    pub fn render(data: &TestResultData) -> String {
+impl Render<TestResultData> for TextView {
+    fn render(data: &TestResultData) -> Result<String, ViewRenderError> {
         let mut output = format!(
             r"Test Results:
   Environment:       {}
@@ -85,7 +59,7 @@ impl TextView {
             }
         }
 
-        output
+        Ok(output)
     }
 }
 
@@ -143,7 +117,7 @@ mod tests {
         let data = create_test_data_no_warnings();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert_contains_all(
@@ -166,7 +140,7 @@ mod tests {
         let data = create_test_data_no_warnings();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert!(!text.contains("DNS Warnings:"));
@@ -178,7 +152,7 @@ mod tests {
         let data = create_test_data_with_warnings();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert_contains_all(
@@ -199,7 +173,7 @@ mod tests {
         let data = create_test_data_with_warnings();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert - each warning should be on its own bullet line
         let warning_lines: Vec<&str> = text

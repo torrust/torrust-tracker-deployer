@@ -11,6 +11,7 @@
 //! purposes and contains all necessary information in a well-structured format.
 
 use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering environment information as JSON
 ///
@@ -21,6 +22,7 @@ use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::application::command_handlers::show::info::EnvironmentInfo;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::show::JsonView;
 /// use chrono::{TimeZone, Utc};
@@ -34,7 +36,7 @@ use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
 ///     "created".to_string(),
 /// );
 ///
-/// let output = JsonView::render(&info);
+/// let output = JsonView::render(&info).unwrap();
 /// // Verify it's valid JSON
 /// let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
 /// assert_eq!(parsed["name"], "my-env");
@@ -42,66 +44,9 @@ use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
 /// ```
 pub struct JsonView;
 
-impl JsonView {
-    /// Render environment information as JSON
-    ///
-    /// Serializes the `EnvironmentInfo` DTO to pretty-printed JSON format.
-    /// The output structure mirrors the DTO structure exactly, making it
-    /// easy to parse programmatically.
-    ///
-    /// # Arguments
-    ///
-    /// * `info` - Environment information to render
-    ///
-    /// # Returns
-    ///
-    /// A JSON string containing the serialized environment information.
-    /// If serialization fails (which should never happen with valid data),
-    /// returns an error JSON object.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::application::command_handlers::show::info::{
-    ///     EnvironmentInfo, InfrastructureInfo,
-    /// };
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::show::JsonView;
-    /// use std::net::{IpAddr, Ipv4Addr};
-    /// use chrono::Utc;
-    ///
-    /// let info = EnvironmentInfo::new(
-    ///     "my-env".to_string(),
-    ///     "Provisioned".to_string(),
-    ///     "LXD".to_string(),
-    ///     Utc::now(),
-    ///     "provisioned".to_string(),
-    /// ).with_infrastructure(InfrastructureInfo::new(
-    ///     IpAddr::V4(Ipv4Addr::new(10, 140, 190, 14)),
-    ///     22,
-    ///     "ubuntu".to_string(),
-    ///     "/home/user/.ssh/key".to_string(),
-    /// ));
-    ///
-    /// let json = JsonView::render(&info);
-    /// // Verify it's valid JSON and has expected fields
-    /// let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
-    /// assert_eq!(parsed["name"], "my-env");
-    /// assert!(parsed["infrastructure"].is_object());
-    /// ```
-    #[must_use]
-    pub fn render(info: &EnvironmentInfo) -> String {
-        serde_json::to_string_pretty(info).unwrap_or_else(|e| {
-            serde_json::to_string_pretty(&serde_json::json!({
-                "error": "Failed to serialize show details",
-                "message": e.to_string(),
-            }))
-            .unwrap_or_else(|_| {
-                r#"{
-  "error": "Failed to serialize error message"
-}"#
-                .to_string()
-            })
-        })
+impl Render<EnvironmentInfo> for JsonView {
+    fn render(data: &EnvironmentInfo) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 
@@ -113,6 +58,7 @@ mod tests {
 
     use super::*;
     use crate::presentation::cli::views::commands::show::view_data::InfrastructureInfo;
+    use crate::presentation::cli::views::Render;
 
     #[test]
     fn it_should_render_created_state_as_json() {
@@ -125,7 +71,7 @@ mod tests {
             "created".to_string(),
         );
 
-        let output = JsonView::render(&info);
+        let output = JsonView::render(&info).unwrap();
 
         // Verify JSON structure
         assert!(
@@ -165,7 +111,7 @@ mod tests {
             "/home/user/.ssh/key".to_string(),
         ));
 
-        let output = JsonView::render(&info);
+        let output = JsonView::render(&info).unwrap();
 
         // Verify infrastructure section exists
         assert!(output.contains(r#""infrastructure":"#));
@@ -191,7 +137,7 @@ mod tests {
             "created".to_string(),
         );
 
-        let output = JsonView::render(&info);
+        let output = JsonView::render(&info).unwrap();
 
         // Verify it's valid JSON by parsing it
         let parsed: serde_json::Value =

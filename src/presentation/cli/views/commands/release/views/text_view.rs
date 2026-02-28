@@ -10,6 +10,7 @@
 //! for terminal display and direct user consumption.
 
 use crate::presentation::cli::views::commands::release::ReleaseDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering release details as human-readable text
 ///
@@ -20,6 +21,7 @@ use crate::presentation::cli::views::commands::release::ReleaseDetailsData;
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::release::{
 ///     ReleaseDetailsData, TextView,
 /// };
@@ -35,73 +37,19 @@ use crate::presentation::cli::views::commands::release::ReleaseDetailsData;
 ///     created_at: Utc.with_ymd_and_hms(2026, 2, 20, 10, 0, 0).unwrap(),
 /// };
 ///
-/// let output = TextView::render(&details);
+/// let output = TextView::render(&details).unwrap();
 /// assert!(output.contains("Environment Details:"));
 /// assert!(output.contains("my-env"));
 /// ```
 pub struct TextView;
 
-impl TextView {
-    /// Render release details as human-readable formatted text
-    ///
-    /// Takes release details and produces a human-readable output
-    /// suitable for displaying to users via stdout.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Release details to render
-    ///
-    /// # Returns
-    ///
-    /// A formatted string containing:
-    /// - Environment Details section with name, instance, provider, state
-    /// - Instance IP (if available)
-    /// - Creation timestamp
-    ///
-    /// # Format
-    ///
-    /// The output follows this structure:
-    /// ```text
-    /// Environment Details:
-    ///   Name:              <environment_name>
-    ///   Instance:          <instance_name>
-    ///   Provider:          <provider>
-    ///   State:             <state>
-    ///   Instance IP:       <ip or "Not available">
-    ///   Created:           <timestamp>
-    /// ```
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::release::{
-    ///     ReleaseDetailsData, TextView,
-    /// };
-    /// use chrono::{TimeZone, Utc};
-    /// use std::net::{IpAddr, Ipv4Addr};
-    ///
-    /// let details = ReleaseDetailsData {
-    ///     environment_name: "prod-tracker".to_string(),
-    ///     instance_name: "torrust-tracker-vm-prod-tracker".to_string(),
-    ///     provider: "lxd".to_string(),
-    ///     state: "Released".to_string(),
-    ///     instance_ip: Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100))),
-    ///     created_at: Utc.with_ymd_and_hms(2026, 1, 5, 10, 30, 0).unwrap(),
-    /// };
-    ///
-    /// let text = TextView::render(&details);
-    ///
-    /// assert!(text.contains("Name:"));
-    /// assert!(text.contains("prod-tracker"));
-    /// assert!(text.contains("Released"));
-    /// ```
-    #[must_use]
-    pub fn render(data: &ReleaseDetailsData) -> String {
+impl Render<ReleaseDetailsData> for TextView {
+    fn render(data: &ReleaseDetailsData) -> Result<String, ViewRenderError> {
         let instance_ip = data
             .instance_ip
             .map_or_else(|| "Not available".to_string(), |ip| ip.to_string());
 
-        format!(
+        Ok(format!(
             r"Environment Details:
   Name:              {}
   Instance:          {}
@@ -115,7 +63,7 @@ impl TextView {
             data.state,
             instance_ip,
             data.created_at.format("%Y-%m-%d %H:%M:%S UTC")
-        )
+        ))
     }
 }
 
@@ -164,7 +112,7 @@ mod tests {
         let details = create_test_details_with_ip(Some(create_test_ip()));
 
         // Act
-        let text = TextView::render(&details);
+        let text = TextView::render(&details).unwrap();
 
         // Assert
         assert_contains_all(
@@ -193,7 +141,7 @@ mod tests {
         let details = create_test_details_with_ip(None);
 
         // Act
-        let text = TextView::render(&details);
+        let text = TextView::render(&details).unwrap();
 
         // Assert
         assert!(text.contains("Instance IP:       Not available"));
@@ -205,7 +153,7 @@ mod tests {
         let details = create_test_details_with_ip(Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 42))));
 
         // Act
-        let text = TextView::render(&details);
+        let text = TextView::render(&details).unwrap();
 
         // Assert - check all sections are present
         assert_contains_all(

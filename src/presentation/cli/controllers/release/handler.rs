@@ -17,6 +17,7 @@ use crate::domain::environment::Environment;
 use crate::presentation::cli::input::cli::OutputFormat;
 use crate::presentation::cli::views::commands::release::{JsonView, ReleaseDetailsData, TextView};
 use crate::presentation::cli::views::progress::{ProgressReporter, VerboseProgressListener};
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 use crate::shared::clock::Clock;
 
@@ -200,8 +201,8 @@ impl ReleaseCommandController {
         let details = ReleaseDetailsData::from(released_env);
 
         let output = match output_format {
-            OutputFormat::Text => TextView::render(&details),
-            OutputFormat::Json => JsonView::render(&details),
+            OutputFormat::Text => TextView::render(&details)?,
+            OutputFormat::Json => JsonView::render(&details)?,
         };
 
         self.progress.result(&output)?;

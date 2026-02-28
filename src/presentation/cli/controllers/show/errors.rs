@@ -8,6 +8,7 @@ use thiserror::Error;
 
 use crate::domain::environment::name::EnvironmentNameError;
 use crate::presentation::cli::views::progress::ProgressReporterError;
+use crate::presentation::cli::views::ViewRenderError;
 
 /// Show command specific errors
 ///
@@ -61,6 +62,12 @@ Tip: This is a critical bug - please report it with full logs using --log-output
 Tip: Check if the environment data is corrupted or permissions are correct"
     )]
     LoadError { name: String, message: String },
+    /// Output formatting failed (JSON serialization error).
+    /// This indicates an internal error in data serialization.
+    #[error(
+        "Failed to format output: {reason}\nTip: This is a critical bug - please report it with full logs using --log-output file-and-stderr"
+    )]
+    OutputFormatting { reason: String },
 }
 
 // ============================================================================
@@ -70,6 +77,13 @@ Tip: Check if the environment data is corrupted or permissions are correct"
 impl From<ProgressReporterError> for ShowSubcommandError {
     fn from(source: ProgressReporterError) -> Self {
         Self::ProgressReportingFailed { source }
+    }
+}
+impl From<ViewRenderError> for ShowSubcommandError {
+    fn from(e: ViewRenderError) -> Self {
+        Self::OutputFormatting {
+            reason: e.to_string(),
+        }
     }
 }
 
@@ -152,6 +166,9 @@ This is a critical internal error. Please:
 3. Try recreating the environment:
    - Remove corrupted data: rm -rf data/<environment-name>
    - Create new environment: torrust-tracker-deployer create environment --env-file <config.json>"
+            }
+            Self::OutputFormatting { .. } => {
+                "Output Formatting Failed - Critical Internal Error:\n\nThis error should not occur during normal operation. It indicates a bug in the output formatting system.\n\n1. Immediate actions:\n   - Save full error output\n   - Copy log files from data/logs/\n   - Note the exact command and output format being used\n\n2. Report the issue:\n   - Create GitHub issue with full details\n   - Include: command, output format (--output-format), error output, logs\n   - Describe steps to reproduce\n\n3. Temporary workarounds:\n   - Try using different output format (text vs json)\n   - Try running command again\n\nPlease report it so we can fix it."
             }
         }
     }

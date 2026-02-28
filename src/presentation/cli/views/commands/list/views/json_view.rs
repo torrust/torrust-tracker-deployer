@@ -10,6 +10,7 @@
 //! The output includes environment summaries, failed environments, and metadata.
 
 use crate::presentation::cli::views::commands::list::view_data::EnvironmentList;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering environment list as JSON
 ///
@@ -20,6 +21,7 @@ use crate::presentation::cli::views::commands::list::view_data::EnvironmentList;
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::application::command_handlers::list::info::{
 ///     EnvironmentList, EnvironmentSummary,
 /// };
@@ -35,7 +37,7 @@ use crate::presentation::cli::views::commands::list::view_data::EnvironmentList;
 /// ];
 ///
 /// let list = EnvironmentList::new(summaries, vec![], "/path/to/data".to_string());
-/// let output = JsonView::render(&list);
+/// let output = JsonView::render(&list).unwrap();
 ///
 /// // Verify it's valid JSON
 /// let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
@@ -43,70 +45,9 @@ use crate::presentation::cli::views::commands::list::view_data::EnvironmentList;
 /// ```
 pub struct JsonView;
 
-impl JsonView {
-    /// Render environment list as JSON
-    ///
-    /// Serializes the environment list to pretty-printed JSON format.
-    /// The JSON structure matches the DTO structure exactly:
-    /// - `environments`: Array of environment summaries
-    /// - `total_count`: Number of successfully loaded environments
-    /// - `failed_environments`: Array of failures (name, error pairs)
-    /// - `data_directory`: Path to scanned directory
-    ///
-    /// # Arguments
-    ///
-    /// * `list` - Environment list to render
-    ///
-    /// # Returns
-    ///
-    /// A JSON string containing the serialized environment list.
-    /// If serialization fails (which should never happen with valid data),
-    /// returns an error JSON object with the serialization error message.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::application::command_handlers::list::info::{
-    ///     EnvironmentList, EnvironmentSummary,
-    /// };
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::list::JsonView;
-    ///
-    /// let summaries = vec![
-    ///     EnvironmentSummary::new(
-    ///         "env1".to_string(),
-    ///         "Running".to_string(),
-    ///         "LXD".to_string(),
-    ///         "2026-01-05T10:30:00Z".to_string(),
-    ///     ),
-    ///     EnvironmentSummary::new(
-    ///         "env2".to_string(),
-    ///         "Created".to_string(),
-    ///         "Hetzner".to_string(),
-    ///         "2026-01-06T14:15:30Z".to_string(),
-    ///     ),
-    /// ];
-    ///
-    /// let list = EnvironmentList::new(summaries, vec![], "/data".to_string());
-    /// let json = JsonView::render(&list);
-    ///
-    /// assert!(json.contains("\"total_count\": 2"));
-    /// assert!(json.contains("\"env1\""));
-    /// assert!(json.contains("\"env2\""));
-    /// ```
-    #[must_use]
-    pub fn render(list: &EnvironmentList) -> String {
-        serde_json::to_string_pretty(list).unwrap_or_else(|e| {
-            serde_json::to_string_pretty(&serde_json::json!({
-                "error": "Failed to serialize environment list",
-                "message": e.to_string(),
-            }))
-            .unwrap_or_else(|_| {
-                r#"{
-  "error": "Failed to serialize error message"
-}"#
-                .to_string()
-            })
-        })
+impl Render<EnvironmentList> for JsonView {
+    fn render(data: &EnvironmentList) -> Result<String, ViewRenderError> {
+        Ok(serde_json::to_string_pretty(data)?)
     }
 }
 
@@ -116,12 +57,13 @@ mod tests {
 
     use super::*;
     use crate::presentation::cli::views::commands::list::view_data::EnvironmentSummary;
+    use crate::presentation::cli::views::Render;
 
     #[test]
     fn it_should_render_empty_environment_list_as_json() {
         let list = EnvironmentList::new(vec![], vec![], "/path/to/data".to_string());
 
-        let output = JsonView::render(&list);
+        let output = JsonView::render(&list).unwrap();
 
         // Verify it's valid JSON
         let parsed: Value = serde_json::from_str(&output).expect("Should be valid JSON");
@@ -143,7 +85,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/data".to_string());
 
-        let output = JsonView::render(&list);
+        let output = JsonView::render(&list).unwrap();
 
         let parsed: Value = serde_json::from_str(&output).expect("Should be valid JSON");
 
@@ -182,7 +124,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/workspace/data".to_string());
 
-        let output = JsonView::render(&list);
+        let output = JsonView::render(&list).unwrap();
 
         let parsed: Value = serde_json::from_str(&output).expect("Should be valid JSON");
 
@@ -217,7 +159,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, failures, "/data".to_string());
 
-        let output = JsonView::render(&list);
+        let output = JsonView::render(&list).unwrap();
 
         let parsed: Value = serde_json::from_str(&output).expect("Should be valid JSON");
 
@@ -244,7 +186,7 @@ mod tests {
 
         let list = EnvironmentList::new(summaries, vec![], "/data".to_string());
 
-        let output = JsonView::render(&list);
+        let output = JsonView::render(&list).unwrap();
 
         // Pretty-printed JSON should have newlines and indentation
         assert!(output.contains('\n'));

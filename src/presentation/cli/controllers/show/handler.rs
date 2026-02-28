@@ -15,6 +15,7 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::presentation::cli::input::cli::OutputFormat;
 use crate::presentation::cli::views::commands::show::{JsonView, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 
 use super::errors::ShowSubcommandError;
@@ -204,8 +205,8 @@ impl ShowCommandController {
 
         // Render using appropriate view based on output format (Strategy Pattern)
         let output = match output_format {
-            OutputFormat::Text => TextView::render(env_info),
-            OutputFormat::Json => JsonView::render(env_info),
+            OutputFormat::Text => TextView::render(env_info)?,
+            OutputFormat::Json => JsonView::render(env_info)?,
         };
 
         // Pipeline: EnvironmentInfo → render → output to stdout

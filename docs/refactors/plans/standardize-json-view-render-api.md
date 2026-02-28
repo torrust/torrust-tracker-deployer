@@ -41,14 +41,14 @@ incompatible patterns in use, and no mechanism to prevent future drift.
 **Total Active Proposals**: 2
 **Total Postponed**: 0
 **Total Discarded**: 0
-**Completed**: 0
+**Completed**: 2
 **In Progress**: 0
-**Not Started**: 2
+**Not Started**: 0
 
 ### Phase Summary
 
-- **Phase 0 - Introduce ViewRenderError + Render Trait (High Impact, Low Effort)**: ⏳ 0/1 completed (0%)
-- **Phase 1 - Standardize Return Type (High Impact, Medium Effort)**: ⏳ 0/1 completed (0%)
+- **Phase 0 - Introduce ViewRenderError + Render Trait (High Impact, Low Effort)**: ✅ 1/1 completed (100%)
+- **Phase 1 - Standardize Return Type (High Impact, Medium Effort)**: ✅ 1/1 completed (100%)
 
 ### Discarded Proposals
 
@@ -107,13 +107,13 @@ be reviewed as one unit. Low effort since no existing call sites change yet.
 
 ### Proposal #1: Add `ViewRenderError` and `Render<T>` Trait
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵 Low
 **Priority**: P0
 **Depends On**: None
-**Completed**: -
-**Commit**: -
+**Completed**: 2026-02-27
+**Commit**: `91798861`
 
 #### Problem
 
@@ -208,13 +208,13 @@ the trait when the error type is later updated. Defining `ViewRenderError` upfro
 
 #### Implementation Checklist
 
-- [ ] Create `src/presentation/cli/views/render.rs` with `ViewRenderError` and `Render<T>`
-- [ ] Add `thiserror` as a dependency if not already present (check `Cargo.toml`)
-- [ ] Re-export both from `src/presentation/cli/views/mod.rs`
-- [ ] Add `impl Render<...> for JsonView` to all 13 `json_view.rs` files
-- [ ] Add `impl Render<...> for TextView` to all 13 `text_view.rs` files
-- [ ] Verify all tests pass
-- [ ] Run `cargo run --bin linter all` and fix issues
+- [x] Create `src/presentation/cli/views/render.rs` with `ViewRenderError` and `Render<T>`
+- [x] Add `thiserror` as a dependency if not already present (check `Cargo.toml`)
+- [x] Re-export both from `src/presentation/cli/views/mod.rs`
+- [x] Add `impl Render<...> for JsonView` to all 13 `json_view.rs` files
+- [x] Add `impl Render<...> for TextView` to all 13 `text_view.rs` files
+- [x] Verify all tests pass
+- [x] Run `cargo run --bin linter all` and fix issues
 
 #### Testing Strategy
 
@@ -231,13 +231,13 @@ pattern.
 
 ### Proposal #2: Remove `unwrap_or_else` Fallbacks and Return `Result`
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Completed
 **Impact**: 🟢🟢🟢 High
 **Effort**: 🔵🔵 Medium
 **Priority**: P1
 **Depends On**: Proposal #1 + [`standardize-command-view-folder-structure`](standardize-command-view-folder-structure.md) (must be applied first so file paths are stable)
-**Completed**: -
-**Commit**: -
+**Completed**: 2026-02-28
+**Commit**: `80616e44`
 
 #### Problem
 
@@ -300,12 +300,12 @@ an error.
 
 #### Implementation Checklist
 
-- [ ] Update all 11 `json_view.rs` standalone `render()` methods to the `Render<T>` trait impl
-- [ ] Update call sites in all 11 command handlers to use `?`
-- [ ] Add `From<ViewRenderError>` conversions where missing in handler error types
-- [ ] Also update `create` and `provision` (already return `Result`) to use the trait
-- [ ] Verify all tests pass
-- [ ] Run `cargo run --bin linter all` and fix issues
+- [x] Update all 11 `json_view.rs` standalone `render()` methods to the `Render<T>` trait impl
+- [x] Update call sites in all 11 command handlers to use `?`
+- [x] Add `From<ViewRenderError>` conversions where missing in handler error types
+- [x] Also update `create` and `provision` (already return `Result`) to use the trait
+- [x] Verify all tests pass
+- [x] Run `cargo run --bin linter all` and fix issues
 
 #### Testing Strategy
 
@@ -318,23 +318,23 @@ behavior (the rendered JSON string) does not change.
 ## 📈 Timeline
 
 - **Start Date**: 2026-02-27
-- **Actual Completion**: TBD
+- **Actual Completion**: 2026-02-28
 
 ## 🔍 Review Process
 
 ### Approval Criteria
 
-- [ ] Technical feasibility validated
-- [ ] Aligns with [Development Principles](../development-principles.md)
-- [ ] Implementation plan is clear and actionable
-- [ ] Priorities are correct (high-impact/low-effort first)
+- [x] Technical feasibility validated
+- [x] Aligns with [Development Principles](../development-principles.md)
+- [x] Implementation plan is clear and actionable
+- [x] Priorities are correct (high-impact/low-effort first)
 
 ### Completion Criteria
 
-- [ ] All active proposals implemented
-- [ ] All tests passing
-- [ ] All linters passing
-- [ ] Documentation updated
+- [x] All active proposals implemented
+- [x] All tests passing
+- [x] All linters passing
+- [x] Documentation updated
 - [ ] Changes merged to main branch
 
 ## 📚 Related Documentation
@@ -353,8 +353,17 @@ to be implemented (earlier PRs #351, #353) and happened to use `Result` from the
 Subsequent commands followed a slightly different pattern that evolved independently.
 The Copilot review on PR #397 was the first mention of the inconsistency.
 
+A follow-up cleanup (`1c71cd7e`) also removed the inherent `pub fn render() -> String`
+methods from all 13 `text_view.rs` files. These had been left intact after Proposals #1
+and #2 because they weren't part of the original scope. Post-completion review revealed
+that keeping them created an asymmetry: `JsonView` exposed rendering exclusively through
+the `Render<T>` trait while `TextView` still had an inherent "convenience" method that
+delegated to the trait. Applying the "least surprise" principle, the inherent methods were
+removed and their bodies inlined directly into the `Render<T>` impls, making all 26 view
+structs consistent.
+
 ---
 
 **Created**: 2026-02-27
-**Last Updated**: 2026-02-27 (revised: merged ViewRenderError into Proposal #1, removed deferred Phase 2)
-**Status**: 📋 Planning
+**Last Updated**: 2026-02-28 (follow-up: removed inherent render() from text_views, commit 1c71cd7e)
+**Status**: ✅ Completed

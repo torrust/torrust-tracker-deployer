@@ -11,6 +11,7 @@
 //! output format produced before the Strategy Pattern was introduced.
 
 use crate::presentation::cli::views::commands::validate::ValidateDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering validate details as human-readable text
 ///
@@ -24,6 +25,7 @@ use crate::presentation::cli::views::commands::validate::ValidateDetailsData;
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::validate::{
 ///     ValidateDetailsData, TextView,
 /// };
@@ -39,72 +41,16 @@ use crate::presentation::cli::views::commands::validate::ValidateDetailsData;
 ///     has_backup: false,
 /// };
 ///
-/// let output = TextView::render(&data);
+/// let output = TextView::render(&data).unwrap();
 /// assert!(output.contains("Configuration file 'envs/my-env.json' is valid"));
 /// assert!(output.contains("Environment Details:"));
 /// assert!(output.contains("my-env"));
 /// ```
 pub struct TextView;
 
-impl TextView {
-    /// Render validate details as human-readable formatted text
-    ///
-    /// Takes validation details and produces a human-readable output
-    /// intended to be wrapped by `ProgressReporter::complete()`.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Validate details to render
-    ///
-    /// # Returns
-    ///
-    /// A formatted string containing:
-    /// - First line: "Configuration file '`<path>`' is valid"
-    /// - Blank line separator
-    /// - "Environment Details:" section with name, provider, and feature flags
-    ///
-    /// # Format
-    ///
-    /// The output follows this structure:
-    /// ```text
-    /// Configuration file '`<config_file>`' is valid
-    ///
-    /// Environment Details:
-    /// • Name: <environment_name>
-    /// • Provider: <provider>
-    /// • Prometheus: Enabled|Disabled
-    /// • Grafana: Enabled|Disabled
-    /// • HTTPS: Enabled|Disabled
-    /// • Backups: Enabled|Disabled
-    /// ```
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::validate::{
-    ///     ValidateDetailsData, TextView,
-    /// };
-    ///
-    /// let data = ValidateDetailsData {
-    ///     environment_name: "prod-tracker".to_string(),
-    ///     config_file: "envs/prod-tracker.json".to_string(),
-    ///     provider: "lxd".to_string(),
-    ///     is_valid: true,
-    ///     has_prometheus: true,
-    ///     has_grafana: true,
-    ///     has_https: false,
-    ///     has_backup: false,
-    /// };
-    ///
-    /// let text = TextView::render(&data);
-    ///
-    /// assert!(text.contains("Configuration file 'envs/prod-tracker.json' is valid"));
-    /// assert!(text.contains("Name:"));
-    /// assert!(text.contains("prod-tracker"));
-    /// ```
-    #[must_use]
-    pub fn render(data: &ValidateDetailsData) -> String {
-        format!(
+impl Render<ValidateDetailsData> for TextView {
+    fn render(data: &ValidateDetailsData) -> Result<String, ViewRenderError> {
+        Ok(format!(
             "Configuration file '{}' is valid\n\nEnvironment Details:\n\
             • Name: {}\n\
             • Provider: {}\n\
@@ -135,7 +81,7 @@ impl TextView {
             } else {
                 "Disabled"
             }
-        )
+        ))
     }
 }
 
@@ -189,7 +135,7 @@ mod tests {
         let data = create_test_data_all_enabled();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert_contains_all(
@@ -215,7 +161,7 @@ mod tests {
         let data = create_test_data_all_enabled();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert - all feature sections show "Enabled"
         let enabled_count = text.matches("Enabled").count();
@@ -231,7 +177,7 @@ mod tests {
         let data = create_test_data_all_disabled();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert - all feature sections show "Disabled"
         let disabled_count = text.matches("Disabled").count();
@@ -247,7 +193,7 @@ mod tests {
         let data = create_test_data_all_disabled();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert!(
@@ -262,7 +208,7 @@ mod tests {
         let data = create_test_data_all_enabled();
 
         // Act
-        let text = TextView::render(&data);
+        let text = TextView::render(&data).unwrap();
 
         // Assert
         assert_contains_all(
