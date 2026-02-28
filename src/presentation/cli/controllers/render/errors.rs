@@ -8,6 +8,7 @@ use thiserror::Error;
 
 use crate::application::command_handlers::render::RenderCommandHandlerError;
 use crate::presentation::cli::views::progress::ProgressReporterError;
+use crate::presentation::cli::views::ViewRenderError;
 
 /// Errors that can occur in the render command controller
 ///
@@ -73,8 +74,20 @@ pub enum RenderCommandError {
     /// Error from displaying progress to the user
     #[error(transparent)]
     ProgressReporter(#[from] ProgressReporterError),
+    /// Output formatting failed (JSON serialization error).
+    /// This indicates an internal error in data serialization.
+    #[error(
+        "Failed to format output: {reason}\nTip: This is a critical bug - please report it with full logs using --log-output file-and-stderr"
+    )]
+    OutputFormatting { reason: String },
 }
-
+impl From<ViewRenderError> for RenderCommandError {
+    fn from(e: ViewRenderError) -> Self {
+        Self::OutputFormatting {
+            reason: e.to_string(),
+        }
+    }
+}
 impl RenderCommandError {
     /// Provides context-specific help for troubleshooting
     ///
@@ -124,6 +137,9 @@ impl RenderCommandError {
             )),
             Self::Handler(e) => Some(e.help()),
             Self::ProgressReporter(_) => None,
+            Self::OutputFormatting { reason } => Some(format!(
+                "Output Formatting Failed - Critical Internal Error:\n\nThis is a critical internal error: {reason}\n\nPlease report this bug with full logs.",
+            )),
         }
     }
 }

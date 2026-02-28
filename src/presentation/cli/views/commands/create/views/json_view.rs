@@ -4,8 +4,8 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (machine-readable JSON) for environment details.
 
-use crate::presentation::cli::views::{Render, ViewRenderError};
 use super::super::EnvironmentDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// JSON view for rendering environment creation details
 ///
@@ -22,6 +22,7 @@ use super::super::EnvironmentDetailsData;
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use std::path::PathBuf;
 /// use chrono::{TimeZone, Utc};
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::create::{
@@ -41,47 +42,6 @@ use super::super::EnvironmentDetailsData;
 /// ```
 pub struct JsonView;
 
-impl JsonView {
-    /// Render environment details as JSON
-    ///
-    /// Takes environment creation data and produces a JSON-formatted string
-    /// suitable for programmatic parsing and automation workflows.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Environment details to render
-    ///
-    /// # Returns
-    ///
-    /// A JSON string containing:
-    /// - `environment_name`: Name of the created environment
-    /// - `instance_name`: Name of the VM instance
-    /// - `data_dir`: Path to environment data directory
-    /// - `build_dir`: Path to build artifacts directory
-    /// - `created_at`: ISO 8601 timestamp of environment creation
-    ///
-    /// # Format
-    ///
-    /// The output is pretty-printed JSON for readability:
-    /// ```json
-    /// {
-    ///   "environment_name": "my-env",
-    ///   "instance_name": "torrust-tracker-vm-my-env",
-    ///   "data_dir": "./data/my-env",
-    ///   "build_dir": "./build/my-env",
-    ///   "created_at": "2026-02-16T14:30:00Z"
-    /// }
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns `serde_json::Error` if JSON serialization fails (very rare,
-    /// would indicate a bug in the serialization implementation).
-    pub fn render(data: &EnvironmentDetailsData) -> Result<String, serde_json::Error> {
-        serde_json::to_string_pretty(data)
-    }
-}
-
 impl Render<EnvironmentDetailsData> for JsonView {
     fn render(data: &EnvironmentDetailsData) -> Result<String, ViewRenderError> {
         Ok(serde_json::to_string_pretty(data)?)
@@ -95,6 +55,7 @@ impl Render<EnvironmentDetailsData> for JsonView {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::cli::views::Render;
     use chrono::{TimeZone, Utc};
     use std::path::PathBuf;
 

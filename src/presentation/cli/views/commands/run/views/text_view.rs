@@ -4,10 +4,10 @@
 //! It displays service URLs, DNS hints, and helpful tips after services are started.
 
 use crate::presentation::cli::views::commands::run::view_data::RunDetailsData;
-use crate::presentation::cli::views::{Render, ViewRenderError};
 use crate::presentation::cli::views::commands::shared::service_urls::{
     CompactServiceUrlsView, DnsHintView,
 };
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering run command output as human-readable text
 ///

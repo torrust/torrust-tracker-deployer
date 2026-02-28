@@ -4,8 +4,8 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (machine-readable JSON) for provision details.
 
-use crate::presentation::cli::views::{Render, ViewRenderError};
 use super::super::ProvisionDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// JSON view for rendering provision details
 ///
@@ -22,6 +22,7 @@ use super::super::ProvisionDetailsData;
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use std::net::{IpAddr, Ipv4Addr};
 /// use std::path::PathBuf;
 /// use chrono::{TimeZone, Utc};
@@ -47,55 +48,6 @@ use super::super::ProvisionDetailsData;
 /// ```
 pub struct JsonView;
 
-impl JsonView {
-    /// Render provision details as JSON
-    ///
-    /// Takes provision data and produces a JSON-formatted string
-    /// suitable for programmatic parsing and automation workflows.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Provision details to render
-    ///
-    /// # Returns
-    ///
-    /// A JSON string containing:
-    /// - `environment_name`: Name of the provisioned environment
-    /// - `instance_name`: Name of the VM instance
-    /// - `instance_ip`: IP address of the provisioned instance (nullable)
-    /// - `ssh_username`: SSH username for connections
-    /// - `ssh_port`: SSH port number
-    /// - `ssh_private_key_path`: Path to SSH private key
-    /// - `provider`: Infrastructure provider (lxd, hetzner, etc.)
-    /// - `provisioned_at`: ISO 8601 timestamp of provisioning
-    /// - `domains`: Array of configured domain names (empty for non-HTTPS)
-    ///
-    /// # Format
-    ///
-    /// The output is pretty-printed JSON for readability:
-    /// ```json
-    /// {
-    ///   "environment_name": "my-env",
-    ///   "instance_name": "torrust-tracker-vm-my-env",
-    ///   "instance_ip": "10.140.190.39",
-    ///   "ssh_username": "torrust",
-    ///   "ssh_port": 22,
-    ///   "ssh_private_key_path": "/path/to/key",
-    ///   "provider": "lxd",
-    ///   "provisioned_at": "2026-02-16T14:30:00Z",
-    ///   "domains": ["tracker.example.com"]
-    /// }
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns `serde_json::Error` if JSON serialization fails (very rare,
-    /// would indicate a bug in the serialization implementation).
-    pub fn render(data: &ProvisionDetailsData) -> Result<String, serde_json::Error> {
-        serde_json::to_string_pretty(data)
-    }
-}
-
 impl Render<ProvisionDetailsData> for JsonView {
     fn render(data: &ProvisionDetailsData) -> Result<String, ViewRenderError> {
         Ok(serde_json::to_string_pretty(data)?)
@@ -109,6 +61,7 @@ impl Render<ProvisionDetailsData> for JsonView {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::cli::views::Render;
     use chrono::{TimeZone, Utc};
     use std::net::{IpAddr, Ipv4Addr};
     use std::path::PathBuf;

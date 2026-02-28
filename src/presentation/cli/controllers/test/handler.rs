@@ -15,6 +15,7 @@ use crate::domain::environment::repository::EnvironmentRepository;
 use crate::presentation::cli::input::cli::OutputFormat;
 use crate::presentation::cli::views::commands::test::{JsonView, TestResultData, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 
 use super::errors::TestSubcommandError;
@@ -231,7 +232,7 @@ impl TestCommandController {
 
         let output = match output_format {
             OutputFormat::Text => TextView::render(&data),
-            OutputFormat::Json => JsonView::render(&data),
+            OutputFormat::Json => JsonView::render(&data)?,
         };
 
         self.progress.result(&output)?;

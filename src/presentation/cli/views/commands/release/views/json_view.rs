@@ -21,6 +21,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::release::{
 ///     ReleaseDetailsData, JsonView,
 /// };
@@ -36,7 +37,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 ///     created_at: Utc.with_ymd_and_hms(2026, 2, 20, 10, 0, 0).unwrap(),
 /// };
 ///
-/// let output = JsonView::render(&details);
+/// let output = JsonView::render(&details).unwrap();
 ///
 /// // Verify it's valid JSON
 /// let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
@@ -44,68 +45,6 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// assert_eq!(parsed["state"], "Released");
 /// ```
 pub struct JsonView;
-
-impl JsonView {
-    /// Render release details as JSON
-    ///
-    /// Serializes the release details to pretty-printed JSON format.
-    /// The JSON structure matches the DTO structure exactly:
-    /// - `environment_name`: Name of the environment
-    /// - `instance_name`: VM instance name
-    /// - `provider`: Infrastructure provider
-    /// - `state`: Always "Released" on success
-    /// - `instance_ip`: IP address (nullable)
-    /// - `created_at`: ISO 8601 UTC timestamp
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Release details to render
-    ///
-    /// # Returns
-    ///
-    /// A JSON string containing the serialized release details.
-    /// If serialization fails (which should never happen with valid data),
-    /// returns an error JSON object with the serialization error message.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::release::{
-    ///     ReleaseDetailsData, JsonView,
-    /// };
-    /// use chrono::{TimeZone, Utc};
-    /// use std::net::{IpAddr, Ipv4Addr};
-    ///
-    /// let details = ReleaseDetailsData {
-    ///     environment_name: "prod-tracker".to_string(),
-    ///     instance_name: "torrust-tracker-vm-prod-tracker".to_string(),
-    ///     provider: "lxd".to_string(),
-    ///     state: "Released".to_string(),
-    ///     instance_ip: Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100))),
-    ///     created_at: Utc.with_ymd_and_hms(2026, 1, 5, 10, 30, 0).unwrap(),
-    /// };
-    ///
-    /// let json = JsonView::render(&details);
-    ///
-    /// assert!(json.contains("\"environment_name\": \"prod-tracker\""));
-    /// assert!(json.contains("\"state\": \"Released\""));
-    /// ```
-    #[must_use]
-    pub fn render(data: &ReleaseDetailsData) -> String {
-        serde_json::to_string_pretty(data).unwrap_or_else(|e| {
-            serde_json::to_string_pretty(&serde_json::json!({
-                "error": "Failed to serialize release details",
-                "message": e.to_string(),
-            }))
-            .unwrap_or_else(|_| {
-                r#"{
-  "error": "Failed to serialize error message"
-}"#
-                .to_string()
-            })
-        })
-    }
-}
 
 impl Render<ReleaseDetailsData> for JsonView {
     fn render(data: &ReleaseDetailsData) -> Result<String, ViewRenderError> {
@@ -116,6 +55,7 @@ impl Render<ReleaseDetailsData> for JsonView {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::cli::views::Render;
     use chrono::{DateTime, TimeZone, Utc};
     use std::net::{IpAddr, Ipv4Addr};
 
@@ -171,7 +111,7 @@ mod tests {
         let details = create_test_details_with_ip(Some(create_test_ip()));
 
         // Act
-        let json = JsonView::render(&details);
+        let json = JsonView::render(&details).unwrap();
 
         // Assert - verify it's valid JSON with expected field values
         assert_json_fields_eq(
@@ -193,7 +133,7 @@ mod tests {
         let details = create_test_details_with_ip(None);
 
         // Act
-        let json = JsonView::render(&details);
+        let json = JsonView::render(&details).unwrap();
 
         // Assert
         let parsed: serde_json::Value = serde_json::from_str(&json).expect("Should be valid JSON");
@@ -206,7 +146,7 @@ mod tests {
         let details = create_test_details_with_ip(Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 42))));
 
         // Act
-        let json = JsonView::render(&details);
+        let json = JsonView::render(&details).unwrap();
 
         // Assert - check all required fields are present
         assert_json_has_fields(

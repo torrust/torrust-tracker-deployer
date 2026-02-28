@@ -19,6 +19,7 @@ use crate::presentation::cli::views::commands::configure::{
 };
 use crate::presentation::cli::views::progress::ProgressReporter;
 use crate::presentation::cli::views::progress::VerboseProgressListener;
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 use crate::shared::clock::Clock;
 
@@ -251,9 +252,7 @@ impl ConfigureCommandController {
     ///
     /// # Note
     ///
-    /// JSON serialization errors are handled inline by `JsonView::render()`,
-    /// which returns a fallback error JSON string. Therefore, this method
-    /// does not propagate serialization errors.
+    /// JSON serialization errors are propagated as `ConfigureSubcommandError::OutputFormatting`.
     #[allow(clippy::result_large_err)]
     fn display_configure_results(
         &mut self,
@@ -264,7 +263,7 @@ impl ConfigureCommandController {
         let details = ConfigureDetailsData::from(configured);
         let output = match output_format {
             OutputFormat::Text => TextView::render(&details),
-            OutputFormat::Json => JsonView::render(&details),
+            OutputFormat::Json => JsonView::render(&details)?,
         };
         self.progress.result(&output)?;
         Ok(())

@@ -4,8 +4,8 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (human-readable text) for provision details.
 
-use crate::presentation::cli::views::{Render, ViewRenderError};
 use super::super::ProvisionDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// Text view for rendering provision details
 ///

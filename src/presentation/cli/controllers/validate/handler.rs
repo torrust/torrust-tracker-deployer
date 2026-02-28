@@ -15,6 +15,7 @@ use crate::presentation::cli::views::commands::validate::{
     JsonView, TextView, ValidateDetailsData,
 };
 use crate::presentation::cli::views::progress::ProgressReporter;
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 
 use super::errors::ValidateSubcommandError;
@@ -179,7 +180,7 @@ impl ValidateCommandController {
                 self.progress.complete(&TextView::render(&data))?;
             }
             OutputFormat::Json => {
-                self.progress.result(&JsonView::render(&data))?;
+                self.progress.result(&JsonView::render(&data)?)?;
             }
         }
 

@@ -19,6 +19,7 @@ use crate::presentation::cli::views::commands::create::{
     EnvironmentDetailsData, JsonView, TextView,
 };
 use crate::presentation::cli::views::progress::ProgressReporter;
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 use crate::shared::clock::Clock;
 

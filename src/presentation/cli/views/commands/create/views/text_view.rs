@@ -4,8 +4,8 @@
 //! It follows the Strategy Pattern, providing one specific rendering strategy
 //! (human-readable text) for environment details.
 
-use crate::presentation::cli::views::{Render, ViewRenderError};
 use super::super::EnvironmentDetailsData;
+use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// Text view for rendering environment creation details
 ///

@@ -18,6 +18,7 @@ use crate::domain::EnvironmentName;
 use crate::presentation::cli::input::cli::OutputFormat;
 use crate::presentation::cli::views::commands::render::{JsonView, RenderDetailsData, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 
 use super::errors::RenderCommandError;
@@ -211,7 +212,7 @@ impl RenderCommandController {
                 self.progress.complete(&TextView::render(&data))?;
             }
             OutputFormat::Json => {
-                self.progress.result(&JsonView::render(&data))?;
+                self.progress.result(&JsonView::render(&data)?)?;
             }
         }
 

@@ -21,6 +21,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::test::{
 ///     TestResultData, JsonView,
 /// };
@@ -32,7 +33,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 ///     dns_warnings: vec![],
 /// };
 ///
-/// let output = JsonView::render(&data);
+/// let output = JsonView::render(&data).unwrap();
 ///
 /// // Verify it's valid JSON
 /// let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
@@ -40,42 +41,6 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// assert_eq!(parsed["result"], "pass");
 /// ```
 pub struct JsonView;
-
-impl JsonView {
-    /// Render test results as JSON
-    ///
-    /// Serializes the test results to pretty-printed JSON format.
-    /// The JSON structure matches the DTO structure exactly:
-    /// - `environment_name`: Name of the tested environment
-    /// - `instance_ip`: IP address of the tested instance
-    /// - `result`: Always "pass" on success
-    /// - `dns_warnings`: Array of advisory DNS warnings (may be empty)
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Test result data to render
-    ///
-    /// # Returns
-    ///
-    /// A JSON string containing the serialized test results.
-    /// If serialization fails (which should never happen with valid data),
-    /// returns an error JSON object with the serialization error message.
-    #[must_use]
-    pub fn render(data: &TestResultData) -> String {
-        serde_json::to_string_pretty(data).unwrap_or_else(|e| {
-            serde_json::to_string_pretty(&serde_json::json!({
-                "error": "Failed to serialize test results",
-                "message": e.to_string(),
-            }))
-            .unwrap_or_else(|_| {
-                r#"{
-  "error": "Failed to serialize error message"
-}"#
-                .to_string()
-            })
-        })
-    }
-}
 
 impl Render<TestResultData> for JsonView {
     fn render(data: &TestResultData) -> Result<String, ViewRenderError> {
@@ -87,6 +52,7 @@ impl Render<TestResultData> for JsonView {
 mod tests {
     use super::*;
     use crate::presentation::cli::views::commands::test::DnsWarningData;
+    use crate::presentation::cli::views::Render;
 
     // Test fixtures and helpers
 
@@ -150,7 +116,7 @@ mod tests {
         let data = create_test_data_no_warnings();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert - verify it's valid JSON with expected field values
         assert_json_fields_eq(
@@ -169,7 +135,7 @@ mod tests {
         let data = create_test_data_no_warnings();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert
         assert_json_has_fields(
@@ -184,7 +150,7 @@ mod tests {
         let data = create_test_data_no_warnings();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert
         let parsed: serde_json::Value = serde_json::from_str(&json).expect("Should be valid JSON");
@@ -198,7 +164,7 @@ mod tests {
         let data = create_test_data_with_warnings();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert
         let parsed: serde_json::Value = serde_json::from_str(&json).expect("Should be valid JSON");

@@ -22,6 +22,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// # Examples
 ///
 /// ```rust
+/// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::validate::{
 ///     ValidateDetailsData, JsonView,
 /// };
@@ -37,7 +38,7 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 ///     has_backup: false,
 /// };
 ///
-/// let output = JsonView::render(&data);
+/// let output = JsonView::render(&data).unwrap();
 ///
 /// // Verify it's valid JSON
 /// let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
@@ -45,70 +46,6 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 /// assert_eq!(parsed["is_valid"], true);
 /// ```
 pub struct JsonView;
-
-impl JsonView {
-    /// Render validate details as JSON
-    ///
-    /// Serializes the validation details to pretty-printed JSON format.
-    /// The JSON structure matches the DTO structure exactly:
-    /// - `environment_name`: Name of the validated environment
-    /// - `config_file`: Path to the validated configuration file
-    /// - `provider`: Infrastructure provider (lowercase)
-    /// - `is_valid`: Always `true` on success
-    /// - `has_prometheus`: Whether Prometheus is configured
-    /// - `has_grafana`: Whether Grafana is configured
-    /// - `has_https`: Whether HTTPS is configured
-    /// - `has_backup`: Whether backups are configured
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Validate details to render
-    ///
-    /// # Returns
-    ///
-    /// A JSON string containing the serialized validate details.
-    /// If serialization fails (which should never happen with valid data),
-    /// returns an error JSON object with the serialization error message.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::validate::{
-    ///     ValidateDetailsData, JsonView,
-    /// };
-    ///
-    /// let data = ValidateDetailsData {
-    ///     environment_name: "prod-tracker".to_string(),
-    ///     config_file: "envs/prod-tracker.json".to_string(),
-    ///     provider: "lxd".to_string(),
-    ///     is_valid: true,
-    ///     has_prometheus: true,
-    ///     has_grafana: true,
-    ///     has_https: true,
-    ///     has_backup: false,
-    /// };
-    ///
-    /// let json = JsonView::render(&data);
-    ///
-    /// assert!(json.contains("\"environment_name\": \"prod-tracker\""));
-    /// assert!(json.contains("\"is_valid\": true"));
-    /// ```
-    #[must_use]
-    pub fn render(data: &ValidateDetailsData) -> String {
-        serde_json::to_string_pretty(data).unwrap_or_else(|e| {
-            serde_json::to_string_pretty(&serde_json::json!({
-                "error": "Failed to serialize validate details",
-                "message": e.to_string(),
-            }))
-            .unwrap_or_else(|_| {
-                r#"{
-  "error": "Failed to serialize error message"
-}"#
-                .to_string()
-            })
-        })
-    }
-}
 
 impl Render<ValidateDetailsData> for JsonView {
     fn render(data: &ValidateDetailsData) -> Result<String, ViewRenderError> {
@@ -119,6 +56,7 @@ impl Render<ValidateDetailsData> for JsonView {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentation::cli::views::Render;
 
     // Test fixtures
 
@@ -178,7 +116,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert - verify it's valid JSON with expected string field values
         assert_json_str_fields_eq(
@@ -197,7 +135,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert
         assert_json_bool_fields_eq(
@@ -218,7 +156,7 @@ mod tests {
         let data = create_test_data();
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert - check all required fields are present
         assert_json_has_fields(
@@ -251,7 +189,7 @@ mod tests {
         };
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert
         assert_json_bool_fields_eq(
@@ -280,7 +218,7 @@ mod tests {
         };
 
         // Act
-        let json = JsonView::render(&data);
+        let json = JsonView::render(&data).unwrap();
 
         // Assert
         assert_json_bool_fields_eq(

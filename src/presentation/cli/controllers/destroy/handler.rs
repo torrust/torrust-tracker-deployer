@@ -16,6 +16,7 @@ use crate::domain::environment::Environment;
 use crate::presentation::cli::input::cli::OutputFormat;
 use crate::presentation::cli::views::commands::destroy::{DestroyDetailsData, JsonView, TextView};
 use crate::presentation::cli::views::progress::ProgressReporter;
+use crate::presentation::cli::views::Render;
 use crate::presentation::cli::views::UserOutput;
 use crate::shared::clock::Clock;
 
@@ -216,7 +217,7 @@ impl DestroyCommandController {
 
         let output = match output_format {
             OutputFormat::Text => TextView::render(&details),
-            OutputFormat::Json => JsonView::render(&details),
+            OutputFormat::Json => JsonView::render(&details)?,
         };
 
         self.progress.result(&output)?;
