@@ -353,8 +353,17 @@ to be implemented (earlier PRs #351, #353) and happened to use `Result` from the
 Subsequent commands followed a slightly different pattern that evolved independently.
 The Copilot review on PR #397 was the first mention of the inconsistency.
 
+A follow-up cleanup (`1c71cd7e`) also removed the inherent `pub fn render() -> String`
+methods from all 13 `text_view.rs` files. These had been left intact after Proposals #1
+and #2 because they weren't part of the original scope. Post-completion review revealed
+that keeping them created an asymmetry: `JsonView` exposed rendering exclusively through
+the `Render<T>` trait while `TextView` still had an inherent "convenience" method that
+delegated to the trait. Applying the "least surprise" principle, the inherent methods were
+removed and their bodies inlined directly into the `Render<T>` impls, making all 26 view
+structs consistent.
+
 ---
 
 **Created**: 2026-02-27
-**Last Updated**: 2026-02-28 (both proposals completed)
+**Last Updated**: 2026-02-28 (follow-up: removed inherent render() from text_views, commit 1c71cd7e)
 **Status**: ✅ Completed
