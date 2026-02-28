@@ -9,6 +9,7 @@ use torrust_tracker_deployer_lib::application::command_handlers::configure::Conf
 use torrust_tracker_deployer_lib::application::command_handlers::create::config::ConfigLoadError;
 use torrust_tracker_deployer_lib::application::command_handlers::create::CreateCommandHandlerError;
 use torrust_tracker_deployer_lib::application::command_handlers::destroy::DestroyCommandHandlerError;
+use torrust_tracker_deployer_lib::application::command_handlers::exists::ExistsCommandHandlerError;
 use torrust_tracker_deployer_lib::application::command_handlers::list::ListCommandHandlerError;
 use torrust_tracker_deployer_lib::application::command_handlers::provision::ProvisionCommandHandlerError;
 use torrust_tracker_deployer_lib::application::command_handlers::purge::errors::PurgeCommandHandlerError;
@@ -69,7 +70,11 @@ pub enum SdkError {
     #[error(transparent)]
     CreateFromFile(#[from] CreateEnvironmentFromFileError),
 
-    /// [`super::deployer::Deployer::show`] or [`super::deployer::Deployer::exists`] failed.
+    /// [`super::deployer::Deployer::exists`] failed.
+    #[error(transparent)]
+    Exists(#[from] ExistsCommandHandlerError),
+
+    /// [`super::deployer::Deployer::show`] failed.
     #[error(transparent)]
     Show(#[from] ShowCommandHandlerError),
 

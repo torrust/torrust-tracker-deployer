@@ -227,6 +227,13 @@ pub async fn route_command(
                 .execute(&environment, context.output_format())?;
             Ok(())
         }
+        Commands::Exists { environment } => {
+            context
+                .container()
+                .create_exists_controller()
+                .execute(&environment, context.output_format())?;
+            Ok(())
+        }
         Commands::List => {
             let output_format = context.output_format();
             context

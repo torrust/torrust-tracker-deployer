@@ -20,6 +20,7 @@ use crate::presentation::cli::controllers::create::subcommands::schema::CreateSc
 use crate::presentation::cli::controllers::create::subcommands::template::CreateTemplateCommandController;
 use crate::presentation::cli::controllers::destroy::DestroyCommandController;
 use crate::presentation::cli::controllers::docs::DocsCommandController;
+use crate::presentation::cli::controllers::exists::ExistsCommandController;
 use crate::presentation::cli::controllers::list::ListCommandController;
 use crate::presentation::cli::controllers::provision::ProvisionCommandController;
 use crate::presentation::cli::controllers::purge::PurgeCommandController;
@@ -301,6 +302,12 @@ impl Container {
     #[must_use]
     pub fn create_show_controller(&self) -> ShowCommandController {
         ShowCommandController::new(self.repository(), self.user_output())
+    }
+
+    /// Create a new `ExistsCommandController`
+    #[must_use]
+    pub fn create_exists_controller(&self) -> ExistsCommandController {
+        ExistsCommandController::new(self.repository(), self.user_output())
     }
 
     /// Create a new `ListCommandController`

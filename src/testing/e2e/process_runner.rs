@@ -438,6 +438,43 @@ impl ProcessRunner {
         Ok(ProcessResult::new(output))
     }
 
+    /// Run the exists command with the production binary
+    ///
+    /// This method runs `exists <environment_name>` with
+    /// optional working directory for the application itself via `--working-dir`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails to execute.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the working directory path contains invalid UTF-8.
+    pub fn run_exists_command(&self, environment_name: &str) -> Result<ProcessResult> {
+        let mut cmd = self.make_command();
+
+        if let Some(working_dir) = &self.working_dir {
+            cmd.args([
+                "exists",
+                environment_name,
+                "--working-dir",
+                working_dir.to_str().unwrap(),
+            ]);
+        } else {
+            cmd.args(["exists", environment_name]);
+        }
+
+        // Add log-dir if specified
+        if let Some(log_dir) = &self.log_dir {
+            cmd.arg("--log-dir");
+            cmd.arg(log_dir);
+        }
+
+        let output = cmd.output().context("Failed to execute exists command")?;
+
+        Ok(ProcessResult::new(output))
+    }
+
     /// Run the show command with the production binary
     ///
     /// This method runs `show <environment_name>` with
