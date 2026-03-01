@@ -144,6 +144,14 @@ cargo run -- your-command valid-input
 
 **Commit**: `feat: [#ISSUE] add your-command presentation layer stub`
 
+> **Query commands (commands that return data)**: If your command returns a value rather than just performing an action (e.g., `exists`, `show`, `list`), the presentation layer needs a view layer in addition to the controller. Create:
+>
+> - `src/presentation/cli/views/commands/your_command/view_data/your_details.rs` — DTO populated with the result
+> - `src/presentation/cli/views/commands/your_command/views/text_view.rs` — `impl Render<YourResult>`
+> - `src/presentation/cli/views/commands/your_command/views/json_view.rs` — `impl Render<YourResult>`
+>
+> See [`src/presentation/cli/views/commands/exists/`](../../../src/presentation/cli/views/commands/exists/) as a reference.
+
 ### Phase 2: Application Handler
 
 **Goal**: Implement business logic that actually does the work.
@@ -361,6 +369,43 @@ cargo fmt
 
 **Commit**: `feat: [#ISSUE] add your-command application layer handler`
 
+#### Unit Tests for the Handler
+
+Write unit tests directly alongside the handler in `src/application/command_handlers/your_command/tests/mod.rs`. Cover:
+
+- Success path (e.g., operation succeeds when environment exists/does not exist)
+- Error path (repository failure propagates correctly)
+
+Use `FileEnvironmentRepository` (via `EnvironmentTestBuilder`) or a simple inline stub:
+
+```rust
+struct FailingRepository;
+impl EnvironmentRepository for FailingRepository {
+    fn find(...) -> Result<...> { Err(RepositoryError::...) }
+}
+```
+
+Add `#[cfg(test)] mod tests;` to `src/application/command_handlers/your_command/mod.rs`.
+
+#### SDK Layer Update
+
+If the command is useful for programmatic workflows, expose it through the SDK:
+
+1. Add a method `your_command(...)` in both:
+   - `packages/sdk/src/deployer.rs`
+   - `src/presentation/sdk/deployer.rs`
+
+2. Add a `From<YourCommandHandlerError>` impl in `packages/sdk/src/error.rs` (new `SdkError` variant). **Without this, doc examples using the `?` operator will fail doc tests**:
+
+   ```rust
+   // packages/sdk/src/error.rs
+   /// [`super::deployer::Deployer::your_command`] failed.
+   #[error(transparent)]
+   YourCommand(#[from] YourCommandHandlerError),
+   ```
+
+3. Verify doc tests pass: `cargo test --doc --workspace`
+
 ### Phase 3: User Confirmation (Optional)
 
 **Goal**: Add interactive confirmation for destructive/important operations.
@@ -439,7 +484,9 @@ cargo run -- your-command test-name --force
 
 **Goal**: Black-box testing validating end-to-end behavior.
 
-**Why E2E over unit tests**: Infrastructure code interacts with external systems (filesystems, databases, APIs, VMs). E2E tests validate real behavior without complex mocking.
+**Note**: Application handler unit tests belong in Phase 2 (`src/application/command_handlers/your_command/tests/`). Phase 4 E2E tests verify the complete command as a black box through the CLI binary.
+
+**Why E2E over unit tests for infrastructure code**: Infrastructure code interacts with external systems (filesystems, databases, APIs, VMs). E2E tests validate real behavior without complex mocking.
 
 **What to build**:
 
@@ -669,6 +716,8 @@ torrust-tracker-deployer your-command my-env --force
 - **[`your-command`](./your-command.md)** - Brief description
 ```
 
+**Also update `docs/console-commands.md`** — this file lists every command with its full CLI syntax and is separate from the user guide. Add your command in the appropriate section.
+
 **Also update the command workflow** (if appropriate):
 
 ````markdown
@@ -811,7 +860,11 @@ Use this for tracking progress:
 - [ ] Phase 2: Application handler
   - [ ] Handler with business logic
   - [ ] Application error types
+  - [ ] Unit tests for handler (tests/mod.rs)
   - [ ] Controller delegates to handler
+  - [ ] SDK method added (if applicable)
+  - [ ] SdkError variant + From impl added (if applicable)
+  - [ ] `cargo test --doc --workspace` passes
   - [ ] Manual test: real behavior
   - [ ] Commit application handler
 - [ ] Phase 3: Confirmation (if needed)
@@ -831,6 +884,8 @@ Use this for tracking progress:
 - [ ] Phase 5: Documentation
   - [ ] Create docs/user-guide/commands/your-command.md
   - [ ] Update docs/user-guide/commands/README.md
+  - [ ] Update docs/console-commands.md
+  - [ ] Update docs/features/active-features.md status
   - [ ] Pass markdown linting
   - [ ] Commit documentation
 - [ ] Phase 6: Polish (optional)
@@ -955,6 +1010,31 @@ Follow DDD layer placement rules from [`docs/contributing/ddd-layer-placement.md
 - Run pre-commit checks: `./scripts/pre-commit.sh`
 - Update roadmap after completion
 
+### Watch for Clippy Pedantic Gotchas
+
+This project enables `clippy::pedantic`. Two patterns that commonly trigger warnings when adding commands:
+
+1. **`unused_self`**: Validation helper methods that don't use `self` must be associated functions:
+
+   ```rust
+   // ❌ Triggers unused_self
+   fn validate_name(&self, name: &str) -> Result<()> { ... }
+
+   // ✅ Correct: associated function, call as Self::validate_name(name)?
+   fn validate_name(name: &str) -> Result<()> { ... }
+   ```
+
+2. **`doc_link_with_quotes`**: Shell command substitutions in `///` doc comments (e.g., `` `"$(torrust-tracker-deployer your-command my-env)"` ``) trigger this lint. Place the allow attribute **before** the entire doc block, not inside it:
+
+   ```rust
+   // ✅ Place BEFORE the doc comment block
+   #[allow(clippy::doc_link_with_quotes)]
+   /// Check whether an environment exists.
+   ///
+   /// Shell usage: `"$(torrust-tracker-deployer your-command my-env)"`
+   YourCommand { ... },
+   ```
+
 ## Related Documentation
 
 - **Architecture**: [`docs/codebase-architecture.md`](../../../docs/codebase-architecture.md)
@@ -966,7 +1046,7 @@ Follow DDD layer placement rules from [`docs/contributing/ddd-layer-placement.md
 
 ## Next Steps After Implementation
 
-1. **Update roadmap**: Mark task complete in [`docs/roadmap.md`](../../../docs/roadmap.md)
+1. **Update feature status**: Change the command's row from `📋 Specified` → `✅ Implemented` in [`docs/features/active-features.md`](../../../docs/features/active-features.md). This is the per-command tracking file; it is separate from the general [`docs/roadmap.md`](../../../docs/roadmap.md).
 2. **Remove issue spec**: Delete from `docs/issues/` after PR merge
 3. **Update GitHub issue**: Close linked issue or update epic progress
 4. **Consider skill**: If command pattern is reusable, document in skills/
