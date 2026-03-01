@@ -12,6 +12,7 @@
 //! - `configure` - Infrastructure configuration and software installation
 //! - `create` - Environment creation and initialization
 //! - `destroy` - Infrastructure destruction and teardown
+//! - `exists` - Check whether an environment exists (read-only)
 //! - `list` - List all environments in the workspace (read-only)
 //! - `provision` - Infrastructure provisioning using `OpenTofu`
 //! - `purge` - Remove all local environment data
@@ -28,6 +29,7 @@ pub mod common;
 pub mod configure;
 pub mod create;
 pub mod destroy;
+pub mod exists;
 pub mod list;
 pub mod provision;
 pub mod purge;
@@ -42,6 +44,7 @@ pub mod validate;
 pub use configure::ConfigureCommandHandler;
 pub use create::CreateCommandHandler;
 pub use destroy::DestroyCommandHandler;
+pub use exists::ExistsCommandHandler;
 pub use list::ListCommandHandler;
 pub use provision::ProvisionCommandHandler;
 pub use purge::handler::PurgeCommandHandler;

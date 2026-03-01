@@ -28,6 +28,9 @@ use crate::application::command_handlers::create::CreateCommandHandlerError;
 use crate::application::command_handlers::destroy::{
     DestroyCommandHandler, DestroyCommandHandlerError,
 };
+use crate::application::command_handlers::exists::{
+    ExistsCommandHandler, ExistsCommandHandlerError,
+};
 use crate::application::command_handlers::list::{
     EnvironmentList, ListCommandHandler, ListCommandHandlerError,
 };
@@ -200,14 +203,11 @@ impl Deployer {
     /// Returns `Ok(true)` if the environment is found, `Ok(false)` if it does
     /// not exist, or `Err` for unexpected repository failures.
     ///
-    /// This is a convenience wrapper around [`show`](Self::show) that avoids
-    /// forcing callers to pattern-match on `ShowCommandHandlerError`.
-    ///
     /// # Errors
     ///
-    /// Returns [`ShowCommandHandlerError::LoadError`] if the repository
-    /// encounters an unexpected error (filesystem/IO). A "not found" result
-    /// is **not** an error — it returns `Ok(false)`.
+    /// Returns [`ExistsCommandHandlerError`] if the repository encounters an
+    /// unexpected error (filesystem/IO). A "not found" result is **not** an
+    /// error — it returns `Ok(false)`.
     ///
     /// # Examples
     ///
@@ -225,12 +225,10 @@ impl Deployer {
     ///     println!("environment already exists");
     /// }
     /// ```
-    pub fn exists(&self, env_name: &EnvironmentName) -> Result<bool, ShowCommandHandlerError> {
-        match self.show(env_name) {
-            Ok(_) => Ok(true),
-            Err(ShowCommandHandlerError::EnvironmentNotFound { .. }) => Ok(false),
-            Err(e) => Err(e),
-        }
+    pub fn exists(&self, env_name: &EnvironmentName) -> Result<bool, ExistsCommandHandlerError> {
+        let handler =
+            ExistsCommandHandler::new(self.repository.clone() as Arc<dyn EnvironmentRepository>);
+        Ok(handler.execute(env_name)?.exists)
     }
 
     /// List all environments in the workspace.

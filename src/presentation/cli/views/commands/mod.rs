@@ -7,6 +7,7 @@
 pub mod configure;
 pub mod create;
 pub mod destroy;
+pub mod exists;
 pub mod list;
 pub mod provision;
 pub mod purge;

@@ -9,6 +9,7 @@
 - **Create Template**: Generate environment configuration template (JSON)
 - **Create Environment**: Create new deployment environment from configuration file
 - **Show**: Display environment information with state-aware details
+- **Exists**: Check whether an environment exists (boolean output)
 - **Render**: Generate deployment artifacts without provisioning infrastructure
 - **Provision**: VM infrastructure provisioning with OpenTofu (LXD and Hetzner Cloud)
 - **Register**: Register existing instances as an alternative to provisioning (for pre-existing VMs, servers, or containers)
@@ -127,6 +128,7 @@ torrust-tracker-deployer list            # List all environments (not yet implem
 torrust-tracker-deployer create template [PATH]         # ✅ Generate configuration template
 torrust-tracker-deployer create environment -f <file>   # ✅ Create environment from config
 torrust-tracker-deployer show <env>      # ✅ Display environment information
+torrust-tracker-deployer exists <env>   # ✅ Check if environment exists
 
 # Plumbing Commands (Low-Level)
 torrust-tracker-deployer render --env-name <env> --instance-ip <IP> --output-dir <PATH> # ✅ Generate deployment artifacts
@@ -286,6 +288,50 @@ State: Created
 Provider: LXD
 
 Next: Run 'provision my-environment' to create infrastructure
+```
+
+---
+
+### `exists` - Check Environment Existence
+
+**Status**: ✅ Implemented
+**State Transition**: None (read-only)
+**Purpose**: Check whether an environment with the given name exists in the local data directory.
+
+```bash
+torrust-tracker-deployer exists <environment>
+```
+
+**Output**:
+
+- `true` — Environment exists
+- `false` — Environment does not exist
+
+Output is the same for both text and JSON formats (bare boolean is valid JSON).
+
+**Exit Code Contract**:
+
+- **Exit 0**: Command completed successfully (check stdout for `true`/`false`)
+- **Exit 1**: An error occurred (repository failure, invalid name)
+
+"Environment not found" is NOT an error — it produces `false` with exit 0.
+
+**Key Features**:
+
+- **Sub-millisecond** — Checks local file existence only, no network calls
+- **Scriptable** — Bare boolean output, easy to use in shell conditionals
+- **Same output for text and JSON** — `true`/`false` are valid JSON values
+
+**Example Usage**:
+
+```bash
+# Check if environment exists
+torrust-tracker-deployer exists my-env
+
+# Use in shell scripts
+if [ "$(torrust-tracker-deployer exists my-env)" = "true" ]; then
+  echo "Environment exists"
+fi
 ```
 
 ---

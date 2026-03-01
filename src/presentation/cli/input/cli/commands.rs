@@ -568,6 +568,49 @@ pub enum Commands {
         environment: String,
     },
 
+    #[allow(clippy::doc_link_with_quotes)]
+    /// Check whether an environment exists
+    ///
+    /// This command checks whether an environment with the given name exists
+    /// in the local data directory. It outputs a bare boolean value (`true`
+    /// or `false`) to stdout.
+    ///
+    /// READ-ONLY OPERATION:
+    ///   This command only checks local state files - no network calls,
+    ///   no state modifications. It completes in sub-millisecond time.
+    ///
+    /// EXIT CODE CONTRACT:
+    ///   • Exit code 0: Command completed successfully (check stdout for result)
+    ///   • Exit code 1: An error occurred (e.g., repository failure, invalid name)
+    ///   "Environment not found" is NOT an error - it produces `false` with exit 0.
+    ///
+    /// OUTPUT:
+    ///   • `true` - Environment exists
+    ///   • `false` - Environment does not exist
+    ///   Output is the same for both text and JSON formats (bare boolean is valid JSON).
+    ///
+    /// USE CASES:
+    ///   • Scripts checking environment state before operations
+    ///   • CI/CD pipelines with conditional deployment logic
+    ///   • AI agents verifying environment existence programmatically
+    ///   • Guard clauses before create/destroy operations
+    ///
+    /// EXAMPLES:
+    ///   Check if environment exists:
+    ///     torrust-tracker-deployer exists my-env
+    ///
+    ///   Use in shell scripts:
+    ///     if [ "$(torrust-tracker-deployer exists my-env)" = "true" ]; then
+    ///       echo "Environment exists"
+    ///     fi
+    Exists {
+        /// Name of the environment to check
+        ///
+        /// The environment name must be a valid identifier (1-63 characters,
+        /// letters/digits/hyphens, starting with letter or digit).
+        environment: String,
+    },
+
     /// List all environments in the deployment workspace
     ///
     /// This command provides a quick overview of all environments with their

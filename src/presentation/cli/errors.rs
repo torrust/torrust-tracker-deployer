@@ -15,14 +15,15 @@
 //! ```text
 //! CommandError
 //! └── Destroy(DestroyError)       # Destroy command errors
+//! └── Exists(ExistsSubcommandError) # Exists command errors
 //! ```
 
 use thiserror::Error;
 
 use crate::presentation::cli::controllers::{
     configure::ConfigureSubcommandError, create::CreateCommandError,
-    destroy::DestroySubcommandError, docs::DocsCommandError, list::ListSubcommandError,
-    provision::ProvisionSubcommandError, purge::PurgeSubcommandError,
+    destroy::DestroySubcommandError, docs::DocsCommandError, exists::ExistsSubcommandError,
+    list::ListSubcommandError, provision::ProvisionSubcommandError, purge::PurgeSubcommandError,
     register::errors::RegisterSubcommandError, release::ReleaseSubcommandError,
     render::errors::RenderCommandError, run::RunSubcommandError, show::ShowSubcommandError,
     test::TestSubcommandError, validate::errors::ValidateSubcommandError,
@@ -111,6 +112,13 @@ pub enum CommandError {
     /// Use `.help()` for detailed troubleshooting steps.
     #[error("Show command failed: {0}")]
     Show(Box<ShowSubcommandError>),
+
+    /// Exists command specific errors
+    ///
+    /// Encapsulates all errors that can occur during environment existence check.
+    /// Use `.help()` for detailed troubleshooting steps.
+    #[error("Exists command failed: {0}")]
+    Exists(Box<ExistsSubcommandError>),
 
     /// List command specific errors
     ///
@@ -207,6 +215,12 @@ impl From<ShowSubcommandError> for CommandError {
     }
 }
 
+impl From<ExistsSubcommandError> for CommandError {
+    fn from(error: ExistsSubcommandError) -> Self {
+        Self::Exists(Box::new(error))
+    }
+}
+
 impl From<ListSubcommandError> for CommandError {
     fn from(error: ListSubcommandError) -> Self {
         Self::List(Box::new(error))
@@ -274,6 +288,7 @@ impl CommandError {
                 .unwrap_or_else(|| "No additional help available".to_string()),
             Self::Run(e) => e.help().to_string(),
             Self::Show(e) => e.help().to_string(),
+            Self::Exists(e) => e.help().to_string(),
             Self::List(e) => e.help().to_string(),
             Self::Purge(e) => e.help().to_string(),
             Self::Validate(e) => e
