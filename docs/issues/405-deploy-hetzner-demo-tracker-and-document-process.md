@@ -55,9 +55,9 @@ docs/deployments/
 
 ### Phase 2: Create and Configure Environment
 
-- [ ] Task 2.1: Generate environment configuration template for Hetzner
-- [ ] Task 2.2: Document configuration decisions (server type, location, image, credentials)
-- [ ] Task 2.3: Create the environment using the deployer
+- [x] Task 2.1: Generate environment configuration template for Hetzner
+- [x] Task 2.2: Document configuration decisions (server type, location, image, credentials)
+- [x] Task 2.3: Create the environment using the deployer
 
 ### Phase 3: Deploy the Tracker
 

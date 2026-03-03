@@ -45,6 +45,7 @@ buildx
 Bynder
 Caddyfile
 cdmon
+celano
 certbot
 Certbot
 certonly
@@ -85,6 +86,7 @@ Cunha
 cursorignore
 custompass
 customuser
+cyberneering
 Datagram
 dcron
 dearmor
