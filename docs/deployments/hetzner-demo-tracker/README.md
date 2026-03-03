@@ -20,6 +20,8 @@ Deploy a public Torrust Tracker demo instance to Hetzner Cloud and document ever
 4. Problems — issues encountered, per command:
    - [create problems](commands/create/problems.md)
    - [provision problems](commands/provision/problems.md)
+5. Improvements — recommended deployer improvements found during this deployment:
+   - [provision improvements](commands/provision/improvements.md)
 
 ## Deployment
 

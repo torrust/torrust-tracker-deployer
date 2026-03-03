@@ -2,6 +2,7 @@
 
 > **Status**: ❌ ProvisionFailed — destroy + recreate required before retrying.
 > See [problems.md](problems.md) for the full failure analysis and recovery steps.
+> See [improvements.md](improvements.md) for recommended deployer improvements found during this phase.
 
 ## What `provision` does
 
