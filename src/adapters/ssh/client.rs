@@ -158,10 +158,8 @@ impl SshClient {
         let mut attempt = 0;
 
         while attempt < max_attempts {
-            let result = self.test_connectivity();
-
-            match result {
-                Ok(true) => {
+            match self.execute_with_options("echo 'SSH connected'", &[]) {
+                Ok(_) => {
                     info!(
                         operation = "ssh_connectivity",
                         host_ip = %self.ssh_config.host_ip(),
@@ -170,18 +168,17 @@ impl SshClient {
                     );
                     return Ok(());
                 }
-                Ok(false) => {
-                    // Connection failed, continue trying
+                Err(CommandError::ExecutionFailed { ref stderr, .. }) => {
                     if (attempt + 1) % conn_config.retry_log_frequency == 0 {
                         info!(
                             operation = "ssh_connectivity",
                             host_ip = %self.ssh_config.host_ip(),
                             attempt = attempt + 1,
                             max_attempts = max_attempts,
+                            reason = %stderr,
                             "Still waiting for SSH connectivity"
                         );
                     }
-
                     tokio::time::sleep(Duration::from_secs(u64::from(
                         conn_config.retry_interval_secs,
                     )))
