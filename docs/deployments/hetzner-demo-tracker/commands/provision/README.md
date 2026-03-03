@@ -1,8 +1,9 @@
 # Command: provision
 
-> **Status**: ❌ ProvisionFailed — destroy + recreate required before retrying.
-> See [problems.md](problems.md) for the full failure analysis and recovery steps.
-> See [improvements.md](improvements.md) for recommended deployer improvements found during this phase.
+> **Status**: 🔄 Cleaned — ready to recreate and retry.
+> See [problems.md](problems.md) for the full failure analysis.
+> See [improvements.md](improvements.md) for deployer improvements applied before this retry.
+> See [cleanup-between-attempts.md](cleanup-between-attempts.md) for the cleanup procedure used between attempts.
 
 ## What `provision` does
 
@@ -10,7 +11,7 @@ The `provision` command:
 
 1. Renders OpenTofu templates (Terraform HCL + cloud-init YAML) into `build/<env>/tofu/hetzner/`.
 2. Runs `tofu init` + `tofu apply` to create the Hetzner server.
-3. Waits for SSH connectivity (up to 120 seconds, 60 × 2 s intervals).
+3. Waits for SSH connectivity (up to 300 seconds, 60 × 5 s intervals).
 4. Marks the environment as `Provisioned` once SSH responds.
 
 It does **not** install Docker, configure the tracker, or deploy any software — that is done by
