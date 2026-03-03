@@ -49,9 +49,9 @@ docs/deployments/
 
 ### Phase 1: Setup and Prerequisites
 
-- [ ] Task 1.1: Create `docs/deployments/hetzner-demo-tracker/` directory structure
-- [ ] Task 1.2: Document prerequisites (Hetzner account, API token, SSH keys, tool versions)
-- [ ] Task 1.3: Verify all required tools are installed and working
+- [x] Task 1.1: Create `docs/deployments/hetzner-demo-tracker/` directory structure
+- [x] Task 1.2: Document prerequisites (Hetzner account, API token, SSH keys, tool versions)
+- [x] Task 1.3: Verify all required tools are installed and working
 
 ### Phase 2: Create and Configure Environment
 
