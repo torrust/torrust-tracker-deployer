@@ -24,13 +24,14 @@ pub const DEFAULT_SSH_PORT: u16 = 22;
 /// Default SSH connection timeout in seconds
 pub const DEFAULT_CONNECT_TIMEOUT_SECS: u32 = 5;
 
-/// Default maximum number of connection retry attempts
-/// Set to 60 to allow up to 120 seconds total wait time (60 attempts × 2 second interval)
-/// This accounts for cloud-init completion time when custom SSH ports are configured
+/// Default maximum number of connection retry attempts.
+/// Set to 60 to allow up to 300 seconds total wait time (60 attempts × 5 second interval).
+/// Cloud-init provisioning (user creation, SSH key injection) can take over 3 minutes on some
+/// providers and small machines, so a 5-minute budget is used as the default.
 pub const DEFAULT_MAX_RETRY_ATTEMPTS: u32 = 60;
 
 /// Default retry interval in seconds
-pub const DEFAULT_RETRY_INTERVAL_SECS: u32 = 2;
+pub const DEFAULT_RETRY_INTERVAL_SECS: u32 = 5;
 
 /// Default retry log frequency (log every N attempts)
 pub const DEFAULT_RETRY_LOG_FREQUENCY: u32 = 5;
@@ -117,7 +118,7 @@ impl SshConnectionConfig {
     /// use torrust_tracker_deployer_lib::adapters::ssh::SshConnectionConfig;
     ///
     /// let config = SshConnectionConfig::default();
-    /// assert_eq!(config.total_timeout_secs(), 120); // 60 attempts × 2 seconds
+    /// assert_eq!(config.total_timeout_secs(), 300); // 60 attempts × 5 seconds
     /// ```
     #[must_use]
     pub fn total_timeout_secs(&self) -> u32 {
@@ -130,10 +131,10 @@ impl Default for SshConnectionConfig {
     ///
     /// Uses constants defined at module level:
     /// - Connection timeout: `DEFAULT_CONNECT_TIMEOUT_SECS` (5 seconds)
-    /// - Max retry attempts: `DEFAULT_MAX_RETRY_ATTEMPTS` (30)
-    /// - Retry interval: `DEFAULT_RETRY_INTERVAL_SECS` (2 seconds)
+    /// - Max retry attempts: `DEFAULT_MAX_RETRY_ATTEMPTS` (60)
+    /// - Retry interval: `DEFAULT_RETRY_INTERVAL_SECS` (5 seconds)
     /// - Retry log frequency: `DEFAULT_RETRY_LOG_FREQUENCY` (every 5 attempts)
-    /// - Total wait time: 30 × 2 = 60 seconds
+    /// - Total wait time: 60 × 5 = 300 seconds
     fn default() -> Self {
         Self {
             connect_timeout_secs: DEFAULT_CONNECT_TIMEOUT_SECS,
