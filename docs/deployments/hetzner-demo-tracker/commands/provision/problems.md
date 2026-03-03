@@ -255,3 +255,123 @@ Potential improvements:
 - A `--ssh-timeout` parameter on the `provision` command.
 - A `wait-for-ssh` command to decouple the retry loop (useful when provision partially succeeds).
 - Document in the Hetzner provider guide that the first SSH probe may take 3–5 minutes.
+
+---
+
+## Problem: SSH probe always fails from Docker container — passphrase-protected private key
+
+**Command**: `provision`
+**Severity**: Blocker
+
+### Symptom
+
+All 60 SSH probe attempts fail with `Permission denied (publickey,password)` even after the server
+is fully running and cloud-init has completed. The error appears in `data/logs/log.txt`:
+
+```text
+Permission denied, please try again.
+Permission denied, please try again.
+torrust@46.225.234.201: Permission denied (publickey,password).
+```
+
+Manual SSH from the host succeeds with the same key:
+
+```bash
+$ ssh -i ~/.ssh/torrust_tracker_deployer_ed25519 torrust@46.225.234.201 "whoami && cloud-init status"
+torrust
+status: done
+```
+
+But the same command from inside the Docker container fails:
+
+```bash
+$ docker run --rm --entrypoint bash \
+    -v ~/.ssh:/home/deployer/.ssh:ro \
+    torrust/tracker-deployer:latest \
+    -c "ssh -i /home/deployer/.ssh/torrust_tracker_deployer_ed25519 \
+        -o StrictHostKeyChecking=no -o IdentitiesOnly=yes \
+        torrust@46.225.234.201 'echo connected'"
+Permission denied (publickey,password).
+```
+
+### Root Cause
+
+**The private key `~/.ssh/torrust_tracker_deployer_ed25519` is protected by a passphrase.**
+
+When SSH is invoked without an agent and without a TTY, it cannot decrypt the private key to
+sign the authentication challenge. The connection reaches the public-key offer phase (the server
+responds PK_OK), but signing fails silently because there is no passphrase source. The server
+then rejects the unauthenticated attempt.
+
+From the host, SSH works because the **GNOME Keyring / SSH agent** has already decrypted the key
+and holds it in memory. The agent handles the signing transparently.
+
+Inside the Docker container there is no SSH agent — and the key file, though readable, cannot be
+used for authentication without its passphrase.
+
+**This was the true root cause of all three provision failures.** The cloud-init timing issue
+was an additional factor in attempts 1 and 2, but even with the 300-second probe budget of
+attempt 3 (where cloud-init had finished in time), SSH from Docker still failed every attempt
+because the passphrase prevented signing. Forwarding the SSH agent socket into the container
+confirms this — with the agent socket forwarded, SSH succeeds immediately:
+
+```bash
+docker run --rm --entrypoint bash \
+  -v ~/.ssh:/home/deployer/.ssh:ro \
+  -v "$SSH_AUTH_SOCK:/tmp/ssh-agent.sock" \
+  -e SSH_AUTH_SOCK=/tmp/ssh-agent.sock \
+  torrust/tracker-deployer:latest \
+  -c "ssh -i /home/deployer/.ssh/torrust_tracker_deployer_ed25519 \
+      -o StrictHostKeyChecking=no -o IdentitiesOnly=yes \
+      torrust@46.225.234.201 'echo connected'"
+# → CONNECTED
+```
+
+### Resolution
+
+Remove the passphrase from the deployment key. Deployment keys used for automation do not benefit
+from passphrases because:
+
+- There is no interactive session to prompt for the passphrase.
+- The key is already protected by filesystem permissions (`0600`).
+- The server already restricts access to injected public keys only.
+
+```bash
+ssh-keygen -p -f ~/.ssh/torrust_tracker_deployer_ed25519
+# Enter current passphrase when prompted
+# Leave new passphrase empty (press Enter twice)
+```
+
+After removing the passphrase, provision works without any agent forwarding:
+
+```bash
+docker run --rm --entrypoint bash \
+  -v ~/.ssh:/home/deployer/.ssh:ro \
+  torrust/tracker-deployer:latest \
+  -c "ssh -i /home/deployer/.ssh/torrust_tracker_deployer_ed25519 \
+      -o StrictHostKeyChecking=no -o IdentitiesOnly=yes \
+      torrust@46.225.234.201 'echo connected'"
+# → CONNECTED
+```
+
+### Notes
+
+- Users may prefer to keep the passphrase on their key (e.g. if the same key is also used for
+  interactive logins). In that case, the alternative is to generate a separate passphrase-free key
+  specifically for deployment automation and configure it in `ssh_credentials`.
+- Hetzner allows setting a default SSH key in the Hetzner console that is automatically added to
+  all new servers. If a user has already done this (for a key that may be different), SSH may
+  succeed with the wrong key if `IdentitiesOnly=yes` is not set. Keeping `IdentitiesOnly=yes`
+  ensures only the explicitly configured deployment key is tried.
+
+### Prevention
+
+The deployer `create environment` or `validate` command should detect passphrase-protected keys
+early and warn the user:
+
+```text
+⚠ Warning: SSH private key appears to be passphrase-protected. When running via Docker,
+  no SSH agent is available and the key cannot be used for authentication.
+  Consider removing the passphrase from the deployment key, or document that the
+  SSH agent socket must be forwarded into the container.
+```

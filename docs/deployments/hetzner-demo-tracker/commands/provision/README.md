@@ -1,8 +1,8 @@
 # Command: provision
 
-> **Status**: 🔄 Cleaned — ready to recreate and retry.
-> See [problems.md](problems.md) for the full failure analysis.
-> See [improvements.md](improvements.md) for deployer improvements applied before this retry.
+> **Status**: ✅ Provisioned successfully (attempt 4, 2026-03-03 ~19:01 UTC).
+> See [problems.md](problems.md) for the full failure history and root cause analysis.
+> See [improvements.md](improvements.md) for deployer improvements applied during this process.
 > See [cleanup-between-attempts.md](cleanup-between-attempts.md) for the cleanup procedure used between attempts.
 
 ## What `provision` does
@@ -31,7 +31,7 @@ docker run --rm \
 
 ## Provisioned Server Details
 
-The Hetzner server was created successfully by OpenTofu on 2026-03-03 at ~15:30 UTC.
+The Hetzner server was created successfully by OpenTofu on 2026-03-03 at ~19:00 UTC (attempt 4).
 
 | Property     | Value                                     |
 | ------------ | ----------------------------------------- |
@@ -47,6 +47,10 @@ The Hetzner server was created successfully by OpenTofu on 2026-03-03 at ~15:30 
 > **Note**: These are the server's own IPs assigned by Hetzner. The floating IPs
 > (`116.202.176.169` IPv4, `2a01:4f8:1c0c:9aae::/64` IPv6) are separate and must be
 > assigned to this server manually in the Hetzner Console after successful provisioning.
+>
+> **Note**: The `provision` command output currently only reports the IPv4 address. The IPv6
+> address and network must be looked up in the Hetzner console or `terraform.tfstate`. See
+> [improvements.md](improvements.md) for the tracked improvement.
 
 ![Hetzner console showing the provisioned server details](../../media/hetzner-console-provisioned-server-details-attempt-1.png)
 
@@ -84,6 +88,60 @@ To verify the key matches your local public key:
 grep -A1 "ssh_authorized_keys" build/torrust-tracker-demo/tofu/hetzner/cloud-init.yml
 cat ~/.ssh/torrust_tracker_deployer_ed25519.pub
 ```
+
+## Successful Provision Output (Attempt 4)
+
+Final output of the `provision` command on attempt 4 (2026-03-03 ~19:01 UTC, 50.9 seconds):
+
+```text
+⏳ [1/3] Validating environment...
+⏳   ✓ Environment name validated: torrust-tracker-demo (took 0ms)
+⏳ [2/3] Creating command handler...
+⏳   ✓ Done (took 0ms)
+⏳ [3/3] Provisioning infrastructure...
+⏳   ✓ Infrastructure provisioned (took 50.9s)
+✅ Environment 'torrust-tracker-demo' provisioned successfully
+
+{
+  "environment_name": "torrust-tracker-demo",
+  "instance_name": "torrust-tracker-vm-torrust-tracker-demo",
+  "instance_ip": "46.225.234.201",
+  "ssh_username": "torrust",
+  "ssh_port": 22,
+  "ssh_private_key_path": "/home/deployer/.ssh/torrust_tracker_deployer_ed25519",
+  "provider": "hetzner",
+  "provisioned_at": "2026-03-03T19:00:42.481676821Z",
+  "domains": [
+    "http1.torrust-tracker-demo.com",
+    "http2.torrust-tracker-demo.com",
+    "api.torrust-tracker-demo.com",
+    "grafana.torrust-tracker-demo.com"
+  ]
+}
+```
+
+> **Note**: The output includes `instance_ip` (IPv4 only). The IPv6 address
+> (`2a01:4f8:1c19:620b::1`) and network (`2a01:4f8:1c19:620b::/64`) are not included. See
+> [improvements.md](improvements.md) for the tracked improvement.
+
+## Key Learnings
+
+After four attempts, the following were identified as the root causes of all failures:
+
+1. **SSH key paths must be container-internal paths** — paths in `envs/*.json` must reflect
+   paths inside the Docker container (`/home/deployer/.ssh/...`), not host paths.
+
+2. **The deployment SSH key must not have a passphrase** — when running inside Docker there is
+   no SSH agent and no TTY, so a passphrase-protected key cannot be used for authentication
+   even if the key file is readable. This was the root cause of all three `Permission denied`
+   failures in attempts 2, 3, and 4. See [problems.md](problems.md) for full analysis.
+
+3. **Cloud-init on Hetzner `ccx23` can take 15+ minutes** — the SSH probe budget must account
+   for this. In attempt 4 the server was ready well within the 300-second window (50.9s total
+   including `tofu apply`), so this was not an issue once the passphrase was removed. But in
+   the earlier attempts where the server lingered in "Server is being created" for 15+ minutes
+   in the Hetzner console, a longer timeout would still not have helped because the fundamental
+   auth problem was the passphrase.
 
 ## Manual SSH Verification (After Provisioning)
 

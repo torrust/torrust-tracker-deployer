@@ -144,6 +144,88 @@ timeout of at least 300 seconds (150 attempts × 2s) is recommended.
 
 ---
 
+## 6. Include IPv6 address in `provision` command output
+
+### Current behavior
+
+The JSON output of a successful `provision` command only includes `instance_ip` (IPv4):
+
+```json
+{
+  "instance_ip": "46.225.234.201"
+}
+```
+
+The IPv6 address and network assigned by Hetzner are not reported anywhere in the command
+output. To find them, the operator must either log into the Hetzner console or read the raw
+`build/torrust-tracker-demo/tofu/hetzner/terraform.tfstate` file:
+
+```json
+"ipv6_address": "2a01:4f8:1c19:620b::1",
+"ipv6_network": "2a01:4f8:1c19:620b::/64"
+```
+
+### Observed impact
+
+After successful provisioning, the floating IP assignment step requires knowing the server's
+IPv6 network. Without it in the output, the operator cannot complete the setup without
+consulting additional sources.
+
+### Recommendation
+
+Extend the `ProvisionOutput` JSON to include both IPv4 and IPv6:
+
+```json
+{
+  "instance_ip": "46.225.234.201",
+  "instance_ipv6": "2a01:4f8:1c19:620b::1",
+  "instance_ipv6_network": "2a01:4f8:1c19:620b::/64"
+}
+```
+
+**Related source**: `src/application/commands/provision/` — output struct; OpenTofu outputs
+defined in `templates/tofu/hetzner/main.tf.tera`
+
+---
+
+## 7. Detect passphrase-protected SSH keys early and warn the user
+
+### Current behavior
+
+The deployer does not validate whether the configured SSH private key is passphrase-protected.
+A key with a passphrase is loaded and offered to the server, but signing fails silently because
+there is no agent and no TTY inside the Docker container. The user sees repeated
+`Permission denied (publickey,password)` errors with no indication that the key itself is the
+problem.
+
+### Observed impact
+
+All three provision failures (attempts 2, 3, 4) were caused by this. Investigation consumed
+multiple hours chasing unrelated hypotheses (wrong key in cloud-init, SSH agent key exhaustion,
+`IdentitiesOnly` flag, cloud-init timing) before the passphrase was identified as the
+root cause.
+
+### Recommendation
+
+In `create environment` or early in `provision`, attempt to load the private key with an empty
+passphrase. If it fails, emit a warning before any infrastructure is created:
+
+```text
+⚠ Warning: The SSH private key at '/home/deployer/.ssh/torrust_tracker_deployer_ed25519'
+  appears to be passphrase-protected. When running via Docker (no SSH agent, no TTY),
+  the key cannot be used for authentication.
+  → Remove the passphrase: ssh-keygen -p -f <key_path>
+  → Or add a passphrase-free key and update ssh_credentials in your env config.
+```
+
+This can be done using `ssh2` or `openssl` bindings in Rust to probe whether the key decrypts
+with an empty passphrase.
+
+**Related source**: `src/application/commands/create/` or `src/adapters/ssh/` — key validation
+step before any remote operations
+
+---
+
 ## 5. Add a `wait-for-ssh` command (or `--resume` flag on provision)
 
 ### Current behavior
