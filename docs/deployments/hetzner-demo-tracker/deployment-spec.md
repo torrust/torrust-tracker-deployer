@@ -1,8 +1,13 @@
-# Configuration
+# Deployment Specification
 
-Decisions and examples for the demo tracker environment configuration.
+Decisions and desired end-state for the demo tracker at `torrust-tracker-demo.com`.
 
-> **Note**: All secrets, API tokens, and passwords shown here are placeholders. Never commit real credentials.
+> **Note**: This document describes _what_ we want to deploy. For step-by-step command
+> documentation see the per-command sub-directories under `commands/` (`commands/create/`,
+> `commands/provision/`, etc.).
+>
+> All secrets, API tokens, and passwords shown here are placeholders. Never commit real
+> credentials.
 
 ## Configuration Decisions
 
@@ -67,23 +72,7 @@ Answer:
 
 > **Note**: The agent also silently used SQLite by default. We caught this and switched to MySQL.
 > The bind addresses were also defaulted to `0.0.0.0` (IPv4 only) — we changed them to `[::]` for
-> dual-stack. Both issues are documented in [problems.md](problems.md).
-
-## Generating the Template
-
-```bash
-docker run --rm \
-  -v $(pwd)/envs:/var/lib/torrust/deployer/envs \
-  torrust/tracker-deployer:latest \
-  create template --provider hetzner /var/lib/torrust/deployer/envs/torrust-tracker-demo.json
-```
-
-The deployer generates a fully-featured template with all sections and placeholders. Edit and replace:
-
-- `REPLACE_WITH_ENVIRONMENT_NAME` → `torrust-tracker-demo`
-- `REPLACE_WITH_SSH_PRIVATE_KEY_ABSOLUTE_PATH` → `/home/<user>/.ssh/torrust_tracker_deployer_ed25519`
-- `REPLACE_WITH_SSH_PUBLIC_KEY_ABSOLUTE_PATH` → `/home/<user>/.ssh/torrust_tracker_deployer_ed25519.pub`
-- `REPLACE_WITH_HETZNER_API_TOKEN` → Your Hetzner API token (never commit this)
+> dual-stack. Both issues are documented in [commands/create/problems.md](commands/create/problems.md).
 
 ## Environment Configuration File (sanitized)
 
@@ -96,8 +85,8 @@ The file is stored at `envs/torrust-tracker-demo.json` (git-ignored — contains
     "description": "Torrust Tracker demo instance at torrust-tracker-demo.com"
   },
   "ssh_credentials": {
-    "private_key_path": "/home/<user>/.ssh/torrust_tracker_deployer_ed25519",
-    "public_key_path": "/home/<user>/.ssh/torrust_tracker_deployer_ed25519.pub",
+    "private_key_path": "/home/deployer/.ssh/torrust_tracker_deployer_ed25519",
+    "public_key_path": "/home/deployer/.ssh/torrust_tracker_deployer_ed25519.pub",
     "username": "torrust",
     "port": 22
   },
@@ -168,68 +157,6 @@ The file is stored at `envs/torrust-tracker-demo.json` (git-ignored — contains
   }
 }
 ```
-
-## Validating the Configuration
-
-After filling in all values, validate before running the full deployment:
-
-```bash
-docker run --rm \
-  -v $(pwd)/envs:/var/lib/torrust/deployer/envs \
-  torrust/tracker-deployer:latest \
-  validate --env-file /var/lib/torrust/deployer/envs/torrust-tracker-demo.json
-```
-
-> **Note**: In this deployment we used `cargo run --bin torrust-tracker-deployer validate ...`
-> because we run from source. For end-users the Docker command above is equivalent and simpler.
-
-Output confirming the config is valid:
-
-```json
-{
-  "environment_name": "torrust-tracker-demo",
-  "config_file": "envs/torrust-tracker-demo.json",
-  "provider": "hetzner",
-  "is_valid": true,
-  "has_prometheus": true,
-  "has_grafana": true,
-  "has_https": true,
-  "has_backup": true
-}
-```
-
-## Creating the Environment
-
-Once the config is validated, register the environment with the deployer:
-
-```bash
-docker run --rm \
-  -v $(pwd)/data:/var/lib/torrust/deployer/data \
-  -v $(pwd)/build:/var/lib/torrust/deployer/build \
-  -v $(pwd)/envs:/var/lib/torrust/deployer/envs \
-  -v ~/.ssh:/home/deployer/.ssh:ro \
-  torrust/tracker-deployer:latest \
-  create environment --env-file /var/lib/torrust/deployer/envs/torrust-tracker-demo.json
-```
-
-Output:
-
-```json
-{
-  "environment_name": "torrust-tracker-demo",
-  "instance_name": "torrust-tracker-vm-torrust-tracker-demo",
-  "data_dir": "./data/torrust-tracker-demo",
-  "build_dir": "./build/torrust-tracker-demo",
-  "created_at": "2026-03-03T13:59:22.635908188Z"
-}
-```
-
-The deployer created `data/torrust-tracker-demo/environment.json` with the internal state. This
-file holds the environment's domain model — it is managed exclusively by the deployer and must
-never be edited manually.
-
-As confirmed by the output, `instance_name: null` in the config results in the auto-generated
-server name `torrust-tracker-vm-torrust-tracker-demo` — the Hetzner VM will be named this.
 
 ## Related Documentation
 

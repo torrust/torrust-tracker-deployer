@@ -12,9 +12,14 @@ Deploy a public Torrust Tracker demo instance to Hetzner Cloud and document ever
 ## Table of Contents
 
 1. [Prerequisites](prerequisites.md) — Account setup, tools, SSH keys
-2. [Configuration](configuration.md) — Environment config decisions and examples
-3. [Deployment](#deployment) — Step-by-step deployment walkthrough (below)
-4. [Problems](problems.md) — Issues encountered with root causes and resolutions
+2. [Deployment Specification](deployment-spec.md) — What we want to deploy: config decisions,
+   endpoints, sanitized config
+3. Deployment commands — step-by-step per deployer command:
+   - [create](commands/create/README.md) — generate template, validate, create environment
+   - [provision](commands/provision/README.md) — create the Hetzner VM
+4. Problems — issues encountered, per command:
+   - [create problems](commands/create/problems.md)
+   - [provision problems](commands/provision/problems.md)
 
 ## Deployment
 
@@ -26,13 +31,14 @@ See [prerequisites.md](prerequisites.md) for the complete checklist.
 
 ### Phase 2: Create and Configure Environment
 
-See [configuration.md](configuration.md) for config decisions.
-
-<!-- TODO: Document `create template` and `create environment` commands with output -->
+See [deployment-spec.md](deployment-spec.md) for config decisions and the sanitized config.
+See [commands/create/README.md](commands/create/README.md) for running the `create template`, `validate`, and
+`create environment` commands.
 
 ### Phase 3: Provision Infrastructure
 
-<!-- TODO: Document `provision` command with output and timing -->
+See [commands/provision/README.md](commands/provision/README.md) for running the `provision` command and server
+details.
 
 ### Phase 4: Configure Instance
 

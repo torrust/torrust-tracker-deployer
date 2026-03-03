@@ -1,15 +1,15 @@
-# Problems Encountered
+# Problems: create
 
-Issues encountered during the Hetzner demo tracker deployment, with root causes and resolutions.
+Issues encountered while running the `create template` and `create environment` commands.
 
-> This is a living document — problems are added as they occur during the deployment process.
+> This is a living document — problems are added as they occur.
 
 <!--
 Template for each problem:
 
 ## Problem: [Short description]
 
-**Phase**: [Setup / Configuration / Provisioning / Configure / Release / Run / Verify]
+**Command**: `create template` | `create environment` | `validate`
 **Severity**: [Blocker / Major / Minor]
 
 ### Symptom
@@ -29,11 +29,9 @@ How we fixed it.
 How to avoid this in the future (if applicable).
 -->
 
-_No problems encountered yet — deployment has not started._
-
 ## Problem: Template generates `instance_name: null` with no explanation
 
-**Phase**: Configuration
+**Command**: `create template`
 **Severity**: Minor
 
 ### Symptom
@@ -69,13 +67,13 @@ For this deployment we left it as `null`, so the server will be named
 ### Prevention
 
 The template generator should add an inline comment or a companion `_comment` field explaining
-the auto-generation behavior. See related improvement idea for the deployer.
+the auto-generation behavior.
 
 ---
 
 ## Problem: Template defaults bind addresses to `0.0.0.0` (IPv4 only)
 
-**Phase**: Configuration
+**Command**: `create template`
 **Severity**: Major
 
 ### Symptom
@@ -117,7 +115,7 @@ deployments would also help.
 
 ## Problem: Template silently defaults to SQLite — no database choice presented
 
-**Phase**: Configuration
+**Command**: `create template`
 **Severity**: Major
 
 ### Symptom
