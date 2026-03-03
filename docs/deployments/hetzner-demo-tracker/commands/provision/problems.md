@@ -375,3 +375,47 @@ early and warn the user:
   Consider removing the passphrase from the deployment key, or document that the
   SSH agent socket must be forwarded into the container.
 ```
+
+---
+
+## Problem: Hetzner activity log shows "Server is being created" indefinitely — misleading status
+
+**Command**: `provision`
+**Severity**: Minor (documentation / UX confusion)
+
+### Symptom
+
+After a server is fully created, accessible via SSH, and cloud-init is complete, the Hetzner
+console activity log still shows **"Server is being created"** as the last event — even 15–20
+minutes later. There is no follow-up event such as "Server creation finished".
+
+This was observed during provision attempts 3 and 4. In attempt 3, we assumed the server was
+still being provisioned by Hetzner ("stuck") because the activity log never updated, which
+led to unnecessary investigation into cloud-init delays and SSH timeouts.
+
+### Root Cause
+
+This is Hetzner's expected (if unintuitive) behavior. The event **"Server is being created"**
+is a point-in-time action record — it records that the creation action was initiated — not a
+status that transitions when the action completes. Hetzner does not emit a corresponding
+"Server creation completed" event.
+
+The actual completion can be inferred from:
+
+- The server **status** in the Hetzner console changing from `Initializing` to `Running`
+- SSH connectivity being established
+- `cloud-init status` returning `done` on the server
+
+### Resolution
+
+No action needed — the "Server is being created" entry is normal and permanent. Use server
+**status** (`Running`) and direct SSH access to confirm the server is ready, not the activity
+log.
+
+### Prevention
+
+Document this behavior in the Hetzner provider guide so operators are not misled. Specifically:
+
+- The Hetzner activity log records what happened, not the current state.
+- "Server is being created" is the last event and does not update when creation finishes.
+- Use `hcloud server describe <name>` or SSH connectivity as the authoritative readiness signal.

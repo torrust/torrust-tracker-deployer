@@ -52,10 +52,16 @@ The Hetzner server was created successfully by OpenTofu on 2026-03-03 at ~19:00 
 > address and network must be looked up in the Hetzner console or `terraform.tfstate`. See
 > [improvements.md](improvements.md) for the tracked improvement.
 
-![Hetzner console showing the provisioned server details](../../media/hetzner-console-provisioned-server-details-attempt-1.png)
+![Hetzner console showing the provisioned server details — attempt 4 (current)](../../media/hetzner-console-provisioned-server-details-attempt-4.png)
 
-> **Note**: This screenshot shows the first successfully created server. A new server will be
-> provisioned after destroying this one; the IP address will be different.
+> **Note**: The Hetzner activity log shows "Server is being created" as the last event even
+> after the server is fully created and accessible. Hetzner does not emit a matching
+> "Server creation finished" event, so this entry can be misleading. See
+> [problems.md](problems.md) for full context.
+
+For reference, the first server created in attempt 1:
+
+![Hetzner console showing the provisioned server details — attempt 1](../../media/hetzner-console-provisioned-server-details-attempt-1.png)
 
 ## Generated Artifacts
 
