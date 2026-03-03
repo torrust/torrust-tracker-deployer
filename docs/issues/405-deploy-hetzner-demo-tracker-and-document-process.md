@@ -61,7 +61,7 @@ docs/deployments/
 
 ### Phase 3: Deploy the Tracker
 
-- [ ] Task 3.1: Provision infrastructure (create Hetzner VM)
+- [x] Task 3.1: Provision infrastructure (create Hetzner VM)
 - [ ] Task 3.2: Configure the instance (Docker, SSH, system setup)
 - [ ] Task 3.3: Release the application (deploy tracker files)
 - [ ] Task 3.4: Run the services (start the tracker)
