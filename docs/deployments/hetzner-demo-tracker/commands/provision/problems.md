@@ -171,10 +171,34 @@ torrust
 status: done
 ```
 
-The actual root cause is **the 120-second SSH connectivity timeout was too short for this
-Hetzner server**. The server booted at ~15:30 UTC and the deployer gave up at ~15:33:32 (roughly
-3.5 minutes after the server appeared). By the time we tested manually (>14 minutes after boot),
-sshd was fully available.
+**Precise timeline reconstructed from `data/logs/log.txt`:**
+
+| Time (UTC)    | Event                                                     |
+| ------------- | --------------------------------------------------------- |
+| `15:30:13`    | `tofu apply` started                                      |
+| `15:30:32`    | `tofu apply` done — server `46.225.234.201` created (19s) |
+| `15:30:32`    | SSH probe starts (attempt 1)                              |
+| `15:30:32–46` | Attempts 1–3: ~7s each (`ConnectTimeout=5` + 2s sleep)    |
+| `15:30:49+`   | Attempts 4–60: ~2–3s each                                 |
+| `15:33:32`    | Probe exhausted — 60 attempts, 120s total                 |
+| `> 15:44:00`  | Manual SSH succeeds (`cloud-init status: done`)           |
+
+The change in per-attempt duration is the key signal:
+
+- **Attempts 1–3 (~7s each)**: port 22 not yet open — the `ssh` process hangs for the full
+  `ConnectTimeout=5` seconds before returning. sshd was not listening.
+- **Attempts 4–60 (~2–3s each)**: TCP connection to port 22 **succeeds** but sshd rejects the
+  authentication immediately. sshd is running but the `torrust` user and `~/.ssh/authorized_keys`
+  do not exist yet — cloud-init has not finished creating them.
+
+**The real bottleneck is cloud-init user provisioning**, not sshd startup. sshd was listening
+within ~17 seconds of the server appearing. But cloud-init had not yet created the `torrust` user
+and written their `authorized_keys`. Every one of the 60 probe attempts was rejected with
+"permission denied" for this reason.
+
+Cloud-init finished some time between `15:33:32` (when the deployer gave up) and `~15:44:00`
+(when manual SSH succeeded) — meaning cloud-init took **more than 3 minutes 32 seconds** on this
+`ccx23` server. The 120-second probe budget was not enough.
 
 **cloud-init timing note**: `cloud-init status --long` reports
 `last_update: Thu, 01 Jan 1970 00:00:13 +0000` — the epoch-based timestamp shows the system clock
@@ -182,8 +206,8 @@ was not yet NTP-synced when cloud-init completed, which is consistent with cloud
 very early in the boot sequence before network time was established.
 
 The deployer's SSH probe loop (60 × 2-second intervals = 120 seconds total) is designed for
-fast LXD VMs which are typically ready in under 30 seconds. Hetzner bare-metal-class servers with
-cloud-init configuration take significantly longer.
+fast LXD VMs which are typically ready in under 30 seconds. Hetzner `ccx23` servers with
+cloud-init user provisioning take significantly longer.
 
 ### Resolution
 
@@ -218,8 +242,8 @@ docker run --rm \
   provision torrust-tracker-demo
 ```
 
-The retry is expected to succeed because the underlying cause (timeout) is non-deterministic —
-the server may be faster on a second attempt. If it times out again, see the Prevention section.
+The retry may still time out if cloud-init on the new server also takes more than 120 seconds.
+If it does, see the Prevention section for options to increase the probe budget.
 
 ### Prevention
 
