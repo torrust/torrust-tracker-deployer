@@ -86,11 +86,73 @@ magnet:?xt=urn:btih:0000000000000000000000000000000000000000
 Note: a real info hash is needed for a meaningful announce. The zero hash above
 will return an empty peer list but confirms the tracker is reachable.
 
+## 4. Using the Torrust Tracker Client
+
+The [Torrust Tracker](https://github.com/torrust/torrust-tracker) project ships
+a reference `udp_tracker_client` binary located in
+[`console/tracker-client`](https://github.com/torrust/torrust-tracker/tree/develop/console/tracker-client).
+It implements the full BEP 15 protocol and sends a real `announce` request,
+making it a definitive end-to-end test.
+
+### UDP Tracker 1 (port 6969)
+
+```bash
+# From the torrust-tracker console/tracker-client directory
+cargo run --bin udp_tracker_client announce \
+  udp://udp1.torrust-tracker-demo.com:6969 \
+  9c38422213e30bff212b30c360d26f9a02136422
+```
+
+Output:
+
+```json
+{
+  "AnnounceIpv4": {
+    "transaction_id": -888840697,
+    "announce_interval": 300,
+    "leechers": 0,
+    "seeders": 1,
+    "peers": []
+  }
+}
+```
+
+### UDP Tracker 2 (port 6868)
+
+```bash
+cargo run --bin udp_tracker_client announce \
+  udp://udp2.torrust-tracker-demo.com:6868 \
+  9c38422213e30bff212b30c360d26f9a02136422
+```
+
+Output:
+
+```json
+{
+  "AnnounceIpv4": {
+    "transaction_id": -888840697,
+    "announce_interval": 300,
+    "leechers": 0,
+    "seeders": 2,
+    "peers": ["0.0.0.0:0", "0.0.0.0:65535", "2.137.92.24:48887"]
+  }
+}
+```
+
+Both trackers responded with `announce_interval: 300` (5 minutes), confirming
+announces were processed correctly. Tracker 2 returned peers registered from
+previous announces: the `0.0.0.0` entries are placeholder peers from the BEP 15
+handshake script, and `2.137.92.24:48887` is the local machine running the
+tracker client — confirming the announce was registered correctly and the peer
+IP was recorded as seen by the server.
+
 ## Results
 
-| Check                        | Result | Notes                                |
-| ---------------------------- | ------ | ------------------------------------ |
-| UDP port 6969 open           | ✅     | BEP 15 handshake succeeded           |
-| UDP port 6868 open           | ✅     | BEP 15 handshake succeeded           |
-| BEP 15 handshake (tracker 1) | ✅     | `connection_id = 0x927bc33b3260b795` |
-| BEP 15 handshake (tracker 2) | ✅     | `connection_id = 0x59c13493038e3be3` |
+| Check                               | Result | Notes                                                  |
+| ----------------------------------- | ------ | ------------------------------------------------------ |
+| UDP port 6969 open                  | ✅     | BEP 15 handshake succeeded                             |
+| UDP port 6868 open                  | ✅     | BEP 15 handshake succeeded                             |
+| BEP 15 handshake (tracker 1)        | ✅     | `connection_id = 0x927bc33b3260b795`                   |
+| BEP 15 handshake (tracker 2)        | ✅     | `connection_id = 0x59c13493038e3be3`                   |
+| Torrust client announce (tracker 1) | ✅     | `announce_interval=300`, `seeders=1`, peers=0          |
+| Torrust client announce (tracker 2) | ✅     | `announce_interval=300`, `seeders=2`, 3 peers returned |
