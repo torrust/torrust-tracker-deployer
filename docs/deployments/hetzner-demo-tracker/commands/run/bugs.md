@@ -91,19 +91,20 @@ The auto-derived root password (`secret_root`) is never surfaced to the operator
 
 ### Root Cause
 
-In `src/application/services/rendering/docker_compose.rs`, `create_mysql_contexts()`
-derives the root password by appending the string `"_root"` to the configured
-password:
+The feature was never implemented. In
+`src/application/services/rendering/docker_compose.rs`, `create_mysql_contexts()`
+contains a placeholder that derives the root password by appending `"_root"` to
+the configured password, with a comment acknowledging the gap:
 
 ```rust
-// src/application/services/rendering/docker_compose.rs, inside create_mysql_contexts()
+// For MySQL, generate a secure root password (in production, this should be managed securely)
 let root_password = format!("{password}_root");
 ```
 
-This was added so that the root and app passwords differ, which is good security
-practice. However, the resulting root password is undocumented and bears a
-mechanical relationship to the app password that a knowledgeable attacker could
-exploit.
+The comment explicitly says this should be managed securely in production, but
+no proper implementation was ever added. The `"_root"` suffix is a stub, not a
+deliberate design decision. As a result the root password silently diverges from
+the configured password and the gap is invisible to the operator.
 
 ### Affected Code
 
