@@ -15,6 +15,7 @@ is fully functional end-to-end.
 | Health Check    | `http://127.0.0.1:1313/health_check` (internal)   | [health-check.md](health-check.md)       |
 | Docker Services | All containers                                    | [docker-services.md](docker-services.md) |
 | MySQL Database  | `torrust_tracker` DB (internal)                   | [mysql.md](mysql.md)                     |
+| Storage Volume  | `/opt/torrust/storage` on `sdb` (internal)        | [storage.md](storage.md)                 |
 
 ## Status
 
@@ -27,6 +28,7 @@ is fully functional end-to-end.
 | Health Check    | ✅ Verified |
 | Docker Services | ✅ Verified |
 | MySQL Database  | ✅ Verified |
+| Storage Volume  | ✅ Verified |
 
 ## Prerequisites
 
