@@ -14,6 +14,7 @@ is fully functional end-to-end.
 | Grafana         | `https://grafana.torrust-tracker-demo.com`        | [grafana.md](grafana.md)                 |
 | Health Check    | `http://127.0.0.1:1313/health_check` (internal)   | [health-check.md](health-check.md)       |
 | Docker Services | All containers                                    | [docker-services.md](docker-services.md) |
+| MySQL Database  | `torrust_tracker` DB (internal)                   | [mysql.md](mysql.md)                     |
 
 ## Status
 
@@ -25,6 +26,7 @@ is fully functional end-to-end.
 | Grafana         | ✅ Verified |
 | Health Check    | ✅ Verified |
 | Docker Services | ✅ Verified |
+| MySQL Database  | ✅ Verified |
 
 ## Prerequisites
 
