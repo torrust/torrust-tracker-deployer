@@ -502,3 +502,10 @@ zstd
 конфиг
 файл
 Nushell
+blkid
+ethernets
+netplan
+mountpoint
+MOUNTPOINTS
+nofail
+NXDOMAIN

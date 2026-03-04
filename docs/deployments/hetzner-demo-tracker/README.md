@@ -17,10 +17,13 @@ Deploy a public Torrust Tracker demo instance to Hetzner Cloud and document ever
 3. Deployment commands — step-by-step per deployer command:
    - [create](commands/create/README.md) — generate template, validate, create environment
    - [provision](commands/provision/README.md) — create the Hetzner VM
-4. Problems — issues encountered, per command:
+4. Post-provision manual steps (done once, before `configure`):
+   - [DNS setup](post-provision/dns-setup.md) — assign floating IPs, create DNS records, verify
+   - [Volume setup](post-provision/volume-setup.md) — create and mount Hetzner volume for storage
+5. Problems — issues encountered, per command:
    - [create problems](commands/create/problems.md)
    - [provision problems](commands/provision/problems.md)
-5. Improvements — recommended deployer improvements found during this deployment:
+6. Improvements — recommended deployer improvements found during this deployment:
    - [provision improvements](commands/provision/improvements.md)
 
 ## Deployment
@@ -41,6 +44,17 @@ See [commands/create/README.md](commands/create/README.md) for running the `crea
 
 See [commands/provision/README.md](commands/provision/README.md) for running the `provision` command and server
 details.
+
+### Phase 3.5: Post-Provision Setup
+
+Manual steps done once after provisioning, required before `configure`:
+
+1. [DNS setup](post-provision/dns-setup.md) — assign floating IPs to the server and create DNS
+   records for all six domains.
+2. [Volume setup](post-provision/volume-setup.md) — create a 50 GB Hetzner volume and mount it
+   at `/opt/torrust/storage` so persistent data lives on a separate disk.
+
+See [post-provision/README.md](post-provision/README.md) for the full overview.
 
 ### Phase 4: Configure Instance
 

@@ -66,6 +66,26 @@ docs/deployments/
 - [ ] Task 3.3: Release the application (deploy tracker files)
 - [ ] Task 3.4: Run the services (start the tracker)
 
+### Phase 3.5: Post-Provision Manual Setup
+
+Steps required after provisioning and before running `configure`.
+See [`docs/deployments/hetzner-demo-tracker/post-provision/`](../deployments/hetzner-demo-tracker/post-provision/README.md).
+
+**DNS Setup** ([dns-setup.md](../deployments/hetzner-demo-tracker/post-provision/dns-setup.md)):
+
+- [x] Task 3.5.1: Assign IPv4 floating IP (`116.202.176.169`) to the server in Hetzner Console
+- [x] Task 3.5.2: Assign IPv6 floating IP (`2a01:4f8:1c0c:9aae::/64`) to the server in Hetzner Console
+- [ ] Task 3.5.3: Configure floating IPs permanently inside the VM (netplan)
+- [ ] Task 3.5.4: Create DNS records for all six subdomains in Hetzner DNS Console
+- [ ] Task 3.5.5: Verify all DNS records resolve correctly
+
+**Volume Setup** ([volume-setup.md](../deployments/hetzner-demo-tracker/post-provision/volume-setup.md)):
+
+- [ ] Task 3.5.6: Create a 50 GB Hetzner volume (`torrust-tracker-demo-storage`) in `nbg1`
+- [ ] Task 3.5.7: Format the volume (`ext4`) and mount it at `/opt/torrust/storage`
+- [ ] Task 3.5.8: Add the volume to `/etc/fstab` for persistent mounting
+- [ ] Task 3.5.9: Verify volume is correctly mounted and writable
+
 ### Phase 4: Verify and Document
 
 - [ ] Task 4.1: Verify tracker is accessible and functioning
