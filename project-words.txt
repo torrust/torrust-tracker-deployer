@@ -514,3 +514,5 @@ nofail
 NXDOMAIN
 rrset
 rrsets
+automount
+ENDSSH
