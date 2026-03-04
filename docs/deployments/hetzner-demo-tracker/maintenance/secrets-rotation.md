@@ -14,7 +14,7 @@ those companies. All live secrets must be rotated.
 | Tracker admin token           | Rotate  | In `.env`, `prometheus.yml`, terminal, docs            |
 | MySQL `torrust` user password | Rotate  | In `.env`, `tracker.toml`, `backup.conf`               |
 | MySQL `root` user password    | Rotate  | In `.env`, terminal session                            |
-| Grafana admin password        | Rotate  | In `.env`, used in `curl` commands                     |
+| Grafana admin password        | ✅ Done | Rotated 2026-03-04                                     |
 | SSH deployer key              | Rotate  | Agent ran `ssh`/`scp` commands using this key          |
 | Hetzner Cloud API token       | ✅ Done | Deleted 2026-03-04 — no longer needed after deployment |
 | Hetzner DNS API token         | ✅ Done | Deleted 2026-03-04 — no longer needed after DNS setup  |
@@ -249,7 +249,7 @@ sudo docker compose logs --tail=20 tracker
 
 ---
 
-## Step 3: Rotate the Grafana Admin Password
+## Step 3: Rotate the Grafana Admin Password ✅ Done (2026-03-04)
 
 ### Option A: Change via the Grafana UI (simplest)
 
