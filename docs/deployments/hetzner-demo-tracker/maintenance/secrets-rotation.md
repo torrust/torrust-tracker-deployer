@@ -358,6 +358,20 @@ Edit `envs/torrust-tracker-demo.json` and update the `ssh_private_key_path`
 field (or equivalent) to point to the same path — no change needed if the path
 did not change.
 
+### 4g. Delete the old SSH key from the Hetzner console ✅ Done (2026-03-04)
+
+The deployer uploaded the old public key to Hetzner during provisioning so
+cloud-init could inject it into the server. Now that the key has been rotated,
+the Hetzner console entry is stale and should be removed.
+
+1. Open [Hetzner Cloud Console](https://console.hetzner.cloud/)
+2. Go to **Security → SSH Keys**
+3. Find the old `torrust-tracker-deployer` key and click **Delete**
+
+> **Note**: Deleting the key from the Hetzner console has no effect on the
+> running server — `authorized_keys` on the server is independent and was
+> already updated in steps 4b and 4d.
+
 ---
 
 ## Step 5: Delete the Hetzner Cloud API Token ✅ Done (2026-03-04)
