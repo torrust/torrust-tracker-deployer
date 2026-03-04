@@ -67,7 +67,8 @@ command. Installs Docker 28.2.2 and Docker Compose v2.29.2.
 
 ### Phase 5: Release Application
 
-<!-- TODO: Document `release` command with output -->
+See [commands/release/README.md](commands/release/README.md) for running the `release`
+command. Pulled and staged all Docker images (~134 s, state=`Released`).
 
 ### Phase 6: Run Services
 
