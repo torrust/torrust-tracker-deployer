@@ -179,6 +179,7 @@ Available skills:
 | Creating issues                | `.github/skills/dev/planning/create-issue/skill.md`                          |
 | Creating new skills            | `.github/skills/add-new-skill/skill.md`                                      |
 | Creating refactor plans        | `.github/skills/dev/planning/create-refactor-plan/skill.md`                  |
+| Debugging command failures     | `.github/skills/usage/operations/debug-command-failure/skill.md`             |
 | Debugging test errors          | `.github/skills/dev/testing/debug-test-errors/skill.md`                      |
 | Handling errors in code        | `.github/skills/dev/rust-code-quality/handle-errors-in-code/skill.md`        |
 | Handling secrets               | `.github/skills/dev/rust-code-quality/handle-secrets/skill.md`               |

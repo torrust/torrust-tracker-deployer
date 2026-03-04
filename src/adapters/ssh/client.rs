@@ -158,10 +158,8 @@ impl SshClient {
         let mut attempt = 0;
 
         while attempt < max_attempts {
-            let result = self.test_connectivity();
-
-            match result {
-                Ok(true) => {
+            match self.execute_with_options("echo 'SSH connected'", &[]) {
+                Ok(_) => {
                     info!(
                         operation = "ssh_connectivity",
                         host_ip = %self.ssh_config.host_ip(),
@@ -170,18 +168,17 @@ impl SshClient {
                     );
                     return Ok(());
                 }
-                Ok(false) => {
-                    // Connection failed, continue trying
+                Err(CommandError::ExecutionFailed { ref stderr, .. }) => {
                     if (attempt + 1) % conn_config.retry_log_frequency == 0 {
                         info!(
                             operation = "ssh_connectivity",
                             host_ip = %self.ssh_config.host_ip(),
                             attempt = attempt + 1,
                             max_attempts = max_attempts,
+                            reason = %stderr,
                             "Still waiting for SSH connectivity"
                         );
                     }
-
                     tokio::time::sleep(Duration::from_secs(u64::from(
                         conn_config.retry_interval_secs,
                     )))
@@ -211,6 +208,7 @@ impl SshClient {
     /// - `StrictHostKeyChecking`: `no` (disable host key verification)
     /// - `UserKnownHostsFile`: `/dev/null` (ignore known hosts file)
     /// - `ConnectTimeout`: configured timeout (prevents hanging)
+    /// - `IdentitiesOnly`: `yes` (only use the configured key, ignore SSH agent)
     ///
     /// These defaults ensure reliable automation but can be overridden by
     /// user-provided options in `additional_options`.
@@ -225,6 +223,11 @@ impl SshClient {
                 .connect_timeout_secs
                 .to_string(),
         );
+        // Only use the explicitly configured identity file, ignoring any keys
+        // loaded in the SSH agent. Without this, SSH may exhaust the server's
+        // MaxAuthTries limit by trying agent keys before the configured key,
+        // causing "Too many authentication failures" on every attempt.
+        defaults.insert("IdentitiesOnly".to_string(), "yes".to_string());
         defaults
     }
 
@@ -580,8 +583,8 @@ mod tests {
         // Act
         let default_options = ssh_client.build_default_ssh_options();
 
-        // Assert: Should contain 3 key-value pairs
-        assert_eq!(default_options.len(), 3);
+        // Assert: Should contain 4 key-value pairs
+        assert_eq!(default_options.len(), 4);
 
         // Verify expected keys and values
         assert_eq!(
@@ -595,6 +598,10 @@ mod tests {
         assert_eq!(
             default_options.get("ConnectTimeout"),
             Some(&expected_timeout.to_string())
+        );
+        assert_eq!(
+            default_options.get("IdentitiesOnly"),
+            Some(&"yes".to_string())
         );
     }
 
