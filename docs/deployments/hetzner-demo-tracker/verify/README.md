@@ -12,15 +12,17 @@ is fully functional end-to-end.
 | UDP Tracker  | `udp://udp1.torrust-tracker-demo.com:6969`        | [udp-tracker.md](udp-tracker.md)   |
 | Tracker API  | `https://api.torrust-tracker-demo.com/api/v1`     | [api.md](api.md)                   |
 | Grafana      | `https://grafana.torrust-tracker-demo.com`        | [grafana.md](grafana.md)           |
+| Health Check | `http://127.0.0.1:1313/health_check` (internal)   | [health-check.md](health-check.md) |
 
 ## Status
 
 | Service      | Status              |
 | ------------ | ------------------- |
-| HTTP Tracker | ⏳ Not yet verified |
+| HTTP Tracker | ✅ Verified         |
 | UDP Tracker  | ⏳ Not yet verified |
-| Tracker API  | ⏳ Not yet verified |
+| Tracker API  | ✅ Verified         |
 | Grafana      | ⏳ Not yet verified |
+| Health Check | ✅ Verified         |
 
 ## Prerequisites
 

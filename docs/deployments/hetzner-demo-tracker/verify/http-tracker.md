@@ -1,6 +1,6 @@
 # HTTP Tracker Verification
 
-**Status**: ⏳ Not yet verified
+**Status**: ✅ Verified (2026-03-04)
 
 ## Endpoints
 
@@ -40,26 +40,18 @@ Repeat the connectivity check for the second HTTP tracker:
 curl -sv "https://http2.torrust-tracker-demo.com/announce?info_hash=%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00&peer_id=%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00&port=6881&uploaded=0&downloaded=0&left=0&event=started&compact=1" 2>&1 | head -20
 ```
 
-## 4. Health Check (via SSH)
+## 4. Health Check
 
-The tracker exposes a health check endpoint on `localhost:1313` on the server.
-
-```bash
-ssh -i ~/.ssh/torrust_tracker_deployer_ed25519 torrust@46.225.234.201 \
-  "curl -s http://localhost:1313/health_check"
-```
-
-Expected response:
-
-```json
-{ "status": "Ok" }
-```
+The tracker exposes a health check API bound to the container's loopback
+interface (`127.0.0.1:1313`). It is not accessible from the host directly.
+See [health-check.md](health-check.md) for the verification procedure and
+actual output.
 
 ## Results
 
-| Check                       | Result | Notes |
-| --------------------------- | ------ | ----- |
-| HTTP Tracker 1 connectivity | ⏳     |       |
-| HTTP Tracker 1 TLS cert     | ⏳     |       |
-| HTTP Tracker 2 connectivity | ⏳     |       |
-| Health check                | ⏳     |       |
+| Check                       | Result | Notes                                  |
+| --------------------------- | ------ | -------------------------------------- |
+| HTTP Tracker 1 connectivity | ✅     | HTTP 200 with bencoded response        |
+| HTTP Tracker 1 TLS cert     | ✅     | Let's Encrypt, valid until Jun 2, 2026 |
+| HTTP Tracker 2 connectivity | ✅     | HTTP 200 with bencoded response        |
+| Health check                | ✅     | See [health-check.md](health-check.md) |
