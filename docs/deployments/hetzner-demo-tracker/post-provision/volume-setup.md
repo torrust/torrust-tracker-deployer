@@ -12,9 +12,14 @@ The server's root disk contains the OS and application binaries. Persistent trac
 
 Putting that data on a separate Hetzner volume means:
 
-- **Targeted backups**: back up only the volume, not the entire server.
 - **Easy migration**: detach the volume and reattach to a new server if the VM is recreated.
-- **Independent lifecycle**: you can snapshot or resize the volume without touching the server.
+- **Independent lifecycle**: resize the volume without touching the server.
+- **Application-level backups**: back up only the data directory, not the entire server disk
+  (see the application's backup commands).
+
+> **Note**: Hetzner does **not** support volume snapshots. Their snapshot feature only captures
+> the server's root disk, not attached volumes. Data backup must be done at the application
+> level (e.g. the deployer's `backup` command) or via filesystem-level tools (rsync, tar).
 
 ## Volume Specification
 
@@ -213,7 +218,14 @@ owned by `torrust:torrust`, and will remount automatically on reboot. The next s
 
 ## Problems
 
-<!-- No issues encountered during volume setup. -->
+### Hetzner volumes cannot be snapshotted
+
+The Hetzner Console has no snapshot option for volumes — only for server root disks. There is
+no API endpoint for volume snapshots either.
+
+Data backup must be handled at the application level. The deployer provides a `backup` command
+for this purpose. Alternatively, use filesystem tools (`rsync`, `tar`) to copy the volume
+data to an off-server location.
 
 ## Improvements
 
