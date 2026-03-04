@@ -4,7 +4,8 @@ Post-deployment maintenance procedures for the Hetzner demo tracker instance.
 
 ## Tasks
 
-| Task             | Guide                                      | Status     |
-| ---------------- | ------------------------------------------ | ---------- |
-| Secrets Rotation | [secrets-rotation.md](secrets-rotation.md) | ✅ Done    |
-| OS Updates       | [os-updates.md](os-updates.md)             | ⏳ Pending |
+| Task              | Guide                                        | Status     |
+| ----------------- | -------------------------------------------- | ---------- |
+| Secrets Rotation  | [secrets-rotation.md](secrets-rotation.md)   | ✅ Done    |
+| OS Updates        | [os-updates.md](os-updates.md)               | ⏳ Pending |
+| Uptime Monitoring | [uptime-monitoring.md](uptime-monitoring.md) | ⏳ Pending |

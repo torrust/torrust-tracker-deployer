@@ -24,6 +24,7 @@ CIFS
 CRCL
 Caddyfile
 Certbot
+Checkly
 Ciphernutz
 Cockburn
 Codegen
@@ -46,6 +47,7 @@ EPEL
 Fairchild
 Falkenstein
 Firestore
+Freshping
 Frontegg
 Geeksfor
 Gossman
@@ -442,6 +444,7 @@ sqlx
 sshpass
 standardisation
 startretries
+statuspage
 stdlib
 stringly
 subcontroller
