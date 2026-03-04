@@ -23,6 +23,7 @@ Deploy a public Torrust Tracker demo instance to Hetzner Cloud and document ever
 4. Post-provision manual steps (done once, before `configure`):
    - [DNS setup](post-provision/dns-setup.md) — assign floating IPs, create DNS records, verify
    - [Volume setup](post-provision/volume-setup.md) — create and mount Hetzner volume for storage
+   - [Hetzner Backups](post-provision/hetzner-backups.md) — enable automated server backups (can be done any time after provisioning)
 5. [Service Verification](verify/README.md) — verifying all services after deployment:
    - [HTTP Tracker](verify/http-tracker.md)
    - [UDP Tracker](verify/udp-tracker.md)
@@ -67,6 +68,8 @@ Manual steps done once after provisioning, required before `configure`:
    records for all six domains.
 2. [Volume setup](post-provision/volume-setup.md) — create a 50 GB Hetzner volume and mount it
    at `/opt/torrust/storage` so persistent data lives on a separate disk.
+3. [Hetzner Backups](post-provision/hetzner-backups.md) — enable automated daily server backups
+   via the Hetzner Console (can be done at any time after provisioning).
 
 See [post-provision/README.md](post-provision/README.md) for the full overview.
 

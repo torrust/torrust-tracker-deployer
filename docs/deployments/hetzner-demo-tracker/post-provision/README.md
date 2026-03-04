@@ -7,10 +7,11 @@ on the server via SSH.
 
 ## Steps
 
-| Step            | Guide                              | Status  |
-| --------------- | ---------------------------------- | ------- |
-| 1. DNS Setup    | [dns-setup.md](dns-setup.md)       | ✅ Done |
-| 2. Volume Setup | [volume-setup.md](volume-setup.md) | ✅ Done |
+| Step               | Guide                                    | Status  |
+| ------------------ | ---------------------------------------- | ------- |
+| 1. DNS Setup       | [dns-setup.md](dns-setup.md)             | ✅ Done |
+| 2. Volume Setup    | [volume-setup.md](volume-setup.md)       | ✅ Done |
+| 3. Hetzner Backups | [hetzner-backups.md](hetzner-backups.md) | ✅ Done |
 
 ## Why Before `configure`?
 
