@@ -253,6 +253,7 @@ myenv
 MyISAM
 mysqladmin
 mysqlcheck
+mysqld
 mysqldump
 mysqlpump
 nameof
@@ -467,6 +468,7 @@ turbofish
 typestate
 tzdata
 ulpn
+unconfigured
 undertested
 unergonomic
 Unflushed
@@ -502,6 +504,7 @@ Zálešák
 zcat
 zeroize
 Zeroize
+zoneinfo
 zstd
 значение
 ключ

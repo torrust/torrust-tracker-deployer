@@ -6,23 +6,25 @@ is fully functional end-to-end.
 
 ## Services
 
-| Service      | URL                                               | File                               |
-| ------------ | ------------------------------------------------- | ---------------------------------- |
-| HTTP Tracker | `https://http1.torrust-tracker-demo.com/announce` | [http-tracker.md](http-tracker.md) |
-| UDP Tracker  | `udp://udp1.torrust-tracker-demo.com:6969`        | [udp-tracker.md](udp-tracker.md)   |
-| Tracker API  | `https://api.torrust-tracker-demo.com/api/v1`     | [api.md](api.md)                   |
-| Grafana      | `https://grafana.torrust-tracker-demo.com`        | [grafana.md](grafana.md)           |
-| Health Check | `http://127.0.0.1:1313/health_check` (internal)   | [health-check.md](health-check.md) |
+| Service         | URL                                               | File                                     |
+| --------------- | ------------------------------------------------- | ---------------------------------------- |
+| HTTP Tracker    | `https://http1.torrust-tracker-demo.com/announce` | [http-tracker.md](http-tracker.md)       |
+| UDP Tracker     | `udp://udp1.torrust-tracker-demo.com:6969`        | [udp-tracker.md](udp-tracker.md)         |
+| Tracker API     | `https://api.torrust-tracker-demo.com/api/v1`     | [api.md](api.md)                         |
+| Grafana         | `https://grafana.torrust-tracker-demo.com`        | [grafana.md](grafana.md)                 |
+| Health Check    | `http://127.0.0.1:1313/health_check` (internal)   | [health-check.md](health-check.md)       |
+| Docker Services | All containers                                    | [docker-services.md](docker-services.md) |
 
 ## Status
 
-| Service      | Status      |
-| ------------ | ----------- |
-| HTTP Tracker | ✅ Verified |
-| UDP Tracker  | ✅ Verified |
-| Tracker API  | ✅ Verified |
-| Grafana      | ✅ Verified |
-| Health Check | ✅ Verified |
+| Service         | Status      |
+| --------------- | ----------- |
+| HTTP Tracker    | ✅ Verified |
+| UDP Tracker     | ✅ Verified |
+| Tracker API     | ✅ Verified |
+| Grafana         | ✅ Verified |
+| Health Check    | ✅ Verified |
+| Docker Services | ✅ Verified |
 
 ## Prerequisites
 
