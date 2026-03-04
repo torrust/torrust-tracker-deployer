@@ -16,6 +16,7 @@ is fully functional end-to-end.
 | Docker Services | All containers                                    | [docker-services.md](docker-services.md) |
 | MySQL Database  | `torrust_tracker` DB (internal)                   | [mysql.md](mysql.md)                     |
 | Storage Volume  | `/opt/torrust/storage` on `sdb` (internal)        | [storage.md](storage.md)                 |
+| Backup          | `storage/backup/` on volume (internal)            | [backup.md](backup.md)                   |
 
 ## Status
 
@@ -29,6 +30,7 @@ is fully functional end-to-end.
 | Docker Services | ✅ Verified |
 | MySQL Database  | ✅ Verified |
 | Storage Volume  | ✅ Verified |
+| Backup          | ✅ Verified |
 
 ## Prerequisites
 
