@@ -42,6 +42,7 @@ Deploy a public Torrust Tracker demo instance to Hetzner Cloud and document ever
 8. [Observations](observations.md) — cross-cutting insights and learnings about the deployer
 9. [Maintenance](maintenance/README.md) — post-deployment operational tasks:
    - [Secrets rotation](maintenance/secrets-rotation.md) — rotate all secrets after AI-assisted deployment
+10. [Tracker Registry](tracker-registry.md) — submit the tracker to public registries (newTrackon)
 
 ## Deployment
 

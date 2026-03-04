@@ -42,4 +42,4 @@ These are the public endpoints that should be checked:
 
 ## Status
 
-⏳ Not yet configured — tracked as a future improvement.
+⏳ Uptime monitoring not yet configured — tracked as a future improvement.
