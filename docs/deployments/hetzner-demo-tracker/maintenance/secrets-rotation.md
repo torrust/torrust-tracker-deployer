@@ -12,8 +12,8 @@ those companies. All live secrets must be rotated.
 | Secret                        | Action  | Reason                                                  |
 | ----------------------------- | ------- | ------------------------------------------------------- |
 | Tracker admin token           | ✅ Done | Rotated 2026-03-04 — tracker and Prometheus scraping OK |
-| MySQL `torrust` user password | Rotate  | In `.env`, `tracker.toml`, `backup.conf`                |
-| MySQL `root` user password    | Rotate  | In `.env`, terminal session                             |
+| MySQL `torrust` user password | ✅ Done | Rotated 2026-03-04                                      |
+| MySQL `root` user password    | ✅ Done | Rotated 2026-03-04                                      |
 | Grafana admin password        | ✅ Done | Rotated 2026-03-04                                      |
 | SSH deployer key              | Rotate  | Agent ran `ssh`/`scp` commands using this key           |
 | Hetzner Cloud API token       | ✅ Done | Deleted 2026-03-04 — no longer needed after deployment  |
@@ -148,7 +148,7 @@ curl -s http://localhost:9090/api/v1/targets | python3 -m json.tool | grep -A3 '
 
 ---
 
-## Step 2: Rotate the MySQL Passwords
+## Step 2: Rotate the MySQL Passwords ✅ Done (2026-03-04)
 
 ### 2a. Change passwords in MySQL
 
