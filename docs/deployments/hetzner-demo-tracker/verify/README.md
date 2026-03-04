@@ -21,7 +21,7 @@ is fully functional end-to-end.
 | HTTP Tracker | ✅ Verified         |
 | UDP Tracker  | ⏳ Not yet verified |
 | Tracker API  | ✅ Verified         |
-| Grafana      | ⏳ Not yet verified |
+| Grafana      | ✅ Verified         |
 | Health Check | ✅ Verified         |
 
 ## Prerequisites

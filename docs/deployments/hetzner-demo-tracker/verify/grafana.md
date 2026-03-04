@@ -1,6 +1,6 @@
 # Grafana Verification
 
-**Status**: ⏳ Not yet verified
+**Status**: ✅ Verified (2026-03-04)
 
 ## Endpoint
 
@@ -24,10 +24,14 @@ certificate for `grafana.torrust-tracker-demo.com`.
 
 ## 2. API Login Check
 
-Verify the credentials work via the Grafana HTTP API:
+Verify the credentials work via the Grafana HTTP API.
+
+> **Note**: use `-u` flag — URL-embedded credentials (`admin:pass@host`) will
+> fail if the password contains `/`, as does this deployment's password.
 
 ```bash
-curl -s "https://admin:/FUYKHCnco72eUb2VjA1MvKvxQ6VuT0Z@grafana.torrust-tracker-demo.com/api/user" | python3 -m json.tool
+GRAFANA_PASS="<GRAFANA_ADMIN_PASSWORD>"
+curl -s -u "admin:${GRAFANA_PASS}" "https://grafana.torrust-tracker-demo.com/api/user" | python3 -m json.tool
 ```
 
 Expected response:
@@ -48,7 +52,8 @@ Expected response:
 Confirm Grafana is receiving metrics from Prometheus.
 
 ```bash
-curl -s "https://admin:/FUYKHCnco72eUb2VjA1MvKvxQ6VuT0Z@grafana.torrust-tracker-demo.com/api/datasources" | python3 -m json.tool
+GRAFANA_PASS="<GRAFANA_ADMIN_PASSWORD>"
+curl -s -u "admin:${GRAFANA_PASS}" "https://grafana.torrust-tracker-demo.com/api/datasources" | python3 -m json.tool
 ```
 
 Expected: a data source named `Prometheus` with `"type": "prometheus"` and
@@ -59,13 +64,14 @@ Expected: a data source named `Prometheus` with `"type": "prometheus"` and
 Confirm the pre-provisioned dashboards are present.
 
 ```bash
-curl -s "https://admin:/FUYKHCnco72eUb2VjA1MvKvxQ6VuT0Z@grafana.torrust-tracker-demo.com/api/dashboards/home" | python3 -m json.tool
+GRAFANA_PASS="<GRAFANA_ADMIN_PASSWORD>"
+curl -s -u "admin:${GRAFANA_PASS}" "https://grafana.torrust-tracker-demo.com/api/dashboards/home" | python3 -m json.tool
 ```
 
 For a full list of dashboards:
 
 ```bash
-curl -s "https://admin:/FUYKHCnco72eUb2VjA1MvKvxQ6VuT0Z@grafana.torrust-tracker-demo.com/api/search?type=dash-db" | python3 -m json.tool
+curl -s -u "admin:${GRAFANA_PASS}" "https://grafana.torrust-tracker-demo.com/api/search?type=dash-db" | python3 -m json.tool
 ```
 
 Expected: one or more dashboards from the `torrust` folder as configured in
@@ -84,11 +90,11 @@ admin credentials, and confirm:
 
 ## Results
 
-| Check                          | Result | Notes |
-| ------------------------------ | ------ | ----- |
-| TLS certificate valid          | ⏳     |       |
-| Login page reachable           | ⏳     |       |
-| API login with credentials     | ⏳     |       |
-| Prometheus data source present | ⏳     |       |
-| Dashboards provisioned         | ⏳     |       |
-| Browser login and dashboard    | ⏳     |       |
+| Check                          | Result | Notes                                                        |
+| ------------------------------ | ------ | ------------------------------------------------------------ |
+| TLS certificate valid          | ✅     | Let's Encrypt, valid until Jun 2, 2026                       |
+| Login page reachable           | ✅     | HTTP 302 redirect to `/login`                                |
+| API login with credentials     | ✅     | Returns admin user details                                   |
+| Prometheus data source present | ✅     | `http://prometheus:9090`, default, `readOnly: true`          |
+| Dashboards provisioned         | ✅     | 2 dashboards in "Torrust Tracker" folder (metrics and stats) |
+| Browser login and dashboard    | ⏳     | Manual browser check not yet performed                       |
