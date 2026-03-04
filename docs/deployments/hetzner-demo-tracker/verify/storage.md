@@ -77,18 +77,79 @@ volume:
 
 ### Data on the volume
 
-```text
-/opt/torrust/storage/backup/etc/backup.conf
-/opt/torrust/storage/caddy/data/caddy/           ← TLS certificates
-/opt/torrust/storage/caddy/etc/Caddyfile
-/opt/torrust/storage/grafana/data/grafana.db     ← Grafana database
-/opt/torrust/storage/grafana/provisioning/
-/opt/torrust/storage/mysql/                      ← 209 MB MySQL data
-/opt/torrust/storage/mysql/data/torrust_tracker/ ← tracker database
-/opt/torrust/storage/prometheus/etc/prometheus.yml
-/opt/torrust/storage/tracker/etc/tracker.toml
-/opt/torrust/storage/tracker/lib/database/       ← 8 KB (SQLite stub)
+Command (run with `sudo` to read MySQL-owned files; excludes MySQL internal
+schemas and InnoDB redo/temp directories for brevity):
+
+```bash
+sudo tree /opt/torrust/storage -L 4 --prune \
+  -I 'performance_schema|#innodb_redo|#innodb_temp|sys'
 ```
+
+Output (2026-03-04, post-deployment):
+
+```text
+/opt/torrust/storage
+├── backup
+│   └── etc
+│       ├── backup.conf
+│       └── backup-paths.txt
+├── caddy
+│   ├── config
+│   │   └── caddy
+│   │       └── autosave.json
+│   ├── data
+│   │   └── caddy
+│   │       ├── instance.uuid
+│   │       └── last_clean.json
+│   └── etc
+│       └── Caddyfile
+├── grafana
+│   ├── data
+│   │   └── grafana.db
+│   └── provisioning
+│       ├── dashboards
+│       │   └── torrust.yml
+│       └── datasources
+│           └── prometheus.yml
+├── mysql
+│   └── data
+│       ├── auto.cnf
+│       ├── binlog.000001
+│       ├── binlog.000002
+│       ├── binlog.index
+│       ├── ca-key.pem
+│       ├── ca.pem
+│       ├── client-cert.pem
+│       ├── client-key.pem
+│       ├── ib_buffer_pool
+│       ├── ibdata1
+│       ├── mysql.ibd
+│       ├── mysql_upgrade_history
+│       ├── private_key.pem
+│       ├── public_key.pem
+│       ├── server-cert.pem
+│       ├── server-key.pem
+│       ├── torrust_tracker
+│       │   ├── keys.ibd
+│       │   ├── torrent_aggregate_metrics.ibd
+│       │   ├── torrents.ibd
+│       │   └── whitelist.ibd
+│       ├── undo_001
+│       └── undo_002
+├── prometheus
+│   └── etc
+│       └── prometheus.yml
+└── tracker
+    ├── etc
+    │   └── tracker.toml
+    └── lib
+        └── database
+            └── tracker.db
+```
+
+> **Note**: TLS certificates are stored deeper inside `caddy/data/caddy/` under
+> `acme/` (ACME account) and `certificates/` (one subdirectory per domain) —
+> omitted above by the depth limit.
 
 MySQL occupies ~209 MB on the volume. The volume has 47 GB free (1% used).
 

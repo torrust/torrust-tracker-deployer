@@ -32,6 +32,7 @@ Banuba
 BBDBE
 bencoded
 Bilu
+binlog
 binstall
 bitrot
 Bitwarden
@@ -171,11 +172,13 @@ Hostnames
 hotfixes
 htdocs
 hugepages
+ibdata
 idna
 impls
 incompletei
 initialisation
 Inno
+innodb
 inspectable
 instructionsets
 intervali
