@@ -1,6 +1,6 @@
 # UDP Tracker Verification
 
-**Status**: ⏳ Not yet verified
+**Status**: ✅ Verified (2026-03-04)
 
 ## Endpoints
 
@@ -12,6 +12,9 @@
 ## 1. Port Connectivity
 
 Check that the UDP ports are open and reachable.
+
+> **Note**: `nc -u -z` is unreliable for UDP — there is no handshake to confirm
+> the port is open. Use the BEP 15 script below as the real connectivity test.
 
 ```bash
 # Test port 6969
@@ -27,42 +30,42 @@ The UDP tracker protocol (defined in
 [BEP 15](https://www.bittorrent.org/beps/bep_0015.html)) requires a two-step
 handshake: a connection request followed by an announce/scrape request.
 
-Use this Python script to perform a full connection handshake against tracker 1:
+Use this Python script to perform a full connection handshake against both
+trackers:
 
 ```python
 import socket
 import struct
 import random
 
-HOST = "udp1.torrust-tracker-demo.com"
-PORT = 6969
-
-# Step 1: Send connection request
-# Magic: 0x41727101980, Action: 0 (connect), Transaction ID: random
-transaction_id = random.randint(0, 0xFFFFFFFF)
-packet = struct.pack(">QII", 0x41727101980, 0, transaction_id)
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.settimeout(5)
-sock.sendto(packet, (HOST, PORT))
-
-# Step 2: Receive connection response
-try:
-    data, _ = sock.recvfrom(16)
-    action, resp_tid, connection_id = struct.unpack(">IIQ", data)
-    assert action == 0, f"unexpected action: {action}"
-    assert resp_tid == transaction_id, "transaction ID mismatch"
-    print(f"✅ Connected! connection_id = {connection_id:#018x}")
-except socket.timeout:
-    print("❌ Timeout — no response from tracker")
-finally:
-    sock.close()
+for host, port, label in [
+    ("udp1.torrust-tracker-demo.com", 6969, "UDP Tracker 1 (port 6969)"),
+    ("udp2.torrust-tracker-demo.com", 6868, "UDP Tracker 2 (port 6868)"),
+]:
+    transaction_id = random.randint(0, 0xFFFFFFFF)
+    packet = struct.pack(">QII", 0x41727101980, 0, transaction_id)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(5)
+    try:
+        sock.sendto(packet, (host, port))
+        data, _ = sock.recvfrom(16)
+        action, resp_tid, connection_id = struct.unpack(">IIQ", data)
+        assert action == 0, f"unexpected action: {action}"
+        assert resp_tid == transaction_id, "transaction ID mismatch"
+        print(f"✅ {label}: Connected! connection_id = {connection_id:#018x}")
+    except socket.timeout:
+        print(f"❌ {label}: Timeout — no response")
+    except Exception as e:
+        print(f"❌ {label}: Error — {e}")
+    finally:
+        sock.close()
 ```
 
 Expected output:
 
 ```text
-✅ Connected! connection_id = 0x<16-digit hex value>
+✅ UDP Tracker 1 (port 6969): Connected! connection_id = 0x<16-digit hex value>
+✅ UDP Tracker 2 (port 6868): Connected! connection_id = 0x<16-digit hex value>
 ```
 
 ## 3. Using a BitTorrent Client
@@ -85,9 +88,9 @@ will return an empty peer list but confirms the tracker is reachable.
 
 ## Results
 
-| Check                        | Result | Notes |
-| ---------------------------- | ------ | ----- |
-| UDP port 6969 open           | ⏳     |       |
-| UDP port 6868 open           | ⏳     |       |
-| BEP 15 handshake (tracker 1) | ⏳     |       |
-| BEP 15 handshake (tracker 2) | ⏳     |       |
+| Check                        | Result | Notes                                |
+| ---------------------------- | ------ | ------------------------------------ |
+| UDP port 6969 open           | ✅     | BEP 15 handshake succeeded           |
+| UDP port 6868 open           | ✅     | BEP 15 handshake succeeded           |
+| BEP 15 handshake (tracker 1) | ✅     | `connection_id = 0x927bc33b3260b795` |
+| BEP 15 handshake (tracker 2) | ✅     | `connection_id = 0x59c13493038e3be3` |

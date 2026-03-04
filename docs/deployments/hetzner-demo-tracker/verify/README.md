@@ -16,13 +16,13 @@ is fully functional end-to-end.
 
 ## Status
 
-| Service      | Status              |
-| ------------ | ------------------- |
-| HTTP Tracker | ✅ Verified         |
-| UDP Tracker  | ⏳ Not yet verified |
-| Tracker API  | ✅ Verified         |
-| Grafana      | ✅ Verified         |
-| Health Check | ✅ Verified         |
+| Service      | Status      |
+| ------------ | ----------- |
+| HTTP Tracker | ✅ Verified |
+| UDP Tracker  | ✅ Verified |
+| Tracker API  | ✅ Verified |
+| Grafana      | ✅ Verified |
+| Health Check | ✅ Verified |
 
 ## Prerequisites
 
