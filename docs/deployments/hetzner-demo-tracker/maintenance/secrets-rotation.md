@@ -122,10 +122,16 @@ params:
 
 There are two occurrences — update both.
 
-### 1c. Restart tracker and Prometheus
+### 1c. Recreate tracker and Prometheus containers
+
+> **Important**: `docker compose restart` is **not enough** here. The admin
+> token is injected as an environment variable when the container is first
+> created. `restart` only restarts the process inside the existing container —
+> it does not re-read `.env`. You must recreate the containers to pick up the
+> new value.
 
 ```bash
-cd /opt/torrust && sudo docker compose restart tracker prometheus
+cd /opt/torrust && sudo docker compose up -d --force-recreate tracker prometheus
 ```
 
 Verify the new token works:
@@ -234,6 +240,10 @@ DB_PASSWORD=<NEW_MYSQL_PASSWORD>
 ```
 
 ### 2e. Restart tracker and backup containers
+
+> **Note**: `restart` is sufficient here. Unlike the admin token (an env var),
+> `tracker.toml` and `backup.conf` are bind-mounted files — the process re-reads
+> them on each startup, so no container recreation is needed.
 
 ```bash
 cd /opt/torrust
