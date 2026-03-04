@@ -128,9 +128,3 @@ When sending an invalid token, the API returns:
 
 A `401 Unauthorized` would be the correct HTTP status for an authentication
 failure. This is a bug in the tracker API error handling.
-| --------------------- | ------ | ----- |
-| TLS certificate valid | ⏳ | |
-| GET /api/v1/stats | ⏳ | |
-| GET /api/v1/torrents | ⏳ | |
-| POST/DELETE torrent | ⏳ | |
-| Invalid token → 401 | ⏳ | |
