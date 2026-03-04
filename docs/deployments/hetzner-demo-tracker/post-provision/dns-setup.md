@@ -1,6 +1,6 @@
 # DNS Setup
 
-> **Status**: 🔄 In progress — both floating IPs assigned; VM-side configuration and DNS records pending.
+> **Status**: 🔄 In progress — both floating IPs assigned and configured on VM; DNS records pending.
 
 Set up DNS records so that all domain names in the environment config resolve to
 the floating IP before running `configure`.
@@ -79,7 +79,7 @@ Both IPs now appear in the Hetzner console Floating IPs list assigned to the ser
 
 ![Hetzner console showing both floating IPs assigned to the server](../media/hetzner-console-floating-ips-assigned-to-server.png)
 
-### Step 1.5: Configure the Floating IPs Inside the VM
+### Step 1.5: Configure the Floating IPs Inside the VM (2026-03-04)
 
 Hetzner's assignment only updates their routing — the VM's network interface still needs to
 know about the new IPs. The Hetzner console popup shows a **temporary** command that works
@@ -94,44 +94,77 @@ sudo ip addr add 116.202.176.169 dev eth0
 sudo ip addr add 2a01:4f8:1c0c:9aae::1 dev eth0
 ```
 
-**Permanent (survives reboot) — recommended:**
+**Permanent (survives reboot) — what we did:**
 
-SSH into the server:
-
-```bash
-ssh -i ~/.ssh/torrust_tracker_deployer_ed25519 torrust@46.225.234.201
-```
-
-Create `/etc/netplan/60-floating-ip.yaml` with both floating IPs. The Hetzner docs specify
-`renderer: networkd` and separate IPv4 (`/32`) and IPv6 (`/64`) prefixes:
+First, we checked the current state of eth0 to confirm the floating IPs were not yet
+configured on the VM:
 
 ```bash
-sudo tee /etc/netplan/60-floating-ip.yaml > /dev/null << 'EOF'
-network:
-  version: 2
-  renderer: networkd
-  ethernets:
-    eth0:
-      addresses:
-        - 116.202.176.169/32
-        - 2a01:4f8:1c0c:9aae::1/64
-EOF
+ssh -i ~/.ssh/torrust_tracker_deployer_ed25519 -o StrictHostKeyChecking=accept-new torrust@46.225.234.201 'ip addr show eth0'
 ```
 
-Apply (this will briefly reset the network connection):
+Output:
+
+```text
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 92:00:07:4f:b3:4f brd ff:ff:ff:ff:ff:ff
+    inet 46.225.234.201/32 metric 100 scope global dynamic eth0
+       valid_lft 71163sec preferred_lft 71163sec
+    inet6 2a01:4f8:1c19:620b::1/64 scope global
+       valid_lft forever preferred_lft forever
+    inet6 fe80::9000:7ff:fe4f:b34f/64 scope link
+       valid_lft forever preferred_lft forever
+```
+
+Only the server's own IPs are present — no floating IPs yet.
+
+> **Note**: We got a `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED` error because this
+> is a new server with the same IP as a previously provisioned server (from an earlier attempt).
+> Fixed by removing the stale known_hosts entry:
+>
+> ```bash
+> ssh-keygen -f '/home/josecelano/.ssh/known_hosts' -R '46.225.234.201'
+> ```
+
+Wrote the netplan config file on the server:
 
 ```bash
-sudo netplan apply
+ssh -i ~/.ssh/torrust_tracker_deployer_ed25519 torrust@46.225.234.201 \
+  'printf "network:\n  version: 2\n  renderer: networkd\n  ethernets:\n    eth0:\n      addresses:\n        - 116.202.176.169/32\n        - 2a01:4f8:1c0c:9aae::1/64\n" | sudo tee /etc/netplan/60-floating-ip.yaml'
 ```
 
-Verify both IPs appear on the interface:
+Fixed file permissions (netplan requires `600`) and applied:
 
 ```bash
-ip addr show eth0
-# Look for:
-#   inet 116.202.176.169/32
-#   inet6 2a01:4f8:1c0c:9aae::1/64
+ssh -i ~/.ssh/torrust_tracker_deployer_ed25519 torrust@46.225.234.201 \
+  'sudo chmod 600 /etc/netplan/60-floating-ip.yaml && sudo netplan apply'
 ```
+
+Verified both floating IPs are now on eth0:
+
+```bash
+ssh -i ~/.ssh/torrust_tracker_deployer_ed25519 torrust@46.225.234.201 'ip addr show eth0'
+```
+
+Output:
+
+```text
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 92:00:07:4f:b3:4f brd ff:ff:ff:ff:ff:ff
+    inet 116.202.176.169/32 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet 46.225.234.201/32 metric 100 scope global dynamic eth0
+       valid_lft 86399sec preferred_lft 86399sec
+    inet6 2a01:4f8:1c0c:9aae::1/64 scope global
+       valid_lft forever preferred_lft forever
+    inet6 2a01:4f8:1c19:620b::1/64 scope global
+       valid_lft forever preferred_lft forever
+    inet6 fe80::9000:7ff:fe4f:b34f/64 scope link
+       valid_lft forever preferred_lft forever
+```
+
+Both `116.202.176.169/32` and `2a01:4f8:1c0c:9aae::1/64` are present — `valid_lft forever`
+confirms they are permanently configured.
 
 > **Note**: The `configure` command does not configure floating IPs — this must be done
 > manually before running `configure`.
@@ -201,8 +234,33 @@ you can proceed to [volume-setup.md](volume-setup.md).
 
 ## Problems
 
-<!-- Document any issues encountered during DNS setup here. -->
+### SSH host key mismatch when connecting to the new server
+
+**Symptom**: `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED` when SSHing to `46.225.234.201`.
+
+**Cause**: A previous server was provisioned at the same IP during an earlier attempt (see
+[provision/problems.md](../commands/provision/problems.md)). The old host key is still in
+`~/.ssh/known_hosts`.
+
+**Fix**:
+
+```bash
+ssh-keygen -f '~/.ssh/known_hosts' -R '46.225.234.201'
+```
+
+Then reconnect — SSH will accept and store the new host key.
+
+### Netplan file permissions warning
+
+**Symptom**: `WARNING: Permissions for /etc/netplan/60-floating-ip.yaml are too open` when
+running `sudo netplan apply`.
+
+**Cause**: Writing with `sudo tee` creates the file world-readable. Netplan requires `600`.
+
+**Fix**: `sudo chmod 600 /etc/netplan/60-floating-ip.yaml` before or after `netplan apply`.
 
 ## Improvements
 
-<!-- Document any recommended improvements here. -->
+- The netplan file should be written with correct permissions from the start. Use
+  `sudo install -m 600 /dev/stdin /etc/netplan/60-floating-ip.yaml` instead of `tee` to
+  avoid the permissions warning.

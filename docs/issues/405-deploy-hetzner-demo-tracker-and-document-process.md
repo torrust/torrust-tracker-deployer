@@ -75,7 +75,7 @@ See [`docs/deployments/hetzner-demo-tracker/post-provision/`](../deployments/het
 
 - [x] Task 3.5.1: Assign IPv4 floating IP (`116.202.176.169`) to the server in Hetzner Console
 - [x] Task 3.5.2: Assign IPv6 floating IP (`2a01:4f8:1c0c:9aae::/64`) to the server in Hetzner Console
-- [ ] Task 3.5.3: Configure floating IPs permanently inside the VM (netplan)
+- [x] Task 3.5.3: Configure floating IPs permanently inside the VM (netplan)
 - [ ] Task 3.5.4: Create DNS records for all six subdomains in Hetzner DNS Console
 - [ ] Task 3.5.5: Verify all DNS records resolve correctly
 

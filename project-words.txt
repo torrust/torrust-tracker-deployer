@@ -503,8 +503,11 @@ zstd
 файл
 Nushell
 blkid
+codel
 ethernets
 netplan
+qdisc
+qlen
 mountpoint
 MOUNTPOINTS
 nofail
