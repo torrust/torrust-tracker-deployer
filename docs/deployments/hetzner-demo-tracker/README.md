@@ -40,6 +40,8 @@ Deploy a public Torrust Tracker demo instance to Hetzner Cloud and document ever
 7. Improvements — recommended deployer improvements found during this deployment:
    - [provision improvements](commands/provision/improvements.md)
 8. [Observations](observations.md) — cross-cutting insights and learnings about the deployer
+9. [Maintenance](maintenance/README.md) — post-deployment operational tasks:
+   - [Secrets rotation](maintenance/secrets-rotation.md) — rotate all secrets after AI-assisted deployment
 
 ## Deployment
 
