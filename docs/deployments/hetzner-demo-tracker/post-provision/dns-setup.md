@@ -1,6 +1,6 @@
 # DNS Setup
 
-> **Status**: 🔄 In progress — both floating IPs assigned and configured on VM; DNS records pending.
+> **Status**: ✅ Done — floating IPs assigned and configured on VM; all 12 DNS records created and verified.
 
 Set up DNS records so that all domain names in the environment config resolve to
 the floating IP before running `configure`.
@@ -169,10 +169,20 @@ confirms they are permanently configured.
 > **Note**: The `configure` command does not configure floating IPs — this must be done
 > manually before running `configure`.
 
-## Step 2: Create DNS Records
+## Step 2: Create DNS Records (2026-03-04)
 
-In the [Hetzner DNS Console](https://dns.hetzner.com/), open the `torrust-tracker-demo.com` zone
-and create the following records:
+The DNS zone `torrust-tracker-demo.com` was created in the **Hetzner Cloud Console**
+(new system, [console.hetzner.cloud](https://console.hetzner.cloud/)). Hetzner is
+[migrating DNS management](https://docs.hetzner.com/networking/dns/migration-to-hetzner-console/process/)
+from the old [dns.hetzner.com](https://dns.hetzner.com) to the Cloud Console. Zones created
+in the Cloud Console are only accessible via the **Hetzner Cloud API** — the old DNS API at
+`dns.hetzner.com/api/v1` cannot see them.
+
+> **Note**: If you create a DNS API token at `dns.hetzner.com`, it will return empty results
+> (`"zones": []`) for zones created in the Cloud Console. Use the **Cloud API token** instead
+> (from **Security → API Tokens** in the Cloud Console project).
+
+### Records to Create
 
 | Subdomain | Type | Value                   |
 | --------- | ---- | ----------------------- |
@@ -189,39 +199,105 @@ and create the following records:
 | `udp2`    | A    | `116.202.176.169`       |
 | `udp2`    | AAAA | `2a01:4f8:1c0c:9aae::1` |
 
-Use the default TTL (300 s is fine for initial setup; increase to 3600 s once stable).
+### API Approach
 
-## Step 3: Verify DNS Propagation
-
-From your local machine, check that all records resolve correctly:
+First, find the zone ID (or use the zone name directly):
 
 ```bash
-# IPv4 records (A)
-for subdomain in http1 http2 api grafana udp1 udp2; do
-  echo -n "$subdomain.torrust-tracker-demo.com A: "
-  dig +short A "$subdomain.torrust-tracker-demo.com"
-done
+curl -s -H "Authorization: Bearer $HCLOUD_TOKEN" \
+  "https://api.hetzner.cloud/v1/zones"
+```
 
-# IPv6 records (AAAA)
-for subdomain in http1 http2 api grafana udp1 udp2; do
-  echo -n "$subdomain.torrust-tracker-demo.com AAAA: "
-  dig +short AAAA "$subdomain.torrust-tracker-demo.com"
+Output showed zone `torrust-tracker-demo.com` with ID `944360`.
+
+Create each record with `POST /v1/zones/{zone_name}/rrsets`:
+
+```bash
+HCLOUD_TOKEN="<Cloud-API-token-from-Security-API-Tokens>"
+ZONE="torrust-tracker-demo.com"
+IPV4="116.202.176.169"
+IPV6="2a01:4f8:1c0c:9aae::1"
+
+for sub in http1 http2 api grafana udp1 udp2; do
+  # A record
+  curl -s -X POST \
+    -H "Authorization: Bearer $HCLOUD_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.hetzner.cloud/v1/zones/$ZONE/rrsets" \
+    -d "{\"name\": \"$sub\", \"type\": \"A\", \"records\": [{\"value\": \"$IPV4\"}], \"ttl\": 300}"
+  # AAAA record
+  curl -s -X POST \
+    -H "Authorization: Bearer $HCLOUD_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.hetzner.cloud/v1/zones/$ZONE/rrsets" \
+    -d "{\"name\": \"$sub\", \"type\": \"AAAA\", \"records\": [{\"value\": \"$IPV6\"}], \"ttl\": 300}"
 done
 ```
 
-Expected output for each:
+Each successful response contains an `rrset` object, for example:
+
+```json
+{
+  "action": {
+    "id": 615271254051174,
+    "status": "running",
+    "command": "create_rrset",
+    ...
+  },
+  "rrset": {
+    "id": "http1/A",
+    "name": "http1",
+    "type": "A",
+    "ttl": 300,
+    "records": [{"value": "116.202.176.169", "comment": ""}],
+    "zone": 944360
+  }
+}
+```
+
+Verify all records were created:
+
+```bash
+curl -s -H "Authorization: Bearer $HCLOUD_TOKEN" \
+  "https://api.hetzner.cloud/v1/zones/$ZONE/rrsets"
+```
+
+All 12 RRSets (6 × A + 6 × AAAA) plus the default NS and SOA were present.
+
+## Step 3: Verify DNS Propagation (2026-03-04)
+
+Verify against the authoritative nameservers first (no propagation delay):
+
+```bash
+for sub in http1 http2 api grafana udp1 udp2; do
+  echo "=== $sub ==="
+  dig +short A "$sub.torrust-tracker-demo.com" @hydrogen.ns.hetzner.com
+  dig +short AAAA "$sub.torrust-tracker-demo.com" @hydrogen.ns.hetzner.com
+done
+```
+
+Then verify global resolution (system resolver):
+
+```bash
+for sub in http1 http2 api grafana udp1 udp2; do
+  A=$(dig +short A "$sub.torrust-tracker-demo.com")
+  AAAA=$(dig +short AAAA "$sub.torrust-tracker-demo.com")
+  echo "$sub: A=$A  AAAA=$AAAA"
+done
+```
+
+Actual output (2026-03-04):
 
 ```text
-http1.torrust-tracker-demo.com A: 116.202.176.169
-http2.torrust-tracker-demo.com A: 116.202.176.169
-api.torrust-tracker-demo.com A: 116.202.176.169
-grafana.torrust-tracker-demo.com A: 116.202.176.169
-udp1.torrust-tracker-demo.com A: 116.202.176.169
-udp2.torrust-tracker-demo.com A: 116.202.176.169
-
-http1.torrust-tracker-demo.com AAAA: 2a01:4f8:1c0c:9aae::1
-...
+http1: A=116.202.176.169  AAAA=2a01:4f8:1c0c:9aae::1
+http2: A=116.202.176.169  AAAA=2a01:4f8:1c0c:9aae::1
+api: A=116.202.176.169  AAAA=2a01:4f8:1c0c:9aae::1
+grafana: A=116.202.176.169  AAAA=2a01:4f8:1c0c:9aae::1
+udp1: A=116.202.176.169  AAAA=2a01:4f8:1c0c:9aae::1
+udp2: A=116.202.176.169  AAAA=2a01:4f8:1c0c:9aae::1
 ```
+
+✅ All 12 records resolve correctly globally.
 
 > DNS propagation with Hetzner's nameservers (`helium.ns.hetzner.de`, `hydrogen.ns.hetzner.com`,
 > `oxygen.ns.hetzner.com`) is typically fast (under 1 minute). If you get `NXDOMAIN` or empty
@@ -229,10 +305,31 @@ http1.torrust-tracker-demo.com AAAA: 2a01:4f8:1c0c:9aae::1
 
 ## Outcome
 
-Once all subdomains resolve to `116.202.176.169` / `2a01:4f8:1c0c:9aae::1`, DNS is ready and
-you can proceed to [volume-setup.md](volume-setup.md).
+✅ All subdomains resolve to `116.202.176.169` (A) and `2a01:4f8:1c0c:9aae::1` (AAAA). DNS
+setup is complete. The next step is [volume-setup.md](volume-setup.md).
 
 ## Problems
+
+### DNS API token from dns.hetzner.com does not see Cloud Console zones
+
+**Symptom**: Creating a token at [dns.hetzner.com](https://dns.hetzner.com) and querying
+`https://dns.hetzner.com/api/v1/zones` returns `{"zones": [], "error": {"message": "zone not found", "code": 404}}`.
+
+**Cause**: Hetzner is migrating DNS management from the old `dns.hetzner.com` console to the
+new Cloud Console ([console.hetzner.cloud](https://console.hetzner.cloud)). Zones **created in
+the Cloud Console** live in the Cloud API only and are invisible to the old DNS API. See the
+[migration docs](https://docs.hetzner.com/networking/dns/migration-to-hetzner-console/process/).
+
+Additionally, the Cloud API does **not** have a `/v1/dns/zones` path —
+`GET https://api.hetzner.cloud/v1/dns/zones` returns `{"error": {"code": "not_found", ...}}`.
+The correct path is `/v1/zones`.
+
+**Fix**: Use the Hetzner Cloud API token (from **Security → API Tokens** in the project) and
+the `/v1/zones` endpoint:
+
+```bash
+curl -H "Authorization: Bearer $HCLOUD_TOKEN" https://api.hetzner.cloud/v1/zones
+```
 
 ### SSH host key mismatch when connecting to the new server
 

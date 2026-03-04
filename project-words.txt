@@ -512,3 +512,5 @@ mountpoint
 MOUNTPOINTS
 nofail
 NXDOMAIN
+rrset
+rrsets
