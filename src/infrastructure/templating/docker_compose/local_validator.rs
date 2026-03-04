@@ -14,6 +14,14 @@
 //! failure.  This is a cheap, dependency-free check — `docker` is already a
 //! project requirement.
 //!
+//! ## Graceful degradation when Docker is not available
+//!
+//! When the deployer itself runs **inside a Docker container** (the typical
+//! production usage pattern), `docker` is not installed inside that container.
+//! In that case the validator logs a warning and skips the check rather than
+//! failing the command — a missing tool cannot indicate a template error.  Any
+//! other OS error (e.g. permission denied) is still treated as a hard failure.
+//!
 //! ## Example failure caught by this validator
 //!
 //! An empty `networks:` key (no list items) produces:
@@ -32,6 +40,7 @@
 //! validate_docker_compose_file(Path::new("build/my-env/docker-compose")).unwrap();
 //! ```
 
+use std::io;
 use std::path::Path;
 use std::process::Command;
 
@@ -40,9 +49,9 @@ use thiserror::Error;
 /// Errors that can occur when validating a rendered `docker-compose.yml`
 #[derive(Error, Debug)]
 pub enum DockerComposeLocalValidationError {
-    /// The `docker` binary could not be executed (not installed or not in PATH)
+    /// The `docker` binary could be found but could not be executed (e.g. permission denied)
     #[error(
-        "Failed to run 'docker compose config --quiet' — is Docker installed and in PATH?\n\
+        "Failed to run 'docker compose config --quiet' — unexpected OS error.\n\
          Source: {source}"
     )]
     CommandExecutionFailed {
@@ -69,7 +78,8 @@ impl DockerComposeLocalValidationError {
     pub fn help(&self) -> String {
         match self {
             Self::CommandExecutionFailed { .. } => {
-                "Install Docker and ensure it is added to your PATH, then re-run the command."
+                "An unexpected OS error occurred while trying to run Docker.\n\
+                 Check that Docker is installed and that the current user has permission to run it."
                     .to_string()
             }
             Self::InvalidDockerComposeFile { .. } => {
@@ -89,6 +99,11 @@ impl DockerComposeLocalValidationError {
 /// The command is executed in `compose_dir` so that it picks up the
 /// `docker-compose.yml` (and optionally `.env`) that live there.
 ///
+/// When `docker` is not installed (e.g. when the deployer itself runs inside a
+/// Docker container), validation is **skipped** with a warning rather than
+/// treating the missing tool as a template error.  Any other OS error is still
+/// a hard failure.
+///
 /// # Arguments
 ///
 /// * `compose_dir` — directory containing the rendered `docker-compose.yml`
@@ -96,7 +111,7 @@ impl DockerComposeLocalValidationError {
 /// # Errors
 ///
 /// - [`DockerComposeLocalValidationError::CommandExecutionFailed`] if `docker`
-///   cannot be executed (not installed, not in PATH, OS error, …)
+///   is found but cannot be executed due to an unexpected OS error
 /// - [`DockerComposeLocalValidationError::InvalidDockerComposeFile`] if the
 ///   file fails structural validation
 ///
@@ -113,11 +128,25 @@ pub fn validate_docker_compose_file(
         "Validating rendered docker-compose.yml with 'docker compose config --quiet'"
     );
 
-    let output = Command::new("docker")
+    let output = match Command::new("docker")
         .args(["compose", "config", "--quiet"])
         .current_dir(compose_dir)
         .output()
-        .map_err(|source| DockerComposeLocalValidationError::CommandExecutionFailed { source })?;
+    {
+        Ok(out) => out,
+        Err(err) if err.kind() == io::ErrorKind::NotFound => {
+            tracing::warn!(
+                compose_dir = %compose_dir.display(),
+                "Skipping local docker-compose.yml validation: \
+                 'docker' is not available in PATH (deployer may be running inside a container). \
+                 The rendered file will be validated by Docker Compose on the remote host."
+            );
+            return Ok(());
+        }
+        Err(source) => {
+            return Err(DockerComposeLocalValidationError::CommandExecutionFailed { source });
+        }
+    };
 
     if output.status.success() {
         tracing::debug!(
@@ -232,13 +261,11 @@ services:
     #[test]
     fn it_should_return_help_message_for_command_execution_failed() {
         let error = DockerComposeLocalValidationError::CommandExecutionFailed {
-            source: std::io::Error::new(std::io::ErrorKind::NotFound, "not found"),
+            // Use PermissionDenied — NotFound is handled as a skip (not an error)
+            source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied"),
         };
         let help = error.help();
         assert!(!help.is_empty(), "Help message must not be empty");
-        assert!(
-            help.contains("Docker"),
-            "Help should mention Docker installation"
-        );
+        assert!(help.contains("Docker"), "Help should mention Docker");
     }
 }
