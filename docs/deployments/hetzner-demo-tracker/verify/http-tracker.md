@@ -1,0 +1,65 @@
+# HTTP Tracker Verification
+
+**Status**: ⏳ Not yet verified
+
+## Endpoints
+
+| Domain         | URL                                               |
+| -------------- | ------------------------------------------------- |
+| HTTP Tracker 1 | `https://http1.torrust-tracker-demo.com/announce` |
+| HTTP Tracker 2 | `https://http2.torrust-tracker-demo.com/announce` |
+
+## 1. Basic Connectivity (scrape request)
+
+The simplest check — a scrape request with no info hashes returns a valid
+bencoded response.
+
+```bash
+curl -v "https://http1.torrust-tracker-demo.com/announce?info_hash=%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00&peer_id=%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00&port=6881&uploaded=0&downloaded=0&left=0&event=started&compact=1"
+```
+
+Expected: HTTP 200 with a bencoded response body starting with `d` (a bencoded
+dictionary). The response will contain `interval` and `peers` fields.
+
+## 2. TLS Certificate Check
+
+Confirm the TLS certificate is valid and issued for the correct domain.
+
+```bash
+curl -v --head https://http1.torrust-tracker-demo.com/announce 2>&1 | grep -E "subject|issuer|expire|SSL"
+```
+
+Expected: Certificate issued by Let's Encrypt for `http1.torrust-tracker-demo.com`,
+not expired.
+
+## 3. Second Endpoint
+
+Repeat the connectivity check for the second HTTP tracker:
+
+```bash
+curl -sv "https://http2.torrust-tracker-demo.com/announce?info_hash=%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00&peer_id=%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00&port=6881&uploaded=0&downloaded=0&left=0&event=started&compact=1" 2>&1 | head -20
+```
+
+## 4. Health Check (via SSH)
+
+The tracker exposes a health check endpoint on `localhost:1313` on the server.
+
+```bash
+ssh -i ~/.ssh/torrust_tracker_deployer_ed25519 torrust@46.225.234.201 \
+  "curl -s http://localhost:1313/health_check"
+```
+
+Expected response:
+
+```json
+{ "status": "Ok" }
+```
+
+## Results
+
+| Check                       | Result | Notes |
+| --------------------------- | ------ | ----- |
+| HTTP Tracker 1 connectivity | ⏳     |       |
+| HTTP Tracker 1 TLS cert     | ⏳     |       |
+| HTTP Tracker 2 connectivity | ⏳     |       |
+| Health check                | ⏳     |       |

@@ -97,13 +97,15 @@ The test checks that each domain resolves to the server's **instance IP**
 (`46.225.234.201`). All four domains instead resolve to `116.202.176.169`, which
 is the **floating IP** assigned to this deployment.
 
-This is expected and correct behavior for this setup — the DNS records
-deliberately point to the floating IP, not the instance IP, so that traffic can
-be rerouted to a different server instance by reassigning the floating IP without
-changing DNS. See the provisioning phase documentation for the floating IP setup.
+This is expected and correct behavior for this setup. The DNS records
+deliberately point to the **floating IP**, not the instance IP. The floating IP
+is a separate Hetzner resource that can be reassigned to a different server
+instance without changing any DNS records — enabling zero-downtime failover. The
+instance IP (`46.225.234.201`) is the bare VM's IP and is not published in DNS.
 
-The test reports these as warnings (not failures) because the infrastructure
-resolves DNS correctly; the resolved IP just differs from the raw instance IP.
-A future improvement of the `test` command could be made aware of the floating IP
-and treat a match against it as a pass rather than a warning.
-See [improvements.md](../run/improvements.md) for related improvement notes.
+The deployer's `test` command currently expects the domain to resolve to the
+instance IP, so it raises a warning whenever a floating IP is in use. This is a
+deployer limitation, not a problem with the deployment.
+
+See [../improvements.md](../improvements.md) for a proposed improvement to make
+the deployer aware of floating IPs.
