@@ -72,6 +72,6 @@ sudo docker compose logs --tail=30 <service-name>
 
 ## Log
 
-| Date       | Updates Applied  | Reboot Required | Notes                            |
-| ---------- | ---------------- | --------------- | -------------------------------- |
-| 2026-03-04 | 59 (37 security) | TBD             | First post-deployment update run |
+| Date       | Updates Applied  | Reboot Required | Notes                                                                                                             |
+| ---------- | ---------------- | --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 2026-03-04 | 59 (37 security) | Yes             | First post-deployment update run — all services healthy after reboot (caddy, grafana, mysql, prometheus, tracker) |

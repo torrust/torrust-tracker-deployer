@@ -457,9 +457,9 @@ After completing all steps, run through this checklist:
 
 - [ ] HTTP tracker responds: `curl -s https://http1.torrust-tracker-demo.com/announce?...`
 - [ ] UDP tracker responds: BEP 15 handshake or `udp_tracker_client`
-- [ ] API responds with new token: `curl .../api/v1/stats?token=<NEW_TOKEN>`
+- [x] API responds with new token: `curl .../api/v1/stats?token=<NEW_TOKEN>`
 - [ ] Grafana login works with new password
-- [ ] SSH access works with new key
+- [x] SSH access works with new key
 - [ ] Application backup runs successfully — SSH in and run:
       `cd /opt/torrust && sudo docker compose run --rm backup`
 - [ ] MySQL dumps are not empty (check last backup file size)

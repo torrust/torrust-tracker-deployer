@@ -96,3 +96,15 @@ five services reported healthy:
   to be exposed externally.
 - Port `1313` appears in `docker compose ps` output but is not published to
   the host (no `0.0.0.0:1313->1313/tcp` mapping).
+
+## Public REST API Health Check
+
+The Tracker REST API (port 1212, routed through Caddy) also exposes its own
+health check endpoint publicly:
+
+```bash
+curl -s "https://api.torrust-tracker-demo.com/api/health_check"
+```
+
+This is a lighter check — it only confirms the REST API itself is responding,
+not the individual tracker services. It does not require an auth token.
