@@ -17,6 +17,9 @@ Deploy a public Torrust Tracker demo instance to Hetzner Cloud and document ever
 3. Deployment commands — step-by-step per deployer command:
    - [create](commands/create/README.md) — generate template, validate, create environment
    - [provision](commands/provision/README.md) — create the Hetzner VM
+   - [configure](commands/configure/README.md) — install Docker and Docker Compose on the server
+   - [release](commands/release/README.md) — pull and stage Docker images
+   - [run](commands/run/README.md) — start all services
 4. Post-provision manual steps (done once, before `configure`):
    - [DNS setup](post-provision/dns-setup.md) — assign floating IPs, create DNS records, verify
    - [Volume setup](post-provision/volume-setup.md) — create and mount Hetzner volume for storage
@@ -25,6 +28,7 @@ Deploy a public Torrust Tracker demo instance to Hetzner Cloud and document ever
    - [provision problems](commands/provision/problems.md)
 6. Improvements — recommended deployer improvements found during this deployment:
    - [provision improvements](commands/provision/improvements.md)
+7. [Observations](observations.md) — cross-cutting insights and learnings about the deployer
 
 ## Deployment
 
@@ -58,7 +62,8 @@ See [post-provision/README.md](post-provision/README.md) for the full overview.
 
 ### Phase 4: Configure Instance
 
-<!-- TODO: Document `configure` command with output -->
+See [commands/configure/README.md](commands/configure/README.md) for running the `configure`
+command. Installs Docker 28.2.2 and Docker Compose v2.29.2.
 
 ### Phase 5: Release Application
 
