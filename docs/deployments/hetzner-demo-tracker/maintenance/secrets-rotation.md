@@ -9,16 +9,16 @@ those companies. All live secrets must be rotated.
 
 ## What to Rotate vs Delete
 
-| Secret                        | Action  | Reason                                               |
-| ----------------------------- | ------- | ---------------------------------------------------- |
-| Tracker admin token           | Rotate  | In `.env`, `prometheus.yml`, terminal, docs          |
-| MySQL `torrust` user password | Rotate  | In `.env`, `tracker.toml`, `backup.conf`             |
-| MySQL `root` user password    | Rotate  | In `.env`, terminal session                          |
-| Grafana admin password        | Rotate  | In `.env`, used in `curl` commands                   |
-| SSH deployer key              | Rotate  | Agent ran `ssh`/`scp` commands using this key        |
-| Hetzner Cloud API token       | Delete  | No longer needed after deployment is complete        |
-| Hetzner DNS API token         | Delete  | No longer needed after DNS records are set           |
-| Local sensitive files         | Archive | `build/`, `data/`, `envs/` dirs contain live secrets |
+| Secret                        | Action  | Reason                                                 |
+| ----------------------------- | ------- | ------------------------------------------------------ |
+| Tracker admin token           | Rotate  | In `.env`, `prometheus.yml`, terminal, docs            |
+| MySQL `torrust` user password | Rotate  | In `.env`, `tracker.toml`, `backup.conf`               |
+| MySQL `root` user password    | Rotate  | In `.env`, terminal session                            |
+| Grafana admin password        | Rotate  | In `.env`, used in `curl` commands                     |
+| SSH deployer key              | Rotate  | Agent ran `ssh`/`scp` commands using this key          |
+| Hetzner Cloud API token       | ✅ Done | Deleted 2026-03-04 — no longer needed after deployment |
+| Hetzner DNS API token         | ✅ Done | Deleted 2026-03-04 — no longer needed after DNS setup  |
+| Local sensitive files         | Archive | `build/`, `data/`, `envs/` dirs contain live secrets   |
 
 > **Nothing to delete**: all tokens and keys are still needed for ongoing
 > administration of the running instance, **except** the Hetzner Cloud and DNS
@@ -350,7 +350,7 @@ did not change.
 
 ---
 
-## Step 5: Delete the Hetzner Cloud API Token
+## Step 5: Delete the Hetzner Cloud API Token ✅ Done (2026-03-04)
 
 The token was only needed during provisioning (`provision` command). The server
 is running and no further OpenTofu operations are planned, so it can be deleted.
@@ -365,7 +365,7 @@ that point.
 
 ---
 
-## Step 6: Delete the Hetzner DNS API Token
+## Step 6: Delete the Hetzner DNS API Token ✅ Done (2026-03-04)
 
 The token was only needed during DNS setup. All DNS records are in place and no
 changes are planned, so it can be deleted.
