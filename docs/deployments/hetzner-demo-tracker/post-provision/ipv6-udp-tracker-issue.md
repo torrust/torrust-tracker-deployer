@@ -436,48 +436,32 @@ interface down.
 
 ```bash
 ip rule list
-```
-
-Output:
-
-```text
-0:      from all lookup local
-32765:  from 116.202.177.184 lookup 100
-32766:  from all lookup main
-32767:  from all lookup default
-```
-
-```bash
 ip route show table 100
-```
-
-Output:
-
-```text
-default via 172.31.1.1 dev eth0
-```
-
-```bash
 ip -6 rule list
-```
-
-Output:
-
-```text
-0:      from all lookup local
-32765:  from 2a01:4f8:1c0c:828e::1 lookup 200
-32766:  from all lookup main
-```
-
-```bash
 ip -6 route show table 200
 ```
 
 Output:
 
 ```text
-default via fe80::1 dev eth0
+0:      from all lookup local
+32764:  from 116.202.177.184 lookup 100 proto static
+32766:  from all lookup main
+32767:  from all lookup default
+default via 172.31.1.1 dev eth0 proto static
+0:      from all lookup local
+32764:  from 2a01:4f8:1c0c:828e::1 lookup 200 proto static
+32766:  from all lookup main
+default via fe80::1 dev eth0 proto static metric 1024 pref medium
 ```
+
+Two differences from manually-added rules (as in Check 2 and Check 3):
+
+- `proto static` — netplan/networkd marks its routes and rules as `proto static`, whereas
+  `ip rule add` / `ip route add` without a `proto` flag produce untagged entries. This is
+  cosmetic only; both work identically.
+- Priority `32764` instead of `32765` — networkd assigns its own priority numbers. Again,
+  functionally equivalent.
 
 ✅ Both routing tables are active and will survive a server reboot — they are now managed by
 `systemd-networkd` via netplan.
