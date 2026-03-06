@@ -5,7 +5,8 @@
 > 1. `ufw` was blocking IPv6 UDP 6969 (primary blocker — packets never reached the container)
 > 2. Asymmetric routing needed policy routing tables so replies leave via the correct floating IP
 >
-> ⚠️ Policy routing rules and ufw rule are in-memory / runtime only — needs persisting via netplan
+> ✅ All fixes are now persistent: `ufw` stores rules in `/etc/ufw/`; policy routing rules are
+> persisted via netplan (`/etc/netplan/60-floating-ip.yaml`)
 
 ## Context
 
@@ -291,8 +292,9 @@ setups are equivalent from the UDP tracker's perspective.
 
 ## Fix Applied (2026-03-06)
 
-> ⚠️ All fixes below are **runtime only** (in-memory). They will be lost on reboot.
-> See [Step 3 — Persist via Netplan](#step-3--persist-via-netplan--pending) below.
+> Fix 1 (`ufw`) was immediately persistent — `ufw` stores rules in `/etc/ufw/` and they survive
+> a reboot. Fixes 2 and 3 (policy routing) were runtime only when first applied; they were
+> persisted via netplan in [Step 4](#step-4--persist-policy-routing-via-netplan--2026-03-06) below.
 
 ### Fix 1 — Open UDP 6969 in ufw ✅
 
@@ -344,10 +346,16 @@ ip route add default via 172.31.1.1 dev eth0 table 100
 ip rule add from 116.202.177.184 table 100
 ```
 
-### Step 3 — Persist via Netplan (⬜ Pending)
+### Step 4 — Persist Policy Routing via Netplan ✅ (2026-03-06)
 
-All three runtime rules must be persisted so they survive a server reboot. Update
-`/etc/netplan/60-floating-ip.yaml`:
+The `ip rule` and `ip route` commands from Fixes 2 and 3 are runtime only — they are held in
+kernel memory and are lost on reboot. `systemd-networkd` (the network renderer used here)
+manages persistent network state via `netplan`. The policy routing rules were added to
+`/etc/netplan/60-floating-ip.yaml`.
+
+#### File Before
+
+The file only contained the static IP address assignments:
 
 ```yaml
 network:
@@ -356,10 +364,45 @@ network:
   ethernets:
     eth0:
       addresses:
-        # Existing floating IPs (HTTP1 / http1.torrust-tracker-demo.com)
+        # Existing floating IPs (HTTP1)
         - 116.202.176.169/32
         - 2a01:4f8:1c0c:9aae::1/64
-        # New floating IPs (UDP1 / udp1.torrust-tracker-demo.com)
+        # New floating IPs (UDP1)
+        - 116.202.177.184/32
+        - 2a01:4f8:1c0c:828e::1/64
+```
+
+#### Changes Made
+
+Two new blocks were added under `eth0:`:
+
+**`routing-policy:`** — one entry per floating IP, mapping the source address to a routing table
+number. When a packet's source IP matches `from`, the kernel consults that table instead of the
+main routing table.
+
+**`routes:`** — one default route per table, pointing outbound traffic to the correct gateway.
+Table 100 uses the IPv4 gateway (`172.31.1.1`); table 200 uses the IPv6 link-local gateway
+(`fe80::1`).
+
+#### File After
+
+```bash
+sudo cat /etc/netplan/60-floating-ip.yaml
+```
+
+Output:
+
+```yaml
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0:
+      addresses:
+        # Existing floating IPs (HTTP1)
+        - 116.202.176.169/32
+        - 2a01:4f8:1c0c:9aae::1/64
+        # New floating IPs (UDP1)
         - 116.202.177.184/32
         - 2a01:4f8:1c0c:828e::1/64
       routing-policy:
@@ -376,25 +419,81 @@ network:
           table: 200
 ```
 
-Apply and verify:
+> **Requirement**: `routing-policy` and per-table `routes` require `renderer: networkd`.
+> Verify the renderer is active with: `systemctl status systemd-networkd`.
+
+#### Apply
 
 ```bash
 sudo netplan apply
+```
 
-# Verify IPv4
+No output on success. `netplan apply` instructs `systemd-networkd` to recalculate and apply the
+network configuration — including the new routing tables and policy rules — without taking the
+interface down.
+
+#### Verify
+
+```bash
 ip rule list
-ip route show table 100
+```
 
-# Verify IPv6
+Output:
+
+```text
+0:      from all lookup local
+32765:  from 116.202.177.184 lookup 100
+32766:  from all lookup main
+32767:  from all lookup default
+```
+
+```bash
+ip route show table 100
+```
+
+Output:
+
+```text
+default via 172.31.1.1 dev eth0
+```
+
+```bash
 ip -6 rule list
+```
+
+Output:
+
+```text
+0:      from all lookup local
+32765:  from 2a01:4f8:1c0c:828e::1 lookup 200
+32766:  from all lookup main
+```
+
+```bash
 ip -6 route show table 200
 ```
 
-For ufw, the rule added via `sudo ufw allow 6969/udp` is already persistent (ufw stores rules
-in `/etc/ufw/`). It will survive a reboot — but verify with `sudo ufw status` after reboot.
+Output:
 
-> **Note**: The `routing-policy` and per-table `routes` keys in netplan require
-> `renderer: networkd`. Confirm with: `systemctl status systemd-networkd`.
+```text
+default via fe80::1 dev eth0
+```
+
+✅ Both routing tables are active and will survive a server reboot — they are now managed by
+`systemd-networkd` via netplan.
+
+#### Why Not Just Re-Run the `ip` Commands After Each Reboot?
+
+The manual `ip rule add` / `ip route add` commands work for a running system but are not
+persistent. On Ubuntu/Debian systems with netplan, options for persistence include:
+
+- **netplan** (used here) — cleanest approach when using `renderer: networkd`
+- `/etc/rc.local` — works on older systems but is not idiomatic on modern Ubuntu
+- A `systemd` one-shot service — explicit but verbose
+
+Netplan is the right choice here because it already manages the floating IP addresses on this
+interface. Keeping routing policy alongside address configuration in the same file ensures
+both are always applied together.
 
 ## Result
 
