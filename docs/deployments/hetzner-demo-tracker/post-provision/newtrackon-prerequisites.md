@@ -228,9 +228,28 @@ ip addr show eth0
 
 All four IPs should appear on the interface.
 
-### Step 4 — Update DNS for UDP1 Subdomain
+### Step 4 — Update DNS for UDP1 Subdomain ✅ Done (2026-03-06)
 
-Update the A and AAAA records for `udp1.torrust-tracker-demo.com` to point to the new IPs:
+Updated via the Hetzner DNS panel directly:
+
+- A record for `udp1`: `116.202.176.169` → `116.202.177.184`
+- AAAA record for `udp1`: `2a01:4f8:1c0c:9aae::1` → `2a01:4f8:1c0c:828e::1`
+
+![Hetzner Console — DNS config after udp1 changes](../media/hetzner-console-dns-config-after-udp1-changes.png)
+
+Verified with `dig`:
+
+```text
+$ dig A udp1.torrust-tracker-demo.com +short
+116.202.177.184
+
+$ dig AAAA udp1.torrust-tracker-demo.com +short
+2a01:4f8:1c0c:828e::1
+```
+
+✅ Both records resolve to the new floating IPs assigned exclusively to the UDP1 tracker.
+
+**Reference** — records can also be updated via the Hetzner Cloud API:
 
 ```bash
 # Get existing record IDs first
@@ -246,7 +265,7 @@ curl -X PUT "https://dns.hetzner.com/api/v1/records/<record_id_for_udp1_A>" \
     "zone_id": "<zone_id>",
     "type": "A",
     "name": "udp1",
-    "value": "<new_ipv4>",
+    "value": "116.202.177.184",
     "ttl": 300
   }'
 
@@ -258,16 +277,9 @@ curl -X PUT "https://dns.hetzner.com/api/v1/records/<record_id_for_udp1_AAAA>" \
     "zone_id": "<zone_id>",
     "type": "AAAA",
     "name": "udp1",
-    "value": "<new_ipv6>",
+    "value": "2a01:4f8:1c0c:828e::1",
     "ttl": 300
   }'
-```
-
-Verify:
-
-```bash
-dig A udp1.torrust-tracker-demo.com
-dig AAAA udp1.torrust-tracker-demo.com
 ```
 
 ### Step 5 — Submit UDP1 to newTrackon
@@ -294,7 +306,7 @@ curl -s https://newtrackon.com/api/stable | grep udp1.torrust-tracker-demo.com
 | New IPv6 floating IP provisioned        | ✅ Done     | 2026-03-06 |
 | New IPs assigned to server              | ✅ Done     | 2026-03-06 |
 | All floating IPs configured via netplan | ⬜ Not done |            |
-| DNS A/AAAA records updated for `udp1`   | ⬜ Not done |            |
+| DNS A/AAAA records updated for `udp1`   | ✅ Done     | 2026-03-06 |
 | UDP1 tracker submitted to newTrackon    | ⬜ Not done |            |
 | UDP1 tracker listed on newTrackon       | ⬜ Not done |            |
 

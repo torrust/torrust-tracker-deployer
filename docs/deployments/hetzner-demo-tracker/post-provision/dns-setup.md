@@ -184,20 +184,20 @@ in the Cloud Console are only accessible via the **Hetzner Cloud API** — the o
 
 ### Records to Create
 
-| Subdomain | Type | Value                   |
-| --------- | ---- | ----------------------- |
-| `http1`   | A    | `116.202.176.169`       |
-| `http1`   | AAAA | `2a01:4f8:1c0c:9aae::1` |
-| `http2`   | A    | `116.202.176.169`       |
-| `http2`   | AAAA | `2a01:4f8:1c0c:9aae::1` |
-| `api`     | A    | `116.202.176.169`       |
-| `api`     | AAAA | `2a01:4f8:1c0c:9aae::1` |
-| `grafana` | A    | `116.202.176.169`       |
-| `grafana` | AAAA | `2a01:4f8:1c0c:9aae::1` |
-| `udp1`    | A    | `116.202.176.169`       |
-| `udp1`    | AAAA | `2a01:4f8:1c0c:9aae::1` |
-| `udp2`    | A    | `116.202.176.169`       |
-| `udp2`    | AAAA | `2a01:4f8:1c0c:9aae::1` |
+| Subdomain | Type | Value                   | Notes                           |
+| --------- | ---- | ----------------------- | ------------------------------- |
+| `http1`   | A    | `116.202.176.169`       |                                 |
+| `http1`   | AAAA | `2a01:4f8:1c0c:9aae::1` |                                 |
+| `http2`   | A    | `116.202.176.169`       |                                 |
+| `http2`   | AAAA | `2a01:4f8:1c0c:9aae::1` |                                 |
+| `api`     | A    | `116.202.176.169`       |                                 |
+| `api`     | AAAA | `2a01:4f8:1c0c:9aae::1` |                                 |
+| `grafana` | A    | `116.202.176.169`       |                                 |
+| `grafana` | AAAA | `2a01:4f8:1c0c:9aae::1` |                                 |
+| `udp1`    | A    | `116.202.177.184`       | Updated 2026-03-06 (issue #407) |
+| `udp1`    | AAAA | `2a01:4f8:1c0c:828e::1` | Updated 2026-03-06 (issue #407) |
+| `udp2`    | A    | `116.202.176.169`       |                                 |
+| `udp2`    | AAAA | `2a01:4f8:1c0c:9aae::1` |                                 |
 
 ### API Approach
 
@@ -297,6 +297,28 @@ udp1: A=116.202.176.169  AAAA=2a01:4f8:1c0c:9aae::1
 udp2: A=116.202.176.169  AAAA=2a01:4f8:1c0c:9aae::1
 ```
 
+## Step 4: Update DNS Records for UDP1 (2026-03-06)
+
+As part of issue #407 (submitting the UDP1 tracker to newTrackon), the `udp1` A and AAAA records
+were updated to point to the new dedicated floating IPs:
+
+| Subdomain | Type | Old value               | New value               |
+| --------- | ---- | ----------------------- | ----------------------- |
+| `udp1`    | A    | `116.202.176.169`       | `116.202.177.184`       |
+| `udp1`    | AAAA | `2a01:4f8:1c0c:9aae::1` | `2a01:4f8:1c0c:828e::1` |
+
+Verified with `dig` (2026-03-06):
+
+```text
+$ dig A udp1.torrust-tracker-demo.com +short
+116.202.177.184
+
+$ dig AAAA udp1.torrust-tracker-demo.com +short
+2a01:4f8:1c0c:828e::1
+```
+
+✅ `udp1.torrust-tracker-demo.com` now resolves exclusively to the UDP1 floating IPs.
+
 ✅ All 12 records resolve correctly globally.
 
 > DNS propagation with Hetzner's nameservers (`helium.ns.hetzner.de`, `hydrogen.ns.hetzner.com`,
@@ -305,8 +327,11 @@ udp2: A=116.202.176.169  AAAA=2a01:4f8:1c0c:9aae::1
 
 ## Outcome
 
-✅ All subdomains resolve to `116.202.176.169` (A) and `2a01:4f8:1c0c:9aae::1` (AAAA). DNS
-setup is complete. The next step is [volume-setup.md](volume-setup.md).
+✅ All subdomains resolve correctly. After the 2026-03-06 update, `udp1.torrust-tracker-demo.com`
+resolves to the dedicated `udp1` floating IPs (`116.202.177.184` / `2a01:4f8:1c0c:828e::1`)
+while all other subdomains continue to resolve to `116.202.176.169` (A) and
+`2a01:4f8:1c0c:9aae::1` (AAAA). DNS setup is complete.
+The next step is [volume-setup.md](volume-setup.md).
 
 ## Problems
 

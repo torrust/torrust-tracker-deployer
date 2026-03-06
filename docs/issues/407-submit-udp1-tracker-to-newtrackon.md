@@ -29,7 +29,7 @@ deployments.
       `udp1.torrust-tracker-demo.com` (port 6969)
 - [x] Provision two new Hetzner floating IPs (IPv4 + IPv6) and assign them to the existing server
 - [ ] Configure the new IPs permanently inside the VM (netplan)
-- [ ] Configure DNS A/AAAA records so `udp1.torrust-tracker-demo.com` resolves to the new IPs
+- [x] Configure DNS A/AAAA records so `udp1.torrust-tracker-demo.com` resolves to the new IPs
 - [ ] Retry submission of `udp://udp1.torrust-tracker-demo.com:6969/announce` to newTrackon
 - [ ] Verify UDP1 tracker appears in the newTrackon public list
 - [ ] Document the complete process (prerequisites, steps, outcomes) in the deployment docs
@@ -125,11 +125,11 @@ Once the new floating IPs are provisioned, A and AAAA records must be created fo
 
 ### Phase 4: Update DNS for UDP1 Subdomain
 
-- [ ] Task 4.1: Update (or add) A record for `udp1.torrust-tracker-demo.com` pointing to the new IPv4
-- [ ] Task 4.2: Update (or add) AAAA record for `udp1.torrust-tracker-demo.com` pointing to the new IPv6
-- [ ] Task 4.3: Verify DNS resolution with `dig A udp1.torrust-tracker-demo.com` and
+- [x] Task 4.1: Update (or add) A record for `udp1.torrust-tracker-demo.com` pointing to the new IPv4
+- [x] Task 4.2: Update (or add) AAAA record for `udp1.torrust-tracker-demo.com` pointing to the new IPv6
+- [x] Task 4.3: Verify DNS resolution with `dig A udp1.torrust-tracker-demo.com` and
       `dig AAAA udp1.torrust-tracker-demo.com`
-- [ ] Task 4.4: Update `docs/deployments/hetzner-demo-tracker/post-provision/dns-setup.md` with the
+- [x] Task 4.4: Update `docs/deployments/hetzner-demo-tracker/post-provision/dns-setup.md` with the
       new A/AAAA records added for `udp1.torrust-tracker-demo.com`
 
 ### Phase 5: Submit UDP1 Tracker to newTrackon
