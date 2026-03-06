@@ -17,10 +17,10 @@ well.
 
 We submit two trackers from this deployment to public registries:
 
-| Tracker        | URL                                                 | Status     |
-| -------------- | --------------------------------------------------- | ---------- |
-| HTTP Tracker 1 | `https://http1.torrust-tracker-demo.com/announce`   | ✅ Listed  |
-| UDP Tracker 1  | `udp://udp1.torrust-tracker-demo.com:6969/announce` | 🔄 Pending |
+| Tracker        | URL                                                 | Status    |
+| -------------- | --------------------------------------------------- | --------- |
+| HTTP Tracker 1 | `https://http1.torrust-tracker-demo.com/announce`   | ✅ Listed |
+| UDP Tracker 1  | `udp://udp1.torrust-tracker-demo.com:6969/announce` | ✅ Listed |
 
 **HTTP Tracker 2**, **UDP Tracker 2**, the REST API, and Grafana are intentionally kept off
 all public tracker lists. Once a tracker appears in public lists it receives a continuous stream
@@ -68,11 +68,27 @@ already used by another listed tracker.
 #### UDP Tracker 1
 
 - **URL**: `udp://udp1.torrust-tracker-demo.com:6969/announce`
-- **Submitted**: 2026-03-04
-- **Accepted**: ❌ No — pending fix (see [issue #407](https://github.com/torrust/torrust-tracker-deployer/issues/407))
-- **Blockers**:
-  - BEP 34 TXT record missing on `udp1.torrust-tracker-demo.com`
-  - `udp1` resolves to same IPs as the already-listed `http1` tracker
+- **Submitted**: 2026-03-06 (attempt 3)
+- **Accepted**: ✅ Yes — listed on newTrackon
+- **IPs at submission**: `116.202.177.184` (IPv4), `2a01:4f8:1c0c:828e::1` (IPv6)
+- **Notes**: Two blockers required fixing before acceptance:
+  1. ufw was blocking IPv6 UDP 6969 — fixed with `sudo ufw allow 6969/udp`
+  2. Policy routing tables (100/200) needed to ensure replies leave via the floating IP
+
+  See [post-provision/ipv6-udp-tracker-issue.md](post-provision/ipv6-udp-tracker-issue.md) and
+  [post-provision/newtrackon-prerequisites.md](post-provision/newtrackon-prerequisites.md).
+
+### Final State — Both Trackers Listed (2026-03-06)
+
+![newTrackon — three trackers listed including http1 and udp1 torrust-tracker-demo.com](media/newtrackon-home-three-trackers-listed.png)
+
+All three trackers visible in the screenshot:
+
+| Tracker                                               | Notes                                 |
+| ----------------------------------------------------- | ------------------------------------- |
+| `https://http1.torrust-tracker-demo.com:443/announce` | This deployment — HTTP tracker        |
+| `udp://udp1.torrust-tracker-demo.com:6969/announce`   | This deployment — UDP tracker         |
+| `udp://tracker.torrust-demo.com:6969/announce`        | Previous Torrust demo (Digital Ocean) |
 
 ### How to submit
 

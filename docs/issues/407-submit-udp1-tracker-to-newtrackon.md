@@ -30,10 +30,10 @@ deployments.
 - [x] Provision two new Hetzner floating IPs (IPv4 + IPv6) and assign them to the existing server
 - [x] Configure the new IPs permanently inside the VM (netplan)
 - [x] Configure DNS A/AAAA records so `udp1.torrust-tracker-demo.com` resolves to the new IPs
-- [ ] Retry submission of `udp://udp1.torrust-tracker-demo.com:6969/announce` to newTrackon
-      (Attempt 1: ❌ Rejected — UDP timeout; see Step 5 in `newtrackon-prerequisites.md`)
-- [ ] Verify UDP1 tracker appears in the newTrackon public list
-- [ ] Document the complete process (prerequisites, steps, outcomes) in the deployment docs
+- [x] Retry submission of `udp://udp1.torrust-tracker-demo.com:6969/announce` to newTrackon
+      (Attempt 3: ✅ Accepted — 2026-03-06; root causes: ufw blocking IPv6 UDP 6969 + asymmetric routing)
+- [x] Verify UDP1 tracker appears in the newTrackon public list
+- [x] Document the complete process (prerequisites, steps, outcomes) in the deployment docs
 
 ## Specifications
 
@@ -139,11 +139,11 @@ Once the new floating IPs are provisioned, A and AAAA records must be created fo
 
 ### Phase 5: Submit UDP1 Tracker to newTrackon
 
-- [ ] Task 5.1: Go to <https://newtrackon.com/> and submit `udp://udp1.torrust-tracker-demo.com:6969/announce`
-- [ ] Task 5.2: Verify submission is accepted (no error message from newTrackon)
-- [ ] Task 5.3: Wait for the tracker to appear in the [newTrackon list](https://newtrackon.com/list)
-- [ ] Task 5.4: Verify via newTrackon API: `curl https://newtrackon.com/api/stable`
-- [ ] Task 5.5: Update `docs/deployments/hetzner-demo-tracker/tracker-registry.md` with the final
+- [x] Task 5.1: Go to <https://newtrackon.com/> and submit `udp://udp1.torrust-tracker-demo.com:6969/announce`
+- [x] Task 5.2: Verify submission is accepted (no error message from newTrackon)
+- [x] Task 5.3: Wait for the tracker to appear in the [newTrackon list](https://newtrackon.com/list)
+- [x] Task 5.4: Verify via newTrackon API: `curl https://newtrackon.com/api/stable`
+- [x] Task 5.5: Update `docs/deployments/hetzner-demo-tracker/tracker-registry.md` with the final
       submission status for the UDP1 tracker and link to `newtrackon-prerequisites.md`
 
 ## Acceptance Criteria
@@ -153,19 +153,19 @@ Once the new floating IPs are provisioned, A and AAAA records must be created fo
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
 
 **Task-Specific Criteria**:
 
-- [ ] BEP 34 TXT records are present and correct for both `http1` and `udp1` subdomains
+- [x] BEP 34 TXT records are present and correct for both `http1` and `udp1` subdomains
       (verified with `dig TXT`)
-- [ ] Two new floating IPs are provisioned in Hetzner and assigned to the server
-- [ ] All four floating IPs (existing + new) are configured permanently via netplan
-- [ ] `udp1.torrust-tracker-demo.com` resolves to the new IPs (A + AAAA records)
-- [ ] `udp://udp1.torrust-tracker-demo.com:6969/announce` appears in the newTrackon public list
-- [ ] `docs/deployments/hetzner-demo-tracker/post-provision/newtrackon-prerequisites.md` documents
+- [x] Two new floating IPs are provisioned in Hetzner and assigned to the server
+- [x] All four floating IPs (existing + new) are configured permanently via netplan
+- [x] `udp1.torrust-tracker-demo.com` resolves to the new IPs (A + AAAA records)
+- [x] `udp://udp1.torrust-tracker-demo.com:6969/announce` appears in the newTrackon public list
+- [x] `docs/deployments/hetzner-demo-tracker/post-provision/newtrackon-prerequisites.md` documents
       the prerequisites clearly
-- [ ] `tracker-registry.md` is updated with the correct submission status
+- [x] `tracker-registry.md` is updated with the correct submission status
 
 ## Related Documentation
 

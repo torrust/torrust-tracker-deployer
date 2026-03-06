@@ -1,7 +1,6 @@
 # newTrackon Prerequisites
 
-> **Status**: 🔄 In Progress — HTTP1 tracker listed; UDP1 tracker submission pending resolution
-> of BEP 34 DNS records and additional floating IPs.
+> **Status**: ✅ Complete — HTTP1 and UDP1 trackers both listed on newTrackon (2026-03-06)
 
 This document captures the newTrackon prerequisites that were **not** addressed during the initial
 tracker submission on 2026-03-04 and the steps being taken to fix them.
@@ -363,7 +362,120 @@ using the new IPv6 address (`2a01:4f8:1c0c:828e::1`) but received no response:
 3. **Docker not routing to floating IP**: The tracker container receives the packet on
    `0.0.0.0:6969` but the kernel's default route sends the reply out via the wrong interface.
 
-This is a **new blocker** — see issue #407 for resolution.
+This is a **new blocker** — see [IPv6 UDP Tracker Issue](ipv6-udp-tracker-issue.md) for the
+full investigation and resolution.
+
+#### Attempt 2 — 2026-03-06: Rejected Again (UDP timeout)
+
+Resubmitted after applying IPv4 + IPv6 policy routing rules (table 100 and table 200). The
+probe still returned "UDP timeout".
+
+See [IPv6 UDP Tracker Issue](ipv6-udp-tracker-issue.md) for the full investigation. While
+the policy routing was correct, a separate blocker remained: the ufw firewall was silently
+dropping all IPv6 UDP 6969 packets before they reached the Docker container.
+
+#### Attempt 3 — 2026-03-06: Accepted ✅
+
+During investigation of Attempt 2, ran `tcpdump` on the server while the newTrackon probe was
+in progress. Packets arrived at `eth0` but no replies were sent — confirming packets were never
+forwarded to the container.
+
+##### Step 1 — Confirm packets arrive at the server (tcpdump)
+
+```bash
+sudo tcpdump -i eth0 -n udp port 6969 -v
+```
+
+Output during newTrackon probe:
+
+```text
+tcpdump: listening on eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+13:18:22.128306 IP6 (flowlabel 0xb28c9, hlim 56, next-header UDP (17) payload length: 24) 2a01:4f8:1c1a:715::1.37318 > 2a01:4f8:1c0c:828e::1.6969: [udp sum ok] UDP, length 16
+13:18:32.129210 IP6 (flowlabel 0xdf835, hlim 56, next-header UDP (17) payload length: 24) 2a01:4f8:1c1a:715::1.34285 > 2a01:4f8:1c0c:828e::1.6969: [udp sum ok] UDP, length 16
+```
+
+✅ Packets arrive at `eth0`. ❌ No replies — something is dropping them before the container.
+
+##### Step 2 — Check iptables FORWARD chain
+
+```bash
+sudo iptables -L FORWARD --line-numbers -n
+sudo ip6tables -L FORWARD --line-numbers -n
+```
+
+Both chains had `DOCKER-FORWARD` at position 2 — forwarding rules are in place. The blockage
+is earlier, in the INPUT chain.
+
+##### Step 3 — Check ufw rules
+
+```bash
+sudo ufw status verbose
+```
+
+Output:
+
+```text
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), deny (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW IN    Anywhere                   # SSH access (configured port 22)
+22/tcp (v6)                ALLOW IN    Anywhere (v6)              # SSH access (configured port 22)
+```
+
+❌ **Port `6969/udp` was missing.** ufw's default `deny (incoming)` was dropping the packets.
+
+Docker bypasses the ufw INPUT chain for IPv4 using DNAT rules (which is why IPv4 always worked),
+but it does **not** create `ip6tables` INPUT rules. IPv6 UDP hits the INPUT chain and is dropped.
+
+##### Step 4 — Open UDP 6969 in ufw
+
+```bash
+sudo ufw allow 6969/udp
+```
+
+Output:
+
+```text
+Rule added
+Rule added (v6)
+```
+
+Verified:
+
+```bash
+sudo ufw status verbose
+```
+
+Output:
+
+```text
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), deny (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW IN    Anywhere                   # SSH access (configured port 22)
+6969/udp                   ALLOW IN    Anywhere
+22/tcp (v6)                ALLOW IN    Anywhere (v6)              # SSH access (configured port 22)
+6969/udp (v6)              ALLOW IN    Anywhere (v6)
+```
+
+Resubmitted to newTrackon immediately after. Result:
+
+| Field    | Value                                                       |
+| -------- | ----------------------------------------------------------- |
+| URL      | `udp://udp1.torrust-tracker-demo.com:6969/announce`         |
+| IP       | `2a01:4f8:1c0c:828e::1`                                     |
+| Result   | ✅ Accepted                                                 |
+| Response | `{'interval': 300, 'leechers': 0, 'peers': [], 'seeds': 1}` |
+
+![newTrackon — UDP1 accepted](../media/newtrackon-submitted-udp1-accepted.png)
 
 ## Status
 
@@ -376,8 +488,10 @@ This is a **new blocker** — see issue #407 for resolution.
 | New IPs assigned to server              | ✅ Done     | 2026-03-06 |
 | All floating IPs configured via netplan | ✅ Done     | 2026-03-06 |
 | DNS A/AAAA records updated for `udp1`   | ✅ Done     | 2026-03-06 |
-| UDP1 tracker submitted to newTrackon    | ❌ Rejected | 2026-03-06 |
-| UDP1 tracker listed on newTrackon       | ⬜ Not done |            |
+| UDP1 tracker submitted to newTrackon    | ✅ Accepted | 2026-03-06 |
+| UDP1 tracker listed on newTrackon       | ✅ Listed   | 2026-03-06 |
+
+![newTrackon — three trackers listed including http1 and udp1 torrust-tracker-demo.com](../media/newtrackon-home-three-trackers-listed.png)
 
 ## Related
 
