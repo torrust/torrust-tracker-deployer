@@ -20,6 +20,7 @@ Steps performed after the tracker is running and during ongoing operations:
 | Step                        | Guide                                                      | Status         |
 | --------------------------- | ---------------------------------------------------------- | -------------- |
 | 4. newTrackon Prerequisites | [newtrackon-prerequisites.md](newtrackon-prerequisites.md) | 🔄 In Progress |
+| 5. IPv6 UDP Tracker Issue   | [ipv6-udp-tracker-issue.md](ipv6-udp-tracker-issue.md)     | 🔴 Unresolved  |
 
 ## Why Before `configure`?
 
