@@ -133,10 +133,17 @@ Floating IPs are created in Hetzner Console → project → Networking → Float
 
 **Names and addresses**:
 
-| Name                        | Type | Address                   |
-| --------------------------- | ---- | ------------------------- |
-| `torrust-tracker-demo-ipv4` | IPv4 | `116.202.176.169`         |
-| `torrust-tracker-demo-ipv6` | IPv6 | `2a01:4f8:1c0c:9aae::/64` |
+| Name         | Type | Address                   |
+| ------------ | ---- | ------------------------- |
+| `http1-ipv4` | IPv4 | `116.202.176.169`         |
+| `http1-ipv6` | IPv6 | `2a01:4f8:1c0c:9aae::/64` |
+
+> **Note**: These IPs were originally created as `torrust-tracker-demo-ipv4` and
+> `torrust-tracker-demo-ipv6` and later renamed to `http1-ipv4` / `http1-ipv6` to
+> avoid confusion when provisioning additional floating IPs for the UDP1 tracker
+> (see [issue #407](https://github.com/torrust/torrust-tracker-deployer/issues/407)).
+
+![Hetzner Console — Floating IPs renamed for HTTP1](media/hetzner-console-floating-ips-renamed-for-http1.png)
 
 ![Hetzner Console — Create floating IPv4 form](media/hetzner-console-create-floating-ip-ipv4-form.png)
 
@@ -144,8 +151,8 @@ Floating IPs are created in Hetzner Console → project → Networking → Float
 
 ![Hetzner Console — Floating IPs list](media/hetzner-console-floating-ips-list.png)
 
-- [x] IPv4 floating IP created in Hetzner project (`torrust-tracker-demo-ipv4`, `nbg1`, `116.202.176.169`)
-- [x] IPv6 floating IP created in Hetzner project (`torrust-tracker-demo-ipv6`, `nbg1`, `2a01:4f8:1c0c:9aae::/64`)
+- [x] IPv4 floating IP created in Hetzner project (`http1-ipv4`, `nbg1`, `116.202.176.169`)
+- [x] IPv6 floating IP created in Hetzner project (`http1-ipv6`, `nbg1`, `2a01:4f8:1c0c:9aae::/64`)
 - [ ] Both IPs assigned to the server (after provisioning)
 
 ### Volume for Storage (⚠️ deferred — do after `release`)

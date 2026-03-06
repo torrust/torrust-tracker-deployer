@@ -333,6 +333,8 @@ netfilter
 netplan
 networkd
 newgrp
+macaddress
+newtrackon
 newtype
 newtypes
 nextest
@@ -504,9 +506,15 @@ undertested
 unergonomic
 unittests
 unrepresentable
+DNAT
+UNCONN
+flowlabel
+hlim
+tcpdump
 unsubscription
 userexample
 usermod
+ulnp
 useroutput
 userpass
 userspace

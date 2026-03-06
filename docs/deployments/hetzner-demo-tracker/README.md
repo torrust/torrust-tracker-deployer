@@ -42,7 +42,9 @@ Deploy a public Torrust Tracker demo instance to Hetzner Cloud and document ever
 8. [Observations](observations.md) — cross-cutting insights and learnings about the deployer
 9. [Maintenance](maintenance/README.md) — post-deployment operational tasks:
    - [Secrets rotation](maintenance/secrets-rotation.md) — rotate all secrets after AI-assisted deployment
-10. [Tracker Registry](tracker-registry.md) — submit the tracker to public registries (newTrackon)
+10. [Tracker Registry](tracker-registry.md) — submit the tracker to public registries (newTrackon):
+    - [newTrackon Prerequisites](post-provision/newtrackon-prerequisites.md) — BEP 34 DNS TXT records and
+      unique-IP policy required by newTrackon (needed to list the UDP1 tracker, see [issue #407](https://github.com/torrust/torrust-tracker-deployer/issues/407))
 11. [Bugs](bugs.md) — all deployer bugs discovered during this deployment (11 bugs, 1 fixed)
 12. [Improvements](improvements.md) — all improvement recommendations collected in one place (13 items)
 
