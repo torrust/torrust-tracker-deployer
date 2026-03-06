@@ -25,7 +25,7 @@ deployments.
 
 ## Goals
 
-- [ ] Add BEP 34 DNS TXT records for `http1.torrust-tracker-demo.com` (port 443) and
+- [x] Add BEP 34 DNS TXT records for `http1.torrust-tracker-demo.com` (port 443) and
       `udp1.torrust-tracker-demo.com` (port 6969)
 - [x] Provision two new Hetzner floating IPs (IPv4 + IPv6) and assign them to the existing server
 - [ ] Configure the new IPs permanently inside the VM (netplan)
@@ -100,12 +100,12 @@ Once the new floating IPs are provisioned, A and AAAA records must be created fo
 
 ### Phase 1: DNS BEP 34 TXT Records
 
-- [ ] Task 1.1: Add TXT record `"BITTORRENT TCP:443"` to `http1.torrust-tracker-demo.com` via Hetzner DNS API
-- [ ] Task 1.2: Add TXT record `"BITTORRENT UDP:6969"` to `udp1.torrust-tracker-demo.com` via Hetzner DNS API
-- [ ] Task 1.3: Verify both TXT records resolve correctly with `dig TXT <domain>`
-- [ ] Task 1.4: Create `docs/deployments/hetzner-demo-tracker/post-provision/newtrackon-prerequisites.md`
+- [x] Task 1.1: Add TXT record `"BITTORRENT TCP:443"` to `http1.torrust-tracker-demo.com` via Hetzner DNS API
+- [x] Task 1.2: Add TXT record `"BITTORRENT UDP:6969"` to `udp1.torrust-tracker-demo.com` via Hetzner DNS API
+- [x] Task 1.3: Verify both TXT records resolve correctly with `dig TXT <domain>`
+- [x] Task 1.4: Create `docs/deployments/hetzner-demo-tracker/post-provision/newtrackon-prerequisites.md`
       documenting the BEP 34 requirement and the TXT records added
-- [ ] Task 1.5: Update `docs/deployments/hetzner-demo-tracker/README.md` to reference the new document
+- [x] Task 1.5: Update `docs/deployments/hetzner-demo-tracker/README.md` to reference the new document
 
 ### Phase 2: Provision New Floating IPs
 

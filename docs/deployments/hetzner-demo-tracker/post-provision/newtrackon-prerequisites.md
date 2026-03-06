@@ -123,7 +123,26 @@ Expected state after changes:
 
 ## Fix Plan
 
-### Step 1 — Add BEP 34 TXT Records via Hetzner DNS API
+### Step 1 — Add BEP 34 TXT Records via Hetzner DNS API ✅ Done (2026-03-06)
+
+Added directly in the Hetzner DNS panel (TTL 300, consistent with all other records in the zone):
+
+```text
+http1  300  IN  TXT  "BITTORRENT TCP:443"
+udp1   300  IN  TXT  "BITTORRENT UDP:6969"
+```
+
+Verified with `dig`:
+
+```text
+$ dig TXT http1.torrust-tracker-demo.com +short
+"BITTORRENT TCP:443"
+
+$ dig TXT udp1.torrust-tracker-demo.com +short
+"BITTORRENT UDP:6969"
+```
+
+**Reference** — the same records can be added via the Hetzner DNS API:
 
 Add TXT records for both tracker subdomains using the Hetzner DNS API:
 
@@ -137,7 +156,7 @@ curl -X POST "https://dns.hetzner.com/api/v1/records" \
     "type": "TXT",
     "name": "http1",
     "value": "\"BITTORRENT TCP:443\"",
-    "ttl": 3600
+    "ttl": 300
   }'
 
 # UDP1 — UDP tracker on port 6969
@@ -149,7 +168,7 @@ curl -X POST "https://dns.hetzner.com/api/v1/records" \
     "type": "TXT",
     "name": "udp1",
     "value": "\"BITTORRENT UDP:6969\"",
-    "ttl": 3600
+    "ttl": 300
   }'
 ```
 
@@ -228,7 +247,7 @@ curl -X PUT "https://dns.hetzner.com/api/v1/records/<record_id_for_udp1_A>" \
     "type": "A",
     "name": "udp1",
     "value": "<new_ipv4>",
-    "ttl": 3600
+    "ttl": 300
   }'
 
 # Update AAAA record
@@ -240,7 +259,7 @@ curl -X PUT "https://dns.hetzner.com/api/v1/records/<record_id_for_udp1_AAAA>" \
     "type": "AAAA",
     "name": "udp1",
     "value": "<new_ipv6>",
-    "ttl": 3600
+    "ttl": 300
   }'
 ```
 
@@ -269,8 +288,8 @@ curl -s https://newtrackon.com/api/stable | grep udp1.torrust-tracker-demo.com
 
 | Item                                    | Status      | Date       |
 | --------------------------------------- | ----------- | ---------- |
-| BEP 34 TXT record for `http1`           | ⬜ Not done |            |
-| BEP 34 TXT record for `udp1`            | ⬜ Not done |            |
+| BEP 34 TXT record for `http1`           | ✅ Done     | 2026-03-06 |
+| BEP 34 TXT record for `udp1`            | ✅ Done     | 2026-03-06 |
 | New IPv4 floating IP provisioned        | ✅ Done     | 2026-03-06 |
 | New IPv6 floating IP provisioned        | ✅ Done     | 2026-03-06 |
 | New IPs assigned to server              | ✅ Done     | 2026-03-06 |
