@@ -256,6 +256,21 @@ Actual output:
 `2a01:4f8:1c0c:828e::1`) are active on `eth0` with `valid_lft forever`, confirming the
 netplan config is persistent across reboots.
 
+Traffic verified with ping from an external host (2026-03-06):
+
+```text
+# IPv4 — 116.202.177.184
+$ ping -c 3 116.202.177.184
+PING 116.202.177.184 (116.202.177.184) 56(84) bytes of data.
+64 bytes from 116.202.177.184: icmp_seq=1 ttl=45 time=71.9 ms
+64 bytes from 116.202.177.184: icmp_seq=2 ttl=45 time=71.3 ms
+64 bytes from 116.202.177.184: icmp_seq=3 ttl=45 time=70.6 ms
+3 packets transmitted, 3 received, 0% packet loss
+
+# IPv6 — not tested (no IPv6 connectivity on the test machine)
+# The address is active on eth0 with valid_lft forever (confirmed via ip addr above)
+```
+
 ### Step 4 — Update DNS for UDP1 Subdomain ✅ Done (2026-03-06)
 
 Updated via the Hetzner DNS panel directly:
@@ -324,6 +339,32 @@ Verify via API:
 curl -s https://newtrackon.com/api/stable | grep udp1.torrust-tracker-demo.com
 ```
 
+#### Attempt 1 — 2026-03-06: Rejected (UDP timeout)
+
+Submitted `udp://udp1.torrust-tracker-demo.com:6969/announce`. newTrackon probed the tracker
+using the new IPv6 address (`2a01:4f8:1c0c:828e::1`) but received no response:
+
+![newTrackon submitted page — UDP1 rejected with UDP timeout](../media/newtrackon-submitted-udp1-rejected-udp-timeout.png)
+
+| Field     | Value                                               |
+| --------- | --------------------------------------------------- |
+| URL       | `udp://udp1.torrust-tracker-demo.com:6969/announce` |
+| IP probed | `2a01:4f8:1c0c:828e::1`                             |
+| Result    | ❌ Rejected                                         |
+| Error     | UDP timeout                                         |
+
+**Root cause analysis**: The IP is correctly configured on `eth0` and DNS resolves correctly.
+"UDP timeout" means packets reached the server but no UDP response was sent back. Likely causes:
+
+1. **Asymmetric routing**: The tracker responds via the primary IP (`46.225.234.201`) rather
+   than the floating IP the probe arrived on — newTrackon discards the response because the
+   source IP doesn't match. This requires policy-based routing (a routing table per floating IP).
+2. **Firewall**: The Hetzner firewall or `ufw` may be dropping UDP 6969 on the new IP.
+3. **Docker not routing to floating IP**: The tracker container receives the packet on
+   `0.0.0.0:6969` but the kernel's default route sends the reply out via the wrong interface.
+
+This is a **new blocker** — see issue #407 for resolution.
+
 ## Status
 
 | Item                                    | Status      | Date       |
@@ -335,7 +376,7 @@ curl -s https://newtrackon.com/api/stable | grep udp1.torrust-tracker-demo.com
 | New IPs assigned to server              | ✅ Done     | 2026-03-06 |
 | All floating IPs configured via netplan | ✅ Done     | 2026-03-06 |
 | DNS A/AAAA records updated for `udp1`   | ✅ Done     | 2026-03-06 |
-| UDP1 tracker submitted to newTrackon    | ⬜ Not done |            |
+| UDP1 tracker submitted to newTrackon    | ❌ Rejected | 2026-03-06 |
 | UDP1 tracker listed on newTrackon       | ⬜ Not done |            |
 
 ## Related

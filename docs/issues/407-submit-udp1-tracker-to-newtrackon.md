@@ -31,6 +31,7 @@ deployments.
 - [x] Configure the new IPs permanently inside the VM (netplan)
 - [x] Configure DNS A/AAAA records so `udp1.torrust-tracker-demo.com` resolves to the new IPs
 - [ ] Retry submission of `udp://udp1.torrust-tracker-demo.com:6969/announce` to newTrackon
+      (Attempt 1: ❌ Rejected — UDP timeout; see Step 5 in `newtrackon-prerequisites.md`)
 - [ ] Verify UDP1 tracker appears in the newTrackon public list
 - [ ] Document the complete process (prerequisites, steps, outcomes) in the deployment docs
 
@@ -123,7 +124,8 @@ Once the new floating IPs are provisioned, A and AAAA records must be created fo
 - [x] Task 3.2: Add all four floating IPs to netplan configuration (`/etc/netplan/60-floating-ip.yaml`)
       — both existing IPs (which were not previously configured via netplan) and the two new ones
 - [x] Task 3.3: Apply netplan configuration (`sudo netplan apply`) and verify all IPs are active
-- [x] Task 3.4: Confirm the new IPs receive traffic (ping test from an external host)
+- [x] Task 3.4: Confirm the new IPs receive traffic (IPv4 ping test from external host: ✅;
+      IPv6 not testable from local machine — confirmed active on `eth0` via `ip addr`)
 - [x] Task 3.5: Document the netplan configuration steps and file content in `newtrackon-prerequisites.md`
 
 ### Phase 4: Update DNS for UDP1 Subdomain
