@@ -333,6 +333,7 @@ netfilter
 netplan
 networkd
 newgrp
+macaddress
 newtrackon
 newtype
 newtypes

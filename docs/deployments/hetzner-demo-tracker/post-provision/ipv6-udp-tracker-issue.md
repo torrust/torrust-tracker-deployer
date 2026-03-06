@@ -353,6 +353,58 @@ kernel memory and are lost on reboot. `systemd-networkd` (the network renderer u
 manages persistent network state via `netplan`. The policy routing rules were added to
 `/etc/netplan/60-floating-ip.yaml`.
 
+#### Netplan File Structure on This Server
+
+Two netplan files exist on this server. The numeric prefix controls load order — networkd
+processes them in ascending order:
+
+| File                  | Who manages it         | Purpose                                                            |
+| --------------------- | ---------------------- | ------------------------------------------------------------------ |
+| `50-cloud-init.yaml`  | cloud-init (automatic) | Primary interface: DHCP4, primary IPv6 address, default IPv6 route |
+| `60-floating-ip.yaml` | manually managed       | Floating IPs and (after this fix) policy routing rules             |
+
+> ⚠️ Never edit `50-cloud-init.yaml` — cloud-init may regenerate it on the next run and
+> overwrite your changes.
+
+The cloud-init file that was already present:
+
+```bash
+sudo cat /etc/netplan/50-cloud-init.yaml
+```
+
+Output:
+
+```yaml
+network:
+  version: 2
+  ethernets:
+    eth0:
+      match:
+        macaddress: "92:00:07:4f:b3:4f"
+      addresses:
+        - "2a01:4f8:1c19:620b::1/64"
+      nameservers:
+        addresses:
+          - 2a01:4ff:ff00::add:2
+          - 2a01:4ff:ff00::add:1
+      dhcp4: true
+      set-name: "eth0"
+      routes:
+        - on-link: true
+          to: "default"
+          via: "fe80::1"
+```
+
+Key observations:
+
+- `dhcp4: true` — the primary IPv4 address (`46.225.234.201`) and default IPv4 route are
+  assigned by DHCP; the gateway (`172.31.1.1`) discovered in Check 3 came from DHCP.
+- The primary IPv6 address `2a01:4f8:1c19:620b::1/64` and its default route via `fe80::1` are
+  statically configured here.
+- `fe80::1` is Hetzner's link-local router address on `eth0`. This is why we reuse it as the
+  gateway in table 200 for the UDP1 floating IP — it is the only IPv6 gateway available on this
+  interface.
+
 #### File Before
 
 The file only contained the static IP address assignments:
