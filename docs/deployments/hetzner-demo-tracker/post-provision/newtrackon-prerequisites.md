@@ -89,6 +89,38 @@ Because HTTP1 already occupies both IPs, the UDP1 submission is rejected.
 
 ![Hetzner Console — All four floating IPs](../media/hetzner-console-all-four-floating-ips.png)
 
+## DNS State Before Changes (2026-03-06)
+
+Recorded before making any DNS changes so we can verify the effect afterwards.
+
+Screenshot of the Hetzner DNS panel:
+
+![Hetzner Console — DNS config before udp1 changes](../media/hetzner-console-dns-config-before-udp1-changes.png)
+
+`dig` output — all six subdomains resolve to the same two shared IPs, no TXT records exist:
+
+```text
+$ dig A {http1,http2,udp1,udp2,api,grafana}.torrust-tracker-demo.com +short
+# All return: 116.202.176.169
+
+$ dig AAAA {http1,http2,udp1,udp2,api,grafana}.torrust-tracker-demo.com +short
+# All return: 2a01:4f8:1c0c:9aae::1
+
+$ dig TXT {http1,http2,udp1,udp2}.torrust-tracker-demo.com +short
+# (no output — no TXT records set)
+```
+
+Expected state after changes:
+
+| Subdomain | A record          | AAAA record             | TXT record              |
+| --------- | ----------------- | ----------------------- | ----------------------- |
+| `http1`   | `116.202.176.169` | `2a01:4f8:1c0c:9aae::1` | `"BITTORRENT TCP:443"`  |
+| `http2`   | `116.202.176.169` | `2a01:4f8:1c0c:9aae::1` | —                       |
+| `udp1`    | `116.202.177.184` | `2a01:4f8:1c0c:828e::1` | `"BITTORRENT UDP:6969"` |
+| `udp2`    | `116.202.176.169` | `2a01:4f8:1c0c:9aae::1` | —                       |
+| `api`     | `116.202.176.169` | `2a01:4f8:1c0c:9aae::1` | —                       |
+| `grafana` | `116.202.176.169` | `2a01:4f8:1c0c:9aae::1` | —                       |
+
 ## Fix Plan
 
 ### Step 1 — Add BEP 34 TXT Records via Hetzner DNS API
