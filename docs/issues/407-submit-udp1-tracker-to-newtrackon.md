@@ -27,7 +27,7 @@ deployments.
 
 - [ ] Add BEP 34 DNS TXT records for `http1.torrust-tracker-demo.com` (port 443) and
       `udp1.torrust-tracker-demo.com` (port 6969)
-- [ ] Provision two new Hetzner floating IPs (IPv4 + IPv6) and assign them to the existing server
+- [x] Provision two new Hetzner floating IPs (IPv4 + IPv6) and assign them to the existing server
 - [ ] Configure the new IPs permanently inside the VM (netplan)
 - [ ] Configure DNS A/AAAA records so `udp1.torrust-tracker-demo.com` resolves to the new IPs
 - [ ] Retry submission of `udp://udp1.torrust-tracker-demo.com:6969/announce` to newTrackon
@@ -109,10 +109,10 @@ Once the new floating IPs are provisioned, A and AAAA records must be created fo
 
 ### Phase 2: Provision New Floating IPs
 
-- [ ] Task 2.1: Book a new IPv4 floating IP in Hetzner Cloud Console (region `nbg1`)
-- [ ] Task 2.2: Book a new IPv6 floating IP in Hetzner Cloud Console (region `nbg1`)
-- [ ] Task 2.3: Assign both new floating IPs to the existing demo server in Hetzner Console
-- [ ] Task 2.4: Add the "one tracker per IP" policy section to `newtrackon-prerequisites.md`
+- [x] Task 2.1: Book a new IPv4 floating IP in Hetzner Cloud Console (region `nbg1`) — `udp1-ipv4`: `116.202.177.184`
+- [x] Task 2.2: Book a new IPv6 floating IP in Hetzner Cloud Console (region `nbg1`) — `udp1-ipv6`: `2a01:4f8:1c0c:828e::1`
+- [x] Task 2.3: Assign both new floating IPs to the existing demo server in Hetzner Console
+- [x] Task 2.4: Add the "one tracker per IP" policy section to `newtrackon-prerequisites.md`
 
 ### Phase 3: Configure New IPs Inside the VM
 

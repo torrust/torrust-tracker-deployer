@@ -80,6 +80,15 @@ Because HTTP1 already occupies both IPs, the UDP1 submission is rejected.
 **Solution**: Provision two new Hetzner floating IPs (one IPv4, one IPv6) and point
 `udp1.torrust-tracker-demo.com` exclusively to them.
 
+**New IPs provisioned (2026-03-06)**:
+
+| Name        | Type | Address                 |
+| ----------- | ---- | ----------------------- |
+| `udp1-ipv4` | IPv4 | `116.202.177.184`       |
+| `udp1-ipv6` | IPv6 | `2a01:4f8:1c0c:828e::1` |
+
+![Hetzner Console — All four floating IPs](../media/hetzner-console-all-four-floating-ips.png)
+
 ## Fix Plan
 
 ### Step 1 — Add BEP 34 TXT Records via Hetzner DNS API
@@ -119,7 +128,7 @@ dig TXT http1.torrust-tracker-demo.com
 dig TXT udp1.torrust-tracker-demo.com
 ```
 
-### Step 2 — Provision New Floating IPs
+### Step 2 — Provision New Floating IPs ✅ Done (2026-03-06)
 
 In the [Hetzner Console](https://console.hetzner.cloud/) under the `torrust-tracker-demo.com`
 project:
@@ -130,7 +139,12 @@ project:
 4. Repeat for **Type: IPv6**, same region.
 5. Assign both new IPs to server `torrust-tracker-vm-torrust-tracker-demo`.
 
-Note the new IPs — they are needed in the following steps.
+New IPs created and assigned:
+
+| Name        | Type | Address                 |
+| ----------- | ---- | ----------------------- |
+| `udp1-ipv4` | IPv4 | `116.202.177.184`       |
+| `udp1-ipv6` | IPv6 | `2a01:4f8:1c0c:828e::1` |
 
 ### Step 3 — Configure All Floating IPs Permanently via Netplan
 
@@ -150,8 +164,8 @@ network:
         - 116.202.176.169/32
         - 2a01:4f8:1c0c:9aae::1/128
         # New floating IPs (UDP1 / udp1.torrust-tracker-demo.com)
-        - <new_ipv4>/32
-        - <new_ipv6>/128
+        - 116.202.177.184/32
+        - 2a01:4f8:1c0c:828e::1/128
 ```
 
 Apply and verify:
@@ -221,17 +235,17 @@ curl -s https://newtrackon.com/api/stable | grep udp1.torrust-tracker-demo.com
 
 ## Status
 
-| Item                                    | Status      | Date |
-| --------------------------------------- | ----------- | ---- |
-| BEP 34 TXT record for `http1`           | ⬜ Not done |      |
-| BEP 34 TXT record for `udp1`            | ⬜ Not done |      |
-| New IPv4 floating IP provisioned        | ⬜ Not done |      |
-| New IPv6 floating IP provisioned        | ⬜ Not done |      |
-| New IPs assigned to server              | ⬜ Not done |      |
-| All floating IPs configured via netplan | ⬜ Not done |      |
-| DNS A/AAAA records updated for `udp1`   | ⬜ Not done |      |
-| UDP1 tracker submitted to newTrackon    | ⬜ Not done |      |
-| UDP1 tracker listed on newTrackon       | ⬜ Not done |      |
+| Item                                    | Status      | Date       |
+| --------------------------------------- | ----------- | ---------- |
+| BEP 34 TXT record for `http1`           | ⬜ Not done |            |
+| BEP 34 TXT record for `udp1`            | ⬜ Not done |            |
+| New IPv4 floating IP provisioned        | ✅ Done     | 2026-03-06 |
+| New IPv6 floating IP provisioned        | ✅ Done     | 2026-03-06 |
+| New IPs assigned to server              | ✅ Done     | 2026-03-06 |
+| All floating IPs configured via netplan | ⬜ Not done |            |
+| DNS A/AAAA records updated for `udp1`   | ⬜ Not done |            |
+| UDP1 tracker submitted to newTrackon    | ⬜ Not done |            |
+| UDP1 tracker listed on newTrackon       | ⬜ Not done |            |
 
 ## Related
 
