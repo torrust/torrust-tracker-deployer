@@ -197,36 +197,64 @@ New IPs created and assigned:
 | `udp1-ipv4` | IPv4 | `116.202.177.184`       |
 | `udp1-ipv6` | IPv6 | `2a01:4f8:1c0c:828e::1` |
 
-### Step 3 — Configure All Floating IPs Permanently via Netplan
+### Step 3 — Configure All Floating IPs Permanently via Netplan ✅ Done (2026-03-06)
 
 The original floating IPs (`116.202.176.169` and `2a01:4f8:1c0c:9aae::1`) were configured
 temporarily (using `ip addr add`) and were **not** persisted via netplan. This step fixes that
 and adds the new IPs at the same time.
 
-SSH into the server and create or replace `/etc/netplan/60-floating-ip.yaml`:
+SSH into the server and updated `/etc/netplan/60-floating-ip.yaml`:
 
 ```yaml
 network:
   version: 2
+  renderer: networkd
   ethernets:
     eth0:
       addresses:
         # Existing floating IPs (HTTP1 / http1.torrust-tracker-demo.com)
         - 116.202.176.169/32
-        - 2a01:4f8:1c0c:9aae::1/128
+        - 2a01:4f8:1c0c:9aae::1/64
         # New floating IPs (UDP1 / udp1.torrust-tracker-demo.com)
         - 116.202.177.184/32
-        - 2a01:4f8:1c0c:828e::1/128
+        - 2a01:4f8:1c0c:828e::1/64
 ```
 
-Apply and verify:
+> **Note**: IPv6 floating IPs use `/64` prefix (consistent with the existing Hetzner convention),
+> not `/128`.
+
+Applied and verified:
 
 ```bash
+sudo chmod 600 /etc/netplan/60-floating-ip.yaml
 sudo netplan apply
 ip addr show eth0
 ```
 
-All four IPs should appear on the interface.
+Actual output:
+
+```text
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 92:00:07:4f:b3:4f brd ff:ff:ff:ff:ff:ff
+    inet 116.202.176.169/32 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet 116.202.177.184/32 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet 46.225.234.201/32 metric 100 scope global dynamic eth0
+       valid_lft 86394sec preferred_lft 86394sec
+    inet6 2a01:4f8:1c0c:828e::1/64 scope global
+       valid_lft forever preferred_lft forever
+    inet6 2a01:4f8:1c0c:9aae::1/64 scope global
+       valid_lft forever preferred_lft forever
+    inet6 2a01:4f8:1c19:620b::1/64 scope global
+       valid_lft forever preferred_lft forever
+    inet6 fe80::9000:7ff:fe4f:b34f/64 scope link
+       valid_lft forever preferred_lft forever
+```
+
+✅ All four floating IPs (`116.202.176.169`, `116.202.177.184`, `2a01:4f8:1c0c:9aae::1`,
+`2a01:4f8:1c0c:828e::1`) are active on `eth0` with `valid_lft forever`, confirming the
+netplan config is persistent across reboots.
 
 ### Step 4 — Update DNS for UDP1 Subdomain ✅ Done (2026-03-06)
 
@@ -305,7 +333,7 @@ curl -s https://newtrackon.com/api/stable | grep udp1.torrust-tracker-demo.com
 | New IPv4 floating IP provisioned        | ✅ Done     | 2026-03-06 |
 | New IPv6 floating IP provisioned        | ✅ Done     | 2026-03-06 |
 | New IPs assigned to server              | ✅ Done     | 2026-03-06 |
-| All floating IPs configured via netplan | ⬜ Not done |            |
+| All floating IPs configured via netplan | ✅ Done     | 2026-03-06 |
 | DNS A/AAAA records updated for `udp1`   | ✅ Done     | 2026-03-06 |
 | UDP1 tracker submitted to newTrackon    | ⬜ Not done |            |
 | UDP1 tracker listed on newTrackon       | ⬜ Not done |            |

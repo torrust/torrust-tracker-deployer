@@ -28,7 +28,7 @@ deployments.
 - [x] Add BEP 34 DNS TXT records for `http1.torrust-tracker-demo.com` (port 443) and
       `udp1.torrust-tracker-demo.com` (port 6969)
 - [x] Provision two new Hetzner floating IPs (IPv4 + IPv6) and assign them to the existing server
-- [ ] Configure the new IPs permanently inside the VM (netplan)
+- [x] Configure the new IPs permanently inside the VM (netplan)
 - [x] Configure DNS A/AAAA records so `udp1.torrust-tracker-demo.com` resolves to the new IPs
 - [ ] Retry submission of `udp://udp1.torrust-tracker-demo.com:6969/announce` to newTrackon
 - [ ] Verify UDP1 tracker appears in the newTrackon public list
@@ -85,11 +85,14 @@ Example netplan stanza for a floating IPv4:
 ```yaml
 network:
   version: 2
+  renderer: networkd
   ethernets:
     eth0:
       addresses:
         - 116.202.176.169/32
 ```
+
+> **Note**: Hetzner uses `/64` prefix for IPv6 floating IPs (not `/128`).
 
 ### DNS Records for New IPs
 
@@ -116,12 +119,12 @@ Once the new floating IPs are provisioned, A and AAAA records must be created fo
 
 ### Phase 3: Configure New IPs Inside the VM
 
-- [ ] Task 3.1: SSH into the server
-- [ ] Task 3.2: Add all four floating IPs to netplan configuration (`/etc/netplan/60-floating-ip.yaml`)
+- [x] Task 3.1: SSH into the server
+- [x] Task 3.2: Add all four floating IPs to netplan configuration (`/etc/netplan/60-floating-ip.yaml`)
       — both existing IPs (which were not previously configured via netplan) and the two new ones
-- [ ] Task 3.3: Apply netplan configuration (`sudo netplan apply`) and verify all IPs are active
-- [ ] Task 3.4: Confirm the new IPs receive traffic (ping test from an external host)
-- [ ] Task 3.5: Document the netplan configuration steps and file content in `newtrackon-prerequisites.md`
+- [x] Task 3.3: Apply netplan configuration (`sudo netplan apply`) and verify all IPs are active
+- [x] Task 3.4: Confirm the new IPs receive traffic (ping test from an external host)
+- [x] Task 3.5: Document the netplan configuration steps and file content in `newtrackon-prerequisites.md`
 
 ### Phase 4: Update DNS for UDP1 Subdomain
 
