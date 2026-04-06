@@ -329,6 +329,47 @@ impl ServiceInfo {
         self.tls_domains.iter().map(|d| d.domain.as_str()).collect()
     }
 
+    /// Returns all domain names that require DNS records: TLS service domains
+    /// plus UDP tracker domains (when a domain is explicitly configured).
+    ///
+    /// This is the correct method to use for the `provision` output `domains` array
+    /// and the DNS setup reminder, because both need to list every hostname the
+    /// operator must point at the server IP — including UDP trackers that have a
+    /// domain name set.
+    ///
+    /// `tls_domain_names()` is kept for the HTTPS-specific hint that only lists
+    /// TLS-enabled services.
+    #[must_use]
+    pub fn all_domain_names(&self) -> Vec<&str> {
+        let mut domains: Vec<&str> = self.tls_domain_names();
+        for url in &self.udp_trackers {
+            // UDP tracker URLs are formatted as "udp://<host>:<port>/announce".
+            // Extract the host part and include it only when it is a domain name
+            // (i.e., it was originally set via UdpTrackerConfig::domain()).
+            if let Some(host) = Self::extract_host_from_udp_url(url) {
+                // Only include if it looks like a domain name (not a raw IP address)
+                if host.parse::<std::net::IpAddr>().is_err() {
+                    domains.push(host);
+                }
+            }
+        }
+        domains
+    }
+
+    /// Extracts the host portion from a UDP tracker announce URL.
+    ///
+    /// Expected format: `udp://<host>:<port>/announce`
+    fn extract_host_from_udp_url(url: &str) -> Option<&str> {
+        // Strip scheme
+        let without_scheme = url.strip_prefix("udp://")?;
+        // Strip path suffix
+        let host_and_port = without_scheme
+            .strip_suffix("/announce")
+            .unwrap_or(without_scheme);
+        // Strip port
+        host_and_port.rsplit_once(':').map(|(host, _port)| host)
+    }
+
     /// Returns all internal ports that are not exposed due to TLS
     #[must_use]
     pub fn unexposed_ports(&self) -> Vec<u16> {
@@ -518,5 +559,61 @@ mod tests {
         assert!(services.has_any_localhost_only());
         assert_eq!(services.localhost_http_trackers.len(), 1);
         assert_eq!(services.localhost_http_trackers[0].port, 7070);
+    }
+
+    #[test]
+    fn it_should_return_all_domain_names_including_udp() {
+        let services = ServiceInfo::new(
+            vec![
+                "udp://udp1.tracker.local:6868/announce".to_string(),
+                "udp://udp2.tracker.local:6969/announce".to_string(),
+            ],
+            vec!["https://http1.tracker.local/announce".to_string()],
+            vec![],
+            vec![],
+            "https://api.tracker.local/api".to_string(),
+            true,
+            false,
+            "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,
+            false,
+            vec![TlsDomainInfo {
+                domain: "http1.tracker.local".to_string(),
+                internal_port: 7070,
+            }],
+        );
+
+        let domains = services.all_domain_names();
+        assert_eq!(domains.len(), 3);
+        assert!(domains.contains(&"http1.tracker.local"));
+        assert!(domains.contains(&"udp1.tracker.local"));
+        assert!(domains.contains(&"udp2.tracker.local"));
+    }
+
+    #[test]
+    fn it_should_exclude_udp_trackers_without_domain_from_all_domain_names() {
+        let services = ServiceInfo::new(
+            // IP-only UDP trackers — no domain name
+            vec![
+                "udp://10.0.0.1:6868/announce".to_string(),
+                "udp://10.0.0.2:6969/announce".to_string(),
+            ],
+            vec![],
+            vec![],
+            vec![],
+            "http://10.0.0.1:1212/api".to_string(), // DevSkim: ignore DS137138
+            false,
+            false,
+            "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,
+            false,
+            vec![],
+        );
+
+        let domains = services.all_domain_names();
+        assert!(
+            domains.is_empty(),
+            "IP-only UDP trackers must not appear in all_domain_names()"
+        );
     }
 }

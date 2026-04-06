@@ -80,7 +80,7 @@ impl From<&Environment<Provisioned>> for ProvisionDetailsData {
             let grafana_config = environment.grafana_config();
             let services = ServiceInfo::from_tracker_config(tracker_config, ip, grafana_config);
             services
-                .tls_domain_names()
+                .all_domain_names()
                 .iter()
                 .map(|s| (*s).to_string())
                 .collect()

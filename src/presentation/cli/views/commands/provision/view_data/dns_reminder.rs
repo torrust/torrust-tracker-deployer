@@ -158,10 +158,8 @@ impl DnsReminderView {
     /// ```
     #[must_use]
     pub fn extract_all_domains(services: &ServiceInfo) -> Vec<String> {
-        // Currently, ServiceInfo only tracks TLS domains
-        // This returns all domain names from tls_domains
         services
-            .tls_domain_names()
+            .all_domain_names()
             .iter()
             .map(|s| (*s).to_string())
             .collect()
@@ -236,6 +234,33 @@ mod tests {
         assert!(domains.contains(&"http.tracker.local".to_string()));
         assert!(domains.contains(&"api.tracker.local".to_string()));
         assert!(domains.contains(&"health.tracker.local".to_string()));
+    }
+
+    #[test]
+    fn it_should_include_udp_tracker_domains_in_extract_all_domains() {
+        let services = ServiceInfo::new(
+            vec![
+                "udp://udp1.tracker.local:6868/announce".to_string(),
+                "udp://udp2.tracker.local:6969/announce".to_string(),
+            ],
+            vec!["https://http.tracker.local/announce".to_string()],
+            vec![],
+            vec![],
+            "https://api.tracker.local/api".to_string(),
+            true,
+            false,
+            "http://10.0.0.1:1313/health_check".to_string(), // DevSkim: ignore DS137138
+            false,
+            false,
+            vec![TlsDomainInfo::new("http.tracker.local".to_string(), 7070)],
+        );
+
+        let domains = DnsReminderView::extract_all_domains(&services);
+
+        assert_eq!(domains.len(), 3);
+        assert!(domains.contains(&"http.tracker.local".to_string()));
+        assert!(domains.contains(&"udp1.tracker.local".to_string()));
+        assert!(domains.contains(&"udp2.tracker.local".to_string()));
     }
 
     #[test]
