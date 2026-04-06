@@ -49,6 +49,12 @@ pub struct GrafanaServiceConfig {
     pub admin_user: String,
     /// Grafana admin password (exposed from secrecy wrapper)
     pub admin_password: String,
+    /// Grafana server root URL for correct public dashboard share links (optional)
+    ///
+    /// Derived from the configured domain and TLS setting.
+    /// Maps to the `GF_SERVER_ROOT_URL` environment variable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_root_url: Option<String>,
 }
 
 /// Context for rendering the .env template
@@ -186,11 +192,19 @@ impl EnvContext {
     ///
     /// * `admin_user` - Grafana admin username
     /// * `admin_password` - Grafana admin password (plain String, already exposed)
+    /// * `server_root_url` - Optional full URL (e.g. `https://grafana.example.com`) for
+    ///   public dashboard share links; derived from domain + TLS setting
     #[must_use]
-    pub fn with_grafana(mut self, admin_user: String, admin_password: String) -> Self {
+    pub fn with_grafana(
+        mut self,
+        admin_user: String,
+        admin_password: String,
+        server_root_url: Option<String>,
+    ) -> Self {
         self.grafana = Some(GrafanaServiceConfig {
             admin_user,
             admin_password,
+            server_root_url,
         });
         self
     }
