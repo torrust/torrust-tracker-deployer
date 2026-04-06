@@ -76,7 +76,7 @@ All linting is managed through a unified Rust binary (`src/bin/linter.rs`) that 
 - **Unified logging**: Consistent output formatting
 - **Easy extensibility**: Add new linters by implementing the `Linter` trait
 
-The linter binary is part of the `torrust-linting` package (`packages/linting/`), which provides a reusable linting framework.
+The linter binary uses the [`torrust-linting`](https://crates.io/crates/torrust-linting) crate, which provides a reusable linting framework published to crates.io.
 
 ### Alternative: Shell Script Wrapper
 

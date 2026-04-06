@@ -185,7 +185,7 @@ For detailed configuration and reference information about each linter, see:
 
 - [references/linters.md](references/linters.md) - Comprehensive linter documentation
 - [docs/contributing/linting.md](../../../docs/contributing/linting.md) - Linting guide
-- [packages/linting/README.md](../../../packages/linting/README.md) - Linting framework details
+- [`torrust-linting` on crates.io](https://crates.io/crates/torrust-linting) - Linting framework details
 
 ## Quick Reference
 

@@ -235,22 +235,21 @@ cargo fmt
 
 ## Linting Framework Architecture
 
-The unified linting framework is implemented in `packages/linting/`:
+The unified linting framework is provided by the [`torrust-linting`](https://crates.io/crates/torrust-linting)
+external crate (published to crates.io). Source: [github.com/torrust/torrust-linting](https://github.com/torrust/torrust-linting).
 
 ```text
-packages/linting/
-├── src/
-│   ├── linters/          # Individual linter implementations
-│   │   ├── markdown.rs
-│   │   ├── yaml.rs
-│   │   ├── toml.rs
-│   │   ├── cspell.rs
-│   │   ├── clippy.rs
-│   │   ├── rustfmt.rs
-│   │   └── shellcheck.rs
-│   ├── runner.rs         # Execution logic
-│   └── lib.rs
-└── README.md
+src/
+├── linters/          # Individual linter implementations
+│   ├── markdown.rs
+│   ├── yaml.rs
+│   ├── toml.rs
+│   ├── cspell.rs
+│   ├── clippy.rs
+│   ├── rustfmt.rs
+│   └── shellcheck.rs
+├── runner.rs         # Execution logic
+└── lib.rs
 ```
 
 ### Benefits
@@ -314,5 +313,5 @@ cargo run --bin linter --help
 ## References
 
 - [Linting Guide](../../../docs/contributing/linting.md)
-- [Linting Framework README](../../../packages/linting/README.md)
+- [`torrust-linting` on crates.io](https://crates.io/crates/torrust-linting)
 - [Pre-Commit Process](../../../docs/contributing/commit-process.md)

@@ -53,7 +53,7 @@ When mocking adds no value or requires real infrastructure:
 
 #### 4. Linting Package
 
-- **Location**: `packages/linting/`
+- **Location**: [`torrust-linting`](https://crates.io/crates/torrust-linting) (external crate)
 - **Reason**: Primarily executed as binary, wraps external tools
 - **Coverage**: 30-40% is acceptable
 - **Testing**: Validated through actual execution
@@ -179,7 +179,7 @@ All coverage commands use cargo aliases defined in `.cargo/config.toml`:
 | Alias               | Full Command                                                      | Purpose                           |
 | ------------------- | ----------------------------------------------------------------- | --------------------------------- |
 | `cargo cov`         | `cargo llvm-cov`                                                  | Basic coverage report in terminal |
-| `cargo cov-check`   | `cargo llvm-cov --all-features --workspace --fail-under-lines 70` | Validate coverage threshold            |
+| `cargo cov-check`   | `cargo llvm-cov --all-features --workspace --fail-under-lines 70` | Validate coverage threshold       |
 | `cargo cov-lcov`    | `cargo llvm-cov --lcov --output-path=./.coverage/lcov.info`       | Generate LCOV format              |
 | `cargo cov-codecov` | `cargo llvm-cov --codecov --output-path=./.coverage/codecov.json` | Generate Codecov JSON             |
 | `cargo cov-html`    | `cargo llvm-cov --html`                                           | Generate HTML report              |

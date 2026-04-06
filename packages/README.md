@@ -26,26 +26,6 @@ This directory contains reusable Rust workspace packages that support the Torrus
 
 **Documentation**: See [packages/dependency-installer/README.md](./dependency-installer/README.md)
 
-### [`linting/`](./linting/)
-
-**Purpose**: Unified linting framework for Rust projects
-
-**Key Features**:
-
-- Supports multiple linters: markdown, YAML, TOML, Rust (clippy + rustfmt), shellcheck
-- Pre-built CLI components for easy binary creation
-- Extensible architecture for adding new linters
-- Uses existing configuration files (`.taplo.toml`, `.yamllint.yml`, etc.)
-
-**Use Cases**:
-
-- Enforcing code quality standards
-- Pre-commit validation
-- CI/CD linting pipelines
-- Standardizing linting across multiple projects
-
-**Documentation**: See [packages/linting/README.md](./linting/README.md)
-
 ### [`deployer-types/`](./deployer-types/)
 
 **Purpose**: Shared value objects and traits for the Torrust Tracker Deployer ecosystem
@@ -108,7 +88,7 @@ All packages in this directory:
 ```rust
 // Add to your Cargo.toml
 [dependencies]
-torrust-linting = { path = "packages/linting" }
+torrust-linting = "0.1.0"  # external crate: https://crates.io/crates/torrust-linting
 torrust-dependency-installer = { path = "packages/dependency-installer" }
 torrust-tracker-deployer-sdk = { path = "packages/sdk" }
 ```
