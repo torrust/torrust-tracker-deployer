@@ -21,9 +21,8 @@
   hosts: all
   gather_facts: false
   become: true
-
-  vars:
-    deploy_dir: /opt/torrust
+  vars_files:
+    - variables.yml
 
   tasks:
     - name: 🚀 Starting Docker Compose services

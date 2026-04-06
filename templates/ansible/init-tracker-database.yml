@@ -22,21 +22,23 @@
 #
 # Requirements:
 #   - The tracker storage directories must exist
-#   - The ansible_user must have write access to /opt/torrust/storage/tracker/lib/database/
+#   - The ansible_user must have write access to {{ deploy_dir }}/storage/tracker/lib/database/
 #
 # Variables:
 #   - ansible_user: The user that will own the database file (default: current user)
 #
 # Creates:
-#   - /opt/torrust/storage/tracker/lib/database/tracker.db (SQLite database file)
+#   - {{ deploy_dir }}/storage/tracker/lib/database/tracker.db (SQLite database file)
 
 - name: Initialize Tracker Database
   hosts: all
   become: true
+  vars_files:
+    - variables.yml
   tasks:
     - name: Create empty SQLite database file
       ansible.builtin.file:
-        path: /opt/torrust/storage/tracker/lib/database/tracker.db
+        path: "{{ deploy_dir }}/storage/tracker/lib/database/tracker.db"
         state: touch
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
@@ -46,7 +48,7 @@
 
     - name: Verify database file exists
       ansible.builtin.stat:
-        path: /opt/torrust/storage/tracker/lib/database/tracker.db
+        path: "{{ deploy_dir }}/storage/tracker/lib/database/tracker.db"
       register: db_file
 
     - name: Assert database file was created

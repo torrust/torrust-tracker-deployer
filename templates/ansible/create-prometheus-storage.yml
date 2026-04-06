@@ -20,6 +20,8 @@
 - name: Create Prometheus storage directories
   hosts: all
   become: true
+  vars_files:
+    - variables.yml
 
   tasks:
     - name: Create Prometheus directory structure
@@ -30,4 +32,4 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
       loop:
-        - /opt/torrust/storage/prometheus/etc
+        - "{{ deploy_dir }}/storage/prometheus/etc"
