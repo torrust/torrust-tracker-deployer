@@ -318,9 +318,18 @@ impl DockerComposeTemplateRenderingService {
     /// Apply Grafana credentials to environment context if Grafana is configured
     fn apply_grafana_env_context(env_context: EnvContext, user_inputs: &UserInputs) -> EnvContext {
         if let Some(grafana_config) = user_inputs.grafana() {
+            let server_root_url = grafana_config.domain().map(|domain| {
+                let scheme = if grafana_config.use_tls_proxy() {
+                    "https"
+                } else {
+                    "http"
+                };
+                format!("{scheme}://{}", domain.as_str())
+            });
             env_context.with_grafana(
                 grafana_config.admin_user().to_string(),
                 grafana_config.admin_password().expose_secret().to_string(),
+                server_root_url,
             )
         } else {
             env_context

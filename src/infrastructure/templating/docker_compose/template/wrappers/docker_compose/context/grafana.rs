@@ -23,6 +23,14 @@ pub struct GrafanaServiceContext {
     /// Flattened for template compatibility - serializes ports/networks at top level.
     #[serde(flatten)]
     pub topology: ServiceTopology,
+
+    /// Server root URL for public dashboard share links (optional)
+    ///
+    /// When set, this is injected as `GF_SERVER_ROOT_URL` env var so that
+    /// Grafana generates correct absolute URLs for shared dashboards.
+    /// Derived from the configured domain and TLS setting.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_root_url: Option<String>,
 }
 
 impl GrafanaServiceContext {
@@ -43,8 +51,17 @@ impl GrafanaServiceContext {
             .iter()
             .map(PortDefinition::from)
             .collect();
+        let server_root_url = config.domain().map(|domain| {
+            let scheme = if config.use_tls_proxy() {
+                "https"
+            } else {
+                "http"
+            };
+            format!("{scheme}://{}", domain.as_str())
+        });
         Self {
             topology: ServiceTopology::new(ports, networks),
+            server_root_url,
         }
     }
 
