@@ -1,6 +1,5 @@
 [workspace]
 members = [
-  "packages/linting",
   "packages/dependency-installer",
   "packages/sdk",
   "packages/deployer-types",
@@ -62,7 +61,7 @@ testcontainers = { version = "0.26", features = [ "blocking" ] }
 thiserror = "2.0"
 torrust-dependency-installer = { path = "packages/dependency-installer" }
 torrust-deployer-types = { path = "packages/deployer-types" }
-torrust-linting = { path = "packages/linting" }
+torrust-linting = "0.1.0"
 tracing = { version = "0.1", features = [ "attributes" ] }
 tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = [ "env-filter", "json", "fmt" ] }
