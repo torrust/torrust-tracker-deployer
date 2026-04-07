@@ -145,6 +145,32 @@ cat /var/log/cloud-init-output.log
 4. **Regular updates** - Keep server packages updated
 5. **Disable root SSH access** - For production, see [SSH Root Access Guide](../../security/ssh-root-access-hetzner.md)
 
+## SSH Key Requirements
+
+> ⚠️ **Docker deployments require a passphrase-free SSH key (or SSH agent forwarding).**
+
+When you run the deployer inside a Docker container (the recommended approach for
+Hetzner), there is no SSH agent and no interactive terminal. A passphrase-protected
+private key will cause the `provision` step to fail with
+`Permission denied (publickey,password)`.
+
+**Options**:
+
+1. **Remove the passphrase** (recommended for dedicated deployment keys):
+
+   ```bash
+   ssh-keygen -p -f ~/.ssh/your_deployment_key
+   # Press Enter twice for an empty new passphrase
+   ```
+
+2. **Forward your SSH agent** into the container (see [SSH Keys Guide](../ssh-keys.md#workflow-2--passphrase-protected-key-with-ssh-agent-forwarding-into-docker)).
+
+The `create environment` command will warn you if it detects a passphrase-protected key
+so you can resolve this before reaching `provision`.
+
+For more detail on generating keys, removing passphrases, and security considerations,
+see the [SSH Keys Guide](../ssh-keys.md).
+
 ## SSH Key Behavior
 
 Hetzner deployments configure SSH access through two mechanisms:

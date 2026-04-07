@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use parking_lot::ReentrantMutex;
 
+use crate::adapters::ssh::is_passphrase_protected;
 use crate::application::command_handlers::create::config::EnvironmentCreationConfig;
 use crate::application::command_handlers::CreateCommandHandler;
 use crate::domain::environment::repository::EnvironmentRepository;
@@ -135,6 +136,8 @@ impl CreateEnvironmentCommandController {
     ) -> Result<Environment<Created>, CreateEnvironmentCommandError> {
         let config = self.load_configuration(env_file)?;
 
+        self.warn_if_ssh_key_passphrase_protected(&config)?;
+
         let command_handler = self.create_command_handler()?;
 
         let environment = self.execute_create_command(&command_handler, config, working_dir)?;
@@ -144,11 +147,53 @@ impl CreateEnvironmentCommandController {
         Ok(environment)
     }
 
+    /// Emit a warning if the configured SSH private key appears to be passphrase-protected.
+    ///
+    /// This is a presentation-layer, best-effort check. The environment is still created
+    /// normally if the key is encrypted — the user is informed and not blocked.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error only if the `UserOutput` mutex is poisoned (critical internal error).
+    fn warn_if_ssh_key_passphrase_protected(
+        &self,
+        config: &EnvironmentCreationConfig,
+    ) -> Result<(), CreateEnvironmentCommandError> {
+        use std::path::Path;
+
+        let key_path = Path::new(&config.ssh_credentials.private_key_path);
+
+        if !is_passphrase_protected(key_path) {
+            return Ok(());
+        }
+
+        let message = format!(
+            "SSH private key appears to be passphrase-protected.\n  \
+             Key: {key}\n\n  \
+             Automated deployment (e.g. Docker, CI/CD) requires an SSH key that can be\n  \
+             used without interactive input. A passphrase-protected key will cause the\n  \
+             `provision` step to fail with \"Permission denied\" unless one of the\n  \
+             following is arranged:\n\n  \
+             Option 1 — Remove the passphrase (recommended for dedicated deployment keys):\n    \
+             ssh-keygen -p -f {key}\n\n  \
+             Option 2 — Forward your SSH agent socket into the Docker container:\n    \
+             docker run ... -v \"$SSH_AUTH_SOCK:/tmp/ssh-agent.sock\" \\\n                   \
+             -e SSH_AUTH_SOCK=/tmp/ssh-agent.sock ...\n\n  \
+             Option 3 — Use a separate passphrase-free deployment key and configure it in\n    \
+             ssh_credentials.private_key_path.\n\n  \
+             You can continue now — the environment will be created. If you plan to run\n  \
+             the deployer without an SSH agent, resolve this before running `provision`.",
+            key = key_path.display()
+        );
+
+        self.progress
+            .warn(&message)
+            .map_err(CreateEnvironmentCommandError::from)
+    }
+
     /// Load and validate configuration from file
     ///
-    /// This step handles:
-    /// - Loading configuration file using `ConfigLoader`
-    /// - Parsing JSON content
+    /// This step handles:    /// - Loading configuration file using `ConfigLoader`    /// - Parsing JSON content
     /// - Validating configuration using domain rules
     ///
     /// # Arguments

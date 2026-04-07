@@ -397,8 +397,7 @@ impl ProgressReporter {
     /// Wraps `UserOutput::result()` to write result data to stdout.
     /// Result data goes to stdout (not stderr) so it can be piped or redirected.
     ///
-    /// # Arguments
-    ///
+    /// # Arguments    ///
     /// * `message` - The result data to output
     ///
     /// # Errors
@@ -424,6 +423,41 @@ impl ProgressReporter {
     /// ```
     pub fn result(&self, message: &str) -> Result<(), ProgressReporterError> {
         self.with_output(|output| output.result(message))?;
+        Ok(())
+    }
+
+    /// Display a warning message to stderr
+    ///
+    /// Wraps `UserOutput::warn()` for use during progress-tracked workflows.
+    /// Warnings are non-blocking — they do not stop the current operation.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - Warning text (may contain newlines for multi-line warnings)
+    ///
+    /// # Errors
+    ///
+    /// Returns `ProgressReporterError::UserOutputMutexPoisoned` if the mutex is poisoned.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::sync::Arc;
+    /// use std::cell::RefCell;
+    /// use parking_lot::ReentrantMutex;
+    /// use torrust_tracker_deployer_lib::presentation::cli::views::progress::ProgressReporter;
+    /// use torrust_tracker_deployer_lib::presentation::cli::views::{UserOutput, VerbosityLevel};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let output = Arc::new(ReentrantMutex::new(RefCell::new(UserOutput::new(VerbosityLevel::Normal))));
+    /// let progress = ProgressReporter::new(output, 1);
+    ///
+    /// progress.warn("SSH key appears to be passphrase-protected")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn warn(&self, message: &str) -> Result<(), ProgressReporterError> {
+        self.with_output(|output| output.warn(message))?;
         Ok(())
     }
 }

@@ -1,4 +1,4 @@
-//! SSH credentials management for remote authentication
+//! SSH credentials for remote instance authentication
 //!
 //! This module provides the `SshCredentials` struct which manages SSH authentication
 //! information including private/public key paths and username configuration.

@@ -10,6 +10,7 @@
 //! - `config` - SSH configuration and management
 //! - `credentials` - SSH authentication credentials and key management
 //! - `error` - SSH error types and implementations
+//! - `key_inspector` - Best-effort detection of passphrase-protected private keys
 //! - `public_key` - SSH public key representation and validation
 //! - `service_checker` - SSH service availability testing without authentication
 //!
@@ -28,6 +29,7 @@ pub mod client;
 pub mod config;
 pub mod credentials;
 pub mod error;
+pub mod key_inspector;
 pub mod public_key;
 pub mod service_checker;
 
@@ -38,5 +40,6 @@ pub use config::{
 };
 pub use credentials::SshCredentials;
 pub use error::SshError;
+pub use key_inspector::is_passphrase_protected;
 pub use public_key::SshPublicKey;
 pub use service_checker::SshServiceChecker;

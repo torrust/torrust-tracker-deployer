@@ -68,11 +68,46 @@ The reliable detection approach is to read the first line of the PEM file:
 - OpenSSH format: the body begins with `bcrypt` if passphrase-protected; the header
   alone is not sufficient — the first few bytes of the decoded body must be checked.
 
-The simplest robust approach in Rust is to read the raw bytes of the key file and check:
+### Detection Approaches Considered
+
+Two approaches were evaluated for detecting whether a key is passphrase-protected:
+
+#### Option A — Byte inspection (chosen)
+
+Read the raw bytes of the key file and check:
 
 - For legacy PEM: `ENCRYPTED` appears in the header
 - For OpenSSH format: after the base64-decoded body, the string `bcrypt` appears near
   the start (OpenSSH uses bcrypt KDF for passphrase derivation)
+
+|     |                                                                                 |
+| --- | ------------------------------------------------------------------------------- |
+| ✅  | Pure Rust, no external tools required                                           |
+| ✅  | Fast — reads only the first ~64 bytes of the file                               |
+| ✅  | Works in any environment, including minimal Docker images                       |
+| ✅  | No process spawning overhead                                                    |
+| ❌  | Must handle two PEM variants (legacy `ENCRYPTED` header, OpenSSH `bcrypt` body) |
+| ❌  | False-negative risk for exotic or future key formats (acceptable per spec)      |
+
+#### Option B — `ssh-keygen -y` probe
+
+Spawn `ssh-keygen -y -f <key> < /dev/null`: this command attempts to derive the public
+key from the private key and exits non-zero with a passphrase prompt when the key is
+encrypted.
+
+|     |                                                                                                     |
+| --- | --------------------------------------------------------------------------------------------------- |
+| ✅  | Handles all key formats transparently — no format-specific parsing                                  |
+| ✅  | Implementation is a single `std::process::Command` call                                             |
+| ❌  | Requires `ssh-keygen` to be present in the runtime environment                                      |
+| ❌  | Spawns an external process just for detection                                                       |
+| ❌  | Must distinguish "encrypted" from "file not found" / "unsupported format" via exit codes and stderr |
+| ❌  | Slower than reading a few bytes from a file                                                         |
+
+**Chosen approach**: Option A (byte inspection). The deployer already targets Docker
+containers where `ssh-keygen` may not be installed, and the detection is best-effort
+(a missed warning is acceptable — a false positive is not). An ADR documents this
+choice in full (see Implementation Plan).
 
 The check only needs to be a best-effort heuristic — it is used to emit a warning, not
 to block the user. A false negative (missing the warning) is acceptable; a false
@@ -200,14 +235,22 @@ configured private key appears to be passphrase-protected.
       with and without passphrase if available, or by constructing the minimal PEM
       structure in the test)
 
-### Phase 2: Documentation
+### Phase 2: ADR
+
+- [ ] Create `docs/decisions/XXX-ssh-key-passphrase-detection.md` documenting:
+  - Why byte inspection was chosen over the `ssh-keygen -y` probe
+  - Pros and cons of each approach
+  - Consequences and limitations (best-effort, false-negative acceptable)
+- [ ] Register the new ADR in `docs/decisions/README.md`
+
+### Phase 3: Documentation
 
 - [ ] Create `docs/user-guide/ssh-keys.md` covering all workflows and security notes
 - [ ] Update `docs/user-guide/providers/hetzner.md` with an SSH key requirements note
 - [ ] Update `docs/user-guide/commands/create.md` to mention the passphrase warning
 - [ ] Update `docs/user-guide/README.md` to link to the new `ssh-keys.md` page
 
-### Phase 3: Linting and pre-commit
+### Phase 4: Linting and pre-commit
 
 - [ ] Run linters: `cargo run --bin linter all`
 - [ ] Run pre-commit: `./scripts/pre-commit.sh`
