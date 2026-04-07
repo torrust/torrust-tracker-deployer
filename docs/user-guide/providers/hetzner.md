@@ -193,3 +193,4 @@ Hetzner deployments configure SSH access through two mechanisms:
 - [SSH Keys Guide](../../tech-stack/ssh-keys.md) - SSH key generation
 - [SSH Root Access Security](../../security/ssh-root-access-hetzner.md) - Disabling root access
 - [LXD Provider](lxd.md) - Local development alternative
+- [Post-Deployment: Floating IPs and IPv6](hetzner-post-deployment.md) - Manual steps for floating IPs and IPv6 UDP

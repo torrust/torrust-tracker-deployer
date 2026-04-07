@@ -39,3 +39,4 @@ See the [contributing guide](../../contributing/README.md) for more details.
 - [Quick Start Guides](../quick-start/README.md) - Docker and native installation guides
 - [Commands Reference](../commands/README.md) - Available commands
 - [SSH Keys](../../tech-stack/ssh-keys.md) - SSH key generation and management
+- [Hetzner Post-Deployment](hetzner-post-deployment.md) - Manual steps for floating IPs and IPv6
