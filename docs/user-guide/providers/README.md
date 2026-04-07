@@ -4,10 +4,10 @@ This directory contains provider-specific configuration guides.
 
 ## Available Providers
 
-| Provider                    | Status    | Description                                |
-| --------------------------- | --------- | ------------------------------------------ |
-| [LXD](lxd.md)               | ✅ Stable | Local development using LXD containers/VMs |
-| [Hetzner Cloud](hetzner.md) | 🆕 New    | Cost-effective European cloud provider     |
+| Provider                  | Status    | Description                                |
+| ------------------------- | --------- | ------------------------------------------ |
+| [LXD](lxd/)               | ✅ Stable | Local development using LXD containers/VMs |
+| [Hetzner Cloud](hetzner/) | 🆕 New    | Cost-effective European cloud provider     |
 
 ## Choosing a Provider
 
@@ -30,7 +30,7 @@ To add a new provider:
 1. Create OpenTofu templates in `templates/tofu/<provider>/`
 2. Add provider configuration types in `src/domain/provider/`
 3. Update the template renderer for provider-specific logic
-4. Add documentation in `docs/user-guide/providers/<provider>.md`
+4. Add documentation in `docs/user-guide/providers/<provider>/README.md`
 
 See the [contributing guide](../../contributing/README.md) for more details.
 
@@ -39,3 +39,4 @@ See the [contributing guide](../../contributing/README.md) for more details.
 - [Quick Start Guides](../quick-start/README.md) - Docker and native installation guides
 - [Commands Reference](../commands/README.md) - Available commands
 - [SSH Keys](../../tech-stack/ssh-keys.md) - SSH key generation and management
+- [Hetzner Post-Deployment](hetzner/post-deployment.md) - Manual steps for floating IPs and IPv6

@@ -202,6 +202,6 @@ torrust-tracker-demo.com. 3600 IN SOA hydrogen.ns.hetzner.com. dns.hetzner.com. 
 
 ## Related Documentation
 
-- [Hetzner Cloud Provider guide](../../user-guide/providers/hetzner.md)
+- [Hetzner Cloud Provider guide](../../user-guide/providers/hetzner/)
 - [Quick Start: Docker Deployment](../../user-guide/quick-start/docker.md)
 - [Quick Start: Native Installation](../../user-guide/quick-start/native.md)

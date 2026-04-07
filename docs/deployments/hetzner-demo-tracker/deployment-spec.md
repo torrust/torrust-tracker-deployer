@@ -160,7 +160,7 @@ The file is stored at `envs/torrust-tracker-demo.json` (git-ignored — contains
 
 ## Related Documentation
 
-- [Hetzner server types and pricing](../../user-guide/providers/hetzner.md#available-server-types)
+- [Hetzner server types and pricing](../../user-guide/providers/hetzner/#available-server-types)
 - [HTTPS/TLS configuration](../../user-guide/services/https.md)
 - [Grafana service](../../user-guide/services/grafana.md)
 - [Prometheus service](../../user-guide/services/prometheus.md)

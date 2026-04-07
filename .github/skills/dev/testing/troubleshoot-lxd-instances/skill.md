@@ -184,5 +184,5 @@ lxc info <instance>
 
 - Emergency cleanup: use the `clean-lxd-environments` skill
 - Expected test errors: use the `debug-test-errors` skill
-- LXD provider docs: [`docs/user-guide/providers/lxd.md`](../../../../docs/user-guide/providers/lxd.md)
+- LXD provider docs: [`docs/user-guide/providers/lxd/`](../../../../docs/user-guide/providers/lxd/)
 - E2E troubleshooting: [`docs/e2e-testing/troubleshooting.md`](../../../../docs/e2e-testing/troubleshooting.md)

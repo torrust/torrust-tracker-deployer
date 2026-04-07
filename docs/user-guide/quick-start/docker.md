@@ -106,7 +106,7 @@ openssl rand -base64 18
 | `grafana.admin_password`             | Grafana admin password                              | (generated secure password)          |
 | `prometheus.scrape_interval_in_secs` | Metrics scrape interval                             | `15`                                 |
 
-See [Hetzner Provider Guide](../providers/hetzner.md) for all options.
+See [Hetzner Provider Guide](../providers/hetzner/) for all options.
 
 ## Step 5: Create Environment
 
@@ -334,7 +334,7 @@ This is expected. Docker only supports cloud providers. For LXD, use [Native Ins
 
 ## Next Steps
 
-- [Hetzner Provider Guide](../providers/hetzner.md) - Server types, locations, pricing
+- [Hetzner Provider Guide](../providers/hetzner/) - Server types, locations, pricing
 - [Docker Image Reference](../../../docker/deployer/README.md) - Advanced Docker usage
 - [Command Reference](../commands/README.md) - All available commands
 

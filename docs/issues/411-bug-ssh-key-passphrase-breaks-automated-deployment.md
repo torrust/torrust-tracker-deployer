@@ -210,7 +210,7 @@ Create `docs/user-guide/ssh-keys.md` covering:
 
 #### Update: Hetzner provider guide
 
-`docs/user-guide/providers/hetzner.md` — add a "SSH Key Requirements" section or
+`docs/user-guide/providers/hetzner/` — add a "SSH Key Requirements" section or
 callout box noting that Docker-based deployments require a passphrase-free key (or agent
 forwarding) and linking to the new SSH keys page.
 
@@ -246,7 +246,7 @@ configured private key appears to be passphrase-protected.
 ### Phase 3: Documentation
 
 - [ ] Create `docs/user-guide/ssh-keys.md` covering all workflows and security notes
-- [ ] Update `docs/user-guide/providers/hetzner.md` with an SSH key requirements note
+- [ ] Update `docs/user-guide/providers/hetzner/` with an SSH key requirements note
 - [ ] Update `docs/user-guide/commands/create.md` to mention the passphrase warning
 - [ ] Update `docs/user-guide/README.md` to link to the new `ssh-keys.md` page
 
@@ -276,11 +276,11 @@ configured private key appears to be passphrase-protected.
       forwarding, separate key)
 - [ ] `docs/user-guide/ssh-keys.md` exists and covers key requirements, workflows, and
       security notes
-- [ ] `docs/user-guide/providers/hetzner.md` references the SSH key requirements
+- [ ] `docs/user-guide/providers/hetzner/` references the SSH key requirements
 
 ## Related Documentation
 
 - [docs/deployments/hetzner-demo-tracker/commands/provision/problems.md](../deployments/hetzner-demo-tracker/commands/provision/problems.md) — root cause analysis and resolution for the Hetzner deployment failure
 - [src/adapters/ssh/ssh/credentials.rs](../../src/adapters/ssh/ssh/credentials.rs) — `SshCredentials` struct
 - [src/presentation/cli/controllers/create/subcommands/environment/handler.rs](../../src/presentation/cli/controllers/create/subcommands/environment/handler.rs) — where the warning is added
-- [docs/user-guide/providers/hetzner.md](../user-guide/providers/hetzner.md) — Hetzner provider guide
+- [docs/user-guide/providers/hetzner/](../user-guide/providers/hetzner/) — Hetzner provider guide

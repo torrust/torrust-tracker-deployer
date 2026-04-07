@@ -131,5 +131,5 @@ Consider disabling root access after successful deployment:
 ## Related Documentation
 
 - [ADR: Hetzner SSH Key Dual Injection Pattern](../decisions/hetzner-ssh-key-dual-injection.md)
-- [Hetzner Provider Documentation](../user-guide/providers/hetzner.md)
+- [Hetzner Provider Documentation](../user-guide/providers/hetzner/)
 - [SSH Keys Guide](../tech-stack/ssh-keys.md)
