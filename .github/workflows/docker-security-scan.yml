@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Build images locally so Trivy scans exactly
       # what this repository produces
@@ -86,7 +86,7 @@ jobs:
           scanners: "vuln"
 
       - name: Upload SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: sarif-project-${{ matrix.image.name }}-${{ github.run_id }}
@@ -140,7 +140,7 @@ jobs:
           echo "name=$(echo '${{ matrix.image }}' | tr '/:' '-')" >> "$GITHUB_OUTPUT"
 
       - name: Upload SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: sarif-third-party-${{ steps.sanitize.outputs.name }}-${{ github.run_id }}
@@ -162,7 +162,7 @@ jobs:
 
     steps:
       - name: Download all SARIF artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: sarif-*-${{ github.run_id }}
 

@@ -18,7 +18,7 @@ jobs:
     steps:
       - id: checkout
         name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - id: setup
         name: Setup Toolchain
@@ -54,7 +54,7 @@ jobs:
 
       - id: upload-coverage
         name: Upload HTML Coverage Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-html-report
           path: target/llvm-cov/html/
