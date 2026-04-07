@@ -19,6 +19,9 @@ pub enum MysqlConfigError {
     /// Username cannot be empty
     #[error("MySQL username cannot be empty")]
     EmptyUsername,
+    /// Username `root` is reserved by the MySQL Docker image
+    #[error("MySQL username \"root\" is reserved and cannot be used as the app database username")]
+    ReservedUsername,
 }
 
 impl MysqlConfigError {
@@ -83,6 +86,23 @@ impl MysqlConfigError {
                  \n\
                  Fix:\n\
                  Set the username field in your database configuration:\n\
+                 \n\
+                 \"database\": {\n\
+                   \"driver\": \"mysql\",\n\
+                   \"username\": \"tracker_user\",\n\
+                   ...\n\
+                 }"
+            }
+            Self::ReservedUsername => {
+                "MySQL username \"root\" is reserved by the MySQL Docker image and cannot\n\
+                 be used as the application database username.\n\
+                 \n\
+                 The MySQL container creates a privileged superuser named \"root\" automatically.\n\
+                 Setting MYSQL_USER=root causes the container initialization to fail with:\n\
+                 [ERROR] [Entrypoint]: MYSQL_USER=\"root\", MYSQL_USER and MYSQL_ROOT_USER cannot be the same.\n\
+                 \n\
+                 Fix:\n\
+                 Choose a different username in your database configuration:\n\
                  \n\
                  \"database\": {\n\
                    \"driver\": \"mysql\",\n\
@@ -159,6 +179,9 @@ impl MysqlConfig {
         }
         if username.is_empty() {
             return Err(MysqlConfigError::EmptyUsername);
+        }
+        if username == "root" {
+            return Err(MysqlConfigError::ReservedUsername);
         }
 
         Ok(Self {
@@ -272,6 +295,20 @@ mod tests {
     fn it_should_reject_empty_username_when_creating_mysql_config() {
         let result = MysqlConfig::new("localhost", 3306, "tracker", "", Password::from("pass"));
         assert!(matches!(result, Err(MysqlConfigError::EmptyUsername)));
+    }
+
+    #[test]
+    fn it_should_reject_root_as_username() {
+        let result = MysqlConfig::new("localhost", 3306, "tracker", "root", Password::from("pass"));
+        assert!(matches!(result, Err(MysqlConfigError::ReservedUsername)));
+    }
+
+    #[test]
+    fn it_should_provide_actionable_help_for_reserved_username_error() {
+        let error = MysqlConfigError::ReservedUsername;
+        let help = error.help();
+        assert!(help.contains("root"));
+        assert!(help.contains("tracker_user"));
     }
 
     #[test]
