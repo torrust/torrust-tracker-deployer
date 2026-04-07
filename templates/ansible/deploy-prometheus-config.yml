@@ -31,20 +31,22 @@
 - name: Deploy Prometheus configuration
   hosts: all
   become: true
+  vars_files:
+    - variables.yml
 
   tasks:
     - name: Copy prometheus.yml to VM
       ansible.builtin.copy:
         src: "{{ playbook_dir }}/../prometheus/prometheus.yml"
         # Note: This is the host path. Inside the container, it's mounted to /etc/prometheus/
-        dest: /opt/torrust/storage/prometheus/etc/prometheus.yml
+        dest: "{{ deploy_dir }}/storage/prometheus/etc/prometheus.yml"
         mode: "0644"
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
 
     - name: Verify Prometheus configuration file exists
       ansible.builtin.stat:
-        path: /opt/torrust/storage/prometheus/etc/prometheus.yml
+        path: "{{ deploy_dir }}/storage/prometheus/etc/prometheus.yml"
       register: prometheus_config
 
     - name: Assert Prometheus configuration was deployed

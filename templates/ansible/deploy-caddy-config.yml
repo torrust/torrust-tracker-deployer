@@ -28,13 +28,15 @@
 # - ansible_user: The SSH user for the remote host (set automatically)
 #
 # Storage Directories:
-# - /opt/torrust/storage/caddy/etc/ - Caddyfile configuration
-# - /opt/torrust/storage/caddy/data/ - Caddy data (certificates, etc.)
-# - /opt/torrust/storage/caddy/config/ - Caddy config state
+# - {{ deploy_dir }}/storage/caddy/etc/ - Caddyfile configuration
+# - {{ deploy_dir }}/storage/caddy/data/ - Caddy data (certificates, etc.)
+# - {{ deploy_dir }}/storage/caddy/config/ - Caddy config state
 
 - name: Deploy Caddy configuration
   hosts: all
   become: true
+  vars_files:
+    - variables.yml
 
   tasks:
     - name: Create Caddy storage directories
@@ -45,23 +47,23 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
       loop:
-        - /opt/torrust/storage/caddy
-        - /opt/torrust/storage/caddy/etc
-        - /opt/torrust/storage/caddy/data
-        - /opt/torrust/storage/caddy/config
+        - "{{ deploy_dir }}/storage/caddy"
+        - "{{ deploy_dir }}/storage/caddy/etc"
+        - "{{ deploy_dir }}/storage/caddy/data"
+        - "{{ deploy_dir }}/storage/caddy/config"
 
     - name: Copy Caddyfile to VM
       ansible.builtin.copy:
         src: "{{ playbook_dir }}/../caddy/Caddyfile"
         # Note: This is the host path. Inside the container, it's mounted to /etc/caddy/Caddyfile
-        dest: /opt/torrust/storage/caddy/etc/Caddyfile
+        dest: "{{ deploy_dir }}/storage/caddy/etc/Caddyfile"
         mode: "0644"
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
 
     - name: Verify Caddy configuration file exists
       ansible.builtin.stat:
-        path: /opt/torrust/storage/caddy/etc/Caddyfile
+        path: "{{ deploy_dir }}/storage/caddy/etc/Caddyfile"
       register: caddy_config
 
     - name: Assert Caddy configuration was deployed

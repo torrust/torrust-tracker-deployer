@@ -32,12 +32,14 @@
 - name: Deploy Backup configuration
   hosts: all
   become: true
+  vars_files:
+    - variables.yml
 
   tasks:
     - name: Copy backup.conf to VM
       ansible.builtin.copy:
         src: "{{ playbook_dir }}/../backup/etc/backup.conf"
-        dest: /opt/torrust/storage/backup/etc/backup.conf
+        dest: "{{ deploy_dir }}/storage/backup/etc/backup.conf"
         mode: "0644"
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
@@ -45,19 +47,19 @@
     - name: Copy backup-paths.txt to VM
       ansible.builtin.copy:
         src: "{{ playbook_dir }}/../backup/etc/backup-paths.txt"
-        dest: /opt/torrust/storage/backup/etc/backup-paths.txt
+        dest: "{{ deploy_dir }}/storage/backup/etc/backup-paths.txt"
         mode: "0644"
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
 
     - name: Verify backup.conf exists
       ansible.builtin.stat:
-        path: /opt/torrust/storage/backup/etc/backup.conf
+        path: "{{ deploy_dir }}/storage/backup/etc/backup.conf"
       register: backup_conf
 
     - name: Verify backup-paths.txt exists
       ansible.builtin.stat:
-        path: /opt/torrust/storage/backup/etc/backup-paths.txt
+        path: "{{ deploy_dir }}/storage/backup/etc/backup-paths.txt"
       register: backup_paths
 
     - name: Assert backup configuration files were deployed

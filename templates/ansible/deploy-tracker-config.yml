@@ -31,20 +31,22 @@
 - name: Deploy Tracker configuration
   hosts: all
   become: true
+  vars_files:
+    - variables.yml
 
   tasks:
     - name: Copy tracker.toml to VM
       ansible.builtin.copy:
         src: "{{ playbook_dir }}/../tracker/tracker.toml"
         # Note: This is the host path. Inside the container, it's mounted to /var/lib/torrust/tracker/etc/
-        dest: /opt/torrust/storage/tracker/etc/tracker.toml
+        dest: "{{ deploy_dir }}/storage/tracker/etc/tracker.toml"
         mode: "0644"
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
 
     - name: Verify tracker configuration file exists
       ansible.builtin.stat:
-        path: /opt/torrust/storage/tracker/etc/tracker.toml
+        path: "{{ deploy_dir }}/storage/tracker/etc/tracker.toml"
       register: tracker_config
 
     - name: Assert tracker configuration was deployed

@@ -21,20 +21,23 @@
 # The directories are created with appropriate permissions and ownership.
 #
 # Directory Structure:
-# /opt/torrust/storage/backup/
+# {{ deploy_dir }}/storage/backup/
 # └── etc/              # Backup configuration files
 #
 # Variables:
+# - deploy_dir: Base deployment directory (from variables.yml)
 # - ansible_user: The SSH user for the remote host (set automatically)
 
 - name: Create Backup storage directories
   hosts: all
   become: true
+  vars_files:
+    - variables.yml
 
   tasks:
     - name: Create backup configuration directory
       ansible.builtin.file:
-        path: /opt/torrust/storage/backup/etc
+        path: "{{ deploy_dir }}/storage/backup/etc"
         state: directory
         mode: "0755"
         owner: "{{ ansible_user }}"
@@ -42,7 +45,7 @@
 
     - name: Verify backup configuration directory exists
       ansible.builtin.stat:
-        path: /opt/torrust/storage/backup/etc
+        path: "{{ deploy_dir }}/storage/backup/etc"
       register: backup_etc_dir
 
     - name: Assert backup directories were created
