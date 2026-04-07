@@ -6,6 +6,7 @@ This directory contains architectural decision records for the Torrust Tracker D
 
 | Status        | Date       | Decision                                                                                                  | Summary                                                                                    |
 | ------------- | ---------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ✅ Accepted   | 2026-04-07 | [SSH Key Passphrase Detection](./ssh-key-passphrase-detection.md)                                         | Detect passphrase-protected keys via byte inspection; reject ssh-keygen probe approach     |
 | ✅ Accepted   | 2026-02-26 | [SDK Package Naming](./sdk-package-naming.md)                                                             | Keep "SDK" name for packages/sdk — the modern API-wrapper meaning is industry-standard     |
 | ✅ Accepted   | 2026-02-24 | [SDK Presentation Layer Interface Design](./sdk-presentation-layer-interface-design.md)                   | Return () from SDK operations; no domain types or typestate pattern in the SDK public API  |
 | ✅ Accepted   | 2026-02-24 | [Docker Compose Local Validation Placement](./docker-compose-local-validation-placement.md)               | Validate rendered docker-compose.yml in the infrastructure generator, not the app layer    |

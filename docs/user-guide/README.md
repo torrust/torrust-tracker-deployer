@@ -388,6 +388,13 @@ See individual service guides for detailed configuration options and verificatio
 - Production security checklist
 - Security incident response
 
+### SSH Keys
+
+The deployer uses SSH for all remote operations (`provision`, `configure`, `release`, `run`).
+Automated deployments (Docker, CI/CD) require a passphrase-free key or SSH agent forwarding.
+
+**[📖 SSH Keys Guide →](ssh-keys.md)**
+
 ### Logging Configuration
 
 Control logging output with command-line options:

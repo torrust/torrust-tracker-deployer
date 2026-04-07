@@ -833,6 +833,32 @@ ssh-keygen -t rsa -b 4096 -f ~/.ssh/deployer_key
 "public_key_path": "~/.ssh/deployer_key.pub"
 ```
 
+### Passphrase-Protected SSH Key Warning
+
+**During `create environment` you may see**:
+
+```text
+⚠️  SSH private key appears to be passphrase-protected.
+  Key: /home/you/.ssh/torrust_key
+
+  Automated deployment (e.g. Docker, CI/CD) requires an SSH key that can be
+  used without interactive input. A passphrase-protected key will cause the
+  `provision` step to fail with "Permission denied" unless one of the
+  following is arranged: …
+```
+
+This is a **warning, not an error** — the environment is created normally. The warning
+means the configured key is encrypted and may not work in automated contexts (Docker,
+CI/CD) without an SSH agent.
+
+**Resolution options**:
+
+1. Remove the passphrase: `ssh-keygen -p -f /path/to/your/key`
+2. Forward your SSH agent socket into the Docker container.
+3. Use a separate passphrase-free deployment key.
+
+See the [SSH Keys Guide](../ssh-keys.md) for full details on all three workflows.
+
 ### Environment Already Exists
 
 **Problem**: `Environment 'my-env' already exists`
