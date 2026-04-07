@@ -227,5 +227,5 @@ sudo ip6tables -t nat -L POSTROUTING -n -v | grep 6969
 - [torrust-tracker-demo#2](https://github.com/torrust/torrust-tracker-demo/issues/2) — incident that produced this documentation
 - [torrust-tracker-demo/docs/docker-ipv6.md](https://github.com/torrust/torrust-tracker-demo/blob/main/docs/docker-ipv6.md) — detailed explanation with packet-flow diagram
 - [torrust-tracker-demo/docs/post-deployment.md](https://github.com/torrust/torrust-tracker-demo/blob/main/docs/post-deployment.md) — step-by-step instructions
-- [Hetzner Provider Guide](hetzner.md) — Hetzner Cloud configuration for the deployer
-- [IPv6 UDP Tracker Issue Investigation](../../../docs/deployments/hetzner-demo-tracker/post-provision/ipv6-udp-tracker-issue.md) — root-cause analysis
+- [Hetzner Provider Guide](README.md) — Hetzner Cloud configuration for the deployer
+- [IPv6 UDP Tracker Issue Investigation](../../../deployments/hetzner-demo-tracker/post-provision/ipv6-udp-tracker-issue.md) — root-cause analysis

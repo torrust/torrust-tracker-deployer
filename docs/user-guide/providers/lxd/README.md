@@ -14,8 +14,8 @@ LXD provides lightweight virtual machines that run on your local system. Ideal f
 
 ## Prerequisites
 
-- LXD installed and initialized (see [LXD tech guide](../../tech-stack/lxd.md))
-- SSH key pair (see [SSH keys guide](../../tech-stack/ssh-keys.md))
+- LXD installed and initialized (see [LXD tech guide](../../../tech-stack/lxd.md))
+- SSH key pair (see [SSH keys guide](../../../tech-stack/ssh-keys.md))
 
 ## LXD-Specific Configuration
 
@@ -73,7 +73,7 @@ sudo systemctl restart snap.lxd.daemon
 
 ### Permission Denied
 
-See the [LXD Group Setup](../../tech-stack/lxd.md#proper-lxd-group-setup) section in the LXD tech guide.
+See the [LXD Group Setup](../../../tech-stack/lxd.md#proper-lxd-group-setup) section in the LXD tech guide.
 
 ### Network Issues
 
@@ -97,7 +97,7 @@ lxc network create lxdbr0
 
 ## SSH Key Behavior
 
-Unlike the [Hetzner provider](hetzner.md), LXD does **not** create a provider-level SSH key resource. This is because:
+Unlike the [Hetzner provider](../hetzner/), LXD does **not** create a provider-level SSH key resource. This is because:
 
 1. **Direct console access**: `lxc exec` provides shell access without SSH
 2. **No account-level keys**: LXD doesn't have an SSH key registry concept
@@ -113,6 +113,6 @@ lxc exec torrust-tracker-vm-<environment> -- bash
 
 ## Related Documentation
 
-- [LXD Tech Guide](../../tech-stack/lxd.md) - Installation and detailed LXD operations
-- [Quick Start: Native](../quick-start/native.md) - LXD deployment workflow
-- [Hetzner Provider](hetzner.md) - Cloud deployment alternative
+- [LXD Tech Guide](../../../tech-stack/lxd.md) - Installation and detailed LXD operations
+- [Quick Start: Native](../../quick-start/native.md) - LXD deployment workflow
+- [Hetzner Provider](../hetzner/) - Cloud deployment alternative

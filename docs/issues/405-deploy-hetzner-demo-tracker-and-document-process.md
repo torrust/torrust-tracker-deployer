@@ -2,7 +2,7 @@
 
 **Issue**: #405
 **Parent Epic**: None
-**Related**: [docs/user-guide/providers/hetzner.md](../user-guide/providers/hetzner.md), [docs/user-guide/quick-start/docker.md](../user-guide/quick-start/docker.md)
+**Related**: [docs/user-guide/providers/hetzner/](../user-guide/providers/hetzner/), [docs/user-guide/quick-start/docker.md](../user-guide/quick-start/docker.md)
 
 ## Overview
 
@@ -118,7 +118,7 @@ See [`docs/deployments/hetzner-demo-tracker/post-provision/`](../deployments/het
 
 ## Related Documentation
 
-- [Hetzner Cloud Provider](../user-guide/providers/hetzner.md)
+- [Hetzner Cloud Provider](../user-guide/providers/hetzner/)
 - [Quick Start: Docker Deployment](../user-guide/quick-start/docker.md)
 - [Deployment Overview](../deployment-overview.md)
 - [User Guide](../user-guide/README.md)

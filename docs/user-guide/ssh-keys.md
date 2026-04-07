@@ -141,6 +141,6 @@ full `ssh_credentials` field documentation.
 ## Related Documentation
 
 - [Create Environment Command](commands/create.md) — passphrase warning details
-- [Hetzner Provider Guide](providers/hetzner.md) — SSH key requirements for cloud deployments
+- [Hetzner Provider Guide](providers/hetzner/) — SSH key requirements for cloud deployments
 - [Security Guide](security.md) — broader security considerations
 - [ADR: SSH Key Passphrase Detection](../../docs/decisions/ssh-key-passphrase-detection.md)

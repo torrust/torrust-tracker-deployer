@@ -17,7 +17,7 @@ This guide covers Hetzner-specific configuration for cloud deployments.
 
 - Hetzner Cloud account ([sign up](https://www.hetzner.com/cloud))
 - API token with read/write permissions
-- SSH key pair (see [SSH keys guide](../../tech-stack/ssh-keys.md))
+- SSH key pair (see [SSH keys guide](../../../tech-stack/ssh-keys.md))
 
 ## Create API Token
 
@@ -143,7 +143,7 @@ cat /var/log/cloud-init-output.log
 2. **Restrict SSH access** - Consider using Hetzner Firewall
 3. **Use strong SSH keys** - Ed25519 or RSA 4096-bit minimum
 4. **Regular updates** - Keep server packages updated
-5. **Disable root SSH access** - For production, see [SSH Root Access Guide](../../security/ssh-root-access-hetzner.md)
+5. **Disable root SSH access** - For production, see [SSH Root Access Guide](../../../security/ssh-root-access-hetzner.md)
 
 ## SSH Key Requirements
 
@@ -163,13 +163,13 @@ private key will cause the `provision` step to fail with
    # Press Enter twice for an empty new passphrase
    ```
 
-2. **Forward your SSH agent** into the container (see [SSH Keys Guide](../ssh-keys.md#workflow-2--passphrase-protected-key-with-ssh-agent-forwarding-into-docker)).
+2. **Forward your SSH agent** into the container (see [SSH Keys Guide](../../ssh-keys.md#workflow-2--passphrase-protected-key-with-ssh-agent-forwarding-into-docker)).
 
 The `create environment` command will warn you if it detects a passphrase-protected key
 so you can resolve this before reaching `provision`.
 
 For more detail on generating keys, removing passphrases, and security considerations,
-see the [SSH Keys Guide](../ssh-keys.md).
+see the [SSH Keys Guide](../../ssh-keys.md).
 
 ## SSH Key Behavior
 
@@ -182,15 +182,15 @@ Hetzner deployments configure SSH access through two mechanisms:
 
 **Why both?** If cloud-init fails, root SSH access provides a debugging path. Without it, a failed cloud-init would leave the server completely inaccessible.
 
-**For stricter security**: You can disable root SSH access after deployment. See [SSH Root Access on Hetzner](../../security/ssh-root-access-hetzner.md) for instructions.
+**For stricter security**: You can disable root SSH access after deployment. See [SSH Root Access on Hetzner](../../../security/ssh-root-access-hetzner.md) for instructions.
 
 **Note**: The SSH key appears in your Hetzner Console under **Security** → **SSH Keys** with the name `torrust-tracker-vm-<environment>-ssh-key`.
 
 ## Related Documentation
 
-- [Quick Start: Docker](../quick-start/docker.md) - Deploy to Hetzner using Docker
-- [Quick Start: Native](../quick-start/native.md) - Deploy using native installation
-- [SSH Keys Guide](../../tech-stack/ssh-keys.md) - SSH key generation
-- [SSH Root Access Security](../../security/ssh-root-access-hetzner.md) - Disabling root access
-- [LXD Provider](lxd.md) - Local development alternative
-- [Post-Deployment: Floating IPs and IPv6](hetzner-post-deployment.md) - Manual steps for floating IPs and IPv6 UDP
+- [Quick Start: Docker](../../quick-start/docker.md) - Deploy to Hetzner using Docker
+- [Quick Start: Native](../../quick-start/native.md) - Deploy using native installation
+- [SSH Keys Guide](../../../tech-stack/ssh-keys.md) - SSH key generation
+- [SSH Root Access Security](../../../security/ssh-root-access-hetzner.md) - Disabling root access
+- [LXD Provider](../lxd/) - Local development alternative
+- [Post-Deployment: Floating IPs and IPv6](post-deployment.md) - Manual steps for floating IPs and IPv6 UDP

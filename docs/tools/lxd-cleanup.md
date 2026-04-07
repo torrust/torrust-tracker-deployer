@@ -240,4 +240,4 @@ cargo run --bin lxd_cleanup -- environment-name
 
 - [E2E Testing Documentation](../e2e-testing/README.md)
 - [Preflight Cleanup Implementation](../../src/testing/e2e/tasks/virtual_machine/preflight_cleanup.rs)
-- [LXD Provider Documentation](../user-guide/providers/lxd.md)
+- [LXD Provider Documentation](../user-guide/providers/lxd/)
