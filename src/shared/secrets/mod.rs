@@ -7,6 +7,7 @@
 
 mod api_token;
 mod password;
+mod random;
 
 // Re-export ExposeSecret from secrecy for convenience
 pub use secrecy::ExposeSecret;
@@ -14,3 +15,4 @@ pub use secrecy::ExposeSecret;
 // Re-export types from submodules
 pub use api_token::{ApiToken, PlainApiToken};
 pub use password::{Password, PlainPassword};
+pub use random::generate_random_password;

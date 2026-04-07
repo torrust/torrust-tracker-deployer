@@ -19,6 +19,6 @@ pub use command::{CommandError, CommandExecutor, CommandResult};
 pub use domain_name::{DomainName, DomainNameError};
 pub use email::{Email, EmailError};
 pub use error::{ErrorKind, Traceable};
-pub use secrets::{ApiToken, ExposeSecret, Password, PlainApiToken, PlainPassword};
+pub use secrets::{ApiToken, ExposeSecret, Password, PlainApiToken, PlainPassword, generate_random_password};
 pub use service_endpoint::{InvalidServiceEndpointUrl, ServiceEndpoint};
 pub use username::{Username, UsernameError};

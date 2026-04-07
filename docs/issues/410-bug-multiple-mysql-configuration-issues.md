@@ -46,11 +46,12 @@ value.
 
 ### Bug 2 — Root password not configurable
 
-- [ ] Add an optional `root_password` field to the MySQL section of the environment
+- [x] Add an optional `root_password` field to the MySQL section of the environment
       configuration JSON schema
-- [ ] When a root password is provided by the user, use it; when omitted, generate a
-      strong random password at render time rather than deriving it from the app password
-- [ ] Remove the `format!("{password}_root")` derivation from `create_mysql_contexts`
+- [x] When a root password is provided by the user, use it; when omitted, generate a
+      strong random password at environment creation time (application layer) rather
+      than deriving it from the app password
+- [x] Remove the `format!("{password}_root")` derivation from `create_mysql_contexts`
 
 ### Bug 3 — Reserved username not rejected
 
@@ -174,21 +175,44 @@ no `root_password` field for MySQL. The deployer therefore always sets
 
 **Fix**: Add an optional `root_password` to the MySQL section of the environment
 configuration JSON. If the user provides it, use it. If they omit it, generate a
-cryptographically random password at render time instead of deriving it from the app
-password. Remove the `format!("{password}_root")` derivation.
+cryptographically random password at **environment creation time** (application layer)
+instead of deriving it from the app password. Remove the `format!("{password}_root")`
+derivation.
+
+**Key design decision — generate at creation time, not render time**: The root password
+is a domain invariant that must remain stable across multiple renders (e.g. re-deploying
+without reprovisioning). Generating it at render time would produce a different
+`MYSQL_ROOT_PASSWORD` on each render, breaking MySQL container restarts. Instead,
+generation happens once in the application layer (`TryFrom<DatabaseSection>`) when the
+environment is first created, and the value is persisted alongside the rest of the
+environment config.
 
 **Affected modules and types**:
 
+- `Cargo.toml`: add `rand = "0.9"` dependency.
 - `schemas/environment-config.json`: add optional `root_password` string to the MySQL
   database object.
-- `src/domain/tracker/config/core/database/mysql.rs` (`MysqlConfig`): add optional
-  `root_password` field; update constructor and accessors.
-- `src/presentation/cli/controllers/create/subcommands/environment/config_loader.rs`
-  (or equivalent deserialization path): propagate the optional field through to the
-  domain type.
+- `src/shared/secrets/random.rs` (new file): `generate_random_password() -> Password`
+  using `rand::rng()` (ThreadRng seeded from OsRng), guaranteeing one character from each
+  class (lower, upper, digit, symbol), filled to 32 characters, then shuffled. Satisfies
+  MySQL `validate_password MEDIUM` policy.
+- `src/shared/secrets/mod.rs` and `src/shared/mod.rs`: re-export
+  `generate_random_password`.
+- `src/domain/tracker/config/core/database/mysql.rs` (`MysqlConfig`): `root_password`
+  field is `Password` (non-optional) — the domain type always has a value. Constructor
+  `new()` takes `root_password: Password`. Accessor `root_password() -> &Password` added.
+  `MysqlConfigRaw` (the serde deserialization intermediate) keeps
+  `root_password: Option<Password>` with `#[serde(default)]` for backward compatibility
+  with persisted environments that pre-date this field; missing values are filled by
+  calling `generate_random_password()` during deserialization.
+- `src/application/command_handlers/create/config/tracker/tracker_core_section.rs`
+  (`TryFrom<DatabaseSection>`): generation happens here — the optional user-supplied
+  `root_password` is mapped to `Password` if present, or `generate_random_password()` is
+  called if absent. This is the single point of generation for new environments.
 - `src/application/services/rendering/docker_compose.rs` (`create_mysql_contexts`):
-  replace `format!("{password}_root")` with either the user-supplied root password or a
-  freshly generated random password.
+  `root_password` parameter is now `PlainPassword` (non-optional); call site passes
+  `mysql_config.root_password().expose_secret().to_string()`. No generation logic
+  remains here.
 
 ### Bug 3 — Reserved MySQL Username `"root"` Not Rejected
 
@@ -237,24 +261,27 @@ Tasks are ordered from simplest to most complex.
 
 ### Phase 1: Reject reserved MySQL username (Bug 3)
 
-- [ ] In `MysqlConfigError` (`mysql.rs`): add `ReservedUsername` variant
-- [ ] Add `help()` arm for `ReservedUsername` with actionable fix instructions
-- [ ] In `MysqlConfig::new()`: add `if username == "root"` guard returning
+- [x] In `MysqlConfigError` (`mysql.rs`): add `ReservedUsername` variant
+- [x] Add `help()` arm for `ReservedUsername` with actionable fix instructions
+- [x] In `MysqlConfig::new()`: add `if username == "root"` guard returning
       `Err(MysqlConfigError::ReservedUsername)`
-- [ ] Add unit test `it_should_reject_root_as_username`
+- [x] Add unit test `it_should_reject_root_as_username`
 
 ### Phase 2: Make root password configurable (Bug 2)
 
-- [ ] `schemas/environment-config.json`: add optional `root_password` string to the
+- [x] `schemas/environment-config.json`: add optional `root_password` string to the
       MySQL database object
-- [ ] `MysqlConfig` (`mysql.rs`): add optional `root_password` field; update constructor
-      and accessor
-- [ ] Deserialization/config-loading path: thread the optional field through to the
-      application layer
-- [ ] `create_mysql_contexts` (`docker_compose.rs`): replace
-      `format!("{password}_root")` with user-supplied value or a randomly generated
-      password (use `rand` / `getrandom` — already in `Cargo.toml` — to produce a
-      16+ character alphanumeric string)
+- [x] `MysqlConfig` (`mysql.rs`): `root_password` is `Password` (non-optional) in the
+      domain — always has a value. `MysqlConfigRaw` uses `Option<Password>` for backward
+      compat with persisted environments lacking the field.
+- [x] `src/shared/secrets/random.rs` (new): `generate_random_password() -> Password`
+      using mixed charset (lower + upper + digit + symbol), length 32, satisfies MySQL
+      MEDIUM password policy
+- [x] `TryFrom<DatabaseSection>` (`tracker_core_section.rs`): generates root password at
+      environment creation time — not at render time — so it is stable across re-renders
+- [x] `create_mysql_contexts` (`docker_compose.rs`): replaced `format!("{password}_root")`
+      with `mysql_config.root_password().expose_secret().to_string()`; no generation
+      logic remains here
 
 ### Phase 3: Move DSN to env var override and add URL-encoding (Bug 1)
 
@@ -308,13 +335,17 @@ Tasks are ordered from simplest to most complex.
 
 **Task-Specific Criteria — Bug 2 (root password)**:
 
-- [ ] The environment configuration JSON schema accepts an optional `root_password` field
+- [x] The environment configuration JSON schema accepts an optional `root_password` field
       in the MySQL database object
-- [ ] When `root_password` is provided in the env JSON it is used as `MYSQL_ROOT_PASSWORD`
+- [x] When `root_password` is provided in the env JSON it is used as `MYSQL_ROOT_PASSWORD`
       in the rendered `.env`
-- [ ] When `root_password` is omitted, a randomly generated password is used — it is
+- [x] When `root_password` is omitted, a randomly generated password is used — it is
       **not** derived from the app password
-- [ ] `create_mysql_contexts` no longer contains `format!("{password}_root")`
+- [x] `create_mysql_contexts` no longer contains `format!("{password}_root")`
+- [x] The random password is generated once at environment creation time (not at render
+      time), ensuring stability across multiple renders
+- [x] The domain type `MysqlConfig.root_password` is always populated (`Password`,
+      non-optional)
 
 **Task-Specific Criteria — Bug 1 (DSN in tracker.toml)**:
 

@@ -283,6 +283,7 @@ mod tests {
                         "tracker_db",
                         "tracker_user",
                         Password::from("secure_pass"),
+                        Password::from("root_pass"),
                     )
                     .unwrap(),
                 ),

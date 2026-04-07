@@ -203,6 +203,7 @@ impl EnvironmentCreationConfigBuilder {
             database_name: database_name.into(),
             username: username.into(),
             password: password.into(),
+            root_password: None,
         });
         self
     }

@@ -139,6 +139,7 @@ mod tests {
                 "tracker",
                 "tracker_user",
                 Password::from("secure_password"),
+                Password::from("root_pass"),
             )
             .unwrap(),
         );
@@ -156,6 +157,7 @@ mod tests {
                 "tracker",
                 "tracker_user",
                 Password::from("pass123"),
+                Password::from("root123"),
             )
             .unwrap(),
         );

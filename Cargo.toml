@@ -50,6 +50,7 @@ clap = { version = "4.0", features = [ "derive" ] }
 derive_more = { version = "2.1", features = [ "display", "from" ] }
 figment = { version = "0.10", features = [ "json" ] }
 parking_lot = "0.12"
+rand = "0.9"
 reqwest = "0.12"
 rust-embed = "8.0"
 schemars = "1.1"

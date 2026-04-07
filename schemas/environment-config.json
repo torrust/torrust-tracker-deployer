@@ -145,6 +145,14 @@
             "username": {
               "description": "Database username",
               "type": "string"
+            },
+            "root_password": {
+              "description": "Optional `MySQL` root password\n\nWhen provided, used as `MYSQL_ROOT_PASSWORD` in the rendered `.env` file.\nWhen absent, a cryptographically random password is generated at render time.\nNever set this to the same value as `password` in production environments.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
             }
           },
           "required": [
