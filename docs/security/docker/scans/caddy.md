@@ -6,11 +6,11 @@
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status       | Scan Date    |
-| ------- | ---- | -------- | ------------ | ------------ |
-| 2.10    | 3    | 1        | ⚠️ Monitored | Jan 13, 2026 |
+| Version | HIGH | CRITICAL | Status                 | Scan Date   |
+| ------- | ---- | -------- | ---------------------- | ----------- |
+| 2.10    | 24   | 0        | ⚠️ CVE database update | Apr 8, 2026 |
 
-**Deployment Status**: ✅ Safe to deploy with monitoring
+**Deployment Status**: ⚠️ Requires investigation - vulnerability count increased significantly (3 → 24 HIGH), suggesting Trivy DB update rather than new Caddy vulnerabilities
 
 ## Vulnerability Summary
 

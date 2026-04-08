@@ -4,9 +4,9 @@ Security scan history for the `torrust/tracker-deployer` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status                      | Last Scan   |
-| ------- | ---- | -------- | --------------------------- | ----------- |
-| trixie  | 1    | 0        | ✅ Improved (Trixie Update) | Feb 5, 2026 |
+| Version | HIGH | CRITICAL | Status                         | Last Scan   |
+| ------- | ---- | -------- | ------------------------------ | ----------- |
+| trixie  | 49   | 0        | ⚠️ Regression (New CVEs Found) | Apr 8, 2026 |
 
 ## Build & Scan Commands
 
@@ -23,6 +23,69 @@ trivy image --severity HIGH,CRITICAL torrust/tracker-deployer:local
 ```
 
 ## Scan History
+
+### April 8, 2026 - Regression Alert - New CVEs Discovered
+
+**Image**: `torrust/tracker-deployer:local`
+**Trivy Version**: 0.68.2
+**Base OS**: Debian 13.4 (trixie)
+**Status**: ⚠️ **Significant regression** - 49 HIGH vulnerabilities (up from 1 in Feb 5 scan)
+
+#### Summary
+
+The April 8, 2026 scan reveals major vulnerabilities that were not detected in the February 5 scan. The Trivy vulnerability database appears to have been updated with new CVE entries, or Debian 13.4 contains additional security issues not present in earlier 13.x releases.
+
+**Alert**: Before deploying, manually verify whether these represent:
+
+1. New Debian 13.4 package vulnerabilities that need investigation
+2. Updated Trivy database with previously unknown CVEs
+3. False positives from secret scanning (test fixtures)
+
+#### Detailed Results
+
+**Debian Base Packages (49 HIGH)**:
+
+The majority of vulnerabilities are in Debian 13.4 base packages:
+
+| Package Category | Count | CVEs                                                                 | Status                         |
+| ---------------- | ----- | -------------------------------------------------------------------- | ------------------------------ |
+| GnuPG packages   | ~32   | CVE-2026-24882                                                       | Affected - needs investigation |
+| System libraries | ~8    | CVE-2025-69720, CVE-2026-27135, CVE-2025-13836, CVE-2025-15366, etc. | Affected                       |
+| Test artifacts   | ~9    | SSH keys, AWS credentials in test fixtures                           | Low risk - test only           |
+
+**Binary Vulnerabilities (3 total: 2 HIGH, 1 CRITICAL)**:
+
+| Binary                            | CVEs                     | Severity           |
+| --------------------------------- | ------------------------ | ------------------ |
+| `/usr/bin/tofu` (OpenTofu binary) | CVE-2026-34986 (go-jose) | 1 HIGH, 1 CRITICAL |
+
+#### Risk Assessment
+
+**High Priority Action Needed**:
+
+1. **GnuPG Regression** (CVE-2026-24882): Stack-based buffer overflow in tpm2daemon
+   - Status: Marked as "affected" with no fixed version in Debian repos
+   - Risk: Could allow arbitrary code execution
+   - Action: Contact Debian maintainers or consider alternative base image
+
+2. **Binary Dependencies**: OpenTofu go-jose library needs update
+   - Status: Fixed version available (go-jose v4.1.4)
+   - Action: Rebuild with updated OpenTofu
+
+3. **Test Artifacts**: Private keys and AWS credentials in test fixtures
+   - Status: Expected in test code
+   - Risk: Negligible (test-only, not deployed)
+
+#### Investigation Required
+
+This is a significant change from the February scan result (1 HIGH) to April (49 HIGH). Before updating deployment systems, determine:
+
+1. Check Debian 13.4 security advisories: https://security-tracker.debian.org/
+2. Compare Trivy database versions between Feb and Apr scans
+3. Verify if base `debian:trixie` image has the same issues
+4. Check if Dockerfile changes inadvertently added new packages
+
+**Pending**: Need manual investigation before marking as clear for deployment.
 
 ### February 5, 2026 - UPDATE TO DEBIAN 13 (TRIXIE)
 

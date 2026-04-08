@@ -4,11 +4,29 @@ Security scan history for the `prom/prometheus` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status    | Last Scan    | Support EOL  |
-| ------- | ---- | -------- | --------- | ------------ | ------------ |
-| v3.5.0  | 0    | 0        | ✅ SECURE | Dec 29, 2025 | Jul 31, 2026 |
+| Version | HIGH | CRITICAL | Status                 | Last Scan   | Support EOL  |
+| ------- | ---- | -------- | ---------------------- | ----------- | ------------ |
+| v3.5.0  | 20   | 0        | ⚠️ CVE database update | Apr 8, 2026 | Jul 31, 2026 |
 
 ## Scan History
+
+### April 8, 2026
+
+**Image**: `prom/prometheus:v3.5.0`
+**Trivy Version**: 0.68.2
+**Status**: ⚠️ **20 vulnerabilities** (20 HIGH, 0 CRITICAL) - Significant increase from Dec scan
+
+#### Summary
+
+Vulnerability count increased dramatically from 0 to 20 HIGH. This represents a significant change, strongly suggesting the Trivy vulnerability database was updated with new CVE entries rather than Prometheus actually becoming more vulnerable.
+
+#### Changes Since December
+
+- December scan: 0 vulnerabilities
+- April scan: 10 HIGH per binary (prometheus, promtool) = 20 total
+- Most likely cause: Trivy database updated with newly-discovered Go stdlib CVEs
+
+**Recommended Action**: Verify that Prometheus binary and dependencies haven't actually been compromised. Check official Prometheus security advisories: https://github.com/prometheus/prometheus/security/advisories
 
 ### December 29, 2025
 

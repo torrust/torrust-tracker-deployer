@@ -6,7 +6,7 @@ Security scan history for the `torrust/tracker-ssh-server` Docker image used for
 
 | Version | HIGH | CRITICAL | Status             | Last Scan   |
 | ------- | ---- | -------- | ------------------ | ----------- |
-| 3.23.3  | 1    | 0        | ✅ Current/Minimal | Feb 5, 2026 |
+| 3.23.3  | 1    | 0        | ✅ Current/Minimal | Apr 8, 2026 |
 
 ## Build & Scan Commands
 
@@ -23,6 +23,22 @@ trivy image --severity HIGH,CRITICAL torrust/tracker-ssh-server:local
 ```
 
 ## Scan History
+
+### April 8, 2026
+
+**Image**: `torrust/tracker-ssh-server:local`
+**Trivy Version**: 0.68.2
+**Base OS**: Alpine Linux 3.23.3
+**Purpose**: Integration testing SSH connectivity for E2E tests
+**Status**: ✅ **1 vulnerability** (1 HIGH, 0 CRITICAL) - Unchanged from Feb 5, test artifact only
+
+#### Summary
+
+The April 8, 2026 scan confirms the same security posture as the previous scan:
+
+- Alpine base remains clean for HIGH/CRITICAL OS vulnerabilities
+- The single finding is the expected private-key test artifact
+- No new actionable vulnerabilities detected
 
 ### February 5, 2026
 

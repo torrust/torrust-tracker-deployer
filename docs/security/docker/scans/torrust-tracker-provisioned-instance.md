@@ -4,9 +4,9 @@ Security scan history for the `torrust/tracker-provisioned-instance` Docker imag
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status               | Last Scan   |
-| ------- | ---- | -------- | -------------------- | ----------- |
-| 24.04   | 11   | 0        | ℹ️ Ubuntu LTS Stable | Feb 5, 2026 |
+| Version | HIGH | CRITICAL | Status                        | Last Scan   |
+| ------- | ---- | -------- | ----------------------------- | ----------- |
+| 24.04   | 12   | 0        | ⚠️ Minor increase (1 new CVE) | Apr 8, 2026 |
 
 ## Build & Scan Commands
 
@@ -23,6 +23,25 @@ trivy image --severity HIGH,CRITICAL torrust/tracker-provisioned-instance:local
 ```
 
 ## Scan History
+
+### April 8, 2026
+
+**Image**: `torrust/tracker-provisioned-instance:local`
+**Trivy Version**: 0.68.2
+**Base OS**: Ubuntu 24.04 LTS
+**Status**: ⚠️ **12 vulnerabilities** (12 HIGH, 0 CRITICAL) - Minor increase from Feb (+1)
+
+#### Summary
+
+Vulnerability count increased from 11 to 12 HIGH. The single new vulnerability is likely from a Ubuntu 24.04 security update adding a newly-discovered CVE to the Trivy database.
+
+#### Changes Since February
+
+- Added 1 new HIGH vulnerability (likely from Ubuntu security advisory)
+- All vulnerabilities remain in Ubuntu 24.04 LTS base packages
+- Image remains suitable for E2E testing (ephemeral, isolated)
+
+**Assessment**: This is expected as Ubuntu continuously updates its security advisory database.
 
 ### February 5, 2026
 

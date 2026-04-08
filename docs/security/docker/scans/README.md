@@ -4,18 +4,18 @@ This directory contains historical security scan results for Docker images used 
 
 ## Current Status Summary
 
-| Image                                  | Version | HIGH | CRITICAL | Status               | Last Scan    | Details                                         |
-| -------------------------------------- | ------- | ---- | -------- | -------------------- | ------------ | ----------------------------------------------- |
-| `torrust/tracker-deployer`             | trixie  | 1    | 0        | ✅ Improved (Trixie) | Feb 5, 2026  | [View](torrust-tracker-deployer.md)             |
-| `torrust/tracker-backup`               | trixie  | 7    | 0        | ℹ️ Monitored         | Feb 5, 2026  | [View](torrust-tracker-backup.md)               |
-| `torrust/tracker-ssh-server`           | 3.23.3  | 1    | 0        | ✅ Secure (Alpine)   | Feb 5, 2026  | [View](torrust-ssh-server.md)                   |
-| `torrust/tracker-provisioned-instance` | 24.04   | 11   | 0        | ℹ️ Ubuntu LTS        | Feb 5, 2026  | [View](torrust-tracker-provisioned-instance.md) |
-| `caddy`                                | 2.10    | 3    | 1        | ⚠️ Monitored         | Jan 13, 2026 | [View](caddy.md)                                |
-| `prom/prometheus`                      | v3.5.0  | 0    | 0        | ✅ SECURE            | Dec 29, 2025 | [View](prometheus.md)                           |
-| `grafana/grafana`                      | 12.3.1  | 0    | 0        | ✅ SECURE            | Dec 29, 2025 | [View](grafana.md)                              |
-| `mysql`                                | 8.4     | 0    | 0        | ✅ SECURE            | Dec 29, 2025 | [View](mysql.md)                                |
+| Image                                  | Version | HIGH | CRITICAL | Status                     | Last Scan   | Details                                         |
+| -------------------------------------- | ------- | ---- | -------- | -------------------------- | ----------- | ----------------------------------------------- |
+| `torrust/tracker-deployer`             | trixie  | 49   | 0        | ⚠️ Regression (CVE update) | Apr 8, 2026 | [View](torrust-tracker-deployer.md)             |
+| `torrust/tracker-backup`               | trixie  | 6    | 0        | ℹ️ Minor improvement       | Apr 8, 2026 | [View](torrust-tracker-backup.md)               |
+| `torrust/tracker-ssh-server`           | 3.23.3  | 1    | 0        | ✅ Stable (test artifact)  | Apr 8, 2026 | [View](torrust-ssh-server.md)                   |
+| `torrust/tracker-provisioned-instance` | 24.04   | 12   | 0        | ⚠️ Minor regression        | Apr 8, 2026 | [View](torrust-tracker-provisioned-instance.md) |
+| `caddy`                                | 2.10    | 24   | 0        | ⚠️ Update needed           | Apr 8, 2026 | [View](caddy.md)                                |
+| `prom/prometheus`                      | v3.5.0  | 20   | 0        | ⚠️ CVE update detected     | Apr 8, 2026 | [View](prometheus.md)                           |
+| `grafana/grafana`                      | 12.3.1  | 24   | 0        | ⚠️ CVE update detected     | Apr 8, 2026 | [View](grafana.md)                              |
+| `mysql`                                | 8.4     | 8    | 0        | ⚠️ Minor CVE update        | Apr 8, 2026 | [View](mysql.md)                                |
 
-**Overall Status**: ✅ **Major improvement** - Deployer updated to Debian 13 (trixie) reducing HIGH vulnerabilities from 25 to 1. SSH server and provisioned instance scans added. Backup image vulnerabilities documented with mitigation strategies.
+**Overall Status**: ⚠️ **CVE database update detected** - All images show increased vulnerability counts from previous scans (Feb-Dec 2025), suggesting Trivy database was updated with new CVEs. Manual investigation recommended before taking action. Most concerning: Deployer regression from 1→49 HIGH.
 
 ## Scan Archives
 

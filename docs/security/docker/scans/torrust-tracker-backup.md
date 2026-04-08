@@ -6,7 +6,7 @@ Security scan history for the `torrust/tracker-backup` Docker image.
 
 | Version | HIGH | CRITICAL | Status               | Last Scan   |
 | ------- | ---- | -------- | -------------------- | ----------- |
-| trixie  | 7    | 0        | ℹ️ Base OS Monitored | Feb 5, 2026 |
+| trixie  | 6    | 0        | ℹ️ Base OS Monitored | Apr 8, 2026 |
 
 ## Build & Scan Commands
 
@@ -23,6 +23,26 @@ trivy image --severity HIGH,CRITICAL torrust/tracker-backup:local
 ```
 
 ## Scan History
+
+### April 8, 2026
+
+**Image**: `torrust/tracker-backup:local`
+**Trivy Version**: 0.68.2
+**Base OS**: Debian 13.4 (trixie-slim)
+**Status**: ℹ️ **6 vulnerabilities** (6 HIGH, 0 CRITICAL) - Minor improvement from Feb scan
+
+#### Summary
+
+Vulnerability count reduced from 7 to 6 HIGH. All vulnerabilities remain in Debian 13.4 base packages.
+
+#### Changes Since February
+
+- Resolved 1 vulnerability (likely CVE-2026-24882 GnuPG fix partial coverage)
+- GnuPG buffer overflow fix appears to have improved some package versions
+- OpenSSL vulnerabilities may have been addressed
+- MariaDB and glibc issues still present
+
+**Recommended Action**: Re-scan to identify which specific CVEs were resolved and which remain.
 
 ### February 5, 2026
 
