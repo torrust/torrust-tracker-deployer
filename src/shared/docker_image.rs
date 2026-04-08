@@ -130,7 +130,7 @@ mod tests {
     fn it_should_create_from_str_tuple() {
         let image = DockerImage::from(("prom/prometheus", "v3.5.0"));
 
-        assert_eq!(image.full_reference(), "prom/prometheus:v3.5.0");
+        assert_eq!(image.full_reference(), "prom/prometheus:v3.5.1");
     }
 
     #[test]

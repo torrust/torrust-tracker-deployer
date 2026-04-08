@@ -12,7 +12,7 @@ pub struct DockerImagesInfo {
     /// `MySQL` Docker image reference (e.g. `mysql:8.4`), present when `MySQL` is configured
     pub mysql: Option<String>,
 
-    /// Prometheus Docker image reference (e.g. `prom/prometheus:v3.5.0`), present when configured
+    /// Prometheus Docker image reference (e.g. `prom/prometheus:v3.5.1`), present when configured
     pub prometheus: Option<String>,
 
     /// Grafana Docker image reference (e.g. `grafana/grafana:12.3.1`), present when configured

@@ -407,7 +407,7 @@ mod tests {
             "Rendered output should contain prometheus service"
         );
         assert!(
-            rendered_content.contains("image: prom/prometheus:v3.5.0"),
+            rendered_content.contains("image: prom/prometheus:v3.5.1"),
             "Should use Prometheus v3.5.0 image"
         );
         assert!(
@@ -466,7 +466,7 @@ mod tests {
 
         // Verify Prometheus service is NOT present
         assert!(
-            !rendered_content.contains("image: prom/prometheus:v3.5.0"),
+            !rendered_content.contains("image: prom/prometheus:v3.5.1"),
             "Should not contain Prometheus service when config absent"
         );
         assert!(
