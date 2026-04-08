@@ -24,6 +24,26 @@ trivy image --severity HIGH,CRITICAL torrust/tracker-backup:local
 
 ## Scan History
 
+### April 8, 2026 - Remediation Pass 1 (Issue #428)
+
+**Image**: `torrust/tracker-backup:local`
+**Trivy Version**: 0.68.2
+**Scan Mode**: `--scanners vuln --severity HIGH,CRITICAL`
+**Base OS**: Debian 13.4 (trixie-slim)
+**Status**: ℹ️ **No change after remediation attempt** - 6 HIGH, 0 CRITICAL
+
+#### Summary
+
+An easy remediation was applied by adding `apt-get upgrade -y` in the base layer.
+The image rebuilt successfully and unit tests embedded in the Docker build still passed.
+
+Post-remediation scan result remained unchanged:
+
+- Before: 6 HIGH, 0 CRITICAL
+- After: 6 HIGH, 0 CRITICAL
+
+This indicates the remaining findings are not resolved by package upgrades at current Debian 13.4 repository state.
+
 ### April 8, 2026
 
 **Image**: `torrust/tracker-backup:local`

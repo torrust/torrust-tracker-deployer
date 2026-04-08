@@ -7,7 +7,7 @@ This directory contains historical security scan results for Docker images used 
 | Image                                  | Version | HIGH | CRITICAL | Status                    | Last Scan   | Details                                         |
 | -------------------------------------- | ------- | ---- | -------- | ------------------------- | ----------- | ----------------------------------------------- |
 | `torrust/tracker-deployer`             | trixie  | 44   | 1        | ⚠️ Partial remediation    | Apr 8, 2026 | [View](torrust-tracker-deployer.md)             |
-| `torrust/tracker-backup`               | trixie  | 6    | 0        | ℹ️ Minor improvement      | Apr 8, 2026 | [View](torrust-tracker-backup.md)               |
+| `torrust/tracker-backup`               | trixie  | 6    | 0        | ℹ️ Remediation no change  | Apr 8, 2026 | [View](torrust-tracker-backup.md)               |
 | `torrust/tracker-ssh-server`           | 3.23.3  | 1    | 0        | ✅ Stable (test artifact) | Apr 8, 2026 | [View](torrust-ssh-server.md)                   |
 | `torrust/tracker-provisioned-instance` | 24.04   | 12   | 0        | ⚠️ Minor regression       | Apr 8, 2026 | [View](torrust-tracker-provisioned-instance.md) |
 | `caddy`                                | 2.10    | 24   | 0        | ⚠️ Update needed          | Apr 8, 2026 | [View](caddy.md)                                |
