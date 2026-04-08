@@ -46,6 +46,9 @@ use super::service_topology::ServiceTopology;
 /// ```
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct MysqlServiceContext {
+    /// Docker image reference (e.g. `mysql:8.4`)
+    pub image: String,
+
     /// Service topology (ports and networks)
     ///
     /// Flattened for template compatibility - serializes ports/networks at top level.
@@ -73,6 +76,7 @@ impl MysqlServiceContext {
         let networks = config.derive_networks(enabled_services);
 
         Self {
+            image: DomainMysqlConfig::docker_image().full_reference(),
             topology: ServiceTopology::new(ports, networks),
         }
     }

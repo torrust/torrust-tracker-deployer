@@ -45,6 +45,7 @@ mod tests;
 // Re-export main types for convenience
 pub use errors::ShowCommandHandlerError;
 pub use handler::ShowCommandHandler;
+pub use info::DockerImagesInfo;
 pub use info::EnvironmentInfo;
 pub use info::GrafanaInfo;
 pub use info::InfrastructureInfo;

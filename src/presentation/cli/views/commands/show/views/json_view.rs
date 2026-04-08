@@ -23,16 +23,18 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 ///
 /// ```rust
 /// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
-/// use torrust_tracker_deployer_lib::application::command_handlers::show::info::EnvironmentInfo;
+/// use torrust_tracker_deployer_lib::application::command_handlers::show::info::{DockerImagesInfo, EnvironmentInfo};
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::show::JsonView;
 /// use chrono::{TimeZone, Utc};
 ///
 /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+/// let docker_images = DockerImagesInfo::new("torrust/tracker:develop".to_string(), None, None, None);
 /// let info = EnvironmentInfo::new(
 ///     "my-env".to_string(),
 ///     "Created".to_string(),
 ///     "LXD".to_string(),
 ///     created_at,
+///     docker_images,
 ///     "created".to_string(),
 /// );
 ///
@@ -57,8 +59,13 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use super::*;
+    use crate::presentation::cli::views::commands::show::view_data::DockerImagesInfo;
     use crate::presentation::cli::views::commands::show::view_data::InfrastructureInfo;
     use crate::presentation::cli::views::Render;
+
+    fn test_docker_images() -> DockerImagesInfo {
+        DockerImagesInfo::new("torrust/tracker:develop".to_string(), None, None, None)
+    }
 
     #[test]
     fn it_should_render_created_state_as_json() {
@@ -68,6 +75,7 @@ mod tests {
             "Created".to_string(),
             "LXD".to_string(),
             created_at,
+            test_docker_images(),
             "created".to_string(),
         );
 
@@ -102,6 +110,7 @@ mod tests {
             "Provisioned".to_string(),
             "LXD".to_string(),
             created_at,
+            test_docker_images(),
             "provisioned".to_string(),
         )
         .with_infrastructure(InfrastructureInfo::new(
@@ -134,6 +143,7 @@ mod tests {
             "Created".to_string(),
             "LXD".to_string(),
             created_at,
+            test_docker_images(),
             "created".to_string(),
         );
 

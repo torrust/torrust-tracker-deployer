@@ -5,8 +5,15 @@ use serde::{Deserialize, Serialize};
 use crate::domain::topology::{
     EnabledServices, Network, NetworkDerivation, PortBinding, PortDerivation, Service,
 };
+use crate::shared::docker_image::DockerImage;
 use crate::shared::domain_name::DomainName;
 use crate::shared::secrets::Password;
+
+/// Docker image repository for the Grafana container
+pub const GRAFANA_DOCKER_IMAGE_REPOSITORY: &str = "grafana/grafana";
+
+/// Docker image tag for the Grafana container
+pub const GRAFANA_DOCKER_IMAGE_TAG: &str = "12.3.1";
 
 /// Grafana metrics visualization configuration
 ///
@@ -105,6 +112,23 @@ impl GrafanaConfig {
     #[must_use]
     pub fn use_tls_proxy(&self) -> bool {
         self.use_tls_proxy
+    }
+
+    /// Returns the Docker image used for the Grafana service.
+    ///
+    /// This is a pinned constant — not user-configurable.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::grafana::GrafanaConfig;
+    ///
+    /// let image = GrafanaConfig::docker_image();
+    /// assert_eq!(image.full_reference(), "grafana/grafana:12.3.1");
+    /// ```
+    #[must_use]
+    pub fn docker_image() -> DockerImage {
+        DockerImage::new(GRAFANA_DOCKER_IMAGE_REPOSITORY, GRAFANA_DOCKER_IMAGE_TAG)
     }
 }
 

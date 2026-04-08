@@ -28,9 +28,15 @@ use std::sync::Arc;
 use tracing::instrument;
 
 use super::errors::ShowCommandHandlerError;
-use super::info::{EnvironmentInfo, GrafanaInfo, InfrastructureInfo, PrometheusInfo, ServiceInfo};
+use super::info::{
+    DockerImagesInfo, EnvironmentInfo, GrafanaInfo, InfrastructureInfo, PrometheusInfo, ServiceInfo,
+};
 use crate::domain::environment::repository::EnvironmentRepository;
 use crate::domain::environment::state::AnyEnvironmentState;
+use crate::domain::grafana::GrafanaConfig;
+use crate::domain::mysql::MysqlServiceConfig;
+use crate::domain::prometheus::PrometheusConfig;
+use crate::domain::tracker::config::TrackerConfig;
 use crate::domain::EnvironmentName;
 
 /// Default SSH port when not specified
@@ -121,7 +127,24 @@ impl ShowCommandHandler {
         let created_at = any_env.created_at();
         let state_name = any_env.state_name().to_string();
 
-        let mut info = EnvironmentInfo::new(name, state, provider, created_at, state_name);
+        let tracker_config = any_env.tracker_config();
+        let docker_images = DockerImagesInfo::new(
+            TrackerConfig::docker_image().full_reference(),
+            if tracker_config.uses_mysql() {
+                Some(MysqlServiceConfig::docker_image().full_reference())
+            } else {
+                None
+            },
+            any_env
+                .prometheus_config()
+                .map(|_| PrometheusConfig::docker_image().full_reference()),
+            any_env
+                .grafana_config()
+                .map(|_| GrafanaConfig::docker_image().full_reference()),
+        );
+
+        let mut info =
+            EnvironmentInfo::new(name, state, provider, created_at, docker_images, state_name);
 
         // Add infrastructure info if instance IP is available
         if let Some(instance_ip) = any_env.instance_ip() {
@@ -144,7 +167,6 @@ impl ShowCommandHandler {
             if Self::should_show_services(any_env.state_name()) {
                 // Always compute from tracker config to show proper service information
                 // including TLS domains, localhost hints, and HTTPS status
-                let tracker_config = any_env.tracker_config();
                 let grafana_config = any_env.grafana_config();
                 let services =
                     ServiceInfo::from_tracker_config(tracker_config, instance_ip, grafana_config);

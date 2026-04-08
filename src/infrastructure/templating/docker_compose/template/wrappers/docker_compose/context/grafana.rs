@@ -18,6 +18,9 @@ use super::service_topology::ServiceTopology;
 /// Uses `ServiceTopology` to share the common topology structure with other services.
 #[derive(Serialize, Debug, Clone)]
 pub struct GrafanaServiceContext {
+    /// Docker image reference (e.g. `grafana/grafana:12.3.1`)
+    pub image: String,
+
     /// Service topology (ports and networks)
     ///
     /// Flattened for template compatibility - serializes ports/networks at top level.
@@ -60,6 +63,7 @@ impl GrafanaServiceContext {
             format!("{scheme}://{}", domain.as_str())
         });
         Self {
+            image: GrafanaConfig::docker_image().full_reference(),
             topology: ServiceTopology::new(ports, networks),
             server_root_url,
         }

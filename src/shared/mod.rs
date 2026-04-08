@@ -6,6 +6,7 @@
 
 pub mod clock;
 pub mod command;
+pub mod docker_image;
 pub mod domain_name;
 pub mod email;
 pub mod error;

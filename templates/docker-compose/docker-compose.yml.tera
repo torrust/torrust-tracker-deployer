@@ -90,7 +90,7 @@ services:
     # Tracking issue: https://github.com/torrust/torrust-tracker-deployer/issues/TBD
     # Rationale: The develop tag is mutable and introduces deployment non-reproducibility.
     #            Pinning to a stable release ensures predictable deployments and easier rollback.
-    image: torrust/tracker:develop
+    image: {{ tracker.image }}
     container_name: tracker
 {%- if mysql %}
     depends_on:
@@ -126,7 +126,7 @@ services:
 
   prometheus:
     <<: *defaults
-    image: prom/prometheus:v3.5.0
+    image: {{ prometheus.image }}
     container_name: prometheus
 {%- if prometheus.networks | length > 0 %}
     networks:
@@ -158,7 +158,7 @@ services:
 
   grafana:
     <<: *defaults
-    image: grafana/grafana:12.3.1
+    image: {{ grafana.image }}
     container_name: grafana
 {%- if grafana.networks | length > 0 %}
     networks:
@@ -196,7 +196,7 @@ services:
 
   mysql:
     <<: *defaults
-    image: mysql:8.4
+    image: {{ mysql.image }}
     container_name: mysql
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
