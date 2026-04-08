@@ -4,9 +4,9 @@ Security scan history for the `torrust/tracker-deployer` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status                         | Last Scan   |
-| ------- | ---- | -------- | ------------------------------ | ----------- |
-| trixie  | 49   | 0        | ⚠️ Regression (New CVEs Found) | Apr 8, 2026 |
+| Version | HIGH | CRITICAL | Status                                    | Last Scan   |
+| ------- | ---- | -------- | ----------------------------------------- | ----------- |
+| trixie  | 44   | 1        | ⚠️ Improved after remediation (still open) | Apr 8, 2026 |
 
 ## Build & Scan Commands
 
@@ -23,6 +23,36 @@ trivy image --severity HIGH,CRITICAL torrust/tracker-deployer:local
 ```
 
 ## Scan History
+
+### April 8, 2026 - Remediation Pass 1 (Issue #428)
+
+**Image**: `torrust/tracker-deployer:local`
+**Trivy Version**: 0.68.2
+**Scan Mode**: `--scanners vuln --severity HIGH,CRITICAL`
+**Base OS**: Debian 13.4 (trixie)
+**Status**: ⚠️ **Partial improvement** - 44 HIGH, 1 CRITICAL
+
+#### Summary
+
+After the first remediation pass in issue #428:
+
+- Runtime GnuPG footprint was reduced (install only for OpenTofu setup, then purge)
+- Package upgrade was applied during image build
+- Image remained functional in smoke test (`docker run --rm ... --help`)
+
+#### Comparison vs previous April scan
+
+| Target                                  | Previous | Current | Delta |
+| --------------------------------------- | -------- | ------- | ----- |
+| `torrust/tracker-deployer:local` (OS)   | 49 HIGH  | 42 HIGH | -7 HIGH |
+| `usr/bin/tofu`                          | 2 HIGH, 1 CRITICAL | 2 HIGH, 1 CRITICAL | no change |
+| **Total**                               | **51 HIGH, 1 CRITICAL** | **44 HIGH, 1 CRITICAL** | **-7 HIGH** |
+
+#### Remaining concerns
+
+- OpenTofu binary still reports 1 CRITICAL and 2 HIGH findings
+- Debian base packages still contain unresolved HIGH findings
+- Additional remediation/follow-up required
 
 ### April 8, 2026 - Regression Alert - New CVEs Discovered
 
