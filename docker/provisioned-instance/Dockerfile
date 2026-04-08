@@ -16,7 +16,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
 # Update package list and install essential packages
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     # SSH server for Ansible connectivity
     openssh-server \
     # Sudo for privilege escalation
@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y \
     apt-transport-https \
     # iptables for Docker networking
     iptables \
+    && apt-get upgrade -y \
     # Clean up package cache
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
