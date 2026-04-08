@@ -78,7 +78,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     # Required for downloading tools
     curl \
-    gnupg \
     # Python for Ansible
     python3 \
     python3-pip \
@@ -89,6 +88,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     # Additional utilities
     sudo \
+    && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Ansible via pipx (isolated environment)
@@ -105,10 +105,13 @@ RUN pipx runpip ansible-core install ansible \
 
 # Install OpenTofu
 # Using the official installation script with deb method for Debian
-RUN curl -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh \
+RUN apt-get update && apt-get install -y --no-install-recommends gnupg \
+    && curl -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh \
     && chmod +x install-opentofu.sh \
     && ./install-opentofu.sh --install-method deb \
-    && rm install-opentofu.sh
+    && rm install-opentofu.sh \
+    && apt-get purge -y --auto-remove gnupg dirmngr \
+    && rm -rf /var/lib/apt/lists/*
 
 # Build arguments for customization
 ARG USER_ID=1000
