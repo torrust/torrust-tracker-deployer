@@ -4,11 +4,31 @@ Security scan history for the `grafana/grafana` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status                 | Last Scan   | Support EOL  |
-| ------- | ---- | -------- | ---------------------- | ----------- | ------------ |
-| 12.3.1  | 24   | 0        | ⚠️ CVE database update | Apr 8, 2026 | Feb 24, 2026 |
+| Version | HIGH | CRITICAL | Status                               | Last Scan   | Support EOL |
+| ------- | ---- | -------- | ------------------------------------ | ----------- | ----------- |
+| 12.4.2  | 4    | 0        | ⚠️ Partial improvement after upgrade | Apr 8, 2026 | Unknown     |
 
 ## Scan History
+
+### April 8, 2026 - Remediation Pass 1 (Issue #428)
+
+**Image**: `grafana/grafana:12.4.2`
+**Trivy Version**: 0.68.2
+**Scan Mode**: `--scanners vuln --severity HIGH,CRITICAL`
+**Status**: ⚠️ **4 vulnerabilities** (4 HIGH, 0 CRITICAL)
+
+#### Summary
+
+Easy remediation applied by upgrading Grafana from `12.3.1` to `12.4.2`.
+
+Vulnerability comparison:
+
+- Previous (`12.3.1`): 18 HIGH, 6 CRITICAL
+- Current (`12.4.2`): 4 HIGH, 0 CRITICAL
+
+Improvement: -14 HIGH, -6 CRITICAL
+
+This is a strong reduction and clears all CRITICAL findings.
 
 ### April 8, 2026
 
