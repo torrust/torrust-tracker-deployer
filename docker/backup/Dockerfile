@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlite3 \
     gzip \
     tar \
+    && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
