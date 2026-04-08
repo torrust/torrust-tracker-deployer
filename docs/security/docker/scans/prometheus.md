@@ -4,11 +4,38 @@ Security scan history for the `prom/prometheus` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status                 | Last Scan   | Support EOL  |
-| ------- | ---- | -------- | ---------------------- | ----------- | ------------ |
-| v3.5.0  | 20   | 0        | ⚠️ CVE database update | Apr 8, 2026 | Jul 31, 2026 |
+| Version | HIGH | CRITICAL | Status                               | Last Scan   | Support EOL  |
+| ------- | ---- | -------- | ------------------------------------ | ----------- | ------------ |
+| v3.5.1  | 6    | 4        | ⚠️ Partial improvement after upgrade | Apr 8, 2026 | Jul 31, 2026 |
 
 ## Scan History
+
+### April 8, 2026 - Remediation Pass 1 (Issue #428)
+
+**Image**: `prom/prometheus:v3.5.1`
+**Trivy Version**: 0.68.2
+**Scan Mode**: `--scanners vuln --severity HIGH,CRITICAL`
+**Status**: ⚠️ **10 vulnerabilities** (6 HIGH, 4 CRITICAL)
+
+#### Summary
+
+Easy remediation applied by upgrading Prometheus from `v3.5.0` to `v3.5.1`.
+
+Vulnerability comparison:
+
+- Previous (`v3.5.0`): 16 HIGH, 4 CRITICAL
+- Current (`v3.5.1`): 6 HIGH, 4 CRITICAL
+
+Improvement: -10 HIGH, 0 CRITICAL
+
+#### Target Breakdown (`v3.5.1`)
+
+| Target           | Type     | HIGH | CRITICAL |
+| ---------------- | -------- | ---- | -------- |
+| `bin/prometheus` | gobinary | 3    | 2        |
+| `bin/promtool`   | gobinary | 3    | 2        |
+
+Remaining vulnerabilities are in upstream Prometheus binary dependencies.
 
 ### April 8, 2026
 
