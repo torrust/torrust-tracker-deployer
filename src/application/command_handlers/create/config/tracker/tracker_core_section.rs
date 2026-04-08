@@ -94,8 +94,7 @@ impl TryFrom<DatabaseSection> for DatabaseConfig {
                 root_password,
             } => {
                 let root_password = root_password
-                    .map(|p| Password::from(p.as_str()))
-                    .unwrap_or_else(generate_random_password);
+                    .map_or_else(generate_random_password, |p| Password::from(p.as_str()));
                 let config = MysqlConfig::new(
                     host,
                     port,

@@ -19,7 +19,7 @@ pub enum MysqlConfigError {
     /// Username cannot be empty
     #[error("MySQL username cannot be empty")]
     EmptyUsername,
-    /// Username `root` is reserved by the MySQL Docker image
+    /// Username `root` is reserved by the `MySQL` Docker image
     #[error("MySQL username \"root\" is reserved and cannot be used as the app database username")]
     ReservedUsername,
 }

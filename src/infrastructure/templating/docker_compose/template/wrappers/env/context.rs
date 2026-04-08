@@ -12,7 +12,7 @@ use serde::Serialize;
 
 use crate::infrastructure::templating::TemplateMetadata;
 
-/// Characters that must be percent-encoded in the userinfo (user/password) part of a MySQL DSN URL.
+/// Characters that must be percent-encoded in the userinfo (user/password) part of a `MySQL` DSN URL.
 ///
 /// Encodes delimiters that have structural meaning in the URL authority component:
 /// - `@` — userinfo/host separator
@@ -45,9 +45,9 @@ pub struct TrackerServiceConfig {
     /// Database driver type ("sqlite3" or "mysql")
     /// Controls which config template the container entrypoint uses
     pub database_driver: String,
-    /// Percent-encoded MySQL DSN for `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH`
+    /// Percent-encoded `MySQL` DSN for `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH`
     ///
-    /// Only populated when MySQL is configured; `None` for SQLite.
+    /// Only populated when `MySQL` is configured; `None` for `SQLite`.
     /// Username and password are percent-encoded with `NON_ALPHANUMERIC` to handle
     /// URL-reserved characters (e.g. `@`, `+`, `/`, `:`).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -171,13 +171,14 @@ impl EnvContext {
     ///     "tracker_db".to_string(),
     ///     "tracker_user".to_string(),
     ///     "user_pass".to_string(),
-    ///     "mysql".to_string(),
+    ///     "mysql",
     ///     3306,
     /// );
     /// assert_eq!(context.tracker.database_driver, "mysql");
     /// assert!(context.mysql.is_some());
     /// ```
     #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_mysql(
         metadata: TemplateMetadata,
         tracker_api_admin_token: String,
@@ -185,7 +186,7 @@ impl EnvContext {
         mysql_database: String,
         mysql_user: String,
         mysql_password: String,
-        mysql_host: String,
+        mysql_host: &str,
         mysql_port: u16,
     ) -> Self {
         let encoded_user = utf8_percent_encode(&mysql_user, &USERINFO_ENCODE).to_string();
@@ -321,7 +322,7 @@ mod tests {
             "tracker_db".to_string(),
             "tracker_user".to_string(),
             "user_pass".to_string(),
-            "mysql".to_string(),
+            "mysql",
             3306,
         );
 
@@ -358,7 +359,7 @@ mod tests {
             "db".to_string(),
             "user".to_string(),
             "pass".to_string(),
-            "mysql".to_string(),
+            "mysql",
             3306,
         );
 
@@ -387,7 +388,7 @@ mod tests {
             "tracker_db".to_string(),
             "tracker_user".to_string(),
             "user_pass".to_string(),
-            "mysql".to_string(),
+            "mysql",
             3306,
         );
 
@@ -411,7 +412,7 @@ mod tests {
             "tracker".to_string(),
             "tracker_user".to_string(),
             "p@ss:w/ord+1".to_string(),
-            "mysql".to_string(),
+            "mysql",
             3306,
         );
 
@@ -434,7 +435,7 @@ mod tests {
             "tracker".to_string(),
             "tracker_user".to_string(),
             "plainpassword123".to_string(),
-            "mysql".to_string(),
+            "mysql",
             3306,
         );
 

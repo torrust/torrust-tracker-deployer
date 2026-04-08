@@ -1,8 +1,8 @@
 //! Cryptographically random password generation
 
-use rand::Rng as _;
 use rand::seq::IndexedRandom as _;
 use rand::seq::SliceRandom as _;
+use rand::Rng as _;
 
 use super::password::Password;
 
@@ -25,11 +25,16 @@ fn full_charset() -> Vec<u8> {
 ///   reseeded — suitable for secrets in rand 0.9 (direct `OsRng` no longer
 ///   implements the high-level `Rng` trait required by `choose`/`shuffle`)
 /// - `choose`: avoids modulo bias — uniform distribution
-/// - Explicit class inclusion: satisfies MySQL `validate_password` MEDIUM policy
+/// - Explicit class inclusion: satisfies `MySQL` `validate_password` MEDIUM policy
 /// - Shuffle: removes structural bias from fixed positions
 ///
 /// The generated password is 32 characters long and always contains at least
 /// one lowercase letter, one uppercase letter, one digit, and one symbol.
+///
+/// # Panics
+///
+/// Panics if any character set constant is empty, which cannot happen in practice
+/// as they are defined as non-empty byte string literals.
 #[must_use]
 pub fn generate_random_password() -> Password {
     let mut rng = rand::rng();
@@ -78,12 +83,11 @@ mod tests {
             let s = pwd.expose_secret();
 
             assert_eq!(s.len(), 32, "password must be 32 characters");
-            assert!(s.chars().any(|c| c.is_uppercase()), "must contain uppercase");
-            assert!(s.chars().any(|c| c.is_lowercase()), "must contain lowercase");
+            assert!(s.chars().any(char::is_uppercase), "must contain uppercase");
+            assert!(s.chars().any(char::is_lowercase), "must contain lowercase");
             assert!(s.chars().any(|c| c.is_ascii_digit()), "must contain digit");
             assert!(
-                s.chars()
-                    .any(|c| "!@#$%^&*()-_=+[]{}<>?".contains(c)),
+                s.chars().any(|c| "!@#$%^&*()-_=+[]{}<>?".contains(c)),
                 "must contain symbol"
             );
             assert!(s.is_ascii(), "must be ASCII (safe in .env files and shell)");

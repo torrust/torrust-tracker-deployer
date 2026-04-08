@@ -313,10 +313,10 @@ Tasks are ordered from simplest to most complex.
 
 ### Phase 5: Linting and pre-commit
 
-- [ ] Run linters: `cargo run --bin linter all`
-- [ ] Run pre-commit: `./scripts/pre-commit.sh`
+- [x] Run linters: `cargo run --bin linter all`
+- [x] Run pre-commit: `./scripts/pre-commit.sh`
 
-> **Status**: Phases 1–4 complete and committed. Phase 5 pending.
+> **Status**: Phases 1–5 complete and committed.
 
 ## Acceptance Criteria
 
@@ -326,7 +326,7 @@ Tasks are ordered from simplest to most complex.
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
 
 **Task-Specific Criteria — Bug 3 (reserved username)**:
 
@@ -365,7 +365,7 @@ Tasks are ordered from simplest to most complex.
       a valid, correctly encoded DSN in the `.env` file (verified with `tracker_p@ss!word#1`)
 - [x] A MySQL password with only alphanumeric characters is rendered unchanged
 - [x] `MysqlTemplateConfig` no longer exists in `tracker_config/context.rs`
-- [ ] `cargo machete` reports no unused dependencies
+- [x] `cargo machete` reports no unused dependencies
 
 ## Manual E2E Verification Test
 

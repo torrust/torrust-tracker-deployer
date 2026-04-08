@@ -540,6 +540,10 @@ zcat
 zeroize
 zoneinfo
 zstd
+CSPRNG
+USERINFO
+plainpassword
+userinfo
 Émojis
 значение
 ключ
