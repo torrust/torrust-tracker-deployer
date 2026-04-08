@@ -4,11 +4,33 @@ Security scan history for the `mysql` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status                 | Last Scan   | Support EOL  |
-| ------- | ---- | -------- | ---------------------- | ----------- | ------------ |
-| 8.4     | 8    | 0        | ⚠️ CVE database update | Apr 8, 2026 | Apr 30, 2032 |
+| Version | HIGH | CRITICAL | Status                         | Last Scan   | Support EOL  |
+| ------- | ---- | -------- | ------------------------------ | ----------- | ------------ |
+| 8.4     | 7    | 1        | ⚠️ Monitored (no safer easy upgrade) | Apr 8, 2026 | Apr 30, 2032 |
 
 ## Scan History
+
+### April 8, 2026 - Remediation Pass 1 (Issue #428)
+
+**Image**: `mysql:8.4`
+**Trivy Version**: 0.68.2
+**Scan Mode**: `--scanners vuln --severity HIGH,CRITICAL`
+**Status**: ⚠️ **8 vulnerabilities** (7 HIGH, 1 CRITICAL)
+
+#### Summary
+
+Findings are concentrated in helper components, not MySQL server core:
+
+- Python packages: 2 HIGH
+- `gosu` Go stdlib dependencies: 5 HIGH, 1 CRITICAL
+
+Tag comparison for easy remediation was performed (`8.4.1`, `8.4.2`, `8.4.3`, `9.0`, `9.1`, `latest`).
+No safer drop-in tag with lower overall risk profile was identified for immediate adoption in this pass.
+
+#### Decision
+
+- Keep `mysql:8.4` for now (validated runtime and LTS alignment)
+- Track unresolved CVEs in follow-up issue for deeper investigation
 
 ### April 8, 2026
 
