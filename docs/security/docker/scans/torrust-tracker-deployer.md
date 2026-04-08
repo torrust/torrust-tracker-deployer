@@ -4,8 +4,8 @@ Security scan history for the `torrust/tracker-deployer` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status                                    | Last Scan   |
-| ------- | ---- | -------- | ----------------------------------------- | ----------- |
+| Version | HIGH | CRITICAL | Status                                     | Last Scan   |
+| ------- | ---- | -------- | ------------------------------------------ | ----------- |
 | trixie  | 44   | 1        | ⚠️ Improved after remediation (still open) | Apr 8, 2026 |
 
 ## Build & Scan Commands
@@ -42,11 +42,11 @@ After the first remediation pass in issue #428:
 
 #### Comparison vs previous April scan
 
-| Target                                  | Previous | Current | Delta |
-| --------------------------------------- | -------- | ------- | ----- |
-| `torrust/tracker-deployer:local` (OS)   | 49 HIGH  | 42 HIGH | -7 HIGH |
-| `usr/bin/tofu`                          | 2 HIGH, 1 CRITICAL | 2 HIGH, 1 CRITICAL | no change |
-| **Total**                               | **51 HIGH, 1 CRITICAL** | **44 HIGH, 1 CRITICAL** | **-7 HIGH** |
+| Target                                | Previous                | Current                 | Delta       |
+| ------------------------------------- | ----------------------- | ----------------------- | ----------- |
+| `torrust/tracker-deployer:local` (OS) | 49 HIGH                 | 42 HIGH                 | -7 HIGH     |
+| `usr/bin/tofu`                        | 2 HIGH, 1 CRITICAL      | 2 HIGH, 1 CRITICAL      | no change   |
+| **Total**                             | **51 HIGH, 1 CRITICAL** | **44 HIGH, 1 CRITICAL** | **-7 HIGH** |
 
 #### Remaining concerns
 
