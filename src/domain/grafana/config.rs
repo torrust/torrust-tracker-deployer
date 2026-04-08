@@ -13,7 +13,7 @@ use crate::shared::secrets::Password;
 pub const GRAFANA_DOCKER_IMAGE_REPOSITORY: &str = "grafana/grafana";
 
 /// Docker image tag for the Grafana container
-pub const GRAFANA_DOCKER_IMAGE_TAG: &str = "12.3.1";
+pub const GRAFANA_DOCKER_IMAGE_TAG: &str = "12.4.2";
 
 /// Grafana metrics visualization configuration
 ///
@@ -124,7 +124,7 @@ impl GrafanaConfig {
     /// use torrust_tracker_deployer_lib::domain::grafana::GrafanaConfig;
     ///
     /// let image = GrafanaConfig::docker_image();
-    /// assert_eq!(image.full_reference(), "grafana/grafana:12.3.1");
+    /// assert_eq!(image.full_reference(), "grafana/grafana:12.4.2");
     /// ```
     #[must_use]
     pub fn docker_image() -> DockerImage {

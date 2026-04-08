@@ -135,8 +135,8 @@ mod tests {
 
     #[test]
     fn it_should_implement_equality() {
-        let a = DockerImage::new("grafana/grafana", "12.3.1");
-        let b = DockerImage::new("grafana/grafana", "12.3.1");
+        let a = DockerImage::new("grafana/grafana", "12.4.2");
+        let b = DockerImage::new("grafana/grafana", "12.4.2");
         let c = DockerImage::new("grafana/grafana", "11.4.0");
 
         assert_eq!(a, b);

@@ -15,7 +15,7 @@ pub struct DockerImagesInfo {
     /// Prometheus Docker image reference (e.g. `prom/prometheus:v3.5.1`), present when configured
     pub prometheus: Option<String>,
 
-    /// Grafana Docker image reference (e.g. `grafana/grafana:12.3.1`), present when configured
+    /// Grafana Docker image reference (e.g. `grafana/grafana:12.4.2`), present when configured
     pub grafana: Option<String>,
 }
 
