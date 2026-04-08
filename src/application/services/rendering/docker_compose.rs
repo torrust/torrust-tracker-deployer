@@ -107,10 +107,12 @@ impl DockerComposeTemplateRenderingService {
             DatabaseConfig::Mysql(mysql_config) => self.create_mysql_contexts(
                 admin_token.to_string(),
                 tracker,
+                mysql_config.host(),
                 mysql_config.port(),
                 mysql_config.database_name().to_string(),
                 mysql_config.username().to_string(),
                 mysql_config.password().expose_secret().to_string(),
+                mysql_config.root_password().expose_secret().to_string(),
             ),
         };
 
@@ -213,14 +215,13 @@ impl DockerComposeTemplateRenderingService {
         &self,
         admin_token: String,
         tracker: TrackerServiceContext,
+        host: &str,
         port: u16,
         database_name: String,
         username: String,
         password: PlainPassword,
+        root_password: PlainPassword,
     ) -> (EnvContext, DockerComposeContextBuilder) {
-        // For MySQL, generate a secure root password (in production, this should be managed securely)
-        let root_password = format!("{password}_root");
-
         let metadata = TemplateMetadata::new(self.clock.now());
         let env_context = EnvContext::new_with_mysql(
             metadata.clone(),
@@ -229,6 +230,8 @@ impl DockerComposeTemplateRenderingService {
             database_name.clone(),
             username.clone(),
             password.clone(),
+            host,
+            port,
         );
 
         let mysql_config = MysqlSetupConfig {

@@ -35,27 +35,28 @@ value.
 
 ### Bug 1 — DSN in `tracker.toml`
 
-- [ ] Move the MySQL DSN out of `tracker.toml` and into an environment variable override,
+- [x] Move the MySQL DSN out of `tracker.toml` and into an environment variable override,
       consistent with `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER` and
       `TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN`
-- [ ] Build the percent-encoded DSN in Rust and expose it in the `.env` file as
+- [x] Build the percent-encoded DSN in Rust and expose it in the `.env` file as
       `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH`
-- [ ] Pass the new env var into the tracker container via `docker-compose.yml.tera`
-- [ ] Remove the raw DSN line from `tracker.toml.tera` for the MySQL case
-- [ ] Remove the now-unused `MysqlTemplateConfig` from `TrackerContext`
+- [x] Pass the new env var into the tracker container via `docker-compose.yml.tera`
+- [x] Remove the raw DSN line from `tracker.toml.tera` for the MySQL case
+- [x] Remove the now-unused `MysqlTemplateConfig` from `TrackerContext`
 
 ### Bug 2 — Root password not configurable
 
-- [ ] Add an optional `root_password` field to the MySQL section of the environment
+- [x] Add an optional `root_password` field to the MySQL section of the environment
       configuration JSON schema
-- [ ] When a root password is provided by the user, use it; when omitted, generate a
-      strong random password at render time rather than deriving it from the app password
-- [ ] Remove the `format!("{password}_root")` derivation from `create_mysql_contexts`
+- [x] When a root password is provided by the user, use it; when omitted, generate a
+      strong random password at environment creation time (application layer) rather
+      than deriving it from the app password
+- [x] Remove the `format!("{password}_root")` derivation from `create_mysql_contexts`
 
 ### Bug 3 — Reserved username not rejected
 
-- [ ] Add a `ReservedUsername` variant to `MysqlConfigError`
-- [ ] Reject `"root"` as the app DB username in `MysqlConfig::new()` with a clear,
+- [x] Add a `ReservedUsername` variant to `MysqlConfigError`
+- [x] Reject `"root"` as the app DB username in `MysqlConfig::new()` with a clear,
       actionable error message
 
 ## Specifications
@@ -174,21 +175,44 @@ no `root_password` field for MySQL. The deployer therefore always sets
 
 **Fix**: Add an optional `root_password` to the MySQL section of the environment
 configuration JSON. If the user provides it, use it. If they omit it, generate a
-cryptographically random password at render time instead of deriving it from the app
-password. Remove the `format!("{password}_root")` derivation.
+cryptographically random password at **environment creation time** (application layer)
+instead of deriving it from the app password. Remove the `format!("{password}_root")`
+derivation.
+
+**Key design decision — generate at creation time, not render time**: The root password
+is a domain invariant that must remain stable across multiple renders (e.g. re-deploying
+without reprovisioning). Generating it at render time would produce a different
+`MYSQL_ROOT_PASSWORD` on each render, breaking MySQL container restarts. Instead,
+generation happens once in the application layer (`TryFrom<DatabaseSection>`) when the
+environment is first created, and the value is persisted alongside the rest of the
+environment config.
 
 **Affected modules and types**:
 
+- `Cargo.toml`: add `rand = "0.9"` dependency.
 - `schemas/environment-config.json`: add optional `root_password` string to the MySQL
   database object.
-- `src/domain/tracker/config/core/database/mysql.rs` (`MysqlConfig`): add optional
-  `root_password` field; update constructor and accessors.
-- `src/presentation/cli/controllers/create/subcommands/environment/config_loader.rs`
-  (or equivalent deserialization path): propagate the optional field through to the
-  domain type.
+- `src/shared/secrets/random.rs` (new file): `generate_random_password() -> Password`
+  using `rand::rng()` (ThreadRng seeded from OsRng), guaranteeing one character from each
+  class (lower, upper, digit, symbol), filled to 32 characters, then shuffled. Satisfies
+  MySQL `validate_password MEDIUM` policy.
+- `src/shared/secrets/mod.rs` and `src/shared/mod.rs`: re-export
+  `generate_random_password`.
+- `src/domain/tracker/config/core/database/mysql.rs` (`MysqlConfig`): `root_password`
+  field is `Password` (non-optional) — the domain type always has a value. Constructor
+  `new()` takes `root_password: Password`. Accessor `root_password() -> &Password` added.
+  `MysqlConfigRaw` (the serde deserialization intermediate) keeps
+  `root_password: Option<Password>` with `#[serde(default)]` for backward compatibility
+  with persisted environments that pre-date this field; missing values are filled by
+  calling `generate_random_password()` during deserialization.
+- `src/application/command_handlers/create/config/tracker/tracker_core_section.rs`
+  (`TryFrom<DatabaseSection>`): generation happens here — the optional user-supplied
+  `root_password` is mapped to `Password` if present, or `generate_random_password()` is
+  called if absent. This is the single point of generation for new environments.
 - `src/application/services/rendering/docker_compose.rs` (`create_mysql_contexts`):
-  replace `format!("{password}_root")` with either the user-supplied root password or a
-  freshly generated random password.
+  `root_password` parameter is now `PlainPassword` (non-optional); call site passes
+  `mysql_config.root_password().expose_secret().to_string()`. No generation logic
+  remains here.
 
 ### Bug 3 — Reserved MySQL Username `"root"` Not Rejected
 
@@ -237,57 +261,62 @@ Tasks are ordered from simplest to most complex.
 
 ### Phase 1: Reject reserved MySQL username (Bug 3)
 
-- [ ] In `MysqlConfigError` (`mysql.rs`): add `ReservedUsername` variant
-- [ ] Add `help()` arm for `ReservedUsername` with actionable fix instructions
-- [ ] In `MysqlConfig::new()`: add `if username == "root"` guard returning
+- [x] In `MysqlConfigError` (`mysql.rs`): add `ReservedUsername` variant
+- [x] Add `help()` arm for `ReservedUsername` with actionable fix instructions
+- [x] In `MysqlConfig::new()`: add `if username == "root"` guard returning
       `Err(MysqlConfigError::ReservedUsername)`
-- [ ] Add unit test `it_should_reject_root_as_username`
+- [x] Add unit test `it_should_reject_root_as_username`
 
 ### Phase 2: Make root password configurable (Bug 2)
 
-- [ ] `schemas/environment-config.json`: add optional `root_password` string to the
+- [x] `schemas/environment-config.json`: add optional `root_password` string to the
       MySQL database object
-- [ ] `MysqlConfig` (`mysql.rs`): add optional `root_password` field; update constructor
-      and accessor
-- [ ] Deserialization/config-loading path: thread the optional field through to the
-      application layer
-- [ ] `create_mysql_contexts` (`docker_compose.rs`): replace
-      `format!("{password}_root")` with user-supplied value or a randomly generated
-      password (use `rand` / `getrandom` — already in `Cargo.toml` — to produce a
-      16+ character alphanumeric string)
+- [x] `MysqlConfig` (`mysql.rs`): `root_password` is `Password` (non-optional) in the
+      domain — always has a value. `MysqlConfigRaw` uses `Option<Password>` for backward
+      compat with persisted environments lacking the field.
+- [x] `src/shared/secrets/random.rs` (new): `generate_random_password() -> Password`
+      using mixed charset (lower + upper + digit + symbol), length 32, satisfies MySQL
+      MEDIUM password policy
+- [x] `TryFrom<DatabaseSection>` (`tracker_core_section.rs`): generates root password at
+      environment creation time — not at render time — so it is stable across re-renders
+- [x] `create_mysql_contexts` (`docker_compose.rs`): replaced `format!("{password}_root")`
+      with `mysql_config.root_password().expose_secret().to_string()`; no generation
+      logic remains here
 
 ### Phase 3: Move DSN to env var override and add URL-encoding (Bug 1)
 
-- [ ] Add `percent-encoding` to `Cargo.toml`
-- [ ] `TrackerServiceConfig` (`env/context.rs`): add optional database path field
-- [ ] `EnvContext::new_with_mysql`: percent-encode username and password with
-      `utf8_percent_encode(..., NON_ALPHANUMERIC)`, build the full DSN string, store in
-      the new field
-- [ ] `TrackerContext` (`tracker_config/context.rs`): remove `MysqlTemplateConfig` and
+- [x] Add `percent-encoding` to `Cargo.toml`
+- [x] `TrackerServiceConfig` (`env/context.rs`): add optional database path field
+- [x] `EnvContext::new_with_mysql`: percent-encode username and password with
+      `utf8_percent_encode(..., USERINFO_ENCODE)` (custom AsciiSet preserving RFC 3986
+      unreserved chars), build the full DSN string, store in the new field
+- [x] `TrackerContext` (`tracker_config/context.rs`): remove `MysqlTemplateConfig` and
       the MySQL branch that builds it
-- [ ] `templates/docker-compose/.env.tera`: add
-      `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH` inside `{%- if mysql %}`
-- [ ] `templates/docker-compose/docker-compose.yml.tera`: inject the new env var into
-      the tracker service `environment:` section, conditionally on
-      `{%- if database.mysql %}`
-- [ ] `templates/tracker/tracker.toml.tera`: remove the MySQL `path =` line; add a
+- [x] `templates/docker-compose/.env.tera`: add
+      `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH` inside `{%- if mysql %}`,
+      placed in the Tracker Service Configuration section
+- [x] `templates/docker-compose/docker-compose.yml.tera`: inject the new env var into
+      the tracker service `environment:` section, conditionally on `{%- if mysql %}`
+- [x] `templates/tracker/tracker.toml.tera`: remove the MySQL `path =` line; add a
       comment explaining that the connection path is injected via the env var override
 
 ### Phase 4: Tests
 
-- [ ] `mysql.rs`: add `it_should_reject_root_as_username` unit test (Phase 1)
-- [ ] `env/context.rs`: add test that `new_with_mysql` produces a correctly
+- [x] `mysql.rs`: add `it_should_reject_root_as_username` unit test (Phase 1)
+- [x] `env/context.rs`: add test that `new_with_mysql` produces a correctly
       percent-encoded DSN for a password containing special characters
-- [ ] `env/context.rs`: add test that `new` (SQLite) leaves the database path field as
+- [x] `env/context.rs`: add test that `new` (SQLite) leaves the database path field as
       `None`
-- [ ] `tracker_config/context.rs`: remove or update the test that referenced
+- [x] `tracker_config/context.rs`: remove or update the test that referenced
       `mysql_password` on `MysqlTemplateConfig`
-- [ ] Run `cargo test` to verify all tests pass
+- [x] Run `cargo test` to verify all tests pass (2314 passed)
 
 ### Phase 5: Linting and pre-commit
 
-- [ ] Run linters: `cargo run --bin linter all`
-- [ ] Run pre-commit: `./scripts/pre-commit.sh`
+- [x] Run linters: `cargo run --bin linter all`
+- [x] Run pre-commit: `./scripts/pre-commit.sh`
+
+> **Status**: Phases 1–5 complete and committed.
 
 ## Acceptance Criteria
 
@@ -297,42 +326,46 @@ Tasks are ordered from simplest to most complex.
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
 
 **Task-Specific Criteria — Bug 3 (reserved username)**:
 
-- [ ] `MysqlConfig::new()` returns `Err(MysqlConfigError::ReservedUsername)` when
+- [x] `MysqlConfig::new()` returns `Err(MysqlConfigError::ReservedUsername)` when
       username is `"root"`
-- [ ] `MysqlConfigError::ReservedUsername` has a `help()` message with an actionable fix
-- [ ] A unit test for the reserved username rejection exists and passes
+- [x] `MysqlConfigError::ReservedUsername` has a `help()` message with an actionable fix
+- [x] A unit test for the reserved username rejection exists and passes
 
 **Task-Specific Criteria — Bug 2 (root password)**:
 
-- [ ] The environment configuration JSON schema accepts an optional `root_password` field
+- [x] The environment configuration JSON schema accepts an optional `root_password` field
       in the MySQL database object
-- [ ] When `root_password` is provided in the env JSON it is used as `MYSQL_ROOT_PASSWORD`
+- [x] When `root_password` is provided in the env JSON it is used as `MYSQL_ROOT_PASSWORD`
       in the rendered `.env`
-- [ ] When `root_password` is omitted, a randomly generated password is used — it is
+- [x] When `root_password` is omitted, a randomly generated password is used — it is
       **not** derived from the app password
-- [ ] `create_mysql_contexts` no longer contains `format!("{password}_root")`
+- [x] `create_mysql_contexts` no longer contains `format!("{password}_root")`
+- [x] The random password is generated once at environment creation time (not at render
+      time), ensuring stability across multiple renders
+- [x] The domain type `MysqlConfig.root_password` is always populated (`Password`,
+      non-optional)
 
 **Task-Specific Criteria — Bug 1 (DSN in tracker.toml)**:
 
-- [ ] The rendered `tracker.toml` for a MySQL deployment does **not** contain the
+- [x] The rendered `tracker.toml` for a MySQL deployment does **not** contain the
       database password
-- [ ] The rendered `.env` file contains
+- [x] The rendered `.env` file contains
       `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH` with a correctly
       percent-encoded DSN when MySQL is configured
-- [ ] The rendered `.env` file does **not** contain
+- [x] The rendered `.env` file does **not** contain
       `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH` when SQLite is configured
-- [ ] The rendered `docker-compose.yml` injects
+- [x] The rendered `docker-compose.yml` injects
       `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH` into the tracker service
       environment when MySQL is configured
-- [ ] A MySQL password containing URL-reserved characters (e.g. `@`, `+`, `/`) produces
-      a valid, correctly encoded DSN in the `.env` file
-- [ ] A MySQL password with only alphanumeric characters is rendered unchanged
-- [ ] `MysqlTemplateConfig` no longer exists in `tracker_config/context.rs`
-- [ ] `cargo machete` reports no unused dependencies
+- [x] A MySQL password containing URL-reserved characters (e.g. `@`, `+`, `/`) produces
+      a valid, correctly encoded DSN in the `.env` file (verified with `tracker_p@ss!word#1`)
+- [x] A MySQL password with only alphanumeric characters is rendered unchanged
+- [x] `MysqlTemplateConfig` no longer exists in `tracker_config/context.rs`
+- [x] `cargo machete` reports no unused dependencies
 
 ## Manual E2E Verification Test
 

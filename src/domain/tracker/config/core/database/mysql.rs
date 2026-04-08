@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::shared::Password;
+use crate::shared::{generate_random_password, Password};
 
 /// Error type for `MySQL` configuration validation
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
@@ -19,6 +19,9 @@ pub enum MysqlConfigError {
     /// Username cannot be empty
     #[error("MySQL username cannot be empty")]
     EmptyUsername,
+    /// Username `root` is reserved by the `MySQL` Docker image
+    #[error("MySQL username \"root\" is reserved and cannot be used as the app database username")]
+    ReservedUsername,
 }
 
 impl MysqlConfigError {
@@ -90,6 +93,23 @@ impl MysqlConfigError {
                    ...\n\
                  }"
             }
+            Self::ReservedUsername => {
+                "MySQL username \"root\" is reserved by the MySQL Docker image and cannot\n\
+                 be used as the application database username.\n\
+                 \n\
+                 The MySQL container creates a privileged superuser named \"root\" automatically.\n\
+                 Setting MYSQL_USER=root causes the container initialization to fail with:\n\
+                 [ERROR] [Entrypoint]: MYSQL_USER=\"root\", MYSQL_USER and MYSQL_ROOT_USER cannot be the same.\n\
+                 \n\
+                 Fix:\n\
+                 Choose a different username in your database configuration:\n\
+                 \n\
+                 \"database\": {\n\
+                   \"driver\": \"mysql\",\n\
+                   \"username\": \"tracker_user\",\n\
+                   ...\n\
+                 }"
+            }
         }
     }
 }
@@ -107,6 +127,11 @@ pub struct MysqlConfig {
     username: String,
     /// Database password (redacted in debug output)
     password: Password,
+    /// `MySQL` root password
+    ///
+    /// Used as `MYSQL_ROOT_PASSWORD` in the rendered `.env` file.
+    /// Always present — generated randomly at environment creation time if not supplied.
+    root_password: Password,
 }
 
 impl MysqlConfig {
@@ -118,6 +143,7 @@ impl MysqlConfig {
     /// - `EmptyHost` if host is empty
     /// - `InvalidPort` if port is 0
     /// - `EmptyUsername` if username is empty
+    /// - `ReservedUsername` if username is `"root"`
     ///
     /// # Examples
     ///
@@ -131,6 +157,7 @@ impl MysqlConfig {
     ///     "tracker",
     ///     "tracker_user",
     ///     Password::from("secure_password"),
+    ///     Password::from("root_password"),
     /// ).unwrap();
     ///
     /// assert_eq!(config.host(), "localhost");
@@ -143,6 +170,7 @@ impl MysqlConfig {
         database_name: impl Into<String>,
         username: impl Into<String>,
         password: Password,
+        root_password: Password,
     ) -> Result<Self, MysqlConfigError> {
         let host = host.into();
         let database_name = database_name.into();
@@ -160,6 +188,9 @@ impl MysqlConfig {
         if username.is_empty() {
             return Err(MysqlConfigError::EmptyUsername);
         }
+        if username == "root" {
+            return Err(MysqlConfigError::ReservedUsername);
+        }
 
         Ok(Self {
             host,
@@ -167,6 +198,7 @@ impl MysqlConfig {
             database_name,
             username,
             password,
+            root_password,
         })
     }
 
@@ -199,6 +231,14 @@ impl MysqlConfig {
     pub fn password(&self) -> &Password {
         &self.password
     }
+
+    /// Returns a reference to the `MySQL` root password.
+    ///
+    /// Used as `MYSQL_ROOT_PASSWORD` in the rendered `.env` file.
+    #[must_use]
+    pub fn root_password(&self) -> &Password {
+        &self.root_password
+    }
 }
 
 /// Intermediate struct for deserialization
@@ -209,6 +249,11 @@ struct MysqlConfigRaw {
     database_name: String,
     username: String,
     password: Password,
+    /// Optional during deserialization for backward compatibility with persisted
+    /// environments created before this field existed. A random password is
+    /// generated when the field is absent.
+    #[serde(default)]
+    root_password: Option<Password>,
 }
 
 impl<'de> Deserialize<'de> for MysqlConfig {
@@ -217,12 +262,14 @@ impl<'de> Deserialize<'de> for MysqlConfig {
         D: Deserializer<'de>,
     {
         let raw = MysqlConfigRaw::deserialize(deserializer)?;
+        let root_password = raw.root_password.unwrap_or_else(generate_random_password);
         Self::new(
             raw.host,
             raw.port,
             raw.database_name,
             raw.username,
             raw.password,
+            root_password,
         )
         .map_err(serde::de::Error::custom)
     }
@@ -240,6 +287,7 @@ mod tests {
             "tracker",
             "tracker_user",
             Password::from("secure_password"),
+            Password::from("root_pass"),
         )
         .unwrap();
 
@@ -252,26 +300,75 @@ mod tests {
 
     #[test]
     fn it_should_reject_empty_host_when_creating_mysql_config() {
-        let result = MysqlConfig::new("", 3306, "tracker", "user", Password::from("pass"));
+        let result = MysqlConfig::new(
+            "",
+            3306,
+            "tracker",
+            "user",
+            Password::from("pass"),
+            Password::from("r"),
+        );
         assert!(matches!(result, Err(MysqlConfigError::EmptyHost)));
     }
 
     #[test]
     fn it_should_reject_port_zero_when_creating_mysql_config() {
-        let result = MysqlConfig::new("localhost", 0, "tracker", "user", Password::from("pass"));
+        let result = MysqlConfig::new(
+            "localhost",
+            0,
+            "tracker",
+            "user",
+            Password::from("pass"),
+            Password::from("r"),
+        );
         assert!(matches!(result, Err(MysqlConfigError::InvalidPort)));
     }
 
     #[test]
     fn it_should_reject_empty_database_name_when_creating_mysql_config() {
-        let result = MysqlConfig::new("localhost", 3306, "", "user", Password::from("pass"));
+        let result = MysqlConfig::new(
+            "localhost",
+            3306,
+            "",
+            "user",
+            Password::from("pass"),
+            Password::from("r"),
+        );
         assert!(matches!(result, Err(MysqlConfigError::EmptyDatabaseName)));
     }
 
     #[test]
     fn it_should_reject_empty_username_when_creating_mysql_config() {
-        let result = MysqlConfig::new("localhost", 3306, "tracker", "", Password::from("pass"));
+        let result = MysqlConfig::new(
+            "localhost",
+            3306,
+            "tracker",
+            "",
+            Password::from("pass"),
+            Password::from("r"),
+        );
         assert!(matches!(result, Err(MysqlConfigError::EmptyUsername)));
+    }
+
+    #[test]
+    fn it_should_reject_root_as_username() {
+        let result = MysqlConfig::new(
+            "localhost",
+            3306,
+            "tracker",
+            "root",
+            Password::from("pass"),
+            Password::from("r"),
+        );
+        assert!(matches!(result, Err(MysqlConfigError::ReservedUsername)));
+    }
+
+    #[test]
+    fn it_should_provide_actionable_help_for_reserved_username_error() {
+        let error = MysqlConfigError::ReservedUsername;
+        let help = error.help();
+        assert!(help.contains("root"));
+        assert!(help.contains("tracker_user"));
     }
 
     #[test]
@@ -282,6 +379,7 @@ mod tests {
             "tracker",
             "tracker_user",
             Password::from("pass123"),
+            Password::from("root123"),
         )
         .unwrap();
 

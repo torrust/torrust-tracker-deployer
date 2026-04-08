@@ -50,11 +50,11 @@ driver = "{{ database_driver }}"
 # Note: This path is inside the Docker container. The host path is /opt/torrust/storage/tracker/database/
 # which is mounted to /var/lib/torrust/tracker/ inside the container.
 path = "/var/lib/torrust/tracker/database/{{ tracker_database_name }}"
-{%- elif database_driver == "mysql" %}
-# MySQL connection string format: mysql://<user>:<password>@<host>:<port>/<database>
-# The hostname "mysql" references the MySQL service in docker-compose network
-path = "mysql://{{ mysql_user }}:{{ mysql_password }}@{{ mysql_host }}:{{ mysql_port }}/{{ mysql_database }}"
 {%- endif %}
+# The MySQL connection path is injected via the
+# TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH environment variable.
+# The DSN is percent-encoded in the Rust rendering layer to handle URL-reserved
+# characters in credentials. See: templates/docker-compose/.env.tera
 
 {%- for udp_tracker in udp_trackers %}
 [[udp_trackers]]

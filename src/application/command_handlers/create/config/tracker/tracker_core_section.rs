@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::application::command_handlers::create::config::errors::CreateConfigError;
 use crate::domain::tracker::{DatabaseConfig, MysqlConfig, SqliteConfig, TrackerCoreConfig};
-use crate::shared::{Password, PlainPassword};
+use crate::shared::{generate_random_password, Password, PlainPassword};
 
 /// Database configuration section (application DTO)
 ///
@@ -67,6 +67,12 @@ pub enum DatabaseSection {
         /// Uses `PlainPassword` type alias to explicitly mark this as a temporarily visible secret.
         /// Converted to secure `Password` type in `to_database_config()` at the DTO-to-domain boundary.
         password: PlainPassword,
+        /// Optional `MySQL` root password
+        ///
+        /// When provided, used as `MYSQL_ROOT_PASSWORD` in the rendered `.env` file.
+        /// When absent, a cryptographically random password is generated at environment creation time.
+        #[serde(default)]
+        root_password: Option<PlainPassword>,
     },
 }
 
@@ -85,13 +91,17 @@ impl TryFrom<DatabaseSection> for DatabaseConfig {
                 database_name,
                 username,
                 password,
+                root_password,
             } => {
+                let root_password = root_password
+                    .map_or_else(generate_random_password, |p| Password::from(p.as_str()));
                 let config = MysqlConfig::new(
                     host,
                     port,
                     database_name,
                     username,
                     Password::from(password.as_str()),
+                    root_password,
                 )?;
                 Ok(Self::Mysql(config))
             }
@@ -212,25 +222,23 @@ mod tests {
                 database_name: "tracker".to_string(),
                 username: "tracker_user".to_string(),
                 password: "secure_password".to_string(),
+                root_password: None,
             },
             private: false,
         };
 
         let config: TrackerCoreConfig = section.try_into().unwrap();
 
-        assert_eq!(
-            *config.database(),
-            DatabaseConfig::Mysql(
-                MysqlConfig::new(
-                    "localhost",
-                    3306,
-                    "tracker",
-                    "tracker_user",
-                    Password::from("secure_password"),
-                )
-                .unwrap()
-            )
-        );
+        let DatabaseConfig::Mysql(mysql) = config.database() else {
+            panic!("expected MySQL config");
+        };
+        assert_eq!(mysql.host(), "localhost");
+        assert_eq!(mysql.port(), 3306);
+        assert_eq!(mysql.database_name(), "tracker");
+        assert_eq!(mysql.username(), "tracker_user");
+        assert_eq!(mysql.password().expose_secret(), "secure_password");
+        // root_password is generated randomly — just verify it is non-empty
+        assert!(!mysql.root_password().expose_secret().is_empty());
         assert!(!config.private());
     }
 
@@ -243,6 +251,7 @@ mod tests {
                 database_name: "tracker".to_string(),
                 username: "tracker_user".to_string(),
                 password: "pass123".to_string(),
+                root_password: None,
             },
             private: false,
         };
@@ -280,6 +289,7 @@ mod tests {
                 database_name: "tracker".to_string(),
                 username: "tracker_user".to_string(),
                 password: "secure_password".to_string(),
+                root_password: None,
             }
         );
         assert!(!section.private);
