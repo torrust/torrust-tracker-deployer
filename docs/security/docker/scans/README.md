@@ -9,7 +9,7 @@ This directory contains historical security scan results for Docker images used 
 | `torrust/tracker-deployer`             | trixie  | 44   | 1        | ⚠️ Partial remediation    | Apr 8, 2026 | [View](torrust-tracker-deployer.md)             |
 | `torrust/tracker-backup`               | trixie  | 6    | 0        | ℹ️ Remediation no change  | Apr 8, 2026 | [View](torrust-tracker-backup.md)               |
 | `torrust/tracker-ssh-server`           | 3.23.3  | 0    | 0        | ✅ Remediated (vuln scan) | Apr 8, 2026 | [View](torrust-ssh-server.md)                   |
-| `torrust/tracker-provisioned-instance` | 24.04   | 12   | 0        | ⚠️ Minor regression       | Apr 8, 2026 | [View](torrust-tracker-provisioned-instance.md) |
+| `torrust/tracker-provisioned-instance` | 24.04   | 0    | 0        | ✅ Remediated (vuln scan) | Apr 8, 2026 | [View](torrust-tracker-provisioned-instance.md) |
 | `caddy`                                | 2.10    | 24   | 0        | ⚠️ Update needed          | Apr 8, 2026 | [View](caddy.md)                                |
 | `prom/prometheus`                      | v3.5.0  | 20   | 0        | ⚠️ CVE update detected    | Apr 8, 2026 | [View](prometheus.md)                           |
 | `grafana/grafana`                      | 12.3.1  | 24   | 0        | ⚠️ CVE update detected    | Apr 8, 2026 | [View](grafana.md)                              |
