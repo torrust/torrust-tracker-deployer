@@ -6,16 +6,18 @@ on:
     paths:
       - "docker/**"
       - "templates/docker-compose/**"
+      - "src/**"
       - ".github/workflows/docker-security-scan.yml"
 
   pull_request:
     paths:
       - "docker/**"
       - "templates/docker-compose/**"
+      - "src/**"
       - ".github/workflows/docker-security-scan.yml"
 
   # Scheduled scans are important because new CVEs appear
-  # even if the code or images didn’t change
+  # even if the code or images didn't change
   schedule:
     - cron: "0 6 * * *" # Daily at 6 AM UTC
 
@@ -60,7 +62,7 @@ jobs:
             ${{ matrix.image.context }}
 
       # Human-readable output in logs
-      # This NEVER fails the job; it’s only for visibility
+      # This NEVER fails the job; it's only for visibility
       - name: Display vulnerabilities (table format)
         uses: aquasecurity/trivy-action@0.35.0
         with:
@@ -93,8 +95,98 @@ jobs:
           path: trivy-${{ matrix.image.name }}.sarif
           retention-days: 30
 
+  extract-images:
+    name: Extract Third-Party Docker Images from Source
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      # JSON array of Docker image references for use in scan matrix
+      # Example: ["torrust/tracker:develop","mysql:8.4","prom/prometheus:v3.5.0","grafana/grafana:12.3.1","caddy:2.10"]
+      images: ${{ steps.extract.outputs.images }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build deployer CLI
+        run: cargo build --release
+
+      # Creates a minimal environment config with all optional services
+      # enabled so that all third-party Docker images appear in the output.
+      # - MySQL: enables mysql image in docker_images output
+      # - Prometheus: enables prometheus image in docker_images output
+      # - Grafana: enables grafana image in docker_images output
+      # Uses fixture SSH keys (already committed to the repository).
+      - name: Create environment config for image extraction
+        run: |
+          cat > /tmp/ci-images-env.json <<EOF
+          {
+            "environment": { "name": "ci-images" },
+            "ssh_credentials": {
+              "private_key_path": "$GITHUB_WORKSPACE/fixtures/testing_rsa",
+              "public_key_path": "$GITHUB_WORKSPACE/fixtures/testing_rsa.pub"
+            },
+            "provider": {
+              "provider": "lxd",
+              "profile_name": "ci-profile"
+            },
+            "tracker": {
+              "core": {
+                "database": {
+                  "driver": "mysql",
+                  "host": "mysql",
+                  "port": 3306,
+                  "database_name": "torrust_tracker",
+                  "username": "tracker_user",
+                  "password": "tracker_password"
+                },
+                "private": false
+              },
+              "udp_trackers": [{ "bind_address": "0.0.0.0:6969" }],
+              "http_trackers": [{ "bind_address": "0.0.0.0:7070" }],
+              "http_api": { "bind_address": "0.0.0.0:1212", "admin_token": "ci-token" },
+              "health_check_api": { "bind_address": "127.0.0.1:1313" }
+            },
+            "prometheus": { "scrape_interval_in_secs": 15 },
+            "grafana": { "admin_user": "admin", "admin_password": "admin" }
+          }
+          EOF
+
+      - name: Create minimal environment (no infrastructure provisioned)
+        run: |
+          ./target/release/torrust-tracker-deployer \
+            --working-dir /tmp/ci-workspace \
+            create environment \
+            --env-file /tmp/ci-images-env.json
+
+      # Extract Docker images from show command JSON output.
+      # The show command lists all configured service images in docker_images.
+      # Caddy is always in the docker-compose stack but is not tracked as
+      # a domain service, so it is appended to the list manually.
+      - name: Extract Docker images
+        id: extract
+        run: |
+          show_output=$(./target/release/torrust-tracker-deployer \
+            --working-dir /tmp/ci-workspace \
+            show ci-images)
+
+          images=$(echo "$show_output" | \
+            jq -c '[
+              .docker_images.tracker,
+              .docker_images.mysql,
+              .docker_images.prometheus,
+              .docker_images.grafana
+            ] | map(select(. != null)) + ["caddy:2.10"]')
+
+          echo "Detected images: $images"
+          echo "images=$images" >> "$GITHUB_OUTPUT"
+
   scan-third-party-images:
     name: Scan Third-Party Docker Images
+    needs: extract-images
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -103,14 +195,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # These must match docker-compose templates
-        # in templates/docker-compose/docker-compose.yml.tera
-        image:
-          - torrust/tracker:develop
-          - mysql:8.0
-          - grafana/grafana:11.4.0
-          - prom/prometheus:v3.0.1
-          - caddy:2.10
+        # Dynamic image list extracted from the deployer CLI at build time.
+        # Images come from domain config constants — no manual maintenance needed.
+        image: ${{ fromJson(needs.extract-images.outputs.images) }}
 
     steps:
       - name: Display vulnerabilities (table format)
@@ -154,7 +241,7 @@ jobs:
       - scan-project-images
       - scan-third-party-images
 
-    # Always run so we don’t lose security visibility
+    # Always run so we don't lose security visibility
     if: always()
 
     permissions:
@@ -168,7 +255,6 @@ jobs:
 
       # Upload each SARIF file with CodeQL Action using unique categories.
       # The category parameter enables proper alert tracking per image.
-      # Must use CodeQL Action (not gh API) - API doesn't support category field.
       #
       # VIEWING RESULTS:
       # - For pull requests: /security/code-scanning?query=pr:NUMBER+is:open
@@ -192,42 +278,41 @@ jobs:
           category: docker-project-ssh-server
         continue-on-error: true
 
-      - name: Upload third-party mysql SARIF
+      # Dynamic upload of all third-party image SARIF results.
+      # Iterates over every sarif-third-party-* artifact directory so
+      # no manual step additions are needed when images change version.
+      # The category is derived from the artifact directory name so
+      # GitHub Code Scanning properly tracks alerts per image.
+      - name: Upload all third-party SARIF results
         if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: sarif-third-party-mysql-8.0-${{ github.run_id }}/trivy.sarif
-          category: docker-third-party-mysql-8.0
-        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          for sarif_dir in sarif-third-party-*; do
+            if [[ ! -d "$sarif_dir" ]]; then
+              continue
+            fi
+            sarif_file="$sarif_dir/trivy.sarif"
+            if [[ ! -f "$sarif_file" ]]; then
+              echo "No SARIF file in $sarif_dir, skipping"
+              continue
+            fi
 
-      - name: Upload third-party tracker SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: sarif-third-party-torrust-tracker-develop-${{ github.run_id }}/trivy.sarif
-          category: docker-third-party-torrust-tracker-develop
-        continue-on-error: true
+            # Derive unique Code Scanning category from the artifact directory name.
+            # Example: sarif-third-party-mysql-8.4-12345 -> docker-third-party-mysql-8.4
+            artifact_name="${sarif_dir%-${{ github.run_id }}}"
+            category="docker-${artifact_name#sarif-}"
 
-      - name: Upload third-party grafana SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: sarif-third-party-grafana-grafana-11.4.0-${{ github.run_id }}/trivy.sarif
-          category: docker-third-party-grafana-grafana-11.4.0
-        continue-on-error: true
+            echo "Uploading $sarif_file with category: $category"
 
-      - name: Upload third-party prometheus SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: sarif-third-party-prom-prometheus-v3.0.1-${{ github.run_id }}/trivy.sarif
-          category: docker-third-party-prom-prometheus-v3.0.1
-        continue-on-error: true
-
-      - name: Upload third-party caddy SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: sarif-third-party-caddy-2.10-${{ github.run_id }}/trivy.sarif
-          category: docker-third-party-caddy-2.10
-        continue-on-error: true
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${{ github.repository }}/code-scanning/sarifs" \
+              -f "commit_sha=${{ github.sha }}" \
+              -f "ref=${{ github.ref }}" \
+              -f "sarif=$(gzip -c "$sarif_file" | base64 -w 0)" \
+              -f "category=$category" \
+              || echo "Warning: Upload failed for $sarif_file (category: $category)"
+          done

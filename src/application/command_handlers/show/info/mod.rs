@@ -7,10 +7,12 @@
 //! # Module Structure
 //!
 //! Each service in the deployment stack has its own submodule:
+//! - `docker_images`: Docker image references for all services
 //! - `tracker`: Tracker service information (UDP/HTTP trackers, API, health check)
 //! - `prometheus`: Prometheus metrics service information
 //! - `grafana`: Grafana visualization service information
 
+mod docker_images;
 mod grafana;
 mod prometheus;
 mod tracker;
@@ -20,6 +22,7 @@ use std::net::IpAddr;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
+pub use self::docker_images::DockerImagesInfo;
 pub use self::grafana::GrafanaInfo;
 pub use self::prometheus::PrometheusInfo;
 pub use self::tracker::{LocalhostServiceInfo, ServiceInfo, TlsDomainInfo};
@@ -55,6 +58,9 @@ pub struct EnvironmentInfo {
     /// Grafana visualization service information, available for Released/Running states
     pub grafana: Option<GrafanaInfo>,
 
+    /// Docker image references for all services in the deployment stack
+    pub docker_images: DockerImagesInfo,
+
     /// Internal state name (e.g., "created", "provisioned") for guidance generation
     pub state_name: String,
 }
@@ -67,6 +73,7 @@ impl EnvironmentInfo {
         state: String,
         provider: String,
         created_at: DateTime<Utc>,
+        docker_images: DockerImagesInfo,
         state_name: String,
     ) -> Self {
         Self {
@@ -78,6 +85,7 @@ impl EnvironmentInfo {
             services: None,
             prometheus: None,
             grafana: None,
+            docker_images,
             state_name,
         }
     }
@@ -166,6 +174,10 @@ mod tests {
 
     use super::*;
 
+    fn test_docker_images() -> DockerImagesInfo {
+        DockerImagesInfo::new("torrust/tracker:develop".to_string(), None, None, None)
+    }
+
     #[test]
     fn it_should_create_environment_info() {
         let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
@@ -174,6 +186,7 @@ mod tests {
             "Created".to_string(),
             "LXD".to_string(),
             created_at,
+            test_docker_images(),
             "Run 'provision' to create infrastructure.".to_string(),
         );
 
@@ -191,6 +204,7 @@ mod tests {
             "Provisioned".to_string(),
             "LXD".to_string(),
             created_at,
+            test_docker_images(),
             "Run 'configure' to set up the system.".to_string(),
         )
         .with_infrastructure(InfrastructureInfo::new(

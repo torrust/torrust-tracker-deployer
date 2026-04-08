@@ -4,6 +4,7 @@
 //! The presentation layer references this module rather than importing directly
 //! from the application layer.
 
+pub use crate::application::command_handlers::show::info::DockerImagesInfo;
 pub use crate::application::command_handlers::show::info::EnvironmentInfo;
 pub use crate::application::command_handlers::show::info::GrafanaInfo;
 pub use crate::application::command_handlers::show::info::InfrastructureInfo;

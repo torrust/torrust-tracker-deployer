@@ -9,12 +9,19 @@ use serde::{Deserialize, Serialize};
 use crate::domain::topology::{
     EnabledServices, Network, NetworkDerivation, PortBinding, PortDerivation, Service,
 };
+use crate::shared::docker_image::DockerImage;
 
 /// Default scrape interval in seconds
 ///
 /// This is the recommended interval for most use cases, balancing
 /// monitoring frequency with resource usage.
 const DEFAULT_SCRAPE_INTERVAL_SECS: u32 = 15;
+
+/// Docker image repository for the Prometheus container
+pub const PROMETHEUS_DOCKER_IMAGE_REPOSITORY: &str = "prom/prometheus";
+
+/// Docker image tag for the Prometheus container
+pub const PROMETHEUS_DOCKER_IMAGE_TAG: &str = "v3.5.0";
 
 /// Prometheus metrics collection configuration
 ///
@@ -76,6 +83,26 @@ impl PrometheusConfig {
     #[must_use]
     pub fn scrape_interval_in_secs(&self) -> u32 {
         self.scrape_interval_in_secs.get()
+    }
+
+    /// Returns the Docker image used for the Prometheus service.
+    ///
+    /// This is a pinned constant — not user-configurable.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::prometheus::PrometheusConfig;
+    ///
+    /// let image = PrometheusConfig::docker_image();
+    /// assert_eq!(image.full_reference(), "prom/prometheus:v3.5.0");
+    /// ```
+    #[must_use]
+    pub fn docker_image() -> DockerImage {
+        DockerImage::new(
+            PROMETHEUS_DOCKER_IMAGE_REPOSITORY,
+            PROMETHEUS_DOCKER_IMAGE_TAG,
+        )
     }
 }
 

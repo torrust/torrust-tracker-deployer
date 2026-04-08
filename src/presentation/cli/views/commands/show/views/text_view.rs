@@ -23,7 +23,9 @@ use super::next_step::NextStepGuidanceView;
 use super::prometheus::PrometheusView;
 use super::tracker_services::TrackerServicesView;
 
-use crate::presentation::cli::views::commands::show::view_data::EnvironmentInfo;
+use crate::presentation::cli::views::commands::show::view_data::{
+    DockerImagesInfo, EnvironmentInfo,
+};
 use crate::presentation::cli::views::{Render, ViewRenderError};
 
 /// View for rendering environment information
@@ -43,16 +45,18 @@ use crate::presentation::cli::views::{Render, ViewRenderError};
 ///
 /// ```rust
 /// # use torrust_tracker_deployer_lib::presentation::cli::views::Render;
-/// use torrust_tracker_deployer_lib::application::command_handlers::show::info::EnvironmentInfo;
+/// use torrust_tracker_deployer_lib::application::command_handlers::show::info::{DockerImagesInfo, EnvironmentInfo};
 /// use torrust_tracker_deployer_lib::presentation::cli::views::commands::show::TextView;
 /// use chrono::{TimeZone, Utc};
 ///
 /// let created_at = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+/// let docker_images = DockerImagesInfo::new("torrust/tracker:develop".to_string(), None, None, None);
 /// let info = EnvironmentInfo::new(
 ///     "my-env".to_string(),
 ///     "Created".to_string(),
 ///     "LXD".to_string(),
 ///     created_at,
+///     docker_images,
 ///     "created".to_string(),
 /// );
 ///
@@ -94,6 +98,9 @@ impl Render<EnvironmentInfo> for TextView {
             lines.extend(GrafanaView::render(grafana));
         }
 
+        // Docker images (always present)
+        lines.extend(Self::render_docker_images(&info.docker_images));
+
         // HTTPS hint with /etc/hosts (if TLS is configured)
         if let Some(ref services) = info.services {
             let instance_ip = info.infrastructure.as_ref().map(|i| i.instance_ip);
@@ -107,6 +114,25 @@ impl Render<EnvironmentInfo> for TextView {
     }
 }
 
+impl TextView {
+    fn render_docker_images(docker_images: &DockerImagesInfo) -> Vec<String> {
+        let mut lines = Vec::new();
+        lines.push(String::new());
+        lines.push("Docker Images:".to_string());
+        lines.push(format!("  Tracker:    {}", docker_images.tracker));
+        if let Some(ref mysql) = docker_images.mysql {
+            lines.push(format!("  MySQL:      {mysql}"));
+        }
+        if let Some(ref prometheus) = docker_images.prometheus {
+            lines.push(format!("  Prometheus: {prometheus}"));
+        }
+        if let Some(ref grafana) = docker_images.grafana {
+            lines.push(format!("  Grafana:    {grafana}"));
+        }
+        lines
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::net::{IpAddr, Ipv4Addr};
@@ -115,12 +141,16 @@ mod tests {
 
     use super::*;
     use crate::presentation::cli::views::commands::show::view_data::{
-        InfrastructureInfo, ServiceInfo, TlsDomainInfo,
+        DockerImagesInfo, InfrastructureInfo, ServiceInfo, TlsDomainInfo,
     };
 
     /// Helper to create a fixed test timestamp
     fn test_timestamp() -> chrono::DateTime<chrono::Utc> {
         Utc.with_ymd_and_hms(2025, 1, 7, 12, 30, 45).unwrap()
+    }
+
+    fn test_docker_images() -> DockerImagesInfo {
+        DockerImagesInfo::new("torrust/tracker:develop".to_string(), None, None, None)
     }
 
     #[test]
@@ -130,6 +160,7 @@ mod tests {
             "Created".to_string(),
             "LXD".to_string(),
             test_timestamp(),
+            test_docker_images(),
             "created".to_string(),
         );
 
@@ -149,6 +180,7 @@ mod tests {
             "Provisioned".to_string(),
             "LXD".to_string(),
             test_timestamp(),
+            test_docker_images(),
             "provisioned".to_string(),
         )
         .with_infrastructure(InfrastructureInfo::new(
@@ -176,6 +208,7 @@ mod tests {
             "Running".to_string(),
             "LXD".to_string(),
             test_timestamp(),
+            test_docker_images(),
             "running".to_string(),
         )
         .with_services(ServiceInfo::new(
@@ -212,6 +245,7 @@ mod tests {
             "Running".to_string(),
             "LXD".to_string(),
             test_timestamp(),
+            test_docker_images(),
             "running".to_string(),
         )
         .with_infrastructure(InfrastructureInfo::new(
@@ -253,6 +287,7 @@ mod tests {
             "Running".to_string(),
             "LXD".to_string(),
             test_timestamp(),
+            test_docker_images(),
             "running".to_string(),
         )
         .with_infrastructure(InfrastructureInfo::new(
@@ -318,6 +353,7 @@ mod tests {
             "Provisioned".to_string(),
             "LXD".to_string(),
             test_timestamp(),
+            test_docker_images(),
             "provisioned".to_string(),
         )
         .with_infrastructure(InfrastructureInfo::new(

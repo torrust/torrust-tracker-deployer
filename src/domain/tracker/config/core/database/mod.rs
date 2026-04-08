@@ -13,6 +13,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::domain::mysql::MysqlServiceConfig;
+use crate::shared::docker_image::DockerImage;
+
 mod mysql;
 mod sqlite;
 
@@ -91,6 +94,33 @@ impl DatabaseConfig {
         match self {
             Self::Sqlite(config) => config.database_name(),
             Self::Mysql(config) => config.database_name(),
+        }
+    }
+
+    /// Returns the Docker image for the database service container, if applicable.
+    ///
+    /// - `Mysql` variant returns the `MySQL` docker image
+    /// - `Sqlite` returns `None` — `SQLite` runs in-process; no container is needed
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::tracker::{DatabaseConfig, SqliteConfig, MysqlConfig};
+    /// use torrust_tracker_deployer_lib::shared::Password;
+    ///
+    /// let sqlite = DatabaseConfig::Sqlite(SqliteConfig::new("tracker.db").unwrap());
+    /// assert!(sqlite.docker_image().is_none());
+    ///
+    /// let mysql = DatabaseConfig::Mysql(
+    ///     MysqlConfig::new("localhost", 3306, "tracker", "user", "pass".to_string().into(), "root_pass".to_string().into()).unwrap()
+    /// );
+    /// assert_eq!(mysql.docker_image().unwrap().full_reference(), "mysql:8.4");
+    /// ```
+    #[must_use]
+    pub fn docker_image(&self) -> Option<DockerImage> {
+        match self {
+            Self::Mysql(_) => Some(MysqlServiceConfig::docker_image()),
+            Self::Sqlite(_) => None,
         }
     }
 }

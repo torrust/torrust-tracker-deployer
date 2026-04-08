@@ -28,6 +28,13 @@ use serde::{Deserialize, Serialize};
 use crate::domain::topology::{
     EnabledServices, Network, NetworkDerivation, PortBinding, PortDerivation,
 };
+use crate::shared::docker_image::DockerImage;
+
+/// Docker image repository for the `MySQL` container
+pub const MYSQL_DOCKER_IMAGE_REPOSITORY: &str = "mysql";
+
+/// Docker image tag for the `MySQL` container
+pub const MYSQL_DOCKER_IMAGE_TAG: &str = "8.4";
 
 /// `MySQL` database service configuration for Docker Compose topology
 ///
@@ -68,6 +75,23 @@ impl MysqlServiceConfig {
     #[must_use]
     pub const fn new() -> Self {
         Self {}
+    }
+
+    /// Returns the Docker image used for the `MySQL` service.
+    ///
+    /// This is a pinned constant — not user-configurable.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::mysql::MysqlServiceConfig;
+    ///
+    /// let image = MysqlServiceConfig::docker_image();
+    /// assert_eq!(image.full_reference(), "mysql:8.4");
+    /// ```
+    #[must_use]
+    pub fn docker_image() -> DockerImage {
+        DockerImage::new(MYSQL_DOCKER_IMAGE_REPOSITORY, MYSQL_DOCKER_IMAGE_TAG)
     }
 }
 

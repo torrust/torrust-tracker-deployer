@@ -13,7 +13,14 @@ use super::{BindingAddress, Protocol};
 use crate::domain::topology::{
     EnabledServices, Network, NetworkDerivation, PortBinding, PortDerivation, Service,
 };
+use crate::shared::docker_image::DockerImage;
 use crate::shared::DomainName;
+
+/// Docker image repository for the Torrust Tracker container
+pub const TRACKER_DOCKER_IMAGE_REPOSITORY: &str = "torrust/tracker";
+
+/// Docker image tag for the Torrust Tracker container
+pub const TRACKER_DOCKER_IMAGE_TAG: &str = "develop";
 
 mod core;
 mod health_check_api;
@@ -328,6 +335,23 @@ impl TrackerConfig {
     #[must_use]
     pub fn uses_mysql(&self) -> bool {
         matches!(self.core.database(), DatabaseConfig::Mysql(_))
+    }
+
+    /// Returns the Docker image used for the tracker service.
+    ///
+    /// This is a pinned constant — not user-configurable.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use torrust_tracker_deployer_lib::domain::tracker::TrackerConfig;
+    ///
+    /// let image = TrackerConfig::docker_image();
+    /// assert_eq!(image.full_reference(), "torrust/tracker:develop");
+    /// ```
+    #[must_use]
+    pub fn docker_image() -> DockerImage {
+        DockerImage::new(TRACKER_DOCKER_IMAGE_REPOSITORY, TRACKER_DOCKER_IMAGE_TAG)
     }
 
     /// Checks for socket address conflicts

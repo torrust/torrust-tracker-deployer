@@ -18,6 +18,9 @@ use super::service_topology::ServiceTopology;
 /// Uses `ServiceTopology` to share the common topology structure with other services.
 #[derive(Serialize, Debug, Clone)]
 pub struct TrackerServiceContext {
+    /// Docker image reference (e.g. `torrust/tracker:develop`)
+    pub image: String,
+
     /// Service topology (ports and networks)
     ///
     /// Flattened for template compatibility - serializes ports/networks at top level.
@@ -45,6 +48,7 @@ impl TrackerServiceContext {
             .collect();
 
         Self {
+            image: TrackerConfig::docker_image().full_reference(),
             topology: ServiceTopology::new(ports, networks),
         }
     }
