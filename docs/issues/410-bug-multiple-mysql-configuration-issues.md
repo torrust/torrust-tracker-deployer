@@ -35,14 +35,14 @@ value.
 
 ### Bug 1 — DSN in `tracker.toml`
 
-- [ ] Move the MySQL DSN out of `tracker.toml` and into an environment variable override,
+- [x] Move the MySQL DSN out of `tracker.toml` and into an environment variable override,
       consistent with `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__DRIVER` and
       `TORRUST_TRACKER_CONFIG_OVERRIDE_HTTP_API__ACCESS_TOKENS__ADMIN`
-- [ ] Build the percent-encoded DSN in Rust and expose it in the `.env` file as
+- [x] Build the percent-encoded DSN in Rust and expose it in the `.env` file as
       `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH`
-- [ ] Pass the new env var into the tracker container via `docker-compose.yml.tera`
-- [ ] Remove the raw DSN line from `tracker.toml.tera` for the MySQL case
-- [ ] Remove the now-unused `MysqlTemplateConfig` from `TrackerContext`
+- [x] Pass the new env var into the tracker container via `docker-compose.yml.tera`
+- [x] Remove the raw DSN line from `tracker.toml.tera` for the MySQL case
+- [x] Remove the now-unused `MysqlTemplateConfig` from `TrackerContext`
 
 ### Bug 2 — Root password not configurable
 
@@ -55,8 +55,8 @@ value.
 
 ### Bug 3 — Reserved username not rejected
 
-- [ ] Add a `ReservedUsername` variant to `MysqlConfigError`
-- [ ] Reject `"root"` as the app DB username in `MysqlConfig::new()` with a clear,
+- [x] Add a `ReservedUsername` variant to `MysqlConfigError`
+- [x] Reject `"root"` as the app DB username in `MysqlConfig::new()` with a clear,
       actionable error message
 
 ## Specifications
@@ -285,36 +285,38 @@ Tasks are ordered from simplest to most complex.
 
 ### Phase 3: Move DSN to env var override and add URL-encoding (Bug 1)
 
-- [ ] Add `percent-encoding` to `Cargo.toml`
-- [ ] `TrackerServiceConfig` (`env/context.rs`): add optional database path field
-- [ ] `EnvContext::new_with_mysql`: percent-encode username and password with
-      `utf8_percent_encode(..., NON_ALPHANUMERIC)`, build the full DSN string, store in
-      the new field
-- [ ] `TrackerContext` (`tracker_config/context.rs`): remove `MysqlTemplateConfig` and
+- [x] Add `percent-encoding` to `Cargo.toml`
+- [x] `TrackerServiceConfig` (`env/context.rs`): add optional database path field
+- [x] `EnvContext::new_with_mysql`: percent-encode username and password with
+      `utf8_percent_encode(..., USERINFO_ENCODE)` (custom AsciiSet preserving RFC 3986
+      unreserved chars), build the full DSN string, store in the new field
+- [x] `TrackerContext` (`tracker_config/context.rs`): remove `MysqlTemplateConfig` and
       the MySQL branch that builds it
-- [ ] `templates/docker-compose/.env.tera`: add
-      `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH` inside `{%- if mysql %}`
-- [ ] `templates/docker-compose/docker-compose.yml.tera`: inject the new env var into
-      the tracker service `environment:` section, conditionally on
-      `{%- if database.mysql %}`
-- [ ] `templates/tracker/tracker.toml.tera`: remove the MySQL `path =` line; add a
+- [x] `templates/docker-compose/.env.tera`: add
+      `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH` inside `{%- if mysql %}`,
+      placed in the Tracker Service Configuration section
+- [x] `templates/docker-compose/docker-compose.yml.tera`: inject the new env var into
+      the tracker service `environment:` section, conditionally on `{%- if mysql %}`
+- [x] `templates/tracker/tracker.toml.tera`: remove the MySQL `path =` line; add a
       comment explaining that the connection path is injected via the env var override
 
 ### Phase 4: Tests
 
-- [ ] `mysql.rs`: add `it_should_reject_root_as_username` unit test (Phase 1)
-- [ ] `env/context.rs`: add test that `new_with_mysql` produces a correctly
+- [x] `mysql.rs`: add `it_should_reject_root_as_username` unit test (Phase 1)
+- [x] `env/context.rs`: add test that `new_with_mysql` produces a correctly
       percent-encoded DSN for a password containing special characters
-- [ ] `env/context.rs`: add test that `new` (SQLite) leaves the database path field as
+- [x] `env/context.rs`: add test that `new` (SQLite) leaves the database path field as
       `None`
-- [ ] `tracker_config/context.rs`: remove or update the test that referenced
+- [x] `tracker_config/context.rs`: remove or update the test that referenced
       `mysql_password` on `MysqlTemplateConfig`
-- [ ] Run `cargo test` to verify all tests pass
+- [x] Run `cargo test` to verify all tests pass (2314 passed)
 
 ### Phase 5: Linting and pre-commit
 
 - [ ] Run linters: `cargo run --bin linter all`
 - [ ] Run pre-commit: `./scripts/pre-commit.sh`
+
+> **Status**: Phases 1–4 complete and committed. Phase 5 pending.
 
 ## Acceptance Criteria
 
@@ -328,10 +330,10 @@ Tasks are ordered from simplest to most complex.
 
 **Task-Specific Criteria — Bug 3 (reserved username)**:
 
-- [ ] `MysqlConfig::new()` returns `Err(MysqlConfigError::ReservedUsername)` when
+- [x] `MysqlConfig::new()` returns `Err(MysqlConfigError::ReservedUsername)` when
       username is `"root"`
-- [ ] `MysqlConfigError::ReservedUsername` has a `help()` message with an actionable fix
-- [ ] A unit test for the reserved username rejection exists and passes
+- [x] `MysqlConfigError::ReservedUsername` has a `help()` message with an actionable fix
+- [x] A unit test for the reserved username rejection exists and passes
 
 **Task-Specific Criteria — Bug 2 (root password)**:
 
@@ -349,20 +351,20 @@ Tasks are ordered from simplest to most complex.
 
 **Task-Specific Criteria — Bug 1 (DSN in tracker.toml)**:
 
-- [ ] The rendered `tracker.toml` for a MySQL deployment does **not** contain the
+- [x] The rendered `tracker.toml` for a MySQL deployment does **not** contain the
       database password
-- [ ] The rendered `.env` file contains
+- [x] The rendered `.env` file contains
       `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH` with a correctly
       percent-encoded DSN when MySQL is configured
-- [ ] The rendered `.env` file does **not** contain
+- [x] The rendered `.env` file does **not** contain
       `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH` when SQLite is configured
-- [ ] The rendered `docker-compose.yml` injects
+- [x] The rendered `docker-compose.yml` injects
       `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH` into the tracker service
       environment when MySQL is configured
-- [ ] A MySQL password containing URL-reserved characters (e.g. `@`, `+`, `/`) produces
-      a valid, correctly encoded DSN in the `.env` file
-- [ ] A MySQL password with only alphanumeric characters is rendered unchanged
-- [ ] `MysqlTemplateConfig` no longer exists in `tracker_config/context.rs`
+- [x] A MySQL password containing URL-reserved characters (e.g. `@`, `+`, `/`) produces
+      a valid, correctly encoded DSN in the `.env` file (verified with `tracker_p@ss!word#1`)
+- [x] A MySQL password with only alphanumeric characters is rendered unchanged
+- [x] `MysqlTemplateConfig` no longer exists in `tracker_config/context.rs`
 - [ ] `cargo machete` reports no unused dependencies
 
 ## Manual E2E Verification Test

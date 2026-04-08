@@ -7,9 +7,33 @@
 //! - Tracker service configuration
 //! - `MySQL` service configuration (optional)
 
+use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use serde::Serialize;
 
 use crate::infrastructure::templating::TemplateMetadata;
+
+/// Characters that must be percent-encoded in the userinfo (user/password) part of a MySQL DSN URL.
+///
+/// Encodes delimiters that have structural meaning in the URL authority component:
+/// - `@` — userinfo/host separator
+/// - `:` — user/password separator in the DSN
+/// - `/` — path separator
+/// - `#` — fragment delimiter
+/// - `?` — query delimiter
+/// - `%` — percent-encoding prefix (must itself be encoded)
+/// - `+` — interpreted as space in some URL parsers
+///
+/// Unreserved characters per RFC 3986 (`-`, `_`, `.`, `~`) and ASCII alphanumerics
+/// are NOT encoded, so common usernames like `tracker_user` remain readable.
+const USERINFO_ENCODE: AsciiSet = CONTROLS
+    .add(b' ')
+    .add(b':')
+    .add(b'@')
+    .add(b'/')
+    .add(b'#')
+    .add(b'?')
+    .add(b'%')
+    .add(b'+');
 
 /// Configuration for the Tracker service
 ///
@@ -21,6 +45,13 @@ pub struct TrackerServiceConfig {
     /// Database driver type ("sqlite3" or "mysql")
     /// Controls which config template the container entrypoint uses
     pub database_driver: String,
+    /// Percent-encoded MySQL DSN for `TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH`
+    ///
+    /// Only populated when MySQL is configured; `None` for SQLite.
+    /// Username and password are percent-encoded with `NON_ALPHANUMERIC` to handle
+    /// URL-reserved characters (e.g. `@`, `+`, `/`, `:`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub database_path: Option<String>,
 }
 
 /// Configuration for the `MySQL` service
@@ -105,6 +136,7 @@ impl EnvContext {
             tracker: TrackerServiceConfig {
                 api_admin_token: tracker_api_admin_token,
                 database_driver: "sqlite3".to_string(),
+                database_path: None,
             },
             mysql: None,
             grafana: None,
@@ -119,8 +151,10 @@ impl EnvContext {
     /// * `tracker_api_admin_token` - The admin token for tracker API authentication
     /// * `mysql_root_password` - `MySQL` root password
     /// * `mysql_database` - `MySQL` database name
-    /// * `mysql_user` - `MySQL` user
-    /// * `mysql_password` - `MySQL` password
+    /// * `mysql_user` - `MySQL` username (percent-encoded in the DSN)
+    /// * `mysql_password` - `MySQL` password (percent-encoded in the DSN)
+    /// * `mysql_host` - `MySQL` host (e.g. `"mysql"`, `"localhost"`)
+    /// * `mysql_port` - `MySQL` port (typically `3306`)
     ///
     /// # Examples
     ///
@@ -137,6 +171,8 @@ impl EnvContext {
     ///     "tracker_db".to_string(),
     ///     "tracker_user".to_string(),
     ///     "user_pass".to_string(),
+    ///     "mysql".to_string(),
+    ///     3306,
     /// );
     /// assert_eq!(context.tracker.database_driver, "mysql");
     /// assert!(context.mysql.is_some());
@@ -149,12 +185,20 @@ impl EnvContext {
         mysql_database: String,
         mysql_user: String,
         mysql_password: String,
+        mysql_host: String,
+        mysql_port: u16,
     ) -> Self {
+        let encoded_user = utf8_percent_encode(&mysql_user, &USERINFO_ENCODE).to_string();
+        let encoded_password = utf8_percent_encode(&mysql_password, &USERINFO_ENCODE).to_string();
+        let database_path = format!(
+            "mysql://{encoded_user}:{encoded_password}@{mysql_host}:{mysql_port}/{mysql_database}"
+        );
         Self {
             metadata,
             tracker: TrackerServiceConfig {
                 api_admin_token: tracker_api_admin_token,
                 database_driver: "mysql".to_string(),
+                database_path: Some(database_path),
             },
             mysql: Some(MySqlServiceConfig {
                 root_password: mysql_root_password,
@@ -277,6 +321,8 @@ mod tests {
             "tracker_db".to_string(),
             "tracker_user".to_string(),
             "user_pass".to_string(),
+            "mysql".to_string(),
+            3306,
         );
 
         assert_eq!(context.tracker.api_admin_token, "AdminToken456");
@@ -312,6 +358,8 @@ mod tests {
             "db".to_string(),
             "user".to_string(),
             "pass".to_string(),
+            "mysql".to_string(),
+            3306,
         );
 
         let serialized = serde_json::to_string(&context).unwrap();
@@ -339,6 +387,8 @@ mod tests {
             "tracker_db".to_string(),
             "tracker_user".to_string(),
             "user_pass".to_string(),
+            "mysql".to_string(),
+            3306,
         );
 
         // Backward compatible getter methods
@@ -348,5 +398,59 @@ mod tests {
         assert_eq!(context.mysql_database(), Some("tracker_db"));
         assert_eq!(context.mysql_user(), Some("tracker_user"));
         assert_eq!(context.mysql_password(), Some("user_pass"));
+    }
+
+    #[test]
+    fn it_should_produce_percent_encoded_dsn_for_password_with_special_chars() {
+        let metadata = create_test_metadata();
+        // password contains URL-reserved characters: @ : / +
+        let context = EnvContext::new_with_mysql(
+            metadata,
+            "Token123".to_string(),
+            "root_pass".to_string(),
+            "tracker".to_string(),
+            "tracker_user".to_string(),
+            "p@ss:w/ord+1".to_string(),
+            "mysql".to_string(),
+            3306,
+        );
+
+        let database_path = context.tracker.database_path.as_deref().unwrap();
+        // @ -> %40, : -> %3A, / -> %2F, + -> %2B
+        // _ in username is NOT encoded (unreserved per RFC 3986)
+        assert_eq!(
+            database_path,
+            "mysql://tracker_user:p%40ss%3Aw%2Ford%2B1@mysql:3306/tracker"
+        );
+    }
+
+    #[test]
+    fn it_should_produce_unencoded_dsn_for_alphanumeric_password() {
+        let metadata = create_test_metadata();
+        let context = EnvContext::new_with_mysql(
+            metadata,
+            "Token123".to_string(),
+            "root_pass".to_string(),
+            "tracker".to_string(),
+            "tracker_user".to_string(),
+            "plainpassword123".to_string(),
+            "mysql".to_string(),
+            3306,
+        );
+
+        let database_path = context.tracker.database_path.as_deref().unwrap();
+        // Alphanumeric password and underscore username are not encoded
+        assert_eq!(
+            database_path,
+            "mysql://tracker_user:plainpassword123@mysql:3306/tracker"
+        );
+    }
+
+    #[test]
+    fn it_should_leave_database_path_none_for_sqlite() {
+        let metadata = create_test_metadata();
+        let context = EnvContext::new(metadata, "Token123".to_string());
+
+        assert!(context.tracker.database_path.is_none());
     }
 }

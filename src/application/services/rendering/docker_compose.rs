@@ -107,6 +107,7 @@ impl DockerComposeTemplateRenderingService {
             DatabaseConfig::Mysql(mysql_config) => self.create_mysql_contexts(
                 admin_token.to_string(),
                 tracker,
+                mysql_config.host().to_string(),
                 mysql_config.port(),
                 mysql_config.database_name().to_string(),
                 mysql_config.username().to_string(),
@@ -214,6 +215,7 @@ impl DockerComposeTemplateRenderingService {
         &self,
         admin_token: String,
         tracker: TrackerServiceContext,
+        host: String,
         port: u16,
         database_name: String,
         username: String,
@@ -228,6 +230,8 @@ impl DockerComposeTemplateRenderingService {
             database_name.clone(),
             username.clone(),
             password.clone(),
+            host,
+            port,
         );
 
         let mysql_config = MysqlSetupConfig {

@@ -316,9 +316,10 @@ mod tests {
             .expect("Failed to read tracker.toml");
 
         assert!(content.contains(r#"driver = "mysql""#));
-        assert!(
-            content.contains("path = \"mysql://tracker_user:secure_pass@mysql:3306/tracker_db\"")
-        );
+        // DSN is no longer in tracker.toml — it is injected via
+        // TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH in .env
+        assert!(!content.contains("path = \"mysql://"));
+        assert!(!content.contains("secure_pass"));
     }
 
     #[test]
@@ -401,7 +402,7 @@ driver = "{{ database_driver }}"
 {% if database_driver == "sqlite3" %}
 path = "/var/lib/torrust/tracker/database/{{ tracker_database_name }}"
 {% elif database_driver == "mysql" %}
-path = "mysql://{{ mysql_user }}:{{ mysql_password }}@{{ mysql_host }}:{{ mysql_port }}/{{ mysql_database }}"
+{# DSN is injected via TORRUST_TRACKER_CONFIG_OVERRIDE_CORE__DATABASE__PATH in .env #}
 {% endif %}
 
 {% for udp_tracker in udp_trackers %}
