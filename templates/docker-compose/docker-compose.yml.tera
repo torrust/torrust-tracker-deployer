@@ -52,7 +52,7 @@ services:
   # Placed first as it's the entry point for HTTPS traffic
   caddy:
     <<: *defaults
-    image: caddy:2.10
+    image: caddy:2.10.2
     container_name: caddy
     # NOTE: No UFW firewall rule needed for these ports!
     # Docker-published ports bypass iptables/UFW rules entirely.

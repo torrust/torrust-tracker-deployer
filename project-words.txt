@@ -101,6 +101,7 @@ Regenerable
 Repomix
 Repositóri
 Rescan
+Remediations
 Restic
 Runrestic
 Rustdoc

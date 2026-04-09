@@ -18,8 +18,9 @@ use torrust_tracker_deployer_lib::adapters::ssh::{
 };
 use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::integration::ssh_server::{
-    MockSshServerContainer, RealSshServerContainer,
+    print_docker_debug_info, MockSshServerContainer, RealSshServerContainer,
 };
+use torrust_tracker_deployer_lib::testing::network::PortChecker;
 
 /// SSH test constants following testing conventions
 ///
@@ -104,9 +105,16 @@ impl SshTestBuilder {
 
     /// Build the SSH client with configured parameters
     pub fn build_client(self) -> SshClient {
+        let private_key_path = self.private_key_path.unwrap();
+        let public_key_path = self.public_key_path.unwrap();
+
+        // CI runners may check out fixture keys with permissive file modes.
+        // OpenSSH rejects private keys that are readable by group/others.
+        normalize_private_key_permissions(&private_key_path);
+
         let ssh_credentials = SshCredentials::new(
-            self.private_key_path.unwrap(),
-            self.public_key_path.unwrap(),
+            private_key_path,
+            public_key_path,
             Username::new(self.username.unwrap()).unwrap(),
         );
 
@@ -123,6 +131,30 @@ impl Default for SshTestBuilder {
     fn default() -> Self {
         Self::new()
     }
+}
+
+#[cfg(unix)]
+fn normalize_private_key_permissions(private_key_path: &std::path::Path) {
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+
+    if let Ok(metadata) = fs::metadata(private_key_path) {
+        let perms = metadata.permissions();
+        let mode = perms.mode();
+
+        // SSH requires private keys to be mode 0600 (owner read/write only).
+        // GitHub runners checkout files with permissive permissions (e.g., 0644),
+        // causing OpenSSH to silently reject the key. Normalize to 0600.
+        if mode & 0o077 != 0 {
+            let restricted = fs::Permissions::from_mode(0o600);
+            drop(fs::set_permissions(private_key_path, restricted));
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn normalize_private_key_permissions(_private_key_path: &std::path::Path) {
+    // No-op on non-Unix platforms.
 }
 
 // =============================================================================
@@ -183,9 +215,25 @@ pub async fn assert_connectivity_succeeds_eventually(client: &SshClient, max_sec
     // Use the built-in wait_for_connectivity method
     let result = test_client.wait_for_connectivity().await;
 
-    assert!(
-        result.is_ok(),
-        "Expected connectivity to succeed eventually within {max_seconds}s, but got error: {:?}",
-        result.err()
-    );
+    if let Err(error) = result {
+        let socket_addr = test_client.ssh_config().socket_addr;
+        let tcp_probe_result = PortChecker::new().is_port_open(socket_addr);
+        let one_shot_ssh_result = test_client.test_connectivity();
+        let one_shot_execute_result = test_client.execute("echo 'SSH connected'");
+
+        eprintln!(
+            "\n=== SSH Connectivity Failure Diagnostics ===\n\
+             target: {socket_addr}\n\
+             retry_window_secs: {max_seconds}\n\
+             raw_tcp_port_open: {tcp_probe_result:?}\n\
+             one_shot_ssh_connectivity: {one_shot_ssh_result:?}\n\
+             one_shot_ssh_execute: {one_shot_execute_result:?}\n"
+        );
+
+        print_docker_debug_info(socket_addr.port());
+
+        panic!(
+            "Expected connectivity to succeed eventually within {max_seconds}s, but got error: {error:?}"
+        );
+    }
 }

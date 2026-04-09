@@ -21,7 +21,7 @@ const DEFAULT_SCRAPE_INTERVAL_SECS: u32 = 15;
 pub const PROMETHEUS_DOCKER_IMAGE_REPOSITORY: &str = "prom/prometheus";
 
 /// Docker image tag for the Prometheus container
-pub const PROMETHEUS_DOCKER_IMAGE_TAG: &str = "v3.5.0";
+pub const PROMETHEUS_DOCKER_IMAGE_TAG: &str = "v3.5.1";
 
 /// Prometheus metrics collection configuration
 ///
@@ -95,7 +95,7 @@ impl PrometheusConfig {
     /// use torrust_tracker_deployer_lib::domain::prometheus::PrometheusConfig;
     ///
     /// let image = PrometheusConfig::docker_image();
-    /// assert_eq!(image.full_reference(), "prom/prometheus:v3.5.0");
+    /// assert_eq!(image.full_reference(), "prom/prometheus:v3.5.1");
     /// ```
     #[must_use]
     pub fn docker_image() -> DockerImage {

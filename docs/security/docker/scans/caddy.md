@@ -1,16 +1,16 @@
 # Caddy Security Scan History
 
-**Image**: `caddy:2.10`
+**Image**: `caddy:2.10.2`
 **Purpose**: TLS termination proxy for HTTPS support
 **Documentation**: [Caddy TLS Proxy Evaluation](../../research/caddy-tls-proxy-evaluation/README.md)
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status       | Scan Date    |
-| ------- | ---- | -------- | ------------ | ------------ |
-| 2.10    | 3    | 1        | ⚠️ Monitored | Jan 13, 2026 |
+| Version | HIGH | CRITICAL | Status                               | Scan Date   |
+| ------- | ---- | -------- | ------------------------------------ | ----------- |
+| 2.10.2  | 14   | 4        | ⚠️ Partial improvement after upgrade | Apr 8, 2026 |
 
-**Deployment Status**: ✅ Safe to deploy with monitoring
+**Deployment Status**: ⚠️ Requires follow-up - upgrading from `2.10` to `2.10.2` reduced findings, but HIGH/CRITICAL issues remain in Caddy binary dependencies
 
 ## Vulnerability Summary
 
@@ -22,6 +22,32 @@ The Caddy 2.10 image has:
 All vulnerabilities have fixed versions available upstream and are expected to be resolved in the next Caddy release.
 
 ## Scan History
+
+### April 8, 2026 - Remediation Pass 1 (Issue #428)
+
+**Scanner**: Trivy v0.68.2
+**Scan Mode**: `--scanners vuln --severity HIGH,CRITICAL`
+**Image**: `caddy:2.10.2`
+**Status**: ⚠️ **18 vulnerabilities** (14 HIGH, 4 CRITICAL)
+
+#### Summary
+
+Easy remediation applied by upgrading Caddy image tag from `2.10` to `2.10.2`.
+
+Vulnerability comparison:
+
+- Previous (`2.10`): 18 HIGH, 6 CRITICAL
+- Current (`2.10.2`): 14 HIGH, 4 CRITICAL
+
+Improvement: -4 HIGH, -2 CRITICAL
+
+#### Target Breakdown (`2.10.2`)
+
+| Target        | Type     | HIGH | CRITICAL |
+| ------------- | -------- | ---- | -------- |
+| usr/bin/caddy | gobinary | 14   | 4        |
+
+Remaining issues are in upstream Caddy binary dependencies and require vendor/upstream updates.
 
 ### January 13, 2026 - caddy:2.10
 
@@ -59,7 +85,7 @@ All vulnerabilities have fixed versions available upstream and are expected to b
 ## How to Rescan
 
 ```bash
-trivy image --severity HIGH,CRITICAL caddy:2.10
+trivy image --severity HIGH,CRITICAL caddy:2.10.2
 ```
 
 ## Security Advisories

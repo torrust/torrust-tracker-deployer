@@ -20,7 +20,8 @@ RUN apk add --no-cache \
     curl \
     wget \
     # Network tools for testing
-    net-tools
+    net-tools \
+    && apk upgrade --no-cache
 
 # Generate SSH host keys
 RUN ssh-keygen -A
@@ -56,14 +57,12 @@ RUN echo 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCw16sai+XVnawp/P/Q23kcXKekygZ6AL
     chmod 600 /home/testuser/.ssh/authorized_keys && \
     chown testuser:testuser /home/testuser/.ssh/authorized_keys
 
-# Generate SSH host keys
-RUN ssh-keygen -A
-
 # Create a simple entrypoint script
-RUN echo '#!/bin/sh\n\
-# Start SSH daemon in foreground\n\
-exec /usr/sbin/sshd -D\n\
-' > /entrypoint.sh && chmod +x /entrypoint.sh
+RUN printf '%s\n' \
+    '#!/bin/sh' \
+    'exec /usr/sbin/sshd -D' \
+    > /entrypoint.sh \
+    && chmod +x /entrypoint.sh
 
 # Expose SSH port
 EXPOSE 22

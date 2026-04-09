@@ -128,15 +128,15 @@ mod tests {
 
     #[test]
     fn it_should_create_from_str_tuple() {
-        let image = DockerImage::from(("prom/prometheus", "v3.5.0"));
+        let image = DockerImage::from(("prom/prometheus", "v3.5.1"));
 
-        assert_eq!(image.full_reference(), "prom/prometheus:v3.5.0");
+        assert_eq!(image.full_reference(), "prom/prometheus:v3.5.1");
     }
 
     #[test]
     fn it_should_implement_equality() {
-        let a = DockerImage::new("grafana/grafana", "12.3.1");
-        let b = DockerImage::new("grafana/grafana", "12.3.1");
+        let a = DockerImage::new("grafana/grafana", "12.4.2");
+        let b = DockerImage::new("grafana/grafana", "12.4.2");
         let c = DockerImage::new("grafana/grafana", "11.4.0");
 
         assert_eq!(a, b);
