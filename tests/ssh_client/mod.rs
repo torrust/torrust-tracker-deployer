@@ -9,7 +9,6 @@ pub mod configuration_tests;
 pub mod connectivity_tests;
 
 // Re-export common SSH testing utilities
-use std::fs;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -135,18 +134,9 @@ impl Default for SshTestBuilder {
 }
 
 #[cfg(unix)]
-fn normalize_private_key_permissions(private_key_path: &std::path::Path) {
-    use std::os::unix::fs::PermissionsExt;
-
-    if private_key_path.exists() {
-        let mode_600 = fs::Permissions::from_mode(0o600);
-        if let Err(error) = fs::set_permissions(private_key_path, mode_600) {
-            eprintln!(
-                "Warning: failed to enforce 0600 permissions on {}: {error}",
-                private_key_path.display()
-            );
-        }
-    }
+fn normalize_private_key_permissions(_private_key_path: &std::path::Path) {
+    // TEMPORARY (CI diagnosis): disabled to verify whether key permission
+    // normalization is the root cause of the flaky GitHub runner failure.
 }
 
 #[cfg(not(unix))]
