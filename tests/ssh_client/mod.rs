@@ -134,9 +134,22 @@ impl Default for SshTestBuilder {
 }
 
 #[cfg(unix)]
-fn normalize_private_key_permissions(_private_key_path: &std::path::Path) {
-    // TEMPORARY (CI diagnosis): disabled to verify whether key permission
-    // normalization is the root cause of the flaky GitHub runner failure.
+fn normalize_private_key_permissions(private_key_path: &std::path::Path) {
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+
+    if let Ok(metadata) = fs::metadata(private_key_path) {
+        let perms = metadata.permissions();
+        let mode = perms.mode();
+
+        // SSH requires private keys to be mode 0600 (owner read/write only).
+        // GitHub runners checkout files with permissive permissions (e.g., 0644),
+        // causing OpenSSH to silently reject the key. Normalize to 0600.
+        if mode & 0o077 != 0 {
+            let restricted = fs::Permissions::from_mode(0o600);
+            drop(fs::set_permissions(private_key_path, restricted));
+        }
+    }
 }
 
 #[cfg(not(unix))]
