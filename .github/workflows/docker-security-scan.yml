@@ -194,6 +194,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      security-events: write
 
     strategy:
       fail-fast: false
@@ -237,12 +238,21 @@ jobs:
           path: trivy.sarif
           retention-days: 30
 
+      # Use the supported CodeQL upload action so category tracking works
+      # for dynamic third-party image configurations.
+      - name: Upload third-party SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy.sarif
+          category: docker-third-party-${{ steps.sanitize.outputs.name }}
+        continue-on-error: true
+
   upload-sarif-results:
     name: Upload SARIF Results to GitHub Security
     runs-on: ubuntu-latest
     needs:
       - scan-project-images
-      - scan-third-party-images
 
     # Always run so we don't lose security visibility
     if: always()
@@ -254,7 +264,7 @@ jobs:
       - name: Download all SARIF artifacts
         uses: actions/download-artifact@v7
         with:
-          pattern: sarif-*-${{ github.run_id }}
+          pattern: sarif-project-*-${{ github.run_id }}
 
       # Upload each SARIF file with CodeQL Action using unique categories.
       # The category parameter enables proper alert tracking per image.
@@ -280,42 +290,3 @@ jobs:
           sarif_file: sarif-project-ssh-server-${{ github.run_id }}/trivy-ssh-server.sarif
           category: docker-project-ssh-server
         continue-on-error: true
-
-      # Dynamic upload of all third-party image SARIF results.
-      # Iterates over every sarif-third-party-* artifact directory so
-      # no manual step additions are needed when images change version.
-      # The category is derived from the artifact directory name so
-      # GitHub Code Scanning properly tracks alerts per image.
-      - name: Upload all third-party SARIF results
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          for sarif_dir in sarif-third-party-*; do
-            if [[ ! -d "$sarif_dir" ]]; then
-              continue
-            fi
-            sarif_file="$sarif_dir/trivy.sarif"
-            if [[ ! -f "$sarif_file" ]]; then
-              echo "No SARIF file in $sarif_dir, skipping"
-              continue
-            fi
-
-            # Derive unique Code Scanning category from the artifact directory name.
-            # Example: sarif-third-party-mysql-8.4-12345 -> docker-third-party-mysql-8.4
-            artifact_name="${sarif_dir%-${{ github.run_id }}}"
-            category="docker-${artifact_name#sarif-}"
-
-            echo "Uploading $sarif_file with category: $category"
-
-            gh api \
-              --method POST \
-              -H "Accept: application/vnd.github+json" \
-              "/repos/${{ github.repository }}/code-scanning/sarifs" \
-              -f "commit_sha=${{ github.sha }}" \
-              -f "ref=${{ github.ref }}" \
-              -f "sarif=$(gzip -c "$sarif_file" | base64 -w 0)" \
-              -f "category=$category" \
-              || echo "Warning: Upload failed for $sarif_file (category: $category)"
-          done
