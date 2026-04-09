@@ -18,8 +18,9 @@ use torrust_tracker_deployer_lib::adapters::ssh::{
 };
 use torrust_tracker_deployer_lib::shared::Username;
 use torrust_tracker_deployer_lib::testing::integration::ssh_server::{
-    MockSshServerContainer, RealSshServerContainer,
+    print_docker_debug_info, MockSshServerContainer, RealSshServerContainer,
 };
+use torrust_tracker_deployer_lib::testing::network::PortChecker;
 
 /// SSH test constants following testing conventions
 ///
@@ -183,9 +184,23 @@ pub async fn assert_connectivity_succeeds_eventually(client: &SshClient, max_sec
     // Use the built-in wait_for_connectivity method
     let result = test_client.wait_for_connectivity().await;
 
-    assert!(
-        result.is_ok(),
-        "Expected connectivity to succeed eventually within {max_seconds}s, but got error: {:?}",
-        result.err()
-    );
+    if let Err(error) = result {
+        let socket_addr = test_client.ssh_config().socket_addr;
+        let tcp_probe_result = PortChecker::new().is_port_open(socket_addr);
+        let one_shot_ssh_result = test_client.test_connectivity();
+
+        eprintln!(
+            "\n=== SSH Connectivity Failure Diagnostics ===\n\
+             target: {socket_addr}\n\
+             retry_window_secs: {max_seconds}\n\
+             raw_tcp_port_open: {tcp_probe_result:?}\n\
+             one_shot_ssh_connectivity: {one_shot_ssh_result:?}\n"
+        );
+
+        print_docker_debug_info(socket_addr.port());
+
+        panic!(
+            "Expected connectivity to succeed eventually within {max_seconds}s, but got error: {error:?}"
+        );
+    }
 }
