@@ -9,6 +9,7 @@ pub mod configuration_tests;
 pub mod connectivity_tests;
 
 // Re-export common SSH testing utilities
+use std::fs;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -105,9 +106,16 @@ impl SshTestBuilder {
 
     /// Build the SSH client with configured parameters
     pub fn build_client(self) -> SshClient {
+        let private_key_path = self.private_key_path.unwrap();
+        let public_key_path = self.public_key_path.unwrap();
+
+        // CI runners may check out fixture keys with permissive file modes.
+        // OpenSSH rejects private keys that are readable by group/others.
+        normalize_private_key_permissions(&private_key_path);
+
         let ssh_credentials = SshCredentials::new(
-            self.private_key_path.unwrap(),
-            self.public_key_path.unwrap(),
+            private_key_path,
+            public_key_path,
             Username::new(self.username.unwrap()).unwrap(),
         );
 
@@ -124,6 +132,26 @@ impl Default for SshTestBuilder {
     fn default() -> Self {
         Self::new()
     }
+}
+
+#[cfg(unix)]
+fn normalize_private_key_permissions(private_key_path: &std::path::Path) {
+    use std::os::unix::fs::PermissionsExt;
+
+    if private_key_path.exists() {
+        let mode_600 = fs::Permissions::from_mode(0o600);
+        if let Err(error) = fs::set_permissions(private_key_path, mode_600) {
+            eprintln!(
+                "Warning: failed to enforce 0600 permissions on {}: {error}",
+                private_key_path.display()
+            );
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn normalize_private_key_permissions(_private_key_path: &std::path::Path) {
+    // No-op on non-Unix platforms.
 }
 
 // =============================================================================
@@ -188,13 +216,15 @@ pub async fn assert_connectivity_succeeds_eventually(client: &SshClient, max_sec
         let socket_addr = test_client.ssh_config().socket_addr;
         let tcp_probe_result = PortChecker::new().is_port_open(socket_addr);
         let one_shot_ssh_result = test_client.test_connectivity();
+        let one_shot_execute_result = test_client.execute("echo 'SSH connected'");
 
         eprintln!(
             "\n=== SSH Connectivity Failure Diagnostics ===\n\
              target: {socket_addr}\n\
              retry_window_secs: {max_seconds}\n\
              raw_tcp_port_open: {tcp_probe_result:?}\n\
-             one_shot_ssh_connectivity: {one_shot_ssh_result:?}\n"
+             one_shot_ssh_connectivity: {one_shot_ssh_result:?}\n\
+             one_shot_ssh_execute: {one_shot_execute_result:?}\n"
         );
 
         print_docker_debug_info(socket_addr.port());
