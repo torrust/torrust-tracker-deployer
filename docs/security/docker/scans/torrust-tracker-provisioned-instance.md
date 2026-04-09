@@ -4,8 +4,8 @@ Security scan history for the `torrust/tracker-provisioned-instance` Docker imag
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status                               | Last Scan   |
-| ------- | ---- | -------- | ------------------------------------ | ----------- |
+| Version | HIGH | CRITICAL | Status                                    | Last Scan   |
+| ------- | ---- | -------- | ----------------------------------------- | ----------- |
 | 24.04   | 0    | 0        | ✅ Vulnerabilities remediated (vuln scan) | Apr 8, 2026 |
 
 ## Build & Scan Commands

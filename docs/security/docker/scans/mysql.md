@@ -4,8 +4,8 @@ Security scan history for the `mysql` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status                         | Last Scan   | Support EOL  |
-| ------- | ---- | -------- | ------------------------------ | ----------- | ------------ |
+| Version | HIGH | CRITICAL | Status                               | Last Scan   | Support EOL  |
+| ------- | ---- | -------- | ------------------------------------ | ----------- | ------------ |
 | 8.4     | 7    | 1        | ⚠️ Monitored (no safer easy upgrade) | Apr 8, 2026 | Apr 30, 2032 |
 
 ## Scan History
