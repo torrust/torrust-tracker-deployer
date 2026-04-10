@@ -125,6 +125,13 @@ For detailed guides, use the docs index and user guide:
 - [Architecture Overview](docs/codebase-architecture.md)
 - [Roadmap](docs/roadmap.md)
 
+## Related Repository
+
+The deployer focuses on provisioning, configuring, and deploying Torrust Tracker.
+For example application operations and maintenance after deployment, see:
+
+- [Torrust Tracker Demo](https://github.com/torrust/torrust-tracker-demo)
+
 ## Repository Layout
 
 Top-level directories:
