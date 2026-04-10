@@ -1,0 +1,44 @@
+name: Cargo Security Audit
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+      - ".github/workflows/cargo-security-audit.yml"
+
+  pull_request:
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+      - ".github/workflows/cargo-security-audit.yml"
+
+  # Scheduled scans are important because new RustSec advisories can appear
+  # even when the codebase and lockfile do not change.
+  schedule:
+    - cron: "0 6 * * *" # Daily at 6 AM UTC
+
+  workflow_dispatch:
+
+jobs:
+  cargo-audit:
+    name: Audit Rust Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # cspell:ignore rustsec
+    # rustsec/audit-check can create issues and checks on scheduled runs.
+    permissions:
+      contents: read
+      checks: write
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Run cargo audit via RustSec action
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
