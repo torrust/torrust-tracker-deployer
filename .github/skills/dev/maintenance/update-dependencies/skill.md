@@ -173,7 +173,7 @@ The script will:
 
 The script generates commit messages in this format:
 
-```
+```text
 chore: update dependencies
 
 [Full cargo update output]
@@ -184,7 +184,7 @@ chore: update dependencies
 
 The full `cargo update` output is included in the commit body for traceability. Example:
 
-```
+```text
     Updating crates.io index
      Locking 14 packages to latest compatible versions
      Updating hyper-rustls from 0.27.7 to 0.27.8

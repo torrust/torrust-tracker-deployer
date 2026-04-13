@@ -216,6 +216,9 @@ doctests
 downcasted
 downcasting
 downloadedi
+pinentry
+signingkey
+clearsign
 dpkg
 drwxr
 drwxrwxr
