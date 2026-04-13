@@ -541,6 +541,7 @@ youruser
 zcat
 zeroize
 zoneinfo
+worktree
 zstd
 CSPRNG
 USERINFO
