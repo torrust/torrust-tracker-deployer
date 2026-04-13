@@ -19,8 +19,8 @@ This skill guides you through the complete commit process for the Torrust Tracke
 # 2. Stage changes
 git add <files>
 
-# 3. Commit with conventional format
-git commit -m "{type}: [#{issue}] {description}"
+# 3. Commit with conventional format and GPG signature (MANDATORY)
+git commit -S -m "{type}: [#{issue}] {description}"
 ```
 
 ## Conventional Commit Format
@@ -59,6 +59,16 @@ When working on a branch with an issue number, include it in your commit message
 | `chore`    | Maintenance tasks                     | `chore: [#89] update dependencies`                   |
 | `ci`       | CI/CD related changes                 | `ci: [#23] add workflow for testing provisioning`    |
 | `perf`     | Performance improvements              | `perf: [#52] optimize container startup time`        |
+
+## GPG Commit Signing (MANDATORY)
+
+**All commits must be GPG signed.** Use the `-S` flag:
+
+```bash
+git commit -S -m "your commit message"
+```
+
+Ensure GPG is configured (see Troubleshooting section if signing fails).
 
 ## Pre-commit Verification (MANDATORY)
 
@@ -207,14 +217,29 @@ vim src/main.rs
 # 4. Stage changes
 git add src/main.rs
 
-# 5. Commit with conventional format
-git commit -m "feat: [#42] add new CLI command"
+# 5. Commit with conventional format and GPG signature (MANDATORY)
+git commit -S -m "feat: [#42] add new CLI command"
 
 # 6. Push to remote
 git push origin 42-add-new-cli-command
 ```
 
 ## Troubleshooting
+
+### GPG Signing Fails
+
+**Problem**: `git commit -S` fails with "gpg failed to sign the data"
+
+**Solution**:
+
+1. Verify GPG is installed: `gpg --version`
+2. List your GPG keys: `gpg --list-keys`
+3. If no keys exist, create one: `gpg --gen-key`
+4. Configure Git to use your GPG key: `git config --global user.signingkey <YOUR_KEY_ID>`
+5. Test signing: `echo "test" | gpg --clearsign`
+6. Retry commit: `git commit -S -m "your message"`
+
+If still failing, check that your GPG agent is running and has proper pinentry configured.
 
 ### Pre-commit Script Fails
 
@@ -261,8 +286,9 @@ Note: This is only supported in local environments with proper LXD networking an
 
 ## Key Reminders
 
-1. **Always run `./scripts/pre-commit.sh` before committing** - This is non-negotiable
-2. **Use issue numbers consistently** - Follow the `[#{issue}]` format
-3. **Be careful with hashtags** - Only use `#NUMBER` when referencing issues
-4. **Keep commits atomic** - One logical change per commit
-5. **Write descriptive messages** - Future you will thank present you
+1. **Always sign commits with `-S`** - GPG signing is mandatory for audit trail
+2. **Always run `./scripts/pre-commit.sh` before committing** - This is non-negotiable
+3. **Use issue numbers consistently** - Follow the `[#{issue}]` format
+4. **Be careful with hashtags** - Only use `#NUMBER` when referencing issues
+5. **Keep commits atomic** - One logical change per commit
+6. **Write descriptive messages** - Future you will thank present you
