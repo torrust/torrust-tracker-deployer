@@ -62,6 +62,24 @@ git commit -m "feat: [#42] add new testing feature"
 git push origin 42-add-your-feature-name
 ```
 
+## Dependency Update Automation
+
+For dependency-only updates, you can automate the repetitive git and PR workflow with:
+
+```bash
+./scripts/update-dependencies.sh \
+   --branch 445-update-dependencies \
+   --push-remote josecelano \
+   --create-pr
+```
+
+Notes:
+
+- The script signs commits by default with `git commit -S`.
+- The push remote and branch name are explicit so the workflow works with different forks.
+- Reuse `--delete-existing-branch` only when you intentionally want to replace an older update branch.
+- Use `--help` to see all options.
+
 ## 📖 Additional Resources
 
 - [Main Documentation](../documentation.md) - Project documentation organization

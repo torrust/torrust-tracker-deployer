@@ -216,6 +216,9 @@ doctests
 downcasted
 downcasting
 downloadedi
+pinentry
+signingkey
+clearsign
 dpkg
 drwxr
 drwxrwxr
@@ -541,6 +544,7 @@ youruser
 zcat
 zeroize
 zoneinfo
+worktree
 zstd
 CSPRNG
 USERINFO

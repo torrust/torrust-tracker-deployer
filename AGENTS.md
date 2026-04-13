@@ -134,6 +134,7 @@ For detailed information about working with deployed instances, see [`docs/user-
   - Individual linters: `cargo run --bin linter {markdown|yaml|toml|cspell|clippy|rustfmt|shellcheck}`
   - Alternative: `./scripts/lint.sh` (wrapper that calls the Rust binary)
 - **Dependencies**: `cargo machete` (mandatory before commits - no unused dependencies)
+- **Commit Signing**: All commits **must** be signed with GPG (`git commit -S`) for audit trail
 - **Build**: `cargo build`
 - **Test**: `cargo test`
 - **Unit Tests**: When writing unit tests, follow conventions described in [`docs/contributing/testing/`](docs/contributing/testing/)
