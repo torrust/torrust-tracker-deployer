@@ -3,12 +3,20 @@
 [![E2E Infrastructure Tests](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-infrastructure.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-infrastructure.yml)
 [![E2E Deployment Tests](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-deployment.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-e2e-deployment.yml)
 [![Coverage](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/coverage.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/coverage.yml)
+[![SDK Examples Tests](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-sdk-examples.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-sdk-examples.yml)
+[![Test LXD Container Provisioning](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-lxd-provision.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-lxd-provision.yml)
+[![Test Dependency Installer](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-dependency-installer.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/test-dependency-installer.yml)
+[![Cargo Security Audit](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/cargo-security-audit.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/cargo-security-audit.yml)
+[![Docker Security Scan](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/docker-security-scan.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/docker-security-scan.yml)
+[![Container](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/container.yaml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/container.yaml)
+[![Backup Container](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/backup-container.yaml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/backup-container.yaml)
+[![Code Statistics](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/code-statistics.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/code-statistics.yml)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/torrust/torrust-tracker-deployer?quickstart=1)
 
 # Torrust Tracker Deployer
 
-Deployment automation for Torrust Tracker environments using OpenTofu, Ansible, and Rust.
+Deployment automation for [Torrust Tracker](https://github.com/torrust/torrust-tracker) environments using [OpenTofu](https://opentofu.org), [Ansible](https://www.ansible.com), and [Rust](https://www.rust-lang.org).
 
 ## Release Status
 
@@ -73,8 +81,8 @@ cargo run -- destroy my-environment
 
 Important:
 
-- Keep your environment JSON files in envs.
-- The data directory is application-managed deployment state and should not be edited manually.
+- Keep your environment JSON files in [`envs/`](envs/).
+- The [`data/`](data/) directory is application-managed deployment state and should not be edited manually.
 
 ## Docker Usage
 
@@ -136,15 +144,19 @@ For example application operations and maintenance after deployment, see:
 
 Top-level directories:
 
-- src: Rust codebase using DDD layers (domain, application, infrastructure, presentation)
-- templates: OpenTofu and Ansible templates
-- docs: user and contributor documentation
-- envs: user environment configuration files (git-ignored)
-- build: generated runtime files (git-ignored)
-- data: application-managed deployment state
+- [`src/`](src/): Rust codebase using DDD layers (domain, application, infrastructure, presentation)
+- [`templates/`](templates/): OpenTofu and Ansible templates
+- [`docs/`](docs/README.md): user and contributor documentation
+- [`envs/`](envs/): user environment configuration files (git-ignored)
+- `build/`: generated runtime files (git-ignored)
+- [`data/`](data/): application-managed deployment state
 
 ## Roadmap After 0.1.0
 
 The 0.1.0 line establishes the functional baseline. Upcoming improvements are tracked in the roadmap, including broader provider support and deployment UX refinements.
 
 See: [Roadmap](docs/roadmap.md)
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
