@@ -1,0 +1,137 @@
+# Crate publication workflow for Torrust Tracker Deployer SDK
+#
+# This workflow publishes the SDK crate when a release branch is pushed.
+# Trigger branch format: releases/vX.Y.Z
+
+name: Publish Crate
+
+on:
+  push:
+    branches:
+      - "releases/**/*"
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "packages/sdk/**"
+      - ".github/workflows/publish-crate.yaml"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  CRATE_NAME: torrust-tracker-deployer-sdk
+
+jobs:
+  publish_sdk:
+    name: Publish SDK Crate
+    environment: crates-io
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Enable Workflow Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Extract Release Version
+        id: release
+        run: |
+          if [[ "${{ github.ref_name }}" =~ ^releases/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            version="${GITHUB_REF_NAME#releases/v}"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          else
+            echo "Invalid release branch name: ${{ github.ref_name }}" >&2
+            echo "Expected format: releases/vX.Y.Z" >&2
+            exit 1
+          fi
+
+      - name: Verify Release Version Matches Cargo Manifests
+        run: |
+          root_version=$(grep '^version = ' Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')
+          sdk_version=$(grep '^version = ' packages/sdk/Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')
+          release_version="${{ steps.release.outputs.version }}"
+
+          if [[ "$root_version" != "$release_version" ]]; then
+            echo "Root Cargo.toml version mismatch: $root_version != $release_version" >&2
+            exit 1
+          fi
+
+          if [[ "$sdk_version" != "$release_version" ]]; then
+            echo "SDK Cargo.toml version mismatch: $sdk_version != $release_version" >&2
+            exit 1
+          fi
+
+      - name: Verify SDK Metadata
+        run: |
+          for field in description license repository readme; do
+            if ! grep -q "^$field = " packages/sdk/Cargo.toml; then
+              echo "Missing required field in packages/sdk/Cargo.toml: $field" >&2
+              exit 1
+            fi
+          done
+
+      - name: Run SDK Tests
+        run: cargo test -p ${{ env.CRATE_NAME }}
+
+      - name: Inspect Packaged Files
+        run: cargo package --list -p ${{ env.CRATE_NAME }}
+
+      - name: Dry Run Publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --dry-run -p ${{ env.CRATE_NAME }}
+
+      - name: Check If Version Already Published
+        run: |
+          set +e
+          http_status=$(curl -s -o /tmp/crate-version.json -w "%{http_code}" "https://crates.io/api/v1/crates/${{ env.CRATE_NAME }}/${{ steps.release.outputs.version }}")
+          set -e
+
+          if [[ "$http_status" == "200" ]]; then
+            echo "Crate version already published: ${{ env.CRATE_NAME }} ${{ steps.release.outputs.version }}" >&2
+            echo "Do not republish. Cut a follow-up patch release instead." >&2
+            exit 1
+          fi
+
+      - name: Publish Crate
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p ${{ env.CRATE_NAME }}
+
+      - name: Verify Crate Is Available
+        run: |
+          for attempt in 1 2 3 4 5; do
+            status=$(curl -s -o /tmp/crate-publish-check.json -w "%{http_code}" "https://crates.io/api/v1/crates/${{ env.CRATE_NAME }}/${{ steps.release.outputs.version }}")
+            if [[ "$status" == "200" ]]; then
+              echo "Crate is available on crates.io"
+              exit 0
+            fi
+            echo "Waiting for crates.io index update (attempt $attempt/5)..."
+            sleep 10
+          done
+
+          echo "Crate was published but not visible yet. Check crates.io manually." >&2
+          exit 1
+
+      - name: Verify docs.rs Build
+        run: |
+          docs_url="https://docs.rs/${{ env.CRATE_NAME }}/${{ steps.release.outputs.version }}"
+          for attempt in 1 2 3 4 5 6; do
+            status=$(curl -s -o /tmp/docsrs-check.html -w "%{http_code}" "$docs_url")
+            if [[ "$status" == "200" ]]; then
+              echo "docs.rs page is available: $docs_url"
+              exit 0
+            fi
+            echo "Waiting for docs.rs build (attempt $attempt/6)..."
+            sleep 20
+          done
+
+          echo "docs.rs page is not available yet: $docs_url" >&2
+          echo "The crate may still be building on docs.rs; verify manually later." >&2
+          exit 1

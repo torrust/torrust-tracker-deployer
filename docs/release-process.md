@@ -264,6 +264,6 @@ CI re-runs and audit trails.
 
 - [Branching conventions](contributing/branching.md)
 - [Commit process](contributing/commit-process.md)
-- [Docker workflow](.github/workflows/container.yaml)
-- [Crate publish workflow](.github/workflows/publish-crate.yaml)
+- [Docker workflow](../.github/workflows/container.yaml)
+- [Crate publish workflow](../.github/workflows/publish-crate.yaml)
 - [Roadmap](roadmap.md)
