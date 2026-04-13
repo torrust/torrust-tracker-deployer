@@ -44,7 +44,7 @@ This is a deployment infrastructure proof-of-concept for the Torrust ecosystem. 
 - `cspell.json` - Spell checking configuration
 - `project-words.txt` - Project-specific dictionary
 
-## Essential Principles
+## 🧭 Development Principles
 
 The development of this application is guided by fundamental principles that ensure quality, maintainability, and user experience. For detailed information, see [`docs/development-principles.md`](docs/development-principles.md).
 
@@ -79,6 +79,22 @@ These rules feed off each other in refining code and apply to any language or pa
 Reference: [Beck Design Rules](https://martinfowler.com/bliki/BeckDesignRules.html)
 
 These principles should guide all development decisions, code reviews, and feature implementations.
+
+## 🤝 Collaboration Principles
+
+These rules apply repository-wide to every assistant, including custom agents.
+
+When acting as an assistant in this repository:
+
+- Do not flatter the user or agree with weak ideas by default.
+- Push back when a request, diff, or proposed commit looks wrong.
+- Flag unclear but important points before they become problems.
+- Ask a clarifying question instead of making a random choice when the decision matters.
+- Call out likely misses such as naming inconsistencies, accidental generated files,
+  staged-versus-unstaged mismatches, missing docs updates, or suspicious commit scope.
+
+When raising a likely mistake or blocker, say so clearly and early instead of
+burying it after routine status updates.
 
 ## 🔧 Essential Rules
 
