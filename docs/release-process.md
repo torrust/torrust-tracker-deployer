@@ -32,12 +32,26 @@ Do not skip or reorder steps. Each step is a prerequisite for the next.
 
 ## Files to Update for Each Release
 
-Update the `version` field in both files:
+Update the `version` field in all four manifests:
 
-- `Cargo.toml` (workspace root) — deployer binary version
-- `packages/sdk/Cargo.toml` — `torrust-tracker-deployer-sdk` crate version
+| File                                       | Crate                                           |
+| ------------------------------------------ | ----------------------------------------------- |
+| `Cargo.toml` (workspace root)              | `torrust-tracker-deployer`                      |
+| `packages/deployer-types/Cargo.toml`       | `torrust-tracker-deployer-types`                |
+| `packages/dependency-installer/Cargo.toml` | `torrust-tracker-deployer-dependency-installer` |
+| `packages/sdk/Cargo.toml`                  | `torrust-tracker-deployer-sdk`                  |
 
-Both files must contain the same non-prefixed semver version (e.g., `1.2.3`).
+All four must carry the same non-prefixed semver version string (e.g., `1.2.3`).
+
+Also ensure that every internal path dependency in each manifest declares an explicit
+`version` constraint that matches the release version, for example:
+
+```toml
+torrust-tracker-deployer-types = { path = "packages/deployer-types", version = "1.2.3" }
+```
+
+crates.io rejects packages with path-only dependencies (no `version` field) because
+consumers resolving the crate from the registry cannot follow local paths.
 
 ## Pre-Flight Checklist
 
@@ -54,27 +68,50 @@ Run these checks before starting any release actions:
   - `DOCKER_HUB_ACCESS_TOKEN` — secret
   - `DOCKER_HUB_USERNAME` — variable (value: `torrust`)
 - [ ] GitHub Environment `crates-io` exists and contains:
-  - `CARGO_REGISTRY_TOKEN` — secret
+  - `CARGO_REGISTRY_TOKEN` — secret with `publish-new` and `publish-update` scopes
+    for **all four** crate names:
+    - `torrust-tracker-deployer-types`
+    - `torrust-tracker-deployer-dependency-installer`
+    - `torrust-tracker-deployer`
+    - `torrust-tracker-deployer-sdk`
+
+  > A token scoped to only one crate name will cause HTTP 403 Forbidden for all
+  > others. Create a single token covering all four names.
 
 **Permissions:**
 
 - [ ] You have push access to `main`, and can push tags and release branches
 - [ ] You have access to the `dockerhub-torrust` and `crates-io` environments
 
-**Crate metadata** (before first publish of each crate):
+**Crate metadata** (verify for all four crates before first publish, or whenever
+adding a new publishable crate):
 
-- [ ] `packages/sdk/Cargo.toml` has `description`, `license`, `repository`, and `readme`
+- [ ] Each `Cargo.toml` has `description`, `license`, `repository`, and `readme`
+- [ ] Each internal path dependency also declares an explicit `version` constraint
+- [ ] All four crate names follow the `torrust-tracker-deployer-*` namespace
+      (crate names are permanent on crates.io — audit before first publish)
+- [ ] `Cargo.lock` is committed and up to date
 
 ## Release Steps
 
 ### Step 1 — Update Versions
 
-Edit the `version` field in both Cargo.toml files:
+Edit the `version` field in all four `Cargo.toml` files. Also update the `version`
+constraint on every internal path dependency in each manifest to match the new
+release version:
 
 ```bash
-# Edit Cargo.toml and packages/sdk/Cargo.toml
-# Change: version = "X.Y.Z-dev" (or current dev version)
-# To:     version = "X.Y.Z"
+# Edit these four files:
+#   Cargo.toml
+#   packages/deployer-types/Cargo.toml
+#   packages/dependency-installer/Cargo.toml
+#   packages/sdk/Cargo.toml
+#
+# In each, change: version = "X.Y.Z-dev" (or current dev version)
+#               to: version = "X.Y.Z"
+#
+# Also update the version constraint on internal path deps, for example:
+#   torrust-tracker-deployer-types = { path = "...", version = "X.Y.Z" }
 ```
 
 Verify the workspace compiles and tests pass after the version change:
@@ -86,10 +123,14 @@ cargo test
 
 ### Step 2 — Create the Release Commit
 
-Stage only the version changes and create a signed commit:
+Stage all four manifests **and `Cargo.lock`**, then create a signed commit:
 
 ```bash
-git add Cargo.toml packages/sdk/Cargo.toml
+git add Cargo.toml \
+        packages/deployer-types/Cargo.toml \
+        packages/dependency-installer/Cargo.toml \
+        packages/sdk/Cargo.toml \
+        Cargo.lock
 git commit -S -m "release: version vX.Y.Z"
 ```
 
@@ -136,7 +177,15 @@ the crate.
 Monitor the following workflows in GitHub Actions:
 
 - **Container** workflow — publishes the Docker image tagged `X.Y.Z` to Docker Hub
-- **Publish Crate** workflow — publishes `torrust-tracker-deployer-sdk` to crates.io
+- **Publish Crate** workflow — publishes all four crates to crates.io in dependency
+  order:
+  1. `torrust-tracker-deployer-types`
+  2. `torrust-tracker-deployer-dependency-installer`
+  3. `torrust-tracker-deployer`
+  4. `torrust-tracker-deployer-sdk`
+
+  Each crate's dry-run step runs only after its prerequisites are available on
+  crates.io. Do not attempt to manually publish out of order.
 
 Both workflows must succeed before moving to step 7. See
 [Finalization Gates](#finalization-gates) below.
@@ -177,19 +226,34 @@ docker run --rm --entrypoint tofu torrust/tracker-deployer:X.Y.Z version
 
 ## Crate Verification
 
-After the Publish Crate workflow completes:
+After the Publish Crate workflow completes, verify all four crates are indexed
+(crates.io indexing may take a few minutes after publish):
 
 ```bash
-# Verify the crate is visible on crates.io
-# (indexing may take a few minutes after publish)
-curl -sf "https://crates.io/api/v1/crates/torrust-tracker-deployer-sdk/X.Y.Z" | jq '.version.num'
-
-# Verify docs.rs build
-# https://docs.rs/torrust-tracker-deployer-sdk/X.Y.Z
+for crate in \
+  torrust-tracker-deployer-types \
+  torrust-tracker-deployer-dependency-installer \
+  torrust-tracker-deployer \
+  torrust-tracker-deployer-sdk; do
+  status=$(curl -s -o /dev/null -w "%{http_code}" \
+    "https://crates.io/api/v1/crates/$crate/X.Y.Z")
+  echo "$crate: HTTP $status"
+done
 ```
 
-It is normal for the crates.io index and docs.rs build to take a few minutes.
-Check the GitHub release notes for links once propagation is complete.
+All four should return `HTTP 200`. If any return 404, wait a few minutes and retry.
+
+**docs.rs** pages may take minutes to hours to become available after a first
+publish, especially for a new crate. The Publish Crate workflow prints the URLs
+as informational output. Verify them manually when convenient:
+
+- `https://docs.rs/torrust-tracker-deployer-types/X.Y.Z`
+- `https://docs.rs/torrust-tracker-deployer-dependency-installer/X.Y.Z`
+- `https://docs.rs/torrust-tracker-deployer/X.Y.Z`
+- `https://docs.rs/torrust-tracker-deployer-sdk/X.Y.Z`
+
+A 404 on docs.rs is **not** a release failure. The crate is published; docs.rs
+builds in its own queue.
 
 ## Failure Handling and Recovery
 
