@@ -57,7 +57,7 @@ use std::time::Instant;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use torrust_dependency_installer::Dependency;
+use torrust_tracker_deployer_dependency_installer::Dependency;
 use tracing::{error, info};
 
 use torrust_tracker_deployer_lib::adapters::ssh::SshCredentials;

@@ -5,10 +5,10 @@
 //! - `DependencyManager` functionality
 //! - Error handling
 
-use torrust_dependency_installer::detector::{
+use torrust_tracker_deployer_dependency_installer::detector::{
     AnsibleDetector, CargoMacheteDetector, DependencyDetector, LxdDetector, OpenTofuDetector,
 };
-use torrust_dependency_installer::{CheckResult, Dependency, DependencyManager};
+use torrust_tracker_deployer_dependency_installer::{CheckResult, Dependency, DependencyManager};
 
 // =============================================================================
 // DETECTOR TRAIT TESTS
@@ -165,7 +165,7 @@ fn it_should_get_lxd_detector_from_manager() {
 
 #[test]
 fn it_should_create_check_result() {
-    use torrust_dependency_installer::Dependency;
+    use torrust_tracker_deployer_dependency_installer::Dependency;
     let result = CheckResult {
         dependency: Dependency::CargoMachete,
         installed: true,
@@ -177,7 +177,7 @@ fn it_should_create_check_result() {
 
 #[test]
 fn it_should_clone_check_result() {
-    use torrust_dependency_installer::Dependency;
+    use torrust_tracker_deployer_dependency_installer::Dependency;
     let result = CheckResult {
         dependency: Dependency::OpenTofu,
         installed: false,
@@ -194,7 +194,7 @@ fn it_should_clone_check_result() {
 
 #[test]
 fn it_should_detect_existing_command() {
-    use torrust_dependency_installer::command::command_exists;
+    use torrust_tracker_deployer_dependency_installer::command::command_exists;
 
     // Test with 'sh' which should always exist on Unix systems
     let result = command_exists("sh");
@@ -205,7 +205,7 @@ fn it_should_detect_existing_command() {
 
 #[test]
 fn it_should_detect_nonexistent_command() {
-    use torrust_dependency_installer::command::command_exists;
+    use torrust_tracker_deployer_dependency_installer::command::command_exists;
 
     // Test with a command that definitely doesn't exist
     let result = command_exists("this-command-definitely-does-not-exist-12345");
@@ -216,7 +216,7 @@ fn it_should_detect_nonexistent_command() {
 
 #[test]
 fn it_should_execute_command_successfully() {
-    use torrust_dependency_installer::command::execute_command;
+    use torrust_tracker_deployer_dependency_installer::command::execute_command;
 
     // Test with 'echo' which should always work
     let result = execute_command("echo", &["hello"]);
@@ -226,7 +226,7 @@ fn it_should_execute_command_successfully() {
 
 #[test]
 fn it_should_fail_to_execute_nonexistent_command() {
-    use torrust_dependency_installer::command::execute_command;
+    use torrust_tracker_deployer_dependency_installer::command::execute_command;
 
     // Test with nonexistent command
     let result = execute_command("this-command-definitely-does-not-exist-12345", &["test"]);

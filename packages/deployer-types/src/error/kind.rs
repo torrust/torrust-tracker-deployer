@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 /// # Examples
 ///
 /// ```
-/// use torrust_deployer_types::ErrorKind;
+/// use torrust_tracker_deployer_types::ErrorKind;
 ///
 /// let kind = ErrorKind::TemplateRendering;
 /// assert_eq!(format!("{kind:?}"), "TemplateRendering");

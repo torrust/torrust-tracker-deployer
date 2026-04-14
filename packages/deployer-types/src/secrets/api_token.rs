@@ -31,7 +31,7 @@ impl ApiToken {
     ///
     /// # Examples
     /// ```
-    /// use torrust_deployer_types::secrets::ApiToken;
+    /// use torrust_tracker_deployer_types::secrets::ApiToken;
     ///
     /// let from_string = ApiToken::new(String::from("token"));
     /// let from_str = ApiToken::new("token");

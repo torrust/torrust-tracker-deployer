@@ -20,7 +20,7 @@
 //! ## In Production Code
 //!
 //! ```rust
-//! use torrust_deployer_types::Clock;
+//! use torrust_tracker_deployer_types::Clock;
 //!
 //! fn record_event(clock: &dyn Clock) {
 //!     let timestamp = clock.now();
@@ -72,7 +72,7 @@ pub trait Clock: Send + Sync {
 /// # Example
 ///
 /// ```rust
-/// use torrust_deployer_types::{Clock, SystemClock};
+/// use torrust_tracker_deployer_types::{Clock, SystemClock};
 ///
 /// let clock = SystemClock;
 /// let now = clock.now();

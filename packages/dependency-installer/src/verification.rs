@@ -28,7 +28,7 @@ use crate::{Dependency, DependencyManager, DetectionError};
 /// # Example
 ///
 /// ```no_run
-/// use torrust_dependency_installer::{Dependency, verify_dependencies};
+/// use torrust_tracker_deployer_dependency_installer::{Dependency, verify_dependencies};
 ///
 /// // Verify all dependencies for a full workflow
 /// let deps = &[Dependency::OpenTofu, Dependency::Ansible, Dependency::Lxd];

@@ -1,2 +1,2 @@
-// Backward compatibility re-export — types moved to torrust-deployer-types.
-pub use torrust_deployer_types::service_endpoint::*;
+// Backward compatibility re-export — types moved to torrust-tracker-deployer-types.
+pub use torrust_tracker_deployer_types::service_endpoint::*;

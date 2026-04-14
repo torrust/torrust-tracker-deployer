@@ -48,7 +48,7 @@
 use anyhow::Result;
 use clap::Parser;
 use std::time::Instant;
-use torrust_dependency_installer::Dependency;
+use torrust_tracker_deployer_dependency_installer::Dependency;
 use tracing::{error, info};
 
 use torrust_tracker_deployer_lib::bootstrap::logging::{LogFormat, LogOutput, LoggingBuilder};

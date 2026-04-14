@@ -32,7 +32,7 @@
 
 use super::super::support::{process_runner, EnvironmentStateAssertions, TempWorkspace};
 use anyhow::Result;
-use torrust_dependency_installer::{verify_dependencies, Dependency};
+use torrust_tracker_deployer_dependency_installer::{verify_dependencies, Dependency};
 use torrust_tracker_deployer_lib::testing::e2e::tasks::black_box::create_test_environment_config;
 
 /// Verify that all required dependencies are installed for render command E2E tests.

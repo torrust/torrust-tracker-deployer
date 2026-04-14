@@ -1,5 +1,5 @@
 [package]
-name = "torrust-dependency-installer"
+name = "torrust-tracker-deployer-dependency-installer"
 version = "0.1.0-beta.1"
 edition = "2021"
 description = "Dependency detection and installation utilities for the Torrust Tracker Deployer project"
@@ -8,7 +8,7 @@ repository = "https://github.com/torrust/torrust-tracker-deployer"
 readme = "README.md"
 
 [lib]
-name = "torrust_dependency_installer"
+name = "torrust_tracker_deployer_dependency_installer"
 path = "src/lib.rs"
 
 [[bin]]

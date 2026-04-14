@@ -31,17 +31,17 @@ and minimal external dependencies.
 
 ```toml
 [dependencies]
-torrust-deployer-types = { path = "packages/deployer-types" }
+torrust-tracker-deployer-types = { path = "packages/deployer-types" }
 ```
 
 ```rust
-use torrust_deployer_types::{EnvironmentName, DomainName, Clock};
+use torrust_tracker_deployer_types::{EnvironmentName, DomainName, Clock};
 ```
 
 ## Architecture
 
 ```text
-torrust-deployer-types           ← this package (no internal deps)
+torrust-tracker-deployer-types           ← this package (no internal deps)
     ↑                   ↑
 torrust-tracker-deployer  torrust-tracker-deployer-sdk
 ```
