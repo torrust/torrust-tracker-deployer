@@ -22,12 +22,6 @@ on:
       - "develop"
       - "main"
       - "releases/**/*"
-    paths:
-      - "src/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "docker/deployer/**"
-      - ".github/workflows/container.yaml"
 
   pull_request:
     branches:
