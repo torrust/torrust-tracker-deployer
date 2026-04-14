@@ -196,14 +196,14 @@ jobs:
       - name: Verify SDK Is Available on crates.io
         run: |
           release_version="${{ steps.release.outputs.version }}"
-          for attempt in 1 2 3 4 5; do
+          for attempt in $(seq 1 18); do
             status=$(curl -s -o /tmp/crate-publish-check.json -w "%{http_code}" "https://crates.io/api/v1/crates/${{ env.SDK_CRATE }}/$release_version")
             if [[ "$status" == "200" ]]; then
               echo "SDK crate is available on crates.io"
               exit 0
             fi
-            echo "Waiting for crates.io index update (attempt $attempt/5)..."
-            sleep 10
+            echo "Waiting for crates.io index update (attempt $attempt/18)..."
+            sleep 20
           done
 
           echo "SDK crate was published but not visible yet. Check crates.io manually." >&2
@@ -212,7 +212,7 @@ jobs:
       - name: Verify docs.rs Build for SDK
         run: |
           docs_url="https://docs.rs/${{ env.SDK_CRATE }}/${{ steps.release.outputs.version }}"
-          for attempt in 1 2 3 4 5 6; do
+          for attempt in $(seq 1 6); do
             status=$(curl -s -o /tmp/docs-rs-check.html -w "%{http_code}" "$docs_url")
             if [[ "$status" == "200" ]]; then
               echo "docs.rs page is available: $docs_url"
@@ -224,4 +224,5 @@ jobs:
 
           echo "docs.rs page is not available yet: $docs_url" >&2
           echo "The crate may still be building on docs.rs; verify manually later." >&2
-          exit 1
+          echo "This is expected shortly after a first publish. Verify manually: $docs_url"
+          exit 0
