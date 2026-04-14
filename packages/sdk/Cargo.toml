@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 description = "Programmatic SDK for the Torrust Tracker Deployer"
 license = "MIT"
+repository = "https://github.com/torrust/torrust-tracker-deployer"
+readme = "README.md"
 
 [[example]]
 name = "sdk_basic_usage"

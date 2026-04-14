@@ -12,6 +12,7 @@ Welcome to the Torrust Tracker Deployer documentation! This index helps you quic
 | Place code in the correct layer      | [`contributing/ddd-layer-placement.md`](contributing/ddd-layer-placement.md) - **CRITICAL** decision flowchart           |
 | Follow development principles        | [`development-principles.md`](development-principles.md) - Observability, Testability, User Friendliness, Actionability  |
 | Commit code                          | [`contributing/commit-process.md`](contributing/commit-process.md) - Pre-commit checks, conventional commits             |
+| Cut a release                        | [`release-process.md`](release-process.md) - Standard release sequence, branch/tag rules, Docker + crate publication     |
 | Handle errors properly               | [`contributing/error-handling.md`](contributing/error-handling.md) - Explicit enums, actionable messages                 |
 | Handle output properly               | [`contributing/output-handling.md`](contributing/output-handling.md) - **CRITICAL** UserOutput, never `println!`         |
 | Organize Rust code                   | [`contributing/module-organization.md`](contributing/module-organization.md) - **CRITICAL** import conventions           |
@@ -83,6 +84,7 @@ docs/
 | Write unit tests          | [`contributing/testing/unit-testing.md`](contributing/testing/unit-testing.md) |
 | Understand a decision     | [`decisions/README.md`](decisions/README.md)                                   |
 | Plan a new feature        | [`features/README.md`](features/README.md)                                     |
+| Perform a release         | [`release-process.md`](release-process.md)                                     |
 | Fix external tool issues  | [`external-issues/README.md`](external-issues/README.md)                       |
 | Work with templates       | [`contributing/templates/`](contributing/templates/)                           |
 | Handle errors properly    | [`contributing/error-handling.md`](contributing/error-handling.md)             |
