@@ -29,7 +29,7 @@ The goal is a release process that is fully trustworthy for future stable releas
 - [x] Verify GitHub release is created and accessible
 - [x] Document every friction point, error, or inconsistency encountered (see Execution Log below)
 - [x] Fix any release-process issues or documentation gaps found during execution
-- [ ] Leave `docs/release-process.md` accurate for future releases (follow-up task)
+- [x] Leave `docs/release-process.md` accurate for future releases
 
 ## 🏗️ Architecture Requirements
 
@@ -40,7 +40,7 @@ The goal is a release process that is fully trustworthy for future stable releas
 ### Module Structure Requirements
 
 - [x] Version updates in all four `Cargo.toml` manifests (`/`, `packages/deployer-types/`, `packages/dependency-installer/`, `packages/sdk/`)
-- [ ] Any documentation fixes go in `docs/release-process.md` or the release skill
+- [x] Any documentation fixes go in `docs/release-process.md` or the release skill
 
 ### Architectural Constraints
 
@@ -206,9 +206,9 @@ follow-up issue if it requires non-trivial work.
 ### Phase 4: Process Review and Cleanup (estimated time: 1 hour)
 
 - [x] Task 4.1: Collect all issues and friction points encountered during execution (see Execution Log)
-- [ ] Task 4.2: Fix small documentation inconsistencies in `docs/release-process.md`
-- [ ] Task 4.3: Fix small skill inaccuracies in `release-new-version/skill.md`
-- [ ] Task 4.4: File follow-up issues for any non-trivial problems found
+- [x] Task 4.2: Fix small documentation inconsistencies in `docs/release-process.md`
+- [x] Task 4.3: Fix small skill inaccuracies in `release-new-version/skill.md`
+- [x] Task 4.4: File follow-up issues for any non-trivial problems found (none required — all 12 Execution Log issues fixed inline or in docs)
 - [x] Task 4.5: Update release finalization gates to confirm all pass
 
 ## Acceptance Criteria
@@ -237,7 +237,7 @@ follow-up issue if it requires non-trivial work.
 **Process Quality**:
 
 - [x] All issues found during the release are documented in the Execution Log section
-- [ ] `docs/release-process.md` reflects any corrections made (follow-up)
+- [x] `docs/release-process.md` reflects any corrections made
 - [x] No step was silently skipped or improvised without documentation
 
 ## Related Documentation
