@@ -9,11 +9,6 @@ on:
   push:
     branches:
       - "releases/**/*"
-    paths:
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "packages/sdk/**"
-      - ".github/workflows/publish-crate.yaml"
   workflow_dispatch:
 
 env:

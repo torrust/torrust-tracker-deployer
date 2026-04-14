@@ -2987,7 +2987,7 @@ dependencies = [
 
 [[package]]
 name = "torrust-tracker-deployer"
-version = "0.1.0"
+version = "0.1.0-beta.1"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -3024,7 +3024,7 @@ dependencies = [
 
 [[package]]
 name = "torrust-tracker-deployer-sdk"
-version = "0.1.0"
+version = "0.1.0-beta.1"
 dependencies = [
  "tempfile",
  "thiserror 2.0.18",
