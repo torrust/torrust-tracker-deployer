@@ -25,20 +25,20 @@ The initial release process should include these mandatory steps in order:
 3. Push the release commit to `main`
 4. Create the release tag and push it
 5. Create the release branch and push it
-6. Create the GitHub release from the tag
-7. Let GitHub Actions publish release artifacts:
+6. Let GitHub Actions publish release artifacts:
    - Docker image for the release branch
    - Crate for the release branch
+7. Create the GitHub release from the tag
 
 ## Goals
 
-- [ ] Define a single documented release workflow with explicit step order
-- [ ] Make branch and tag conventions consistent across releases
-- [ ] Ensure Docker image publication is triggered from release branches
-- [ ] Ensure crate publication is triggered from release branches
-- [ ] Define validation and rollback guidance for failed release steps
-- [ ] Keep the first version of the process intentionally simpler than the tracker repository
-- [ ] Avoid duplicate Docker release tags for the same version
+- [x] Define a single documented release workflow with explicit step order
+- [x] Make branch and tag conventions consistent across releases
+- [x] Ensure Docker image publication is triggered from release branches
+- [x] Ensure crate publication is triggered from release branches
+- [x] Define validation and rollback guidance for failed release steps
+- [x] Keep the first version of the process intentionally simpler than the tracker repository
+- [x] Avoid duplicate Docker release tags for the same version
 
 ## 🏗️ Architecture Requirements
 
@@ -48,21 +48,21 @@ The initial release process should include these mandatory steps in order:
 
 ### Module Structure Requirements
 
-- [ ] Keep process documentation in `docs/`
-- [ ] Keep automation in `.github/workflows/` and/or `scripts/`
-- [ ] Keep branch and tag naming rules explicit and testable
-- [ ] Keep artifact version alignment across Git tag, Docker image tag, and crate version
+- [x] Keep process documentation in `docs/`
+- [x] Keep automation in `.github/workflows/` and/or `scripts/`
+- [x] Keep branch and tag naming rules explicit and testable
+- [x] Keep artifact version alignment across Git tag, Docker image tag, and crate version
 
 ### Architectural Constraints
 
-- [ ] Release order must be deterministic and documented
-- [ ] Tag format must be clearly defined as `vX.Y.Z`
-- [ ] Release branch format must be clearly defined and compatible with workflow triggers
-- [ ] Docker publish step must support reproducible release tagging without overloading `main` publish behavior
-- [ ] Docker release tags must not include the Git tag `v` prefix
-- [ ] Crate publish step must define pre-checks and ownership requirements
-- [ ] Docker Hub credentials must separate secrets from non-sensitive variables
-- [ ] Workflow triggers and branch protections must align with allowed branches (`develop`, `main`, `releases/**/*`)
+- [x] Release order must be deterministic and documented
+- [x] Tag format must be clearly defined as `vX.Y.Z`
+- [x] Release branch format must be clearly defined and compatible with workflow triggers
+- [x] Docker publish step must support reproducible release tagging without overloading `main` publish behavior
+- [x] Docker release tags must not include the Git tag `v` prefix
+- [x] Crate publish step must define pre-checks and ownership requirements
+- [x] Docker Hub credentials must separate secrets from non-sensitive variables
+- [x] Workflow triggers and branch protections must align with allowed branches (`develop`, `main`, `releases/**/*`)
 
 ### Anti-Patterns to Avoid
 
@@ -224,31 +224,34 @@ Define repository settings expectations that release automation depends on.
 
 ### Phase 1: Define the Manual Release Sequence (estimated time: 2-3 hours)
 
-- [ ] Task 1.1: Document the simplified release steps from version bump through GitHub release creation
-- [ ] Task 1.2: Define version, tag, and release branch naming conventions
-- [ ] Task 1.3: Specify which `Cargo.toml` files must be updated for each release
-- [ ] Task 1.4: Add a pre-flight checklist for environments, permissions, and clean git state
+- [x] Task 1.1: Document the simplified release steps from version bump through GitHub release creation
+- [x] Task 1.2: Define version, tag, and release branch naming conventions
+- [x] Task 1.3: Specify which `Cargo.toml` files must be updated for each release
+- [x] Task 1.4: Add a pre-flight checklist for environments, permissions, and clean git state
 
 ### Phase 2: Docker Release Branch Publishing (estimated time: 1-2 hours)
 
-- [ ] Task 2.1: Extend `container.yaml` to trigger on `releases/**/*`
-- [ ] Task 2.2: Add release branch context detection and release image tags
-- [ ] Task 2.3: Define image verification, credential, and rerun requirements
-- [ ] Task 2.4: Ensure Docker Hub username/repository are configured as non-secret variables (token remains secret)
+- [x] Task 2.1: Extend `container.yaml` to trigger on `releases/**/*`
+- [x] Task 2.2: Add release branch context detection and release image tags
+- [x] Task 2.3: Define image verification, credential, and rerun requirements
+- [x] Task 2.4: Ensure Docker Hub username/repository are configured as non-secret variables (token remains secret)
 
 ### Phase 3: Crate Publishing Workflow (estimated time: 1-2 hours)
 
-- [ ] Task 3.1: Create a dedicated workflow for publishing the SDK crate from `releases/**/*`
-- [ ] Task 3.2: Define package inspection, dry-run, publish, and post-publish verification steps
-- [ ] Task 3.3: Define dedicated environment and document cargo registry credentials and failure recovery rules
-- [ ] Task 3.4: Add docs.rs post-publish verification guidance
+- [x] Task 3.1: Create a dedicated workflow for publishing the SDK crate from `releases/**/*`
+- [x] Task 3.2: Define package inspection, dry-run, publish, and post-publish verification steps
+- [x] Task 3.3: Define dedicated environment and document cargo registry credentials and failure recovery rules
+- [x] Task 3.4: Add docs.rs post-publish verification guidance
 
 ### Phase 4: Validation and Operational Guidance (estimated time: 2-4 hours)
 
 - [ ] Task 4.1: Validate the end-to-end release flow against a test version
-- [ ] Task 4.2: Document how maintainers verify Docker image, crate publication, and GitHub release creation
-- [ ] Task 4.3: Add troubleshooting notes for partial publication failures
-- [ ] Task 4.4: Add explicit idempotency/re-run guidance and crate yank policy
+- [x] Task 4.2: Document how maintainers verify Docker image, crate publication, and GitHub release creation
+- [x] Task 4.3: Add troubleshooting notes for partial publication failures
+- [x] Task 4.4: Add explicit idempotency/re-run guidance and crate yank policy
+
+> Note: The practical end-to-end validation for Task 4.1 is planned as the
+> post-merge `0.1.0-beta` release run.
 
 ## Acceptance Criteria
 
@@ -256,27 +259,27 @@ Define repository settings expectations that release automation depends on.
 
 **Quality Checks**:
 
-- [ ] Pre-commit checks pass: `./scripts/pre-commit.sh`
+- [x] Pre-commit checks pass: `./scripts/pre-commit.sh`
 
 **Task-Specific Criteria**:
 
-- [ ] The documented release process follows this order: version update, release commit, push to `main`, tag push, release branch push, GitHub release creation, workflow-driven artifact publication
-- [ ] The spec defines explicit finalization gates (main push, tag push, release branch push, Docker pass, crate pass, GitHub release)
-- [ ] Branch naming and tag naming conventions are documented as `releases/vX.Y.Z` and `vX.Y.Z`
-- [ ] `container.yaml` is specified to publish Docker images for release branches in addition to existing `main` and `develop` behavior
-- [ ] The spec explicitly requires Docker release tags to use `X.Y.Z` and forbids `vX.Y.Z` image tags
-- [ ] A separate crate publication workflow is specified for the SDK crate on `releases/**/*`
-- [ ] The spec explicitly records the decision to keep Docker and crate publication in independent workflows
-- [ ] Docker Hub configuration policy is explicit: token is secret, username/repository are variables
-- [ ] Release workflow branch scope is explicit and aligned with `develop`, `main`, and `releases/**/*`
-- [ ] Docker publish procedure includes verification and failure handling
-- [ ] Crate publish procedure includes dry-run and post-publish verification
-- [ ] Crate publish procedure includes package content inspection before publish
-- [ ] Crate publish procedure includes docs.rs build verification after publish
-- [ ] Pre-flight checks are documented for environments, secrets/variables, permissions, and git state
-- [ ] Partial-failure and re-run rules are documented for Docker and crate workflows
-- [ ] Crate rollback policy includes explicit yank criteria and patch-release follow-up
-- [ ] Version consistency rules are documented across Git tags, Docker tags, and crate versions
+- [x] The documented release process follows this order: version update, release commit, push to `main`, tag push, release branch push, workflow-driven artifact publication, GitHub release creation
+- [x] The spec defines explicit finalization gates (main push, tag push, release branch push, Docker pass, crate pass, GitHub release)
+- [x] Branch naming and tag naming conventions are documented as `releases/vX.Y.Z` and `vX.Y.Z`
+- [x] `container.yaml` is specified to publish Docker images for release branches in addition to existing `main` and `develop` behavior
+- [x] The spec explicitly requires Docker release tags to use `X.Y.Z` and forbids `vX.Y.Z` image tags
+- [x] A separate crate publication workflow is specified for the SDK crate on `releases/**/*`
+- [x] The spec explicitly records the decision to keep Docker and crate publication in independent workflows
+- [x] Docker Hub configuration policy is explicit: token is secret, username/repository are variables
+- [x] Release workflow branch scope is explicit and aligned with `develop`, `main`, and `releases/**/*`
+- [x] Docker publish procedure includes verification and failure handling
+- [x] Crate publish procedure includes dry-run and post-publish verification
+- [x] Crate publish procedure includes package content inspection before publish
+- [x] Crate publish procedure includes docs.rs build verification after publish
+- [x] Pre-flight checks are documented for environments, secrets/variables, permissions, and git state
+- [x] Partial-failure and re-run rules are documented for Docker and crate workflows
+- [x] Crate rollback policy includes explicit yank criteria and patch-release follow-up
+- [x] Version consistency rules are documented across Git tags, Docker tags, and crate versions
 
 ## Related Documentation
 
