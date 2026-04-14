@@ -2947,7 +2947,7 @@ dependencies = [
 
 [[package]]
 name = "torrust-dependency-installer"
-version = "0.1.0"
+version = "0.1.0-beta.1"
 dependencies = [
  "async-trait",
  "clap",
@@ -2960,7 +2960,7 @@ dependencies = [
 
 [[package]]
 name = "torrust-deployer-types"
-version = "0.1.0"
+version = "0.1.0-beta.1"
 dependencies = [
  "chrono",
  "email_address",
