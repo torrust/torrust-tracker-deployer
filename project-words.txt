@@ -51,6 +51,7 @@ Firestore
 Freshping
 Frontegg
 Geeksfor
+GHSA
 Gossman
 Grafana
 Grafonnet
@@ -240,6 +241,7 @@ ethernets
 executability
 exfiltration
 exitcode
+exploitability
 filesd
 flatlined
 frontends
@@ -289,6 +291,7 @@ leecher
 leechers
 letsencrypt
 libc
+libcrypto
 libldap
 libmariadb
 libpam
@@ -513,6 +516,7 @@ unconfigured
 undertested
 unergonomic
 unittests
+untgz
 unrepresentable
 DNAT
 UNCONN
@@ -548,6 +552,10 @@ zeroize
 zoneinfo
 worktree
 zstd
+ciphertext
+makeslice
+rstrip
+urlsafe
 CSPRNG
 USERINFO
 plainpassword
