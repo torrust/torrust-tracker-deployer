@@ -97,6 +97,7 @@ Pythonic
 QUIC
 RAII
 RUSTDOCFLAGS
+RUSTSEC
 Regenerable
 Repomix
 Repositóri
@@ -168,6 +169,7 @@ celano
 certbot
 certonly
 chatbots
+chacha
 chdir
 checkmark
 checkmarks
