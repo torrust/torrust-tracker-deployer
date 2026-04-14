@@ -44,7 +44,7 @@ pub fn display_getting_started() {
     println!("📋 Quick Start:");
     println!("   1. Check dependencies:");
     println!(
-        "      cargo run --package torrust-dependency-installer --bin dependency-installer check"
+        "      cargo run --package torrust-tracker-deployer-dependency-installer --bin dependency-installer check"
     );
     println!();
     println!("   2. Create and deploy an environment:");

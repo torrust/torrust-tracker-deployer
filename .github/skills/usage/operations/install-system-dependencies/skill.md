@@ -14,26 +14,26 @@ Use the built-in `dependency-installer` package to install all tools required to
 
 ```bash
 # 1. Check what is already installed
-cargo run -p torrust-dependency-installer --bin dependency-installer check
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer check
 
 # 2. Install everything missing in one command
-cargo run -p torrust-dependency-installer --bin dependency-installer install
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer install
 
 # 3. Verify all dependencies are now present
-cargo run -p torrust-dependency-installer --bin dependency-installer check
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer check
 ```
 
 ## Commands
 
 ```bash
 # Install all missing dependencies
-cargo run -p torrust-dependency-installer --bin dependency-installer install
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer install
 
 # Install a specific dependency
-cargo run -p torrust-dependency-installer --bin dependency-installer install --dependency opentofu
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer install --dependency opentofu
 
 # Install with verbose output (shows download/install steps)
-cargo run -p torrust-dependency-installer --bin dependency-installer install --verbose
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer install --verbose
 ```
 
 ## Dependencies Installed

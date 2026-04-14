@@ -20,7 +20,7 @@
 //!
 //! ## Dependency Verification
 //!
-//! E2E test binaries use the `torrust-dependency-installer` package to verify
+//! E2E test binaries use the `torrust-tracker-deployer-dependency-installer` package to verify
 //! required system dependencies are installed before running tests.
 
 pub mod container;

@@ -1,8 +1,8 @@
 # Crate publication workflow for Torrust Tracker Deployer
 #
 # Publishes all four workspace crates in dependency order when a release branch is pushed:
-#   1. torrust-deployer-types (no internal deps)
-#   2. torrust-dependency-installer (no internal deps)
+#   1. torrust-tracker-deployer-types (no internal deps)
+#   2. torrust-tracker-deployer-dependency-installer (no internal deps)
 #   3. torrust-tracker-deployer (depends on 1 and 2)
 #   4. torrust-tracker-deployer-sdk (depends on 1 and 3)
 #
@@ -18,8 +18,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  DEPLOYER_TYPES_CRATE: torrust-deployer-types
-  DEPENDENCY_INSTALLER_CRATE: torrust-dependency-installer
+  DEPLOYER_TYPES_CRATE: torrust-tracker-deployer-types
+  DEPENDENCY_INSTALLER_CRATE: torrust-tracker-deployer-dependency-installer
   MAIN_CRATE: torrust-tracker-deployer
   SDK_CRATE: torrust-tracker-deployer-sdk
 
@@ -97,7 +97,7 @@ jobs:
             cargo package --list -p "$crate"
           done
 
-      - name: Dry Run Publish torrust-deployer-types
+      - name: Dry Run Publish torrust-tracker-deployer-types
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish --dry-run -p ${{ env.DEPLOYER_TYPES_CRATE }}
@@ -119,12 +119,12 @@ jobs:
             fi
           done
 
-      - name: Publish torrust-deployer-types
+      - name: Publish torrust-tracker-deployer-types
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish -p ${{ env.DEPLOYER_TYPES_CRATE }}
 
-      - name: Wait for torrust-deployer-types to Be Indexed
+      - name: Wait for torrust-tracker-deployer-types to Be Indexed
         run: |
           release_version="${{ steps.release.outputs.version }}"
           for attempt in 1 2 3 4 5 6; do
@@ -137,17 +137,17 @@ jobs:
             sleep 15
           done
 
-      - name: Dry Run Publish torrust-dependency-installer
+      - name: Dry Run Publish torrust-tracker-deployer-dependency-installer
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish --dry-run -p ${{ env.DEPENDENCY_INSTALLER_CRATE }}
 
-      - name: Publish torrust-dependency-installer
+      - name: Publish torrust-tracker-deployer-dependency-installer
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish -p ${{ env.DEPENDENCY_INSTALLER_CRATE }}
 
-      - name: Wait for torrust-dependency-installer to Be Indexed
+      - name: Wait for torrust-tracker-deployer-dependency-installer to Be Indexed
         run: |
           release_version="${{ steps.release.outputs.version }}"
           for attempt in 1 2 3 4 5; do

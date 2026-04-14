@@ -23,7 +23,7 @@ use thiserror::Error;
 /// # Examples
 ///
 /// ```rust
-/// use torrust_dependency_installer::command::command_exists;
+/// use torrust_tracker_deployer_dependency_installer::command::command_exists;
 ///
 /// // Check if 'cargo' is installed
 /// let exists = command_exists("cargo").unwrap();
@@ -53,7 +53,7 @@ pub fn command_exists(command: &str) -> Result<bool, CommandError> {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use torrust_dependency_installer::command::execute_command;
+/// use torrust_tracker_deployer_dependency_installer::command::execute_command;
 ///
 /// // Get cargo version
 /// let version = execute_command("cargo", &["--version"]).unwrap();

@@ -41,7 +41,7 @@ impl std::error::Error for InvalidServiceEndpointUrl {}
 ///
 /// ```
 /// use std::net::SocketAddr;
-/// use torrust_deployer_types::ServiceEndpoint;
+/// use torrust_tracker_deployer_types::ServiceEndpoint;
 ///
 /// // HTTP endpoint
 /// let socket_addr: SocketAddr = "10.0.0.1:1212".parse().unwrap();

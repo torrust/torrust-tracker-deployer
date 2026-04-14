@@ -14,7 +14,7 @@ use std::time::Duration;
 use crate::application::traits::RepositoryProvider;
 use crate::infrastructure::persistence::file_repository_factory::FileRepositoryFactory;
 use crate::shared::SystemClock;
-use torrust_deployer_types::Clock;
+use torrust_tracker_deployer_types::Clock;
 
 /// The default file-lock timeout used by the SDK when no custom value is provided.
 pub const DEFAULT_SDK_LOCK_TIMEOUT: Duration = Duration::from_secs(30);

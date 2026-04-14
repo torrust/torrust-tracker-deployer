@@ -37,7 +37,7 @@
 //! # Examples
 //!
 //! ```
-//! use torrust_deployer_types::DomainName;
+//! use torrust_tracker_deployer_types::DomainName;
 //!
 //! // Valid domain names
 //! let domain = DomainName::new("example.com").unwrap();
@@ -91,7 +91,7 @@ impl DomainName {
     /// # Examples
     ///
     /// ```
-    /// use torrust_deployer_types::DomainName;
+    /// use torrust_tracker_deployer_types::DomainName;
     ///
     /// let domain = DomainName::new("tracker.torrust.org").unwrap();
     /// assert_eq!(domain.as_str(), "tracker.torrust.org");
@@ -117,7 +117,7 @@ impl DomainName {
     /// # Examples
     ///
     /// ```
-    /// use torrust_deployer_types::DomainName;
+    /// use torrust_tracker_deployer_types::DomainName;
     ///
     /// let domain = DomainName::new("api.tracker.torrust.org").unwrap();
     /// assert_eq!(domain.tld(), "org");
@@ -135,7 +135,7 @@ impl DomainName {
     /// # Examples
     ///
     /// ```
-    /// use torrust_deployer_types::DomainName;
+    /// use torrust_tracker_deployer_types::DomainName;
     ///
     /// let domain = DomainName::new("api.tracker.torrust.org").unwrap();
     /// assert_eq!(domain.subdomains(), vec!["api", "tracker", "torrust"]);

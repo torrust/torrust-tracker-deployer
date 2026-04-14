@@ -12,19 +12,19 @@ For dependency installation, use the `dependency-installer` binary:
 
 ```bash
 # Install all dependencies
-cargo run -p torrust-dependency-installer --bin dependency-installer -- install
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer -- install
 
 # Check which dependencies are installed
-cargo run -p torrust-dependency-installer --bin dependency-installer -- check
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer -- check
 
 # List all available dependencies
-cargo run -p torrust-dependency-installer --bin dependency-installer -- list
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer -- list
 
 # Install specific dependency
-cargo run -p torrust-dependency-installer --bin dependency-installer -- install --dependency opentofu
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer -- install --dependency opentofu
 
 # See all options
-cargo run -p torrust-dependency-installer --bin dependency-installer -- --help
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer -- --help
 ```
 
 ### Benefits of the New Approach
@@ -66,8 +66,8 @@ Example workflow step:
 ```yaml
 - name: Install dependencies
   run: |
-    cargo build -p torrust-dependency-installer --bin dependency-installer
-    cargo run -p torrust-dependency-installer --bin dependency-installer -- install
+    cargo build -p torrust-tracker-deployer-dependency-installer --bin dependency-installer
+    cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer -- install
 ```
 
 ### Local Development
@@ -84,9 +84,9 @@ For local development, the dependency installer automatically handles:
 
 If you encounter issues with the dependency installer:
 
-1. **Check installation status**: `cargo run -p torrust-dependency-installer --bin dependency-installer -- check`
+1. **Check installation status**: `cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer -- check`
 2. **Enable debug logging**: Add `--verbose` flag or `--log-level debug`
-3. **View available dependencies**: `cargo run -p torrust-dependency-installer --bin dependency-installer -- list`
+3. **View available dependencies**: `cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer -- list`
 4. **Check exit codes**: Exit code 0 = success, non-zero = failure
 
 For detailed troubleshooting, see the [dependency installer README](../../packages/dependency-installer/README.md).

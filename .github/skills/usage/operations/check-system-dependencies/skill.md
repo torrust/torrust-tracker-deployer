@@ -14,16 +14,16 @@ Use the built-in `dependency-installer` package to verify all required tools are
 
 ```bash
 # Check all dependencies
-cargo run -p torrust-dependency-installer --bin dependency-installer check
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer check
 
 # Check a specific dependency
-cargo run -p torrust-dependency-installer --bin dependency-installer check --dependency opentofu
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer check --dependency opentofu
 
 # List all dependencies with status
-cargo run -p torrust-dependency-installer --bin dependency-installer list
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer list
 
 # Install all missing dependencies
-cargo run -p torrust-dependency-installer --bin dependency-installer install
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer install
 ```
 
 ## Required Dependencies
@@ -60,7 +60,7 @@ ERROR ... dependency is not installed dependency="opentofu"
 - In CI/CD pipelines use `--log-level off` to suppress output and rely on exit code only:
 
   ```bash
-  cargo run -p torrust-dependency-installer --bin dependency-installer check --log-level off
+  cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer check --log-level off
   ```
 
 - To install missing tools automatically, use the `install` subcommand (requires system package manager access)

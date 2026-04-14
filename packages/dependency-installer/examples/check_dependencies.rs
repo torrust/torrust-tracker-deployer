@@ -5,7 +5,7 @@
 //!
 //! Run with: `cargo run --example check_dependencies`
 
-use torrust_dependency_installer::{init_tracing, DependencyManager};
+use torrust_tracker_deployer_dependency_installer::{init_tracing, DependencyManager};
 
 fn main() {
     // Initialize tracing for structured logging with INFO level

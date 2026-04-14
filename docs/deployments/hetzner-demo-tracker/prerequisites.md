@@ -86,7 +86,7 @@ The image starts, prints tool versions, and shows the CLI help. Tool versions in
 All dependencies verified with:
 
 ```bash
-cargo run -p torrust-dependency-installer --bin dependency-installer check
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer check
 ```
 
 - [x] **Rust toolchain** — `rustc 1.96.0-nightly (ec818fda3 2026-03-02)`
