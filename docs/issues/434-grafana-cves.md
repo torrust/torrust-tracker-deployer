@@ -84,16 +84,35 @@ algorithm (e.g. `A128KW`) but with an empty `encrypted_key`, go-jose panics tryi
 allocate a zero-length slice in `cipher.KeyUnwrap()`. The panic crashes the goroutine
 and can bring down the Grafana process entirely.
 
-**Is it exploitable via the public dashboard?** Yes. Grafana parses bearer tokens on
-all HTTP requests before checking authentication. An attacker can send:
+**Is it exploitable via the public dashboard?** Not via the simple bearer-token path
+tested on 2026-04-14. Testing against the live `grafana.torrust-tracker-demo.com`
+(`12.4.2`) confirmed the attack does **not** trigger a panic from a plain
+`Authorization: Bearer <JWE>` header:
 
-```text
-Authorization: Bearer <crafted-JWE-with-empty-encrypted_key>
+```console
+$ TOKEN="eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..AAAA.AAAA.AAAA"
+$ curl -si -H "Authorization: Bearer $TOKEN" https://grafana.torrust-tracker-demo.com/api/org
+HTTP/2 401   {"message":"Invalid API key"}
 ```
 
-to any endpoint on `grafana.torrust-tracker-demo.com` without any credentials and
-crash Grafana. The CVSS confirms this: no privileges required, no user interaction,
-network-reachable.
+Grafana's auth middleware routed the token to the **API key** handler
+(`auth.client.api-key`), which performs a simple database lookup — it never calls
+go-jose to parse the token. Server log:
+
+```text
+INFO Failed to authenticate request  client=auth.client.api-key error="[api-key.invalid] API key is invalid"
+```
+
+The go-jose panic is only reachable when Grafana calls `jwe.ParseEncrypted()` on
+user input — which happens in specific auth flows (e.g. service-account JWT auth,
+certain OIDC callback paths) but **not** via the default API-key/bearer-token
+routing used here.
+
+**Revised risk**: The CVSS `AV:N/AC:L/PR:N` reflects the library's theoretical
+attack surface. In practice, this deployment is not vulnerable to the simple
+bearertoken attack vector. The CVE is real in the binary and the upgrade to 13.0.0
+is still correct (defence in depth), but the immediate risk of remote DoS on
+`grafana.torrust-tracker-demo.com` via this technique is not confirmed.
 
 **Grafana's fix**: merged in PR
 [grafana/grafana#121830](https://github.com/grafana/grafana/pull/121830) 2 weeks
@@ -106,9 +125,13 @@ labelled `no-backport` — **no fix will be released for any 12.x version**.
 
 #### Proof-of-concept
 
-> ⚠️ **Run against a local instance first.** Sending this to the live demo will
-> crash the public Grafana at `grafana.torrust-tracker-demo.com` until Docker
-> restarts it.
+> ⚠️ **Run against a local instance first.**
+>
+> **Update (2026-04-14)**: The attack was tested against the live demo
+> (`grafana.torrust-tracker-demo.com`, `12.4.2`) and did **not** produce a panic.
+> Grafana routed the JWE bearer token to the API key handler rather than the
+> JWE parser. The PoC below may only work in configurations where JWT auth is
+> explicitly enabled or via specific OIDC flows.
 
 ##### Step 1 — Generate the crafted JWE token
 
@@ -288,18 +311,20 @@ internal-only code paths, not reachable via Grafana's HTTP layer.
 All remaining CVEs (10 HIGH, 0 CRITICAL in `grafana/grafana:13.0.0`) require local
 access or are not reachable via Grafana's HTTP layer:
 
-| CVE            | Exploitable remotely? | Reason                                                                     |
-| -------------- | --------------------- | -------------------------------------------------------------------------- |
-| CVE-2026-28390 | No                    | Caddy terminates TLS; Grafana never processes raw TLS                      |
-| CVE-2026-22184 | No                    | `untgz` path — unreachable via dashboard UI                                |
-| CVE-2026-34040 | No                    | Moby Docker-client code, not a Grafana HTTP endpoint                       |
-| CVE-2026-39883 | No                    | Local PATH-hijack — requires host shell access                             |
-| CVE-2026-25679 | No                    | `elasticsearch` plugin internal path — not reachable via dashboard         |
-| CVE-2026-27137 | No                    | `elasticsearch` plugin internal path — not reachable via dashboard         |
-| CVE-2026-32280 | No                    | Go chain-building DoS on outbound TLS — not reachable from public internet |
-| CVE-2026-32282 | No                    | Local `Root.Chmod` symlink — requires host shell access                    |
+| CVE            | Exploitable remotely? | Reason                                                                                                                                              |
+| -------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CVE-2026-28390 | No                    | Caddy terminates TLS; Grafana never processes raw TLS                                                                                               |
+| CVE-2026-22184 | No                    | `untgz` path — unreachable via dashboard UI                                                                                                         |
+| CVE-2026-34040 | No                    | Moby Docker-client code, not a Grafana HTTP endpoint                                                                                                |
+| CVE-2026-39883 | No                    | Local PATH-hijack — requires host shell access                                                                                                      |
+| CVE-2026-25679 | No                    | `elasticsearch` plugin internal path — not reachable via dashboard                                                                                  |
+| CVE-2026-27137 | No                    | `elasticsearch` plugin internal path — not reachable via dashboard                                                                                  |
+| CVE-2026-32280 | No                    | Go chain-building DoS on outbound TLS — not reachable from public internet                                                                          |
+| CVE-2026-32282 | No                    | Local `Root.Chmod` symlink — requires host shell access                                                                                             |
+| CVE-2026-34986 | Not confirmed         | JWE bearer token routed to API-key handler in live test; panic requires a code path that calls `jwe.ParseEncrypted()` (e.g. JWT-auth or OIDC flows) |
 
-**Overall risk**: CVE-2026-34986 (unauthenticated remote DoS) is eliminated by
-upgrading to `grafana/grafana:13.0.0`. The 10 remaining HIGH CVEs have no realistic
-remote attack path in this deployment. No CRITICALs in any version we are now
-deploying.
+**Overall risk**: CVE-2026-34986 was not confirmed exploitable via simple bearer token
+on this deployment — the API-key auth handler intercepted the request before go-jose
+was called. The upgrade to `grafana/grafana:13.0.0` eliminates the vulnerability at
+its root regardless. The remaining 10 HIGH CVEs have no realistic remote attack path
+in this deployment. No CRITICALs in any version we are now deploying.
