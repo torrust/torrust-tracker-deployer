@@ -88,7 +88,7 @@ All packages in this directory:
 ```rust
 // Add to your Cargo.toml
 [dependencies]
-torrust-linting = "0.1.0"  # external crate: https://crates.io/crates/torrust-linting
+torrust-tracker-deployer-types = { path = "packages/deployer-types" }
 torrust-tracker-deployer-dependency-installer = { path = "packages/dependency-installer" }
 torrust-tracker-deployer-sdk = { path = "packages/sdk" }
 ```

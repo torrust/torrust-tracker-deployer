@@ -13,7 +13,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-torrust-tracker-deployer-sdk = { git = "https://github.com/torrust/torrust-tracker-deployer" }
+torrust-tracker-deployer-sdk = "0.1.0-beta.1"
 ```
 
 Basic usage:
@@ -46,27 +46,23 @@ cargo run --example sdk_validate_config -p torrust-tracker-deployer-sdk
 ```text
 torrust-tracker-deployer-sdk         ← this package
     │
-    ▼
-torrust-tracker-deployer (root crate)
+    ├──▶ torrust-tracker-deployer (root crate)
+    │         │
+    │         ▼
+    │    Application Layer    (command_handlers/)
+    │         │
+    │         ▼
+    │    Domain Layer         (environment/, template/, topology/, ...)
     │
-    ▼
-Application Layer    (command_handlers/)
-    │
-    ▼
-Domain Layer         (environment/, template/, topology/, ...)
+    └──▶ torrust-tracker-deployer-types (packages/deployer-types/)
+             (shared value objects and traits)
 ```
-
-> **Note**: This package currently depends on the root `torrust-tracker-deployer`
-> crate for application-layer types. Plans 3 and 4 will progressively decouple
-> this dependency by extracting shared types into a `packages/deployer-types/`
-> package.
 
 ## Status
 
 This package was extracted from `src/presentation/sdk/` in the root crate as part
-of the SDK workspace package refactoring (Plan 2 of 4). See the
-[refactoring plan](../../docs/refactors/plans/extract-sdk-workspace-package.md)
-for details.
+of the workspace package refactoring. The extraction is complete and the package is
+published on [crates.io](https://crates.io/crates/torrust-tracker-deployer-sdk).
 
 ## License
 

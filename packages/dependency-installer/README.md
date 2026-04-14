@@ -1,4 +1,4 @@
-# Torrust Dependency Installer Package
+# Torrust Tracker Deployer Dependency Installer
 
 This package provides dependency detection and installation utilities for the Torrust Tracker Deployer project.
 
