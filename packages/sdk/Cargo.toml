@@ -1,6 +1,6 @@
 [package]
 name = "torrust-tracker-deployer-sdk"
-version = "0.1.0"
+version = "0.1.0-beta.1"
 edition = "2021"
 description = "Programmatic SDK for the Torrust Tracker Deployer"
 license = "MIT"
