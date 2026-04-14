@@ -123,7 +123,7 @@ jobs:
         run: |
           docs_url="https://docs.rs/${{ env.CRATE_NAME }}/${{ steps.release.outputs.version }}"
           for attempt in 1 2 3 4 5 6; do
-            status=$(curl -s -o /tmp/docsrs-check.html -w "%{http_code}" "$docs_url")
+            status=$(curl -s -o /tmp/docs-rs-check.html -w "%{http_code}" "$docs_url")
             if [[ "$status" == "200" ]]; then
               echo "docs.rs page is available: $docs_url"
               exit 0
