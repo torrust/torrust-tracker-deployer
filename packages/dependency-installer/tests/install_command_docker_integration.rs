@@ -155,7 +155,7 @@ async fn it_should_install_opentofu_successfully() {
 ///
 /// **Known Issue**: This test is flaky due to Ansible installation reliability in containers.
 /// It's marked as `#[ignore]` to prevent CI failures. Run manually with:
-/// `cargo test --package torrust-dependency-installer --test install_command_docker_integration it_should_install_ansible_successfully -- --ignored`
+/// `cargo test --package torrust-tracker-deployer-dependency-installer --test install_command_docker_integration it_should_install_ansible_successfully -- --ignored`
 #[tokio::test]
 #[ignore = "Flaky test: Ansible installation is unreliable in containers"]
 async fn it_should_install_ansible_successfully() {

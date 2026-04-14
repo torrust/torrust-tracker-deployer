@@ -35,7 +35,7 @@ jobs:
 
       - name: Build dependency-installer binary
         run: |
-          cargo build --release -p torrust-dependency-installer --bin dependency-installer
+          cargo build --release -p torrust-tracker-deployer-dependency-installer --bin dependency-installer
 
       - name: Install all development dependencies
         run: |

@@ -126,7 +126,7 @@ jobs:
           fi
 
   publish:
-    name: Publish (${{ needs.context.outputs.type }})
+    name: Publish Image
     environment: dockerhub-torrust
     needs: context
     if: needs.context.outputs.continue == 'true'

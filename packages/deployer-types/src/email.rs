@@ -6,7 +6,7 @@
 //! # Usage
 //!
 //! ```rust
-//! use torrust_deployer_types::Email;
+//! use torrust_tracker_deployer_types::Email;
 //!
 //! // Valid email
 //! let email = Email::new("admin@example.com").unwrap();
@@ -47,7 +47,7 @@ use serde::{Deserialize, Serialize};
 /// # Examples
 ///
 /// ```rust
-/// use torrust_deployer_types::Email;
+/// use torrust_tracker_deployer_types::Email;
 ///
 /// let email = Email::new("user@example.com").unwrap();
 /// println!("Email: {}", email);
@@ -76,7 +76,7 @@ impl Email {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_deployer_types::Email;
+    /// use torrust_tracker_deployer_types::Email;
     ///
     /// let valid = Email::new("admin@example.com");
     /// assert!(valid.is_ok());
@@ -104,7 +104,7 @@ impl Email {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_deployer_types::Email;
+    /// use torrust_tracker_deployer_types::Email;
     ///
     /// let email = Email::new("user@example.com").unwrap();
     /// assert_eq!(email.local_part(), "user");
@@ -119,7 +119,7 @@ impl Email {
     /// # Examples
     ///
     /// ```rust
-    /// use torrust_deployer_types::Email;
+    /// use torrust_tracker_deployer_types::Email;
     ///
     /// let email = Email::new("user@example.com").unwrap();
     /// assert_eq!(email.domain_part(), "example.com");

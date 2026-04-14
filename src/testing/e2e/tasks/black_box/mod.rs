@@ -23,7 +23,7 @@
 //!     E2eTestRunner, generate_environment_config, run_preflight_cleanup,
 //!     verify_required_dependencies,
 //! };
-//! use torrust_dependency_installer::Dependency;
+//! use torrust_tracker_deployer_dependency_installer::Dependency;
 //!
 //! // Setup tasks (before creating the test runner)
 //! verify_required_dependencies(&[Dependency::OpenTofu, Dependency::Ansible])?;

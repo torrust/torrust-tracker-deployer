@@ -125,51 +125,51 @@ This output is designed for human reading, **not for parsing by scripts**.
 ```bash
 # Check all dependencies (default log level shows INFO and above)
 $ dependency-installer check
-2025-11-04T17:33:20.959847Z  INFO torrust_dependency_installer::handlers::check: Checking all dependencies
-2025-11-04T17:33:20.960126Z  INFO torrust_dependency_installer::handlers::check: Dependency check result dependency="cargo-machete" status="installed"
-2025-11-04T17:33:20.960131Z  INFO torrust_dependency_installer::handlers::check: Dependency check result dependency="OpenTofu" status="not installed"
-2025-11-04T17:33:20.960136Z  INFO torrust_dependency_installer::handlers::check: Dependency check result dependency="Ansible" status="not installed"
-2025-11-04T17:33:20.960139Z  INFO torrust_dependency_installer::handlers::check: Dependency check result dependency="LXD" status="installed"
-2025-11-04T17:33:20.960144Z  INFO torrust_dependency_installer::handlers::check: Missing dependencies missing_count=2 total_count=4
+2025-11-04T17:33:20.959847Z  INFO torrust_tracker_deployer_dependency_installer::handlers::check: Checking all dependencies
+2025-11-04T17:33:20.960126Z  INFO torrust_tracker_deployer_dependency_installer::handlers::check: Dependency check result dependency="cargo-machete" status="installed"
+2025-11-04T17:33:20.960131Z  INFO torrust_tracker_deployer_dependency_installer::handlers::check: Dependency check result dependency="OpenTofu" status="not installed"
+2025-11-04T17:33:20.960136Z  INFO torrust_tracker_deployer_dependency_installer::handlers::check: Dependency check result dependency="Ansible" status="not installed"
+2025-11-04T17:33:20.960139Z  INFO torrust_tracker_deployer_dependency_installer::handlers::check: Dependency check result dependency="LXD" status="installed"
+2025-11-04T17:33:20.960144Z  INFO torrust_tracker_deployer_dependency_installer::handlers::check: Missing dependencies missing_count=2 total_count=4
 Error: Check command failed: Failed to check all dependencies: Missing 2 out of 4 required dependencies
 
 # Check specific dependency
 $ dependency-installer check --dependency opentofu
-2025-11-04T17:33:20.959855Z  INFO torrust_dependency_installer::handlers::check: Checking specific dependency dependency=opentofu
-2025-11-04T17:33:20.960473Z  INFO torrust_dependency_installer::detector::opentofu: OpenTofu is not installed dependency="opentofu"
-2025-11-04T17:33:20.960482Z  INFO torrust_dependency_installer::handlers::check: Dependency is not installed dependency="OpenTofu" status="not installed"
+2025-11-04T17:33:20.959855Z  INFO torrust_tracker_deployer_dependency_installer::handlers::check: Checking specific dependency dependency=opentofu
+2025-11-04T17:33:20.960473Z  INFO torrust_tracker_deployer_dependency_installer::detector::opentofu: OpenTofu is not installed dependency="opentofu"
+2025-11-04T17:33:20.960482Z  INFO torrust_tracker_deployer_dependency_installer::handlers::check: Dependency is not installed dependency="OpenTofu" status="not installed"
 Error: Check command failed: Failed to check specific dependency: opentofu: not installed
 
 # Install all dependencies
 $ dependency-installer install
-2025-11-04T19:30:10.000000Z  INFO torrust_dependency_installer::handlers::install: Installing all dependencies
-2025-11-04T19:30:10.100000Z  INFO torrust_dependency_installer::installer::cargo_machete: Installing cargo-machete dependency="cargo-machete"
-2025-11-04T19:30:25.000000Z  INFO torrust_dependency_installer::handlers::install: Dependency installation result dependency="cargo-machete" status="installed"
-2025-11-04T19:30:25.100000Z  INFO torrust_dependency_installer::installer::opentofu: Installing OpenTofu dependency="opentofu"
-2025-11-04T19:30:40.000000Z  INFO torrust_dependency_installer::handlers::install: Dependency installation result dependency="OpenTofu" status="installed"
+2025-11-04T19:30:10.000000Z  INFO torrust_tracker_deployer_dependency_installer::handlers::install: Installing all dependencies
+2025-11-04T19:30:10.100000Z  INFO torrust_tracker_deployer_dependency_installer::installer::cargo_machete: Installing cargo-machete dependency="cargo-machete"
+2025-11-04T19:30:25.000000Z  INFO torrust_tracker_deployer_dependency_installer::handlers::install: Dependency installation result dependency="cargo-machete" status="installed"
+2025-11-04T19:30:25.100000Z  INFO torrust_tracker_deployer_dependency_installer::installer::opentofu: Installing OpenTofu dependency="opentofu"
+2025-11-04T19:30:40.000000Z  INFO torrust_tracker_deployer_dependency_installer::handlers::install: Dependency installation result dependency="OpenTofu" status="installed"
 ...
-2025-11-04T19:31:00.000000Z  INFO torrust_dependency_installer::handlers::install: All dependencies installed successfully
+2025-11-04T19:31:00.000000Z  INFO torrust_tracker_deployer_dependency_installer::handlers::install: All dependencies installed successfully
 
 # Install specific dependency with verbose logging
 $ dependency-installer install --dependency opentofu --verbose
-2025-11-04T19:30:10.000000Z  INFO torrust_dependency_installer::handlers::install: Installing specific dependency dependency=opentofu
-2025-11-04T19:30:10.100000Z  INFO torrust_dependency_installer::installer::opentofu: Installing OpenTofu dependency="opentofu"
-2025-11-04T19:30:10.200000Z DEBUG torrust_dependency_installer::installer::opentofu: Downloading OpenTofu installer script
-2025-11-04T19:30:12.000000Z DEBUG torrust_dependency_installer::installer::opentofu: Making installer script executable
-2025-11-04T19:30:12.100000Z DEBUG torrust_dependency_installer::installer::opentofu: Running OpenTofu installer with sudo
-2025-11-04T19:30:25.000000Z DEBUG torrust_dependency_installer::installer::opentofu: Cleaning up installer script
-2025-11-04T19:30:25.100000Z  INFO torrust_dependency_installer::handlers::install: Dependency installation completed dependency="OpenTofu" status="installed"
+2025-11-04T19:30:10.000000Z  INFO torrust_tracker_deployer_dependency_installer::handlers::install: Installing specific dependency dependency=opentofu
+2025-11-04T19:30:10.100000Z  INFO torrust_tracker_deployer_dependency_installer::installer::opentofu: Installing OpenTofu dependency="opentofu"
+2025-11-04T19:30:10.200000Z DEBUG torrust_tracker_deployer_dependency_installer::installer::opentofu: Downloading OpenTofu installer script
+2025-11-04T19:30:12.000000Z DEBUG torrust_tracker_deployer_dependency_installer::installer::opentofu: Making installer script executable
+2025-11-04T19:30:12.100000Z DEBUG torrust_tracker_deployer_dependency_installer::installer::opentofu: Running OpenTofu installer with sudo
+2025-11-04T19:30:25.000000Z DEBUG torrust_tracker_deployer_dependency_installer::installer::opentofu: Cleaning up installer script
+2025-11-04T19:30:25.100000Z  INFO torrust_tracker_deployer_dependency_installer::handlers::install: Dependency installation completed dependency="OpenTofu" status="installed"
 
 # List all dependencies
 $ dependency-installer list
-2025-11-04T17:33:20.960482Z  INFO torrust_dependency_installer::handlers::list: Available dependency dependency="cargo-machete" status="installed"
-2025-11-04T17:33:20.960494Z  INFO torrust_dependency_installer::handlers::list: Available dependency dependency="OpenTofu" status="not installed"
-2025-11-04T17:33:20.960962Z  INFO torrust_dependency_installer::handlers::list: Available dependency dependency="Ansible" status="not installed"
-2025-11-04T17:33:20.961521Z  INFO torrust_dependency_installer::handlers::list: Available dependency dependency="LXD" status="installed"
+2025-11-04T17:33:20.960482Z  INFO torrust_tracker_deployer_dependency_installer::handlers::list: Available dependency dependency="cargo-machete" status="installed"
+2025-11-04T17:33:20.960494Z  INFO torrust_tracker_deployer_dependency_installer::handlers::list: Available dependency dependency="OpenTofu" status="not installed"
+2025-11-04T17:33:20.960962Z  INFO torrust_tracker_deployer_dependency_installer::handlers::list: Available dependency dependency="Ansible" status="not installed"
+2025-11-04T17:33:20.961521Z  INFO torrust_tracker_deployer_dependency_installer::handlers::list: Available dependency dependency="LXD" status="installed"
 
 # Enable verbose logging (includes DEBUG level)
 $ dependency-installer check --verbose
-2025-11-04T17:33:20.959872Z DEBUG torrust_dependency_installer::detector::cargo_machete: Checking if cargo-machete is installed dependency="cargo-machete"
+2025-11-04T17:33:20.959872Z DEBUG torrust_tracker_deployer_dependency_installer::detector::cargo_machete: Checking if cargo-machete is installed dependency="cargo-machete"
 ...
 ```
 
@@ -187,7 +187,7 @@ The CLI accepts the following dependency names:
 #### Checking Dependencies
 
 ```rust
-use torrust_dependency_installer::DependencyManager;
+use torrust_tracker_deployer_dependency_installer::DependencyManager;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize tracing for structured logging
@@ -214,7 +214,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #### Installing Dependencies
 
 ```rust
-use torrust_dependency_installer::{Dependency, DependencyManager};
+use torrust_tracker_deployer_dependency_installer::{Dependency, DependencyManager};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -252,7 +252,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #### Using Individual Detectors
 
 ```rust
-use torrust_dependency_installer::{DependencyDetector, Dependency, DependencyManager};
+use torrust_tracker_deployer_dependency_installer::{DependencyDetector, Dependency, DependencyManager};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
@@ -290,14 +290,14 @@ The Dockerfile serves as **explicit documentation** of what must be installed on
 
 ```bash
 # Run all tests (unit tests run normally, Docker tests use pre-built image)
-cargo test -p torrust-dependency-installer
+cargo test -p torrust-tracker-deployer-dependency-installer
 
 # Run only Docker-based integration tests
-cargo test -p torrust-dependency-installer --test docker_install_command
-cargo test -p torrust-dependency-installer --test docker_check_command
+cargo test -p torrust-tracker-deployer-dependency-installer --test docker_install_command
+cargo test -p torrust-tracker-deployer-dependency-installer --test docker_check_command
 
 # Run expensive tests (OpenTofu, Ansible, LXD)
-cargo test -p torrust-dependency-installer -- --ignored
+cargo test -p torrust-tracker-deployer-dependency-installer -- --ignored
 
 # Build the test Docker image
 docker build -f docker/ubuntu-24.04.Dockerfile -t dependency-installer-test:ubuntu-24.04 .
@@ -311,15 +311,15 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-torrust-dependency-installer = { path = "path/to/torrust-dependency-installer" }
+torrust-tracker-deployer-dependency-installer = { path = "path/to/torrust-tracker-deployer-dependency-installer" }
 ```
 
 Or if using in a workspace:
 
 ```toml
 [workspace]
-members = ["packages/torrust-dependency-installer"]
+members = ["packages/torrust-tracker-deployer-dependency-installer"]
 
 [dependencies]
-torrust-dependency-installer = { path = "packages/torrust-dependency-installer" }
+torrust-tracker-deployer-dependency-installer = { path = "packages/torrust-tracker-deployer-dependency-installer" }
 ```

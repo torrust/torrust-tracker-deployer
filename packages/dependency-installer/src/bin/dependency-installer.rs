@@ -41,7 +41,7 @@
 
 use std::process;
 
-use torrust_dependency_installer::app;
+use torrust_tracker_deployer_dependency_installer::app;
 
 #[tokio::main]
 async fn main() {

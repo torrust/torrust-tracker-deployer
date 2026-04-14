@@ -2946,34 +2946,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "torrust-dependency-installer"
-version = "0.1.0-beta.1"
-dependencies = [
- "async-trait",
- "clap",
- "testcontainers",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "torrust-deployer-types"
-version = "0.1.0-beta.1"
-dependencies = [
- "chrono",
- "email_address",
- "schemars 1.2.1",
- "secrecy",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "torrust-linting"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3011,9 +2983,9 @@ dependencies = [
  "testcontainers",
  "thiserror 2.0.18",
  "tokio",
- "torrust-dependency-installer",
- "torrust-deployer-types",
  "torrust-linting",
+ "torrust-tracker-deployer-dependency-installer",
+ "torrust-tracker-deployer-types",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
@@ -3023,14 +2995,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "torrust-tracker-deployer-dependency-installer"
+version = "0.1.0-beta.1"
+dependencies = [
+ "async-trait",
+ "clap",
+ "testcontainers",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "torrust-tracker-deployer-sdk"
 version = "0.1.0-beta.1"
 dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
- "torrust-deployer-types",
  "torrust-tracker-deployer",
+ "torrust-tracker-deployer-types",
+]
+
+[[package]]
+name = "torrust-tracker-deployer-types"
+version = "0.1.0-beta.1"
+dependencies = [
+ "chrono",
+ "email_address",
+ "schemars 1.2.1",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tracing",
+ "url",
 ]
 
 [[package]]

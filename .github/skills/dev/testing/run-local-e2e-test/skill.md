@@ -21,13 +21,13 @@ This skill walks you through a complete manual end-to-end test of the deployer u
 
 ```bash
 # Verify all required tools are installed
-cargo run -p torrust-dependency-installer --bin dependency-installer -- check
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer -- check
 
 # Install missing tools (LXD, OpenTofu, Ansible, Docker)
-cargo run -p torrust-dependency-installer --bin dependency-installer -- install
+cargo run -p torrust-tracker-deployer-dependency-installer --bin dependency-installer -- install
 ```
 
-> **Note**: `cargo run --bin dependency-installer` does not work from the workspace root because the binary lives in a sub-package. Always use `-p torrust-dependency-installer`.
+> **Note**: `cargo run --bin dependency-installer` does not work from the workspace root because the binary lives in a sub-package. Always use `-p torrust-tracker-deployer-dependency-installer`.
 
 ## Complete Workflow
 

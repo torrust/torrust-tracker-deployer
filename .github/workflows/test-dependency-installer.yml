@@ -48,7 +48,7 @@ jobs:
       - name: Build dependency-installer binary
         run: |
           echo "🔨 Building dependency-installer binary..."
-          cargo build --release -p torrust-dependency-installer --bin dependency-installer
+          cargo build --release -p torrust-tracker-deployer-dependency-installer --bin dependency-installer
           echo "✅ Binary built successfully"
 
       - name: Install all development dependencies

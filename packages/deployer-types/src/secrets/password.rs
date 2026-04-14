@@ -31,7 +31,7 @@ impl Password {
     ///
     /// # Examples
     /// ```
-    /// use torrust_deployer_types::secrets::Password;
+    /// use torrust_tracker_deployer_types::secrets::Password;
     ///
     /// let from_string = Password::new(String::from("password"));
     /// let from_str = Password::new("password");
