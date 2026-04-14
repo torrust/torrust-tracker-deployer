@@ -10,7 +10,7 @@
 #
 # Publishing:
 #   - Images are pushed to Docker Hub on push to main/develop/release branches (not PRs)
-#   - Release branches (releases/vX.Y.Z) publish versioned Docker tags (X.Y.Z)
+#   - Release branches (releases/vX.Y.Z or releases/vX.Y.Z-pre.N) publish versioned Docker tags
 #   - Release Docker tags use bare semver without the v prefix
 #   - Requires Docker Hub credentials in the dockerhub-torrust GitHub Environment
 
@@ -111,7 +111,7 @@ jobs:
               elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
                 echo "type=develop" >> $GITHUB_OUTPUT
                 echo "continue=true" >> $GITHUB_OUTPUT
-              elif [[ $(echo "${{ github.ref }}" | grep -P '^refs/heads/releases/v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') ]]; then
+              elif [[ $(echo "${{ github.ref }}" | grep -P '^refs/heads/releases/v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[a-zA-Z0-9][a-zA-Z0-9.-]*)?$') ]]; then
                 version=$(echo "${{ github.ref }}" | sed -n -E 's/^refs\/heads\/releases\///p')
                 echo "version=$version" >> $GITHUB_OUTPUT
                 echo "type=release" >> $GITHUB_OUTPUT

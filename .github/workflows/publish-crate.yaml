@@ -1,7 +1,7 @@
 # Crate publication workflow for Torrust Tracker Deployer SDK
 #
 # This workflow publishes the SDK crate when a release branch is pushed.
-# Trigger branch format: releases/vX.Y.Z
+# Trigger branch format: releases/vX.Y.Z or releases/vX.Y.Z-pre.N (pre-release)
 
 name: Publish Crate
 
@@ -37,12 +37,12 @@ jobs:
       - name: Extract Release Version
         id: release
         run: |
-          if [[ "${{ github.ref_name }}" =~ ^releases/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+          if [[ "${{ github.ref_name }}" =~ ^releases/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9][a-zA-Z0-9.-]*)?$ ]]; then
             version="${GITHUB_REF_NAME#releases/v}"
             echo "version=$version" >> "$GITHUB_OUTPUT"
           else
             echo "Invalid release branch name: ${{ github.ref_name }}" >&2
-            echo "Expected format: releases/vX.Y.Z" >&2
+            echo "Expected format: releases/vX.Y.Z or releases/vX.Y.Z-pre.N" >&2
             exit 1
           fi
 
