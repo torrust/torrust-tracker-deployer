@@ -110,8 +110,8 @@ routing used here.
 
 **Revised risk**: The CVSS `AV:N/AC:L/PR:N` reflects the library's theoretical
 attack surface. In practice, this deployment is not vulnerable to the simple
-bearertoken attack vector. The CVE is real in the binary and the upgrade to 13.0.0
-is still correct (defence in depth), but the immediate risk of remote DoS on
+bearer-token attack vector. The CVE is real in the binary and the upgrade to 13.0.0
+is still correct (defense in depth), but the immediate risk of remote DoS on
 `grafana.torrust-tracker-demo.com` via this technique is not confirmed.
 
 **Grafana's fix**: merged in PR
