@@ -40,22 +40,35 @@ Before starting:
 - [ ] Clean working tree (`git status`)
 - [ ] Up to date with `origin/main`
 - [ ] GitHub environment `dockerhub-torrust` configured
-- [ ] GitHub environment `crates-io` configured with `CARGO_REGISTRY_TOKEN`
+- [ ] GitHub environment `crates-io` configured with `CARGO_REGISTRY_TOKEN` scoped to
+      **all four** crate names (`torrust-tracker-deployer-types`,
+      `torrust-tracker-deployer-dependency-installer`, `torrust-tracker-deployer`,
+      `torrust-tracker-deployer-sdk`) — a token scoped to only one will cause 403 on the others
 - [ ] Releaser has permissions for `main`, tags, and release branches
+- [ ] All four `Cargo.toml` files have `description`, `license`, `repository`, `readme`
+- [ ] Every internal path dependency also declares an explicit `version` constraint
+- [ ] `Cargo.lock` is committed and up to date
 
 ## Commands
 
 ### 1) Update versions
 
-Update `version` in:
+Update `version` in all four manifests, and update the `version` constraint on every
+internal path dependency in each file:
 
 - `Cargo.toml`
+- `packages/deployer-types/Cargo.toml`
+- `packages/dependency-installer/Cargo.toml`
 - `packages/sdk/Cargo.toml`
 
 ### 2) Commit and push
 
 ```bash
-git add Cargo.toml packages/sdk/Cargo.toml
+git add Cargo.toml \
+        packages/deployer-types/Cargo.toml \
+        packages/dependency-installer/Cargo.toml \
+        packages/sdk/Cargo.toml \
+        Cargo.lock
 git commit -S -m "release: version vX.Y.Z"
 git push origin main
 ```
@@ -72,8 +85,15 @@ git push origin releases/vX.Y.Z
 
 ### 4) Verify workflows
 
-- Container workflow: publishes Docker image from release branch
-- Publish Crate workflow: publishes `torrust-tracker-deployer-sdk`
+- **Container** workflow: publishes Docker image from release branch
+- **Publish Crate** workflow: publishes all four crates in dependency order:
+  1. `torrust-tracker-deployer-types`
+  2. `torrust-tracker-deployer-dependency-installer`
+  3. `torrust-tracker-deployer`
+  4. `torrust-tracker-deployer-sdk`
+
+  Each crate's dry-run runs only after its prerequisites are indexed on crates.io.
+  Do not attempt to publish out of order.
 
 Workflow files:
 
