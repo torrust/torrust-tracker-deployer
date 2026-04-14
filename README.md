@@ -9,6 +9,7 @@
 [![Cargo Security Audit](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/cargo-security-audit.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/cargo-security-audit.yml)
 [![Docker Security Scan](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/docker-security-scan.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/docker-security-scan.yml)
 [![Container](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/container.yaml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/container.yaml)
+[![Publish Crate](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/publish-crate.yaml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/publish-crate.yaml)
 [![Backup Container](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/backup-container.yaml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/backup-container.yaml)
 [![Code Statistics](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/code-statistics.yml/badge.svg)](https://github.com/torrust/torrust-tracker-deployer/actions/workflows/code-statistics.yml)
 
