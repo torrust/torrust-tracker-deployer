@@ -97,18 +97,10 @@ jobs:
             cargo package --list -p "$crate"
           done
 
-      - name: Dry Run Publish All Crates
+      - name: Dry Run Publish torrust-deployer-types
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: |
-          for crate in \
-            "${{ env.DEPLOYER_TYPES_CRATE }}" \
-            "${{ env.DEPENDENCY_INSTALLER_CRATE }}" \
-            "${{ env.MAIN_CRATE }}" \
-            "${{ env.SDK_CRATE }}"; do
-            echo "=== Dry run publish for $crate ==="
-            cargo publish --dry-run -p "$crate"
-          done
+        run: cargo publish --dry-run -p ${{ env.DEPLOYER_TYPES_CRATE }}
 
       - name: Check If Versions Already Published
         run: |
@@ -145,6 +137,11 @@ jobs:
             sleep 15
           done
 
+      - name: Dry Run Publish torrust-dependency-installer
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --dry-run -p ${{ env.DEPENDENCY_INSTALLER_CRATE }}
+
       - name: Publish torrust-dependency-installer
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -163,6 +160,11 @@ jobs:
             sleep 15
           done
 
+      - name: Dry Run Publish torrust-tracker-deployer
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --dry-run -p ${{ env.MAIN_CRATE }}
+
       - name: Publish torrust-tracker-deployer
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -180,6 +182,11 @@ jobs:
             echo "Waiting for crates.io index update (attempt $attempt/5)..."
             sleep 15
           done
+
+      - name: Dry Run Publish torrust-tracker-deployer-sdk
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --dry-run -p ${{ env.SDK_CRATE }}
 
       - name: Publish torrust-tracker-deployer-sdk
         env:
