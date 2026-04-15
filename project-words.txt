@@ -440,6 +440,7 @@ sandboxed
 sarif
 sarifs
 scannability
+SCEP
 schemafile
 schemars
 scriptable
