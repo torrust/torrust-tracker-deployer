@@ -164,6 +164,7 @@ bootcmd
 browsable
 btih
 btrfs
+buger
 buildx
 cdmon
 celano
@@ -199,6 +200,7 @@ crontabs
 cursorignore
 custompass
 customuser
+cves
 cyberneering
 dcron
 dearmor
@@ -280,6 +282,7 @@ josecelano
 journalctl
 jsonlint
 jsonls
+jsonparser
 keepalive
 keygen
 keypair
