@@ -4,9 +4,9 @@ Security scan history for the `torrust/tracker-backup` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status               | Last Scan   |
-| ------- | ---- | -------- | -------------------- | ----------- |
-| trixie  | 6    | 0        | ℹ️ Base OS Monitored | Apr 8, 2026 |
+| Version | HIGH | CRITICAL | Status                               | Last Scan    |
+| ------- | ---- | -------- | ------------------------------------ | ------------ |
+| trixie  | 6    | 0        | ⚠️ Accepted risk (Debian `<no-dsa>`) | Apr 15, 2026 |
 
 ## Build & Scan Commands
 
@@ -23,6 +23,56 @@ trivy image --severity HIGH,CRITICAL torrust/tracker-backup:local
 ```
 
 ## Scan History
+
+### April 15, 2026 - Remediation Pass 2 / Accepted Risk (Issue #431)
+
+**Image**: `torrust/tracker-backup:local`
+**Trivy Version**: 0.69.3
+**Scan Mode**: `--scanners vuln --severity HIGH,CRITICAL`
+**Base OS**: Debian 13.4 (trixie-slim)
+**Status**: ⚠️ **No change** — 6 HIGH, 0 CRITICAL
+
+#### Summary
+
+Image rebuilt from scratch with `--no-cache`. All Debian packages updated to latest trixie
+repository state. Vulnerability count unchanged: **6 HIGH, 0 CRITICAL**.
+
+| Target                                       | HIGH | CRITICAL |
+| -------------------------------------------- | ---- | -------- |
+| `torrust/tracker-backup:local` (debian 13.4) | 6    | 0        |
+
+| CVE            | Library                                           | Severity | Status   | Fixed Version | Title                                                     |
+| -------------- | ------------------------------------------------- | -------- | -------- | ------------- | --------------------------------------------------------- |
+| CVE-2025-69720 | libncurses6, libtinfo6, ncurses-base, ncurses-bin | HIGH     | affected | —             | ncurses: Buffer overflow in `infocmp` CLI tool            |
+| CVE-2026-29111 | libsystemd0, libudev1                             | HIGH     | affected | —             | systemd: Assert/freeze via spurious unprivileged IPC call |
+
+#### Debian Security Tracker Status
+
+Both CVEs confirmed as `<no-dsa>` (minor issue) for trixie — Debian Security Team will not
+issue a DSA for stable trixie:
+
+- **CVE-2025-69720**: Fixed only in `forky/sid` (`ncurses 6.6+20251231-1`). Affects the
+  `infocmp` CLI tool (`progs/infocmp.c`) — **not the ncurses library itself**. Our backup
+  container never invokes `infocmp`.
+- **CVE-2026-29111**: Fixed only in `forky/sid` (`systemd 260.1-1`). Affects systemd when
+  running as PID 1 and receiving a spurious unprivileged IPC call. Our container runs a bash
+  script as entrypoint — **systemd is not PID 1**; `libsystemd0`/`libudev1` are installed as
+  transitive dependencies of other packages but the daemon is never started.
+
+#### Decision
+
+**Accepted risk — close issue #431.**
+
+- No fixes available in Debian trixie for either CVE
+- Both CVEs are marked `<no-dsa>` minor issues by Debian Security Team
+- Neither CVE is reachable in our container's runtime behaviour:
+  - `infocmp` is never called
+  - systemd is not running as PID 1
+- The backup container has a minimal footprint, runs non-root, and is not network-accessible
+
+**Revisit**: When Debian trixie backports fixes for `ncurses` or `systemd`.
+
+---
 
 ### April 8, 2026 - Remediation Pass 1 (Issue #428)
 
