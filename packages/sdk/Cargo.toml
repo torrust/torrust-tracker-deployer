@@ -1,6 +1,6 @@
 [package]
 name = "torrust-tracker-deployer-sdk"
-version = "0.1.0-beta.2"
+version = "0.1.0"
 edition = "2021"
 description = "Programmatic SDK for the Torrust Tracker Deployer"
 license = "MIT"
@@ -28,8 +28,8 @@ name = "sdk_validate_config"
 path = "examples/validate_config.rs"
 
 [dependencies]
-torrust-tracker-deployer = { path = "../..", version = "0.1.0-beta.1" }
-torrust-tracker-deployer-types = { path = "../deployer-types", version = "0.1.0-beta.2" }
+torrust-tracker-deployer = { path = "../..", version = "0.1.0" }
+torrust-tracker-deployer-types = { path = "../deployer-types", version = "0.1.0" }
 thiserror = "2.0"
 
 [dev-dependencies]

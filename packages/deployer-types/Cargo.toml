@@ -1,6 +1,6 @@
 [package]
 name = "torrust-tracker-deployer-types"
-version = "0.1.0-beta.2"
+version = "0.1.0"
 edition = "2021"
 description = "Shared value objects and traits for the Torrust Tracker Deployer"
 license = "MIT"
