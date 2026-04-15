@@ -578,3 +578,7 @@ userinfo
 ключ
 конфиг
 файл
+
+cpython
+kenv
+libexpat
