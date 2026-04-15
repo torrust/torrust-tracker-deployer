@@ -444,6 +444,12 @@ SCEP
 DTLS
 mysqlsh
 syscall
+infocmp
+libncurses
+libtinfo
+libsystemd
+libudev
+behaviour
 schemafile
 schemars
 scriptable

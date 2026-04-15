@@ -29,25 +29,24 @@ All 6 HIGH are Debian 13.4 (trixie) base package CVEs.
 
 ## Steps
 
-- [ ] Rebuild the image from scratch:
+- [x] Rebuild the image from scratch:
       `docker build --no-cache -t torrust/tracker-backup:local docker/backup/`
-- [ ] Re-scan: `trivy image --severity HIGH,CRITICAL torrust/tracker-backup:local`
-- [ ] Compare against the pass-1 baseline in
+- [x] Re-scan: `trivy image --severity HIGH,CRITICAL torrust/tracker-backup:local`
+- [x] Compare against the pass-1 baseline in
       `docs/security/docker/scans/torrust-tracker-backup.md`
-- [ ] For each remaining CVE, check fix availability:
+- [x] For each remaining CVE, check fix availability:
       <https://security-tracker.debian.org/tracker/>
-- [ ] Update `docs/security/docker/scans/torrust-tracker-backup.md` with the new
+- [x] Update `docs/security/docker/scans/torrust-tracker-backup.md` with the new
       scan results
 - [ ] **If HIGH count dropped**: post comment with before/after results; close #431
-- [ ] **If no change**: post comment documenting that Debian upstream has not yet
+- [x] **If no change**: post comment documenting that Debian upstream has not yet
       patched these CVEs with a revisit note; close #431
 
 ## Outcome
 
-<!-- Fill in after doing the work -->
-
-- Date:
-- Findings after rebuild (HIGH / CRITICAL):
-- Debian packages patched: yes / no
-- Decision: resolved / accepted risk
-- Comment/PR:
+- Date: Apr 15, 2026
+- Findings after rebuild (HIGH / CRITICAL): 6 HIGH / 0 CRITICAL (unchanged)
+- CVEs: CVE-2025-69720 (ncurses `infocmp`) and CVE-2026-29111 (systemd IPC)
+- Debian packages patched: no — both CVEs are `<no-dsa>` minor issues; fixes only in forky/sid
+- Decision: **accepted risk** — neither CVE is reachable in our container's runtime (no `infocmp` call, no systemd PID 1)
+- Comment/PR: PR #457, comment on #431
