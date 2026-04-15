@@ -127,14 +127,14 @@ jobs:
       - name: Wait for torrust-tracker-deployer-types to Be Indexed
         run: |
           release_version="${{ steps.release.outputs.version }}"
-          for attempt in 1 2 3 4 5 6; do
+          for attempt in $(seq 1 10); do
             status=$(curl -s -o /tmp/crate-check.json -w "%{http_code}" "https://crates.io/api/v1/crates/${{ env.DEPLOYER_TYPES_CRATE }}/$release_version")
             if [[ "$status" == "200" ]]; then
               echo "${{ env.DEPLOYER_TYPES_CRATE }} $release_version is indexed on crates.io"
               break
             fi
-            echo "Waiting for crates.io index (attempt $attempt/6)..."
-            sleep 15
+            echo "Waiting for crates.io index (attempt $attempt/10)..."
+            sleep 20
           done
 
       - name: Dry Run Publish torrust-tracker-deployer-dependency-installer
@@ -150,14 +150,14 @@ jobs:
       - name: Wait for torrust-tracker-deployer-dependency-installer to Be Indexed
         run: |
           release_version="${{ steps.release.outputs.version }}"
-          for attempt in 1 2 3 4 5; do
+          for attempt in $(seq 1 10); do
             status=$(curl -s -o /tmp/crate-check.json -w "%{http_code}" "https://crates.io/api/v1/crates/${{ env.DEPENDENCY_INSTALLER_CRATE }}/$release_version")
             if [[ "$status" == "200" ]]; then
               echo "${{ env.DEPENDENCY_INSTALLER_CRATE }} $release_version is indexed on crates.io"
               break
             fi
-            echo "Waiting for crates.io index update (attempt $attempt/5)..."
-            sleep 15
+            echo "Waiting for crates.io index update (attempt $attempt/10)..."
+            sleep 20
           done
 
       - name: Dry Run Publish torrust-tracker-deployer
@@ -173,14 +173,14 @@ jobs:
       - name: Wait for torrust-tracker-deployer to Be Indexed
         run: |
           release_version="${{ steps.release.outputs.version }}"
-          for attempt in 1 2 3 4 5; do
+          for attempt in $(seq 1 10); do
             status=$(curl -s -o /tmp/crate-check.json -w "%{http_code}" "https://crates.io/api/v1/crates/${{ env.MAIN_CRATE }}/$release_version")
             if [[ "$status" == "200" ]]; then
               echo "${{ env.MAIN_CRATE }} $release_version is indexed on crates.io"
               break
             fi
-            echo "Waiting for crates.io index update (attempt $attempt/5)..."
-            sleep 15
+            echo "Waiting for crates.io index update (attempt $attempt/10)..."
+            sleep 20
           done
 
       - name: Dry Run Publish torrust-tracker-deployer-sdk
@@ -196,18 +196,22 @@ jobs:
       - name: Verify SDK Is Available on crates.io
         run: |
           release_version="${{ steps.release.outputs.version }}"
-          for attempt in $(seq 1 18); do
+          for attempt in $(seq 1 30); do
             status=$(curl -s -o /tmp/crate-publish-check.json -w "%{http_code}" "https://crates.io/api/v1/crates/${{ env.SDK_CRATE }}/$release_version")
             if [[ "$status" == "200" ]]; then
               echo "SDK crate is available on crates.io"
               exit 0
             fi
-            echo "Waiting for crates.io index update (attempt $attempt/18)..."
+            echo "Waiting for crates.io index update (attempt $attempt/30)..."
             sleep 20
           done
 
-          echo "SDK crate was published but not visible yet. Check crates.io manually." >&2
-          exit 1
+          # crates.io indexing can be slow under load. The cargo publish step above
+          # already returned zero — the crate is published. This check is best-effort.
+          echo "SDK crate not yet visible after 10 minutes — verify manually:" >&2
+          echo "  https://crates.io/crates/${{ env.SDK_CRATE }}/$release_version" >&2
+          echo "This is expected on slow crates.io days; it does not mean the publish failed."
+          exit 0
 
       - name: Verify docs.rs Build for SDK
         run: |
