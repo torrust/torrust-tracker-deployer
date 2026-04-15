@@ -13,7 +13,7 @@ This directory contains historical security scan results for Docker images used 
 | `caddy`                                | 2.11.2  | 10   | 2        | ⚠️ Partial remediation    | Apr 15, 2026 | [View](caddy.md)                                |
 | `prom/prometheus`                      | v3.11.2 | 4    | 0        | ✅ Remediated             | Apr 14, 2026 | [View](prometheus.md)                           |
 | `grafana/grafana`                      | 12.4.2  | 4    | 0        | ⚠️ Partial remediation    | Apr 8, 2026  | [View](grafana.md)                              |
-| `mysql`                                | 8.4     | 7    | 1        | ⚠️ Monitored              | Apr 8, 2026  | [View](mysql.md)                                |
+| `mysql`                                | 8.4     | 9    | 1        | ⚠️ Accepted risk (gosu)   | Apr 15, 2026 | [View](mysql.md)                                |
 
 **Overall Status**: ⚠️ **CVE database update detected** - Most images still show increased vulnerability counts from previous scans (Feb-Dec 2025). Deployer has a first remediation pass applied (49 HIGH -> 44 HIGH, with 1 CRITICAL still open).
 
