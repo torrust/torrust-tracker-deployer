@@ -4,9 +4,9 @@ Security scan history for the `torrust/tracker-deployer` Docker image.
 
 ## Current Status
 
-| Version | HIGH | CRITICAL | Status                                     | Last Scan   |
-| ------- | ---- | -------- | ------------------------------------------ | ----------- |
-| trixie  | 44   | 1        | ⚠️ Improved after remediation (still open) | Apr 8, 2026 |
+| Version | HIGH | CRITICAL | Status                                             | Last Scan    |
+| ------- | ---- | -------- | -------------------------------------------------- | ------------ |
+| trixie  | 46   | 1        | ⚠️ CRITICAL blocked on OpenTofu upstream (grpc-go) | Apr 15, 2026 |
 
 ## Build & Scan Commands
 
@@ -23,6 +23,76 @@ trivy image --severity HIGH,CRITICAL torrust/tracker-deployer:local
 ```
 
 ## Scan History
+
+### April 15, 2026 - Remediation Pass 2 (Issue #429)
+
+**Image**: `torrust/tracker-deployer:local`
+**OpenTofu version**: v1.11.6 (latest, released 2026-04-08)
+**Trivy Version**: 0.69.3
+**Scan Mode**: `--scanners vuln --severity HIGH,CRITICAL`
+**Base OS**: Debian 13.4 (trixie)
+**Status**: ⚠️ **1 CRITICAL remains** (blocked on OpenTofu upstream) — 46 HIGH, 1 CRITICAL
+
+#### Summary
+
+Image rebuilt from scratch with `--no-cache`. OpenTofu v1.11.6 (latest) was installed.
+CRITICAL in `usr/bin/tofu` (CVE-2026-33186, grpc-go) **remains unresolved** — needs
+OpenTofu to upgrade `google.golang.org/grpc` to v1.79.3+.
+
+#### Target breakdown
+
+| Target                                         | HIGH   | CRITICAL |
+| ---------------------------------------------- | ------ | -------- |
+| `torrust/tracker-deployer:local` (debian 13.4) | 42     | 0        |
+| `usr/bin/tofu`                                 | 4      | 1        |
+| **Total**                                      | **46** | **1**    |
+
+#### Comparison vs pass 1 (Apr 8)
+
+| Target         | Apr 8 (HIGH / CRITICAL) | Apr 15 (HIGH / CRITICAL) | Delta                                      |
+| -------------- | ----------------------- | ------------------------ | ------------------------------------------ |
+| Debian OS      | 42 / 0                  | 42 / 0                   | no change (same Debian state)              |
+| `usr/bin/tofu` | 2 / 1                   | 4 / 1                    | +2 HIGH (Trivy DB update)                  |
+| **Total**      | **44 / 1**              | **46 / 1**               | **+2 HIGH (Trivy DB), CRITICAL unchanged** |
+
+#### `usr/bin/tofu` CVE details (OpenTofu v1.11.6)
+
+| CVE            | Library                        | Severity | Status | Installed | Fixed  | Title                                           |
+| -------------- | ------------------------------ | -------- | ------ | --------- | ------ | ----------------------------------------------- |
+| CVE-2026-33186 | google.golang.org/grpc         | CRITICAL | fixed  | v1.76.0   | 1.79.3 | gRPC-Go: Authorization bypass via HTTP/2 path   |
+| CVE-2026-34986 | github.com/go-jose/go-jose/v4  | HIGH     | fixed  | v4.1.2    | 4.1.4  | JOSE: DoS via crafted JSON Web Encryption       |
+| CVE-2026-4660  | github.com/hashicorp/go-getter | HIGH     | fixed  | v1.8.2    | 1.8.6  | go-getter: Arbitrary file reads via crafted URL |
+| CVE-2026-24051 | go.opentelemetry.io/otel/sdk   | HIGH     | fixed  | v1.38.0   | 1.40.0 | OTel Go SDK: Arbitrary code execution via PATH  |
+| CVE-2026-39883 | go.opentelemetry.io/otel/sdk   | HIGH     | fixed  | v1.38.0   | 1.43.0 | OTel Go SDK: BSD kenv PATH hijacking            |
+
+All `usr/bin/tofu` CVEs have fixes available in their respective upstream libraries but
+require OpenTofu to update its Go module dependencies and ship a new release.
+
+#### Notable Debian OS CVEs (selected new or notable HIGH, all `affected` / no fix in trixie)
+
+| CVE            | Package        | Title                                                       |
+| -------------- | -------------- | ----------------------------------------------------------- |
+| CVE-2025-13836 | python3.13     | cpython: Excessive read buffering DoS in http.client        |
+| CVE-2025-15366 | python3.13     | cpython: IMAP command injection (`will_not_fix`)            |
+| CVE-2025-15367 | python3.13     | cpython: POP3 command injection (`will_not_fix`)            |
+| CVE-2026-25210 | libexpat1      | libexpat: Integer overflow — data integrity issues          |
+| CVE-2026-29111 | libsystemd0    | systemd: Assert/freeze via spurious IPC (`<no-dsa>`)        |
+| CVE-2026-35385 | openssh-client | OpenSSH: Priv escalation via scp legacy protocol            |
+| CVE-2026-35414 | openssh-client | OpenSSH: Security bypass via authorized_keys principals     |
+| CVE-2026-35535 | sudo           | Sudo: Privilege escalation via failed privilege drop        |
+| CVE-2025-69720 | ncurses        | ncurses: Buffer overflow in `infocmp` CLI tool (`<no-dsa>`) |
+
+#### Decision
+
+**Leave issue #429 open — CRITICAL unresolved.**
+
+- CRITICAL CVE-2026-33186 (grpc-go, gRPC authorization bypass) remains in `usr/bin/tofu` v1.11.6
+- Fix requires OpenTofu to bump `google.golang.org/grpc` to v1.79.3+ and ship a new release
+- Debian OS CVEs are all `affected`/`will_not_fix`/`<no-dsa>` with no trixie backports available
+
+**Revisit**: When OpenTofu releases v1.11.7+ or v1.12.x with updated `grpc-go` dependency.
+
+---
 
 ### April 8, 2026 - Remediation Pass 1 (Issue #428)
 
