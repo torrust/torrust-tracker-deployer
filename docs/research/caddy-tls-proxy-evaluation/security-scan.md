@@ -28,7 +28,6 @@
 ### HIGH Severity
 
 1. **CVE-2025-59530** - Crash in github.com/quic-go/quic-go
-
    - **Component**: `github.com/quic-go/quic-go`
    - **Installed Version**: v0.54.0
    - **Fixed Version**: 0.49.1, 0.54.1
@@ -36,7 +35,6 @@
    - **Reference**: https://avd.aquasec.com/nvd/cve-2025-59530
 
 2. **CVE-2025-58183** - Unbounded allocation in Go stdlib
-
    - **Component**: `stdlib`
    - **Installed Version**: v1.25.0
    - **Fixed Version**: 1.24.8, 1.25.2
@@ -55,13 +53,11 @@
 ### Risk Assessment
 
 1. **CVE-2025-44005 (CRITICAL)**:
-
    - **Impact**: Authorization bypass in certificate creation
    - **Mitigation**: This affects the `smallstep/certificates` library, which is used by Caddy for certificate management
    - **Action Required**: Monitor for Caddy v2.11 release with updated dependencies
 
 2. **CVE-2025-59530 (HIGH)**:
-
    - **Impact**: QUIC protocol crash vulnerability
    - **Mitigation**: Affects HTTP/3 (QUIC) support; HTTP/2 and HTTP/1.1 not affected
    - **Action Required**: Monitor for Caddy release with patched QUIC library
@@ -106,12 +102,10 @@ Caddy's vulnerability count is within normal range for Go-based proxies.
 When Caddy is officially integrated into the deployer (new issue), the following workflow updates will be required:
 
 1. **Update `.github/workflows/docker-security-scan.yml`**:
-
    - Add `caddy:2.10` (or latest version) to the third-party images matrix
    - This ensures automated security scanning in CI/CD pipeline
 
 2. **Add to security scan documentation**:
-
    - Create `docs/security/production/scans/caddy.md` with scan history
    - Update summary table in `docs/security/production/scans/README.md`
 

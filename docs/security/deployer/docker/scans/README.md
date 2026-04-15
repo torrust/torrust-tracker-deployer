@@ -7,8 +7,8 @@ For production image scans, see [`../../../production/scans/`](../../../producti
 
 ## Current Status Summary
 
-| Image                      | Version | HIGH | CRITICAL | Status                                  | Last Scan    | Details                             |
-| -------------------------- | ------- | ---- | -------- | --------------------------------------- | ------------ | ----------------------------------- |
+| Image                      | Version | HIGH | CRITICAL | Status                                 | Last Scan    | Details                             |
+| -------------------------- | ------- | ---- | -------- | -------------------------------------- | ------------ | ----------------------------------- |
 | `torrust/tracker-deployer` | trixie  | 46   | 1        | ⚠️ CRITICAL blocked (OpenTofu grpc-go) | Apr 15, 2026 | [View](torrust-tracker-deployer.md) |
 
 ## Scan Archives

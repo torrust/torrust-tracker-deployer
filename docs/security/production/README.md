@@ -5,12 +5,12 @@ These are [Priority 1](../README.md) — the highest-risk surface because they r
 
 ## Images Covered
 
-| Image | Role |
-| ----- | ---- |
-| `caddy` | TLS termination proxy — public-facing |
-| `prom/prometheus` | Metrics collection |
-| `grafana/grafana` | Metrics dashboards |
-| `mysql` | Tracker database |
+| Image                    | Role                                                                |
+| ------------------------ | ------------------------------------------------------------------- |
+| `caddy`                  | TLS termination proxy — public-facing                               |
+| `prom/prometheus`        | Metrics collection                                                  |
+| `grafana/grafana`        | Metrics dashboards                                                  |
+| `mysql`                  | Tracker database                                                    |
 | `torrust/tracker-backup` | Backup service — runs on a schedule inside the deployed environment |
 
 ## Scanning with Trivy

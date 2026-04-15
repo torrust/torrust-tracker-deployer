@@ -86,10 +86,10 @@ Docker images and other artifacts used only in automated tests or local developm
 
 ## Scan Tooling
 
-| Tool | Purpose | Run Command |
-| ---- | ------- | ----------- |
-| Trivy | Docker image CVE scanning | `trivy image --severity HIGH,CRITICAL <image>` |
-| cargo-audit | Rust dependency audits | `cargo audit` |
+| Tool        | Purpose                   | Run Command                                    |
+| ----------- | ------------------------- | ---------------------------------------------- |
+| Trivy       | Docker image CVE scanning | `trivy image --severity HIGH,CRITICAL <image>` |
+| cargo-audit | Rust dependency audits    | `cargo audit`                                  |
 
 ## Current Security Status
 
