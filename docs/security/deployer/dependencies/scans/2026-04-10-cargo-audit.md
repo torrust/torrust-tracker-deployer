@@ -69,4 +69,4 @@ No follow-up issue was required for this scan because all reported vulnerabiliti
 
 - Main task: <https://github.com/torrust/torrust-tracker-deployer/issues/439>
 - Workflow: `.github/workflows/cargo-security-audit.yml`
-- Dependency report index: `docs/security/dependencies/README.md`
+- Dependency report index: `docs/security/deployer/dependencies/README.md`

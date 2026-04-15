@@ -112,8 +112,8 @@ When Caddy is officially integrated into the deployer (new issue), the following
 
 2. **Add to security scan documentation**:
 
-   - Create `docs/security/docker/scans/caddy.md` with scan history
-   - Update summary table in `docs/security/docker/scans/README.md`
+   - Create `docs/security/production/scans/caddy.md` with scan history
+   - Update summary table in `docs/security/production/scans/README.md`
 
 3. **Set up GitHub Security monitoring**:
    - SARIF results will automatically upload to GitHub Security tab

@@ -32,7 +32,7 @@ After PR #436 upgraded Caddy from `2.10` to `2.10.2`:
 - [x] Run Trivy against the latest tag:
       `trivy image --severity HIGH,CRITICAL caddy:LATEST_TAG`
 - [x] Compare results against the 2.10.2 baseline in
-      `docs/security/docker/scans/caddy.md`
+      `docs/security/production/scans/caddy.md`
 - [x] **If CRITICALs are cleared (or HIGH count drops meaningfully)**: update
       `templates/docker-compose/docker-compose.yml.tera` and the CI scan matrix;
       update the scan doc; post results comment; close #432

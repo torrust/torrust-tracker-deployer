@@ -107,7 +107,7 @@ variable "server_labels" {
 # Root SSH provides a recovery/debugging path.
 #
 # SECURITY NOTE: For production deployments, consider disabling root SSH access
-# after verifying deployment succeeded. See docs/security/ssh-root-access-hetzner.md
+# after verifying deployment succeeded. See docs/security/user-security/ssh-root-access-hetzner.md
 #
 # This key will appear in Hetzner Console → Security → SSH Keys.
 resource "hcloud_ssh_key" "torrust" {

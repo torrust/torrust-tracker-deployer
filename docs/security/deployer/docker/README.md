@@ -1,14 +1,20 @@
-# Docker Image Security Scanning Guide
+# Deployer Docker Image Security
 
-This document explains how to perform security scans on Docker images used in the deployer.
+This directory covers security scanning for Docker images used by the deployer tooling.
+These are [Priority 3](../../README.md) images — they run locally for minutes during deployment
+and are not exposed to the internet.
+
+For production image security, see [`../../production/`](../../production/).
 
 ## Purpose
 
-Regular security scanning ensures that Docker images used in production deployments are free from known vulnerabilities. This documentation provides:
+Regular security scanning ensures that deployer tool images are free from known vulnerabilities. This documentation provides:
 
-- Instructions for running security scans
+- Instructions for running security scans on deployer images
 - Configuration guidelines
 - Best practices for vulnerability management
+
+See [`../../production/`](../../production/) for scanning guidance on production-deployed images.
 
 ## Automated Scanning
 
@@ -121,13 +127,8 @@ trivy image --severity HIGH,CRITICAL prom/prometheus:v3.5.0
 See the [scans/](scans/) directory for historical security scan results:
 
 - [Torrust Tracker Deployer](scans/torrust-tracker-deployer.md)
-- [Torrust Tracker Backup](scans/tracker-backup.md)
-- [Prometheus](scans/prometheus.md)
-- [Grafana](scans/grafana.md)
-- [MySQL](scans/mysql.md)
 
 ## References
 
 - [Trivy Documentation](https://aquasecurity.github.io/trivy/)
 - [Issue #250: Automated Security Scanning](https://github.com/torrust/torrust-tracker-deployer/issues/250)
-- [Issue #253: Docker Image Updates](https://github.com/torrust/torrust-tracker-deployer/issues/253)

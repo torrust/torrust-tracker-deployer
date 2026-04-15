@@ -45,10 +45,10 @@ Remaining findings split into two areas:
   ```
 
 - [x] Compare against the pass-1 baseline in
-      `docs/security/docker/scans/torrust-tracker-deployer.md`
+      `docs/security/deployer/docker/scans/torrust-tracker-deployer.md`
 - [x] For Debian base package CVEs, check fix availability:
       <https://security-tracker.debian.org/tracker/>
-- [x] Update `docs/security/docker/scans/torrust-tracker-deployer.md` with new
+- [x] Update `docs/security/deployer/docker/scans/torrust-tracker-deployer.md` with new
       scan results
 - [ ] **If CRITICAL is cleared**: update Dockerfile OpenTofu version; post results
       comment; close #429
