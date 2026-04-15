@@ -8,7 +8,7 @@ resolver = "2"
 
 [package]
 name = "torrust-tracker-deployer"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 edition = "2021"
 description = "Torrust Tracker Deployer - Deployment Infrastructure with Ansible and OpenTofu"
 license = "MIT"
@@ -64,8 +64,8 @@ tempfile = "3.0"
 tera = "1.0"
 testcontainers = { version = "0.27", features = [ "blocking" ] }
 thiserror = "2.0"
-torrust-tracker-deployer-dependency-installer = { path = "packages/dependency-installer", version = "0.1.0-beta.1" }
-torrust-tracker-deployer-types = { path = "packages/deployer-types", version = "0.1.0-beta.1" }
+torrust-tracker-deployer-dependency-installer = { path = "packages/dependency-installer", version = "0.1.0-beta.2" }
+torrust-tracker-deployer-types = { path = "packages/deployer-types", version = "0.1.0-beta.2" }
 torrust-linting = "0.1.0"
 tracing = { version = "0.1", features = [ "attributes" ] }
 tracing-appender = "0.2"

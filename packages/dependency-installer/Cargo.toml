@@ -1,6 +1,6 @@
 [package]
 name = "torrust-tracker-deployer-dependency-installer"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 edition = "2021"
 description = "Dependency detection and installation utilities for the Torrust Tracker Deployer project"
 license = "MIT"
