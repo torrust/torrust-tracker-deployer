@@ -441,6 +441,9 @@ sarif
 sarifs
 scannability
 SCEP
+DTLS
+mysqlsh
+syscall
 schemafile
 schemars
 scriptable

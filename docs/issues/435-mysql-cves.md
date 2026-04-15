@@ -24,25 +24,24 @@ the best available option.
 
 ## Steps
 
-- [ ] Pull and scan the current floating tag:
+- [x] Pull and scan the current floating tag:
       `docker pull mysql:8.4 && trivy image --severity HIGH,CRITICAL mysql:8.4`
-- [ ] Check which patch the floating tag currently resolves to:
+- [x] Check which patch the floating tag currently resolves to:
       `docker inspect mysql:8.4 | grep -i version`
-- [ ] Compare results against the 8.4.8 baseline in
+- [x] Compare results against the 8.4.8 baseline in
       `docs/security/docker/scans/mysql.md`
-- [ ] Check if `mysql:9.x` is now a viable option for the deployer (compatibility,
+- [x] Check if `mysql:9.x` is now a viable option for the deployer (compatibility,
       LTS status):
       <https://hub.docker.com/_/mysql>
 - [ ] **If CVE count has dropped**: update the scan doc; post comment; close #435
-- [ ] **If still 7 HIGH / 1 CRITICAL with no viable upgrade path**: post comment
+- [x] **If still 7 HIGH / 1 CRITICAL with no viable upgrade path**: post comment
       documenting accepted risk (helper components, not MySQL core); close #435
 
 ## Outcome
 
-<!-- Fill in after doing the work -->
-
-- Date:
-- Floating tag resolves to:
-- Findings (HIGH / CRITICAL):
-- Decision: accepted risk / upgrade to mysql:9.x
-- Comment/PR:
+- Date: Apr 15, 2026
+- Floating tag resolves to: `8.4.8` (unchanged from Apr 8 baseline)
+- Previous findings (Apr 8, HIGH / CRITICAL): 7 HIGH / 1 CRITICAL
+- Current findings (Apr 15, HIGH / CRITICAL): 9 HIGH / 1 CRITICAL (Trivy DB update; same image digest)
+- mysql:9.6 (latest Innovation Release): identical CVE profile — 9 HIGH / 1 CRITICAL
+- Decision: **accepted risk** — all CVEs in `gosu` helper binary and MySQL Shell Python tools, not MySQL Server core. No viable upgrade path. Requires MySQL upstream to ship updated `gosu` on Go ≥ 1.24.13.
