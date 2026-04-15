@@ -18,7 +18,7 @@ use super::service_topology::ServiceTopology;
 /// Uses `ServiceTopology` to share the common topology structure with other services.
 #[derive(Serialize, Debug, Clone)]
 pub struct PrometheusServiceContext {
-    /// Docker image reference (e.g. `prom/prometheus:v3.5.1`)
+    /// Docker image reference (e.g. `prom/prometheus:v3.11.2`)
     pub image: String,
 
     /// Service topology (ports and networks)
